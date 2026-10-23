@@ -1,0 +1,31 @@
+{
+  "schema": "buri-toolchain-1",
+  "host": "https://github.com/tizoc/shen-scheme",
+  "release": "v0.52",
+  "host_source_reviewed": "8d261518db17fbfec32d1b268b40ed216b925c74",
+  "host_archive_sha256": {
+    "linux-x64": "aa711f576ea0ec96d86b0120eeba875153317a9af9e6a69f9c6ef4c00a4ad8c9",
+    "macOS-arm64": "44e980d192d156859d06374e554813e1dc1e81210b95e9b1e23eb5e85276106b"
+  },
+  "required_kernel_pr": "https://github.com/Shen-Language/shen-sources/pull/117",
+  "required_kernel_commit": "ec16a9fa4fc2e87e2aa336fb1ae30e8ac2266394",
+  "overlay_path": "sources/t-star.shen",
+  "overlay_sha256": "480e26c610b593b66f87118ea2fbeacaf34201e42f2279a09decfb9481879168",
+  "overlay_policy": "Load the complete pinned typechecker before any Vor module. Never infer PR inclusion from a version string.",
+  "kernel_repository": "https://github.com/Shen-Language/shen-sources",
+  "kernel_version": "43.1",
+  "kernel_base_tag": "shen-43.1",
+  "rocq": {
+    "implementation": "Coq (pre-rename Rocq)",
+    "version": "8.18.0",
+    "ocaml_version": "4.14.1",
+    "packages": "rocq-packages.lock",
+    "snapshot": "https://snapshot.ubuntu.com/ubuntu/20260828T000000Z",
+    "proof_replay": "coqchk",
+    "custom_axioms": false
+  },
+  "port_sources": {
+    "src/compiler.shen": "42ac753b8f305c578998b74693fc85b28112a814",
+    "src/primitives.scm": "92b8875a276848b473c59879f075f429ba44a7a0"
+  }
+}

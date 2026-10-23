@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+tool=${1:-coqc}
+shift
+if [ -x "$root/.tools/rocq/usr/bin/$tool" ]; then
+  export OCAMLFIND_CONF="$root/.tools/rocq/etc/ocamlfind.conf"
+  export OCAMLPATH="$root/.tools/rocq/usr/lib/ocaml"
+  exec "$root/.tools/rocq/usr/bin/$tool" -coqlib "$root/.tools/rocq/usr/lib/ocaml/coq" "$@"
+fi
+exec "$tool" "$@"

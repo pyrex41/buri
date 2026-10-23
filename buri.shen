@@ -1,0 +1,7 @@
+(load "shen/base.shen")
+(load "spec/arithmetic.shen")
+(load "shen/equations.shen")
+(load "shen/kernel.shen")
+(load "shen/klambda.shen")
+(load "shen/trace.shen")
+(load "shen/claims.shen")

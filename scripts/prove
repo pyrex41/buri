@@ -1,0 +1,29 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+root=$(pwd)
+mkdir -p _build/rocq
+# Require a fresh image and regenerate the bridge from actual loaded equations.
+scripts/shen -l buri.shen -l proofs/compiler.shen -l shen/export-rocq.shen \
+ -e '(buri.export-rocq "_build/EquationBridge.v")' > _build/export.log 2>&1
+diff -u rocq/EquationBridge.v _build/EquationBridge.v
+scripts/shen -l buri.shen -l ports/compiler-schemas.shen -l shen/export-native.shen \
+ -e '(buri.export-native "_build/NativeOutput.v" "_build/compiler-output.sexp")' > _build/native-export.log 2>&1
+diff -u rocq/NativeOutput.v _build/NativeOutput.v
+diff -u ports/compiler-output.sexp _build/compiler-output.sexp
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Audit; do
+  cp "rocq/$module.v" "_build/rocq/$module.v"
+  rm -f "_build/rocq/$module.vo" "_build/rocq/$module.vos" "_build/rocq/$module.vok"
+done
+cd _build/rocq
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Audit; do
+  if ! "$root/scripts/rocq" coqc -Q . Buri "$module.v" > "$module.log" 2>&1; then
+    cat "$module.log"; exit 1
+  fi
+done
+if grep -q '^Axioms:' Audit.log; then cat Audit.log; exit 1; fi
+[ "$(grep -c '^Closed under the global context$' Audit.log)" = 28 ] || {
+  cat Audit.log; echo 'Unexpected theorem assumption inventory' >&2; exit 1;
+}
+"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Audit
+printf 'BURI_ROCQ_OK 28 audited theorems; 18 equation bridges; 12 native compiler schemas; coqchk replay passed\n'

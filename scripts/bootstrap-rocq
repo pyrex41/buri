@@ -1,0 +1,22 @@
+#!/bin/sh
+# Pinned Coq 8.18 (the pre-rename Rocq release), extracted locally without sudo.
+set -eu
+cd "$(dirname "$0")/.."
+[ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || {
+  echo 'Use an installed Coq 8.18 toolchain on this platform.' >&2; exit 2;
+}
+mkdir -p .tools/rocq-debs .tools/rocq
+base=https://snapshot.ubuntu.com/ubuntu/20260828T000000Z
+while read -r expected path; do
+  archive=".tools/rocq-debs/$(basename "$path")"
+  if [ ! -f "$archive" ]; then
+    curl --fail --location --retry 2 --connect-timeout 15 --max-time 180 "$base/$path" -o "$archive.partial"
+    actual=$(sha256sum "$archive.partial" | cut -d ' ' -f 1)
+    [ "$actual" = "$expected" ] || { echo "Checksum mismatch: $path" >&2; exit 1; }
+    mv "$archive.partial" "$archive"
+  fi
+  actual=$(sha256sum "$archive" | cut -d ' ' -f 1)
+  [ "$actual" = "$expected" ] || { echo "Checksum mismatch: $path" >&2; exit 1; }
+  dpkg-deb -x "$archive" .tools/rocq
+ done < rocq-packages.lock
+scripts/rocq coqc --version

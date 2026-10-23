@@ -1,0 +1,20 @@
+name: Proofs and port conformance
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bootstrap pinned Shen and Rocq toolchains
+        run: make bootstrap
+      - name: Replay proofs, reject mutations, and compare native execution
+        run: make report
+      - name: Preserve exact claims and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buri-evidence
+          path: _build/

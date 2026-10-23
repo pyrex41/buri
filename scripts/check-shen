@@ -1,0 +1,9 @@
+#!/bin/sh
+# Some Shen launchers print an exception but exit zero. Require a final marker.
+set -eu
+cd "$(dirname "$0")/.."
+mkdir -p _build
+name=$(basename "$1" .shen)
+log="_build/$name.log"
+if ! scripts/shen -l "$1" > "$log" 2>&1; then cat "$log"; exit 1; fi
+if ! grep -E '^BURI_TESTS_OK [0-9]+$' "$log"; then cat "$log"; exit 1; fi

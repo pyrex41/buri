@@ -1,0 +1,31 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+root=$(pwd)
+mkdir -p _build/mutations
+python3 - <<'PY'
+from pathlib import Path
+source = Path('rocq/Arithmetic.v').read_text()
+mutations = {
+ 'WrongInstruction': ('compile b (Times k)', 'compile b (Plus k)'),
+ 'DroppedPush': ("run k' (n :: s)", "run k' s"),
+}
+for name, (old, new) in mutations.items():
+ assert source.count(old) == 1, name
+ Path('_build/mutations', name + '.v').write_text(source.replace(old, new))
+bridge = Path('rocq/EquationBridge.v').read_text()
+old = '(compile v_a (compile v_b (Plus v_k)))'
+assert bridge.count(old) == 1
+Path('_build/mutations/FalseEquation.v').write_text(bridge.replace(old, '(compile v_a (compile v_b (Times v_k)))'))
+native = Path('rocq/NativeOutput.v').read_text()
+old = 'seval rho (SAdd (SVar 0) (SVar 1))'
+assert native.count(old) == 1
+Path('_build/mutations/FalseNativeOutput.v').write_text(native.replace(old, 'seval rho (SMul (SVar 0) (SVar 1))'))
+PY
+for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Error:' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
