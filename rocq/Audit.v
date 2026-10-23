@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -99,3 +99,25 @@ Check native_capture_sound.
 Print Assumptions native_capture_sound.
 Check native_capture_record_coverage.
 Print Assumptions native_capture_record_coverage.
+Check Encoder.eval_monotone.
+Print Assumptions Encoder.eval_monotone.
+Check Encoder.evaluation_deterministic.
+Print Assumptions Encoder.evaluation_deterministic.
+Check Encoder.byte_correct.
+Print Assumptions Encoder.byte_correct.
+Check Encoder.byte_ascii.
+Print Assumptions Encoder.byte_ascii.
+Check Encoder.string_correct.
+Print Assumptions Encoder.string_correct.
+Check Encoder.datum_correct.
+Print Assumptions Encoder.datum_correct.
+Check Encoder.encoder_output_unique.
+Print Assumptions Encoder.encoder_output_unique.
+Check Encoder.encoder_decodes.
+Print Assumptions Encoder.encoder_decodes.
+Check encoder_source_exact.
+Print Assumptions encoder_source_exact.
+Check source_linked_encoder.
+Print Assumptions source_linked_encoder.
+Check source_linked_roundtrip.
+Print Assumptions source_linked_roundtrip.

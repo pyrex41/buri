@@ -33,11 +33,15 @@ ultimately depends on.
   resolution inside Rocq, with round-trip, exact-input, normalization, and full
   record-coverage proofs. Capture provenance and the lower runtime remain trusted.
   See [the capture boundary](docs/CAPTURE.md).
+- **Source-linked encoder proof:** the exact loaded Shen file matches a formal
+  program with universal termination, unique-output, and decoding round-trip
+  proofs. Reader/compiler preservation, primitives, and native execution remain
+  explicit obligations. See [the encoder boundary](docs/ENCODER.md).
 - **Real Shen-Scheme comparisons:** 105 native cases, including evaluation
   order, lexical capture, lazy branches, currying, exceptions, large integers,
   and freeze/thaw. These are tests, not a preservation proof.
-- **Adversarial gates:** 91 Shen kernel/evaluator/encoder checks, 25 Rocq adversarial examples,
-  four orchestration checks, and nine compiler or capture mutations rejected by Rocq. Claim reports keep proofs, ground replay,
+- **Adversarial gates:** 97 Shen kernel/evaluator/encoder checks, 35 Rocq adversarial examples,
+  five orchestration checks, and twelve compiler, capture, or encoder mutations rejected by Rocq. Claim reports keep proofs, ground replay,
   tests, open obligations, and assumptions distinct.
 
 Read [STATUS](docs/STATUS.md) and [TRUST](docs/TRUST.md) before interpreting any
@@ -64,7 +68,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 50 theorem dependencies for custom axioms, independently
+checks all proofs, audits 61 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
@@ -101,6 +105,7 @@ preservation proof and not a claim about arbitrary Shen programs.
 | `rocq/` | Independent semantic definitions, proofs, and assumption audit |
 | `shen/export-rocq.shen` | Checked-equation bridge generator; currently trusted correspondence |
 | `rocq/Wire.v`, `Resolve.v`, `Normalize.v`, `NativeValidation.v` | Checked raw-data validation and lexical/arithmetic preservation |
+| `shen/wire.shen`, `rocq/Encoder.v`, `EncoderSource.v` | Source-linked encoder program, semantics, and correctness proof |
 | `shen/export-wire.shen` | Raw capture of the real compiler input/output |
 | `ports/shen-scheme.shen` | Native test adapter; intentionally executes trusted fixtures |
 | `tests/` | Hostile proofs, reference regressions, native conformance |

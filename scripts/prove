@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 root=$(pwd)
 mkdir -p _build/rocq
 rm -f _build/EquationBridge.v _build/NativeOutput.v _build/compiler-output.sexp \
- _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v
+ _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v _build/EncoderSource.v
 scripts/rocq coqc --version > _build/rocq-version.log
 grep -q 'version 8.18.0' _build/rocq-version.log || { cat _build/rocq-version.log; exit 1; }
 # Require a fresh image and regenerate the bridge from actual loaded equations.
@@ -25,19 +25,22 @@ diff -u ports/native-capture.sexp _build/native-capture.sexp
 python3 scripts/package-wire.py _build/native-capture.bits _build/NativeCapture.v
 python3 scripts/check-wire-package.py _build/native-capture.bits _build/NativeCapture.v
 diff -u rocq/NativeCapture.v _build/NativeCapture.v
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Audit; do
+python3 scripts/package-encoder.py shen/wire.shen _build/EncoderSource.v
+python3 scripts/check-encoder-package.py shen/wire.shen _build/EncoderSource.v
+diff -u rocq/EncoderSource.v _build/EncoderSource.v
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests Audit; do
   cp "rocq/$module.v" "_build/rocq/$module.v"
   rm -f "_build/rocq/$module.vo" "_build/rocq/$module.vos" "_build/rocq/$module.vok"
 done
 cd _build/rocq
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Audit; do
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests Audit; do
   if ! "$root/scripts/rocq" coqc -Q . Buri "$module.v" > "$module.log" 2>&1; then
     cat "$module.log"; exit 1
   fi
 done
 if grep -q '^Axioms:' Audit.log; then cat Audit.log; exit 1; fi
-[ "$(grep -c '^Closed under the global context$' Audit.log)" = 50 ] || {
+[ "$(grep -c '^Closed under the global context$' Audit.log)" = 61 ] || {
   cat Audit.log; echo 'Unexpected theorem assumption inventory' >&2; exit 1;
 }
-"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Wire Buri.Resolve Buri.Normalize Buri.NativeValidation Buri.NativeCapture Buri.WireTests Buri.Audit
-printf 'BURI_ROCQ_OK 50 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n'
+"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Wire Buri.Resolve Buri.Normalize Buri.NativeValidation Buri.NativeCapture Buri.WireTests Buri.Encoder Buri.EncoderSource Buri.EncoderTests Buri.Audit
+printf 'BURI_ROCQ_OK 61 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n'

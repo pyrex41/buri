@@ -117,7 +117,9 @@ certificate, rather than a proof that the program is wrong.
 
 `rocq/NativeCapture.v` binds this acceptance result to the exact supplied capture
 string and proves coverage of all supplied records, with an exact release count.
-The capture encoder's connection to the host source objects, actual compiler
+The encoder's exact source now has a correctness proof in an admitted first-order
+fragment. [ENCODER.md](ENCODER.md) defines its primitive contracts and the remaining
+native representation/execution boundary. Host source objects, actual compiler
 invocation, and lower execution semantics remain explicit obligations.
 The original `NativeOutput.v` AST exports continue as independent regression
 cross-checks. [CAPTURE.md](CAPTURE.md) documents the new path and its boundaries.

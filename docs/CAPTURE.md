@@ -76,8 +76,10 @@ arithmetic equation exporter retains its previously documented assumptions.
 ## Remaining assumptions
 
 - The supplied capture originated from the claimed source data and compiler
-  invocation. The Shen serializer's implementation is not yet proved to refine
-  `Wire.capture`; a raw byte file cannot prove how it was produced.
+  invocation. The serializer now has a source-linked correctness proof in the admitted
+  first-order semantics; [ENCODER](ENCODER.md) specifies the exact chain. Native
+  reader/compiler, primitive, representation, and runtime refinement remain
+  open. A raw byte file cannot establish its own origin.
 - The selected grammar and exact-integer Scheme meaning faithfully describe the
   port's admitted behavior. In particular, normalization assumes total pure
   arithmetic. It does not justify deleting effects, exceptions, divergence, or
@@ -95,13 +97,14 @@ algebraic equalities such as commutative rewrites.
 
 ## Regression evidence
 
-The new lane includes 25 Rocq examples and 10 Shen encoder checks. They exercise
+The new lane includes 35 Rocq examples and 16 Shen encoder checks. They exercise
 shadowing, temporary bindings, negative and large integers, numeric/symbol tag
 confusion, reserved names, malformed wire data, and unsupported effects.
 
 Five capture mutations must fail the acceptance proof: a changed target operator,
 truncation, trailing bits, an omitted expected record, and the wrong profile.
-The four existing compiler/equation mutations remain. Mutation gates require a
+The four existing compiler/equation mutations remain; three encoder/source
+mutations additionally check the source-linked proof. Mutation gates require a
 proof unification failure; missing dependencies or a broken toolchain cannot
 masquerade as a successfully rejected program.
 

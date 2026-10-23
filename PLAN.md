@@ -43,8 +43,11 @@ B04 now has a required native validation path that receives only captured data
 and performs semantic decoding and comparison inside Rocq. Its acceptance theorem
 binds the supplied string to every checked record in order; the release requires
 12 records. Exporters no longer supply semantic indices or ASTs for this path.
-The Shen serializer/source-object correspondence, capture provenance, broader
-Shen evaluator, proof checker, and runtime remain open. The original Peano
+The serializer now has a source-linked program proof: exact source equality,
+termination, unique canonical output, and a decoding round trip. Its native
+reader/compiler, primitive, and representation refinement remains open, together
+with capture provenance, the broader Shen evaluator, proof checker, and runtime.
+See docs/ENCODER.md for the boundary. The original Peano
 arithmetic equation exporter retains its own translation obligation.
 
 See docs/CAPTURE.md. These results close specific initial-fragment gaps; they do

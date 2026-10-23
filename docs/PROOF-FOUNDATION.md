@@ -36,6 +36,11 @@ source/output pairs. The required raw-capture path now defines semantic decoding
 lexical resolution and normalization. It still requires capture provenance and
 lower-runtime correspondence.
 
+The encoder adds a source-linked program proof: its exact Shen file is checked
+against a canonical rendering, and its abstract executions have termination,
+unique-output, and decoding round-trip theorems. Native reader/compiler and
+primitive/runtime refinement remain explicit obligations. See [ENCODER](ENCODER.md).
+
 The arithmetic equation bridge checks every exported equation and the exact
 theorem conclusions. It does not yet prove the exporter or the Shen normalizer.
 The Rocq equality checker has its own soundness theorem; its connection to the

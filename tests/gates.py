@@ -54,4 +54,17 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     assert result.returncode != 0 and 'exact captured bytes' in result.stderr
     count += 1
 
+with tempfile.TemporaryDirectory(prefix='buri-encoder-gate-') as directory:
+    tree = Path(directory)
+    source = tree / 'wire.shen'
+    module = tree / 'EncoderSource.v'
+    source.write_text('(tc -)\n')
+    subprocess.run(['python3', str(root / 'scripts/package-encoder.py'), str(source), str(module)], check=True)
+    subprocess.run(['python3', str(root / 'scripts/check-encoder-package.py'), str(source), str(module)], check=True)
+    source.write_text('(tc +)\n')
+    result = subprocess.run(['python3', str(root / 'scripts/check-encoder-package.py'), str(source), str(module)],
+                            capture_output=True, text=True)
+    assert result.returncode != 0 and 'exact loaded encoder source bytes' in result.stderr
+    count += 1
+
 print(f'BURI_GATE_TESTS_OK {count}')

@@ -11,4 +11,7 @@ Normalize.v
 NativeValidation.v
 NativeCapture.v
 WireTests.v
+Encoder.v
+EncoderSource.v
+EncoderTests.v
 Audit.v

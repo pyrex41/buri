@@ -29,9 +29,9 @@ checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
 assert len(rows) == 4 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 50 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 9
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['4']
+assert 'BURI_ROCQ_OK 61 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 12
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['5']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,12 +46,13 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 50,
+        'audited_theorems': 61,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
                   'exact wire decoding, lexical resolution and symbolic normalization',
-                  'raw captured-data validation and complete record coverage'],
+                  'raw captured-data validation and complete record coverage',
+                  'source-linked encoder termination, unique output and decoding roundtrip'],
     },
     'equation_bridge': {'checked_equations': 18, 'checked_theorem_statements': 2,
                        'exporter_correctness': 'assumed; not mechanically proved'},
@@ -61,17 +62,31 @@ report = {
         'symbolic_normalization_preservation': 'machine-checked',
         'capture_wire_identity': 'machine-checked for supplied Rocq input',
         'record_coverage': 'machine-checked for the complete supplied capture',
-        'capture_encoder_correspondence': 'assumed; not mechanically proved',
+        'capture_encoder_correspondence': 'source-linked fragment proved; native execution and representation assumed',
         'capture_sha256': digest(root / '_build/native-capture.bits'),
         'captured_proof_input_sha256': digest(root / '_build/NativeCapture.v'),
         'output_transcript_sha256': digest(root / '_build/compiler-output.sexp')},
+    'encoder_program_verification': {
+        'source': 'shen/wire.shen',
+        'source_sha256': digest(root / 'shen/wire.shen'),
+        'proof_input_sha256': digest(root / '_build/EncoderSource.v'),
+        'source_to_program': 'exact rendered-source equality checked inside Rocq',
+        'domain': 'all finite abstract datums and byte strings',
+        'evidence': 'source-linked-fragment-proof',
+        'proved': ['termination in the admitted semantics', 'unique canonical output',
+                   'decoding recovers original datum'],
+        'assumed_for_native_execution': ['reader/define compilation preservation',
+            'native input representation and primitive contracts',
+            'Shen-Scheme/Chez/runtime preservation', 'specified source is loaded without rebinding'],
+        'native_execution_verified': False,
+    },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 9,
-    'rocq_regression_examples': 25,
-    'orchestration_regressions': 4,
-    'open': ['Shen raw-capture serializer correspondence', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
+    'rejected_proof_mutations': 12,
+    'rocq_regression_examples': 35,
+    'orchestration_regressions': 5,
+    'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',
              'Chez/native machine-code correctness', 'artifact execution refinement'],

@@ -17,6 +17,17 @@ bridge = Path('rocq/EquationBridge.v').read_text()
 old = '(compile v_a (compile v_b (Plus v_k)))'
 assert bridge.count(old) == 1
 Path('_build/mutations/FalseEquation.v').write_text(bridge.replace(old, '(compile v_a (compile v_b (Times v_k)))'))
+encoder = Path('rocq/Encoder.v').read_text()
+for name, old, new in [
+ ('WrongEncoderTag', '(Op Cat (text "011")', '(Op Cat (text "010")'),
+ ('WrongEncoderBit', '(text "0") (text "1"))', '(text "1") (text "0"))'),
+]:
+ assert encoder.count(old) == 1, name
+ Path('_build/mutations', name + '.v').write_text(encoder.replace(old, new))
+source = Path('rocq/EncoderSource.v').read_text()
+old = '(cn ""011""'
+assert source.count(old) == 1
+Path('_build/mutations/FalseEncoderSource.v').write_text(source.replace(old, '(cn ""010""'))
 native = Path('rocq/NativeOutput.v').read_text()
 old = 'seval rho (SAdd (SVar 0) (SVar 1))'
 assert native.count(old) == 1
@@ -26,7 +37,7 @@ python3 tests/mutate-wire.py
 for name in CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile; do
   python3 scripts/package-wire.py "_build/mutations/$name.bits" "_build/mutations/$name.v"
 done
-for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile; do
+for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile WrongEncoderTag WrongEncoderBit FalseEncoderSource; do
   if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
     echo "Mutant incorrectly accepted: $name" >&2; exit 1
   fi

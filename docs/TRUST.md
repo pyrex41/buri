@@ -62,9 +62,14 @@ requires all 12 expected schemas. See [CAPTURE.md](CAPTURE.md) for the formal sc
 
 The raw source/target grammar and named integer semantics are now reviewed Rocq
 specifications, rather than a semantic transformation delegated to Shen. The
-actual Shen capture encoder is still unproved: the theorem is about the supplied
-bytes and does not prove their origin. Source/port provenance, exact-byte
-packaging, correspondence to real Scheme primitives, and Chez remain trusted.
+capture encoder now has a source-linked program proof: Rocq checks the exact
+loaded source against a rendered first-order program and proves termination,
+unique canonical output, and a decoder round trip. This does not establish native
+execution preservation. Reader/define compilation, primitive contracts, native
+representations, loading without rebinding, and the backend/runtime remain open
+or assumed. See [ENCODER.md](ENCODER.md). Capture origin, source/port provenance,
+exact-byte packaging, and correspondence to real Scheme primitives also retain
+their trust boundaries.
 This is instance translation validation, not universal port preservation.
 
 ## Artifacts and execution
