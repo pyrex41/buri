@@ -32,6 +32,24 @@ integer-equivalence proofs under decoder/target-semantics assumptions. Tests rem
 Open even here: proof that the Shen implementations implement the Rocq models,
 proof of exporter/source correspondence, and any real-port preservation theorem.
 
+## Current advance: raw native-capture validation
+
+B01 now has a canonical finite-datum wire codec with proved round trips, exact
+input consumption, and injectivity. The admitted arithmetic grammar has a generic
+name-resolution preservation theorem covering shadowing and lexical extension.
+A proved symbolic normalizer handles real compiler-generated administrative lets.
+
+B04 now has a required native validation path that receives only captured data
+and performs semantic decoding and comparison inside Rocq. Its acceptance theorem
+binds the supplied string to every checked record in order; the release requires
+12 records. Exporters no longer supply semantic indices or ASTs for this path.
+The Shen serializer/source-object correspondence, capture provenance, broader
+Shen evaluator, proof checker, and runtime remain open. The original Peano
+arithmetic equation exporter retains its own translation obligation.
+
+See docs/CAPTURE.md. These results close specific initial-fragment gaps; they do
+not complete B01/B04 for the full KLambda language or prove the whole port.
+
 ## B01 — Shared syntax and semantic identity
 
 Add canonical algebraic syntax for KLambda, closed environments, primitive

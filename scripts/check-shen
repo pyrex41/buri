@@ -7,3 +7,5 @@ name=$(basename "$1" .shen)
 log="_build/$name.log"
 if ! scripts/shen -l "$1" > "$log" 2>&1; then cat "$log"; exit 1; fi
 if ! grep -E '^BURI_TESTS_OK [0-9]+$' "$log"; then cat "$log"; exit 1; fi
+count=$(sed -n 's/^BURI_TESTS_OK \([0-9][0-9]*\)$/\1/p' "$log")
+printf 'BURI_SUITE_OK %s %s\n' "$name" "$count"

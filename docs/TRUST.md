@@ -53,14 +53,19 @@ The two compiler theorem statements are regenerated too. Changing the source
 claim cannot silently reuse a proof about another conclusion. Nevertheless,
 exporter correctness is required for a complete source-to-Rocq guarantee.
 
-The native-output bridge captures `_scm.compile-expression` output for 12 fixed
-schemas and emits source/target ASTs in `rocq/NativeOutput.v`. Rocq checks their
-semantics for every integer input, not a finite input table. The source-to-AST
-and Scheme-output-to-AST decoders remain trusted. So does the correspondence
-between the modeled integer Scheme operations and Chez execution. This checks
-those compiler outputs; it does not prove the compiler for every source program.
-The captured input/output transcript and generated claims are committed and
-regenerated on every proof run. A changed target operation is a negative test.
+The original native-output AST exporter is retained as a regression cross-check.
+A required raw-capture path now moves syntax decoding and variable resolution
+inside Rocq. Its generic codec proves full consumption, round trips, and exact
+input identity. Its resolver and symbolic normalizer have preservation theorems.
+The acceptance theorem validates every supplied record in order and the release
+requires all 12 expected schemas. See [CAPTURE.md](CAPTURE.md) for the formal scope.
+
+The raw source/target grammar and named integer semantics are now reviewed Rocq
+specifications, rather than a semantic transformation delegated to Shen. The
+actual Shen capture encoder is still unproved: the theorem is about the supplied
+bytes and does not prove their origin. Source/port provenance, exact-byte
+packaging, correspondence to real Scheme primitives, and Chez remain trusted.
+This is instance translation validation, not universal port preservation.
 
 ## Artifacts and execution
 
@@ -74,7 +79,9 @@ Budgets cap proof rewrite counts or evaluator tree depth, not total allocation,
 input size, elapsed time, or machine stack. Budget exhaustion means unknown,
 never divergence, unsafety, or a catchable language exception. Process failures
 must fail the gate; the wrapper also requires a success marker because a Shen
-launcher can print an exception and return exit code zero.
+launcher can print an exception and return exit code zero. Export inputs are
+removed before generation and an explicit completion marker is required. A stale
+file or missing proof dependency cannot satisfy the export or mutation gate.
 
 The report binds source and selected host bytes. It does not prove that the host
 binary was built from the reviewed upstream source. Bootstrap checks archive

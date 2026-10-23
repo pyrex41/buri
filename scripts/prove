@@ -3,27 +3,41 @@ set -eu
 cd "$(dirname "$0")/.."
 root=$(pwd)
 mkdir -p _build/rocq
+rm -f _build/EquationBridge.v _build/NativeOutput.v _build/compiler-output.sexp \
+ _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v
+scripts/rocq coqc --version > _build/rocq-version.log
+grep -q 'version 8.18.0' _build/rocq-version.log || { cat _build/rocq-version.log; exit 1; }
 # Require a fresh image and regenerate the bridge from actual loaded equations.
 scripts/shen -l buri.shen -l proofs/compiler.shen -l shen/export-rocq.shen \
- -e '(buri.export-rocq "_build/EquationBridge.v")' > _build/export.log 2>&1
+ -e '(buri.export-rocq "_build/EquationBridge.v")' -e '(output "BURI_EXPORT_OK~%")' > _build/export.log 2>&1
+grep -qx 'BURI_EXPORT_OK' _build/export.log || { cat _build/export.log; exit 1; }
 diff -u rocq/EquationBridge.v _build/EquationBridge.v
 scripts/shen -l buri.shen -l ports/compiler-schemas.shen -l shen/export-native.shen \
- -e '(buri.export-native "_build/NativeOutput.v" "_build/compiler-output.sexp")' > _build/native-export.log 2>&1
+ -e '(buri.export-native "_build/NativeOutput.v" "_build/compiler-output.sexp")' -e '(output "BURI_EXPORT_OK~%")' > _build/native-export.log 2>&1
+grep -qx 'BURI_EXPORT_OK' _build/native-export.log || { cat _build/native-export.log; exit 1; }
 diff -u rocq/NativeOutput.v _build/NativeOutput.v
 diff -u ports/compiler-output.sexp _build/compiler-output.sexp
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Audit; do
+scripts/shen -l buri.shen -l ports/compiler-schemas.shen -l shen/export-wire.shen \
+ -e '(buri.capture-wire "_build/native-capture.bits" "_build/native-capture.sexp")' -e '(output "BURI_EXPORT_OK~%")' > _build/wire-export.log 2>&1
+grep -qx 'BURI_EXPORT_OK' _build/wire-export.log || { cat _build/wire-export.log; exit 1; }
+diff -u ports/native-capture.bits _build/native-capture.bits
+diff -u ports/native-capture.sexp _build/native-capture.sexp
+python3 scripts/package-wire.py _build/native-capture.bits _build/NativeCapture.v
+python3 scripts/check-wire-package.py _build/native-capture.bits _build/NativeCapture.v
+diff -u rocq/NativeCapture.v _build/NativeCapture.v
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Audit; do
   cp "rocq/$module.v" "_build/rocq/$module.v"
   rm -f "_build/rocq/$module.vo" "_build/rocq/$module.vos" "_build/rocq/$module.vok"
 done
 cd _build/rocq
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Audit; do
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Audit; do
   if ! "$root/scripts/rocq" coqc -Q . Buri "$module.v" > "$module.log" 2>&1; then
     cat "$module.log"; exit 1
   fi
 done
 if grep -q '^Axioms:' Audit.log; then cat Audit.log; exit 1; fi
-[ "$(grep -c '^Closed under the global context$' Audit.log)" = 28 ] || {
+[ "$(grep -c '^Closed under the global context$' Audit.log)" = 50 ] || {
   cat Audit.log; echo 'Unexpected theorem assumption inventory' >&2; exit 1;
 }
-"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Audit
-printf 'BURI_ROCQ_OK 28 audited theorems; 18 equation bridges; 12 native compiler schemas; coqchk replay passed\n'
+"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Wire Buri.Resolve Buri.Normalize Buri.NativeValidation Buri.NativeCapture Buri.WireTests Buri.Audit
+printf 'BURI_ROCQ_OK 50 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n'

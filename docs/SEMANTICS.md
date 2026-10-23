@@ -95,13 +95,29 @@ or pairs. It must not be confused with the broader executable Shen profile.
 ## Native compiler-output validation
 
 `ports/compiler-schemas.shen` supplies 12 fixed KLambda source ASTs with explicit
-free-variable scopes. The port's actual `_scm.compile-expression` produces the
-Scheme ASTs. The exporter rejects unknown syntax; it supports literals,
-variables, integer +/−/*, one-binding let, and sequential let*. Scope resolution
-converts both ASTs independently to de Bruijn-indexed formal terms.
+free-variable scopes. `_scm.compile-expression` returns the real Scheme ASTs.
+The required raw-capture lane serializes those data without resolving names.
+Rocq decodes the resulting bit string with a proved canonical codec, interprets
+the admitted grammar, and resolves lexical names using proved first-binding
+shadowing rules. The grammar accepts integer literals, admissible variable names,
+integer +/−/*, source let, one-binding Scheme let, and sequential let*.
 
-`rocq/NativeArithmetic.v` assigns total exact-integer semantics to each AST.
-`rocq/NativeOutput.v` proves the resulting equalities for every valuation of
-free inputs. These are universally quantified instance-validation theorems,
-not an induction proof over all possible inputs to the compiler. Target primitive
-correctness, native execution, and decoder fidelity are named assumptions.
+Names start with an ASCII letter or underscore, followed by letters, digits,
+underscores, dots, or hyphens. Reserved forms and Boolean literals cannot become
+integer input variables. This is a restricted admission grammar, not a parser for
+unrestricted Shen/KLambda/Scheme. Decimal integer parsing occurs inside Rocq;
+numeric and symbolic payloads have distinct wire tags.
+
+The checker symbolically normalizes the resolved arithmetic terms to eliminate
+administrative bindings. Its generic preservation theorem relies on pure total
+integer arithmetic; it makes no effects or resource guarantee. A successful
+check proves equivalence for every integer environment. It is conservative:
+insufficient fuel, unsupported syntax, or nonmatching normal forms yields no
+certificate, rather than a proof that the program is wrong.
+
+`rocq/NativeCapture.v` binds this acceptance result to the exact supplied capture
+string and proves coverage of all supplied records, with an exact release count.
+The capture encoder's connection to the host source objects, actual compiler
+invocation, and lower execution semantics remain explicit obligations.
+The original `NativeOutput.v` AST exports continue as independent regression
+cross-checks. [CAPTURE.md](CAPTURE.md) documents the new path and its boundaries.

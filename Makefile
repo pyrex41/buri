@@ -6,6 +6,8 @@ bootstrap:
 test:
 	./scripts/check-shen tests/kernel.shen
 	./scripts/check-shen tests/evaluator.shen
+	./scripts/check-shen tests/wire.shen
+	python3 tests/gates.py
 
 prove:
 	./scripts/prove

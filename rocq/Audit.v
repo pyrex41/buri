@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -55,3 +55,47 @@ Check native_schema_10.
 Print Assumptions native_schema_10.
 Check native_schema_11.
 Print Assumptions native_schema_11.
+Check Wire.decode_encode.
+Print Assumptions Wire.decode_encode.
+Check Wire.decode_exact.
+Print Assumptions Wire.decode_exact.
+Check Wire.encode_injective.
+Print Assumptions Wire.encode_injective.
+Check Wire.capture_roundtrip.
+Print Assumptions Wire.capture_roundtrip.
+Check Wire.capture_exact.
+Print Assumptions Wire.capture_exact.
+Check Resolve.resolve_preserves.
+Print Assumptions Resolve.resolve_preserves.
+Check Resolve.resolved_equal_sound.
+Print Assumptions Resolve.resolved_equal_sound.
+Check Normalize.symbolic_preserves.
+Print Assumptions Normalize.symbolic_preserves.
+Check Normalize.normalize_preserves.
+Print Assumptions Normalize.normalize_preserves.
+Check Normalize.normal_equal_sound.
+Print Assumptions Normalize.normal_equal_sound.
+Check NativeValidation.agrees_sound.
+Print Assumptions NativeValidation.agrees_sound.
+Check NativeValidation.check_record_sound.
+Print Assumptions NativeValidation.check_record_sound.
+Check NativeValidation.check_records_sound.
+Print Assumptions NativeValidation.check_records_sound.
+Check NativeValidation.check_records_exact.
+Print Assumptions NativeValidation.check_records_exact.
+Check NativeValidation.check_capture_sound.
+Print Assumptions NativeValidation.check_capture_sound.
+Check NativeValidation.check_capture_complete_record_coverage.
+Print Assumptions NativeValidation.check_capture_complete_record_coverage.
+Check NativeValidation.checked_count_sound.
+Print Assumptions NativeValidation.checked_count_sound.
+Check NativeValidation.checked_count_coverage.
+Print Assumptions NativeValidation.checked_count_coverage.
+Check NativeValidation.unique_names_sound.
+Print Assumptions NativeValidation.unique_names_sound.
+Check native_capture_checked.
+Print Assumptions native_capture_checked.
+Check native_capture_sound.
+Print Assumptions native_capture_sound.
+Check native_capture_record_coverage.
+Print Assumptions native_capture_record_coverage.

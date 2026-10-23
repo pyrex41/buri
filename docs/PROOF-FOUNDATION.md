@@ -32,7 +32,9 @@ does not automatically prove that Shen executes the formal model. That bridge
 must be explicit and is a first-class work item.
 
 Native compiler-output validation adds quantified proofs of selected actual
-source/output pairs. It still requires decoder and lower-runtime correspondence.
+source/output pairs. The required raw-capture path now defines semantic decoding in Rocq and proves
+lexical resolution and normalization. It still requires capture provenance and
+lower-runtime correspondence.
 
 The arithmetic equation bridge checks every exported equation and the exact
 theorem conclusions. It does not yet prove the exporter or the Shen normalizer.

@@ -10,7 +10,7 @@ has NOT been established.
 
 | Actual implementation area | Required contract | Current evidence |
 |---|---|---|
-| `src/compiler.shen`: `compile-expression`, `kl->scheme` | Simulation from KLambda evaluation to emitted Scheme | 12 actual-output arithmetic schemas validated for all integer inputs; general preservation open |
+| `src/compiler.shen`: `compile-expression`, `kl->scheme` | Simulation from KLambda evaluation to emitted Scheme | 12 actual-output schemas validated from raw data in Rocq for all integer inputs; general preservation open |
 | `order-call-inputs`, `order-call` | Left-to-right effects and exceptions retained | Native fixtures; no proof |
 | `emit-let`, `merge-nested-lets` | Lexical capture, order, and scope retained | Rocq proves a basic abstract let/lambda law; actual functions open |
 | `emit-application`, `emit-dynamic-application`, `nest-call` | Direct/computed calls and partial application preserve meaning | Native fixtures; no proof |

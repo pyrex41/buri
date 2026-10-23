@@ -5,4 +5,10 @@ Lambda.v
 EquationBridge.v
 NativeArithmetic.v
 NativeOutput.v
+Wire.v
+Resolve.v
+Normalize.v
+NativeValidation.v
+NativeCapture.v
+WireTests.v
 Audit.v
