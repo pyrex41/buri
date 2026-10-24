@@ -47,7 +47,11 @@ The serializer now has a source-linked program proof: exact source equality,
 termination, unique canonical output, and a decoding round trip. Its native
 reader/compiler, primitive, and representation refinement remains open, together
 with capture provenance, the broader Shen evaluator, proof checker, and runtime.
-See docs/ENCODER.md for the boundary. The original Peano
+The three registered KLambda definitions are now captured from the loaded image
+and individually translation-validated. Generic named-resolution preservation
+covers the complete recursive table and all modeled outcomes. Metadata/tagging
+fidelity, primitive contracts, and lower execution remain open or assumed.
+See docs/ENCODER.md and docs/FRONTEND.md for the boundary. The original Peano
 arithmetic equation exporter retains its own translation obligation.
 
 See docs/CAPTURE.md. These results close specific initial-fragment gaps; they do

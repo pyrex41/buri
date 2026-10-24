@@ -14,4 +14,8 @@ WireTests.v
 Encoder.v
 EncoderSource.v
 EncoderTests.v
+EncoderNames.v
+EncoderFrontend.v
+EncoderKLambda.v
+EncoderFrontendTests.v
 Audit.v

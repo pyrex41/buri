@@ -4,7 +4,9 @@ The encoder now has a correctness proof for a precisely defined first-order Shen
 fragment, tied to the exact file that the capture path loads. This closes the
 previous gap between two separately handwritten encoding algorithms at the
 program/source level. Native execution of that source still needs the front-end,
-primitive-representation, and runtime preservation proofs below.
+primitive-representation, and runtime preservation proofs below. The registered
+KLambda output for these three definitions is now separately translation-validated;
+see [FRONTEND](FRONTEND.md).
 
 ## Checked chain
 
@@ -73,7 +75,7 @@ example, this pinned port does not classify `(intern "1")` as a Shen symbol;
 the native encoder rejects that object. Ordinary strings and floats also remain
 outside the datum encoder's admitted input profile.
 
-The source equality is not a proof that Shen's reader, `define` compiler,
+The source equality alone is not a proof that Shen's reader, `define` compiler,
 Shen-Scheme optimizer, or Chez preserves the fragment semantics. Nor does it
 prove that `str`, integer arithmetic, or the native representation satisfies the
 contracts above. The exact-integer predicate's own helper implementation remains

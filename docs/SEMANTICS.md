@@ -123,3 +123,13 @@ native representation/execution boundary. Host source objects, actual compiler
 invocation, and lower execution semantics remain explicit obligations.
 The original `NativeOutput.v` AST exports continue as independent regression
 cross-checks. [CAPTURE.md](CAPTURE.md) documents the new path and its boundaries.
+
+## Registered encoder definitions
+
+The first-order named semantics in `EncoderNames.v` has a generic resolution
+preservation theorem for the complete recursive function table. `EncoderFrontend.v`
+admits a strict KLambda grammar and checks that all three captured definitions
+resolve to the proved encoder bodies. Its primitive groups use the contracts
+in ENCODER.md; it is not an unrestricted KLambda interpreter. `EncoderKLambda.v`
+binds the result to exact registered-source capture bytes. See [FRONTEND](FRONTEND.md)
+for arity, scope, coverage, metadata, and native-execution limits.

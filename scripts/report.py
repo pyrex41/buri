@@ -28,10 +28,10 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 4 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 61 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 12
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['5']
+assert len(rows) == 5 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 76 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 18
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['6']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,13 +46,14 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 61,
+        'audited_theorems': 76,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
                   'exact wire decoding, lexical resolution and symbolic normalization',
                   'raw captured-data validation and complete record coverage',
-                  'source-linked encoder termination, unique output and decoding roundtrip'],
+                  'source-linked encoder termination, unique output and decoding roundtrip',
+                  'named recursive program resolution and registered KLambda validation'],
     },
     'equation_bridge': {'checked_equations': 18, 'checked_theorem_statements': 2,
                        'exporter_correctness': 'assumed; not mechanically proved'},
@@ -75,17 +76,33 @@ report = {
         'evidence': 'source-linked-fragment-proof',
         'proved': ['termination in the admitted semantics', 'unique canonical output',
                    'decoding recovers original datum'],
-        'assumed_for_native_execution': ['reader/define compilation preservation',
+        'registered_kl': 'all three captured definitions translation-validated',
+        'assumed_for_native_execution': ['registered KLambda metadata identifies the installed code',
             'native input representation and primitive contracts',
             'Shen-Scheme/Chez/runtime preservation', 'specified source is loaded without rebinding'],
         'native_execution_verified': False,
     },
+    'encoder_frontend_validation': {
+        'definitions': 3,
+        'capture': 'ports/encoder-kl.bits',
+        'capture_sha256': digest(root / '_build/encoder-kl.bits'),
+        'proof_input_sha256': digest(root / '_build/EncoderKLambda.v'),
+        'registered_definitions_sha256': digest(root / '_build/encoder-kl.sexp'),
+        'scope': 'registered KLambda for the three source-bound encoder functions',
+        'evidence': 'instance-translation-validation',
+        'named_resolution_and_recursive_calls': 'machine-checked for every abstract fuel and environment satisfying scope correspondence',
+        'definition_coverage': 'all three expected definitions in order; no extra or missing definitions',
+        'semantic_decoder': 'strict admitted grammar inside Rocq; includes explicit composite primitive contracts',
+        'capture_provenance_and_tagging': 'assumed; not mechanically proved',
+        'generic_frontend_verified': False,
+        'backend_or_binary_verified': False,
+    },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
-                   'wire': suite_counts['wire']},
+                   'wire': suite_counts['wire'], 'frontend': suite_counts['frontend']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 12,
-    'rocq_regression_examples': 35,
-    'orchestration_regressions': 5,
+    'rejected_proof_mutations': 18,
+    'rocq_regression_examples': 51,
+    'orchestration_regressions': 6,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',

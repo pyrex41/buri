@@ -39,7 +39,11 @@ lower-runtime correspondence.
 The encoder adds a source-linked program proof: its exact Shen file is checked
 against a canonical rendering, and its abstract executions have termination,
 unique-output, and decoding round-trip theorems. Native reader/compiler and
-primitive/runtime refinement remain explicit obligations. See [ENCODER](ENCODER.md).
+primitive/runtime refinement remain explicit obligations. The three registered
+KLambda outputs are now individually translation-validated using a generic
+named execution preservation theorem, including recursive calls. This still
+depends on metadata/capture fidelity and the admitted primitive contracts. See
+[ENCODER](ENCODER.md) and [FRONTEND](FRONTEND.md).
 
 The arithmetic equation bridge checks every exported equation and the exact
 theorem conclusions. It does not yet prove the exporter or the Shen normalizer.

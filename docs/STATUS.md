@@ -17,13 +17,14 @@ Run `make report` for evidence from your own image and toolchain.
 | Actual Shen-Scheme compiler output preserves 12 arithmetic schemas | Raw-data validation in Rocq, with name-resolution and normalization preservation for every integer environment | Capture provenance and Scheme primitive/runtime semantics remain trusted; not universal compiler correctness |
 | Canonical captured-data transport | Generic codec round-trip, exact decoding, and injectivity proofs | Native primitive and execution correspondence remains open |
 | Exact Shen encoder source matches a correct program | Source equality plus generic termination, unique-output, and decoder round-trip proofs | Admitted first-order semantics; native reader/compiler, primitive, and representation preservation remain open |
+| Registered KLambda for all three encoder functions preserves the proved program | Complete capture validation plus generic named-execution preservation, including recursion and shadowing | Source metadata/capture provenance and tagging, primitive contracts, and backend/runtime remain trusted; not a full compiler proof |
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
-| Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Twelve Rocq mutation cases, including source substitution and encoder changes | Tests of the gates, not a completeness claim |
+| Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
+| Wrong compiler instructions and false equations rejected | Eighteen Rocq mutation cases, including six altered KLambda captures | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 61 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 76 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -34,9 +35,11 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 35 additional Rocq regression examples and five
+The native validation lane has 51 additional Rocq regression examples and six
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
 evaluator, Shen proof checker, and native execution of the encoder still require
 implementation-correspondence proofs.
+
+[FRONTEND](FRONTEND.md) specifies the registered-KLambda validation boundary.

@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -121,3 +121,33 @@ Check source_linked_encoder.
 Print Assumptions source_linked_encoder.
 Check source_linked_roundtrip.
 Print Assumptions source_linked_roundtrip.
+Check EncoderNames.resolve_preserves.
+Print Assumptions EncoderNames.resolve_preserves.
+Check EncoderNames.program_preserves.
+Print Assumptions EncoderNames.program_preserves.
+Check EncoderNames.program_encoder_total.
+Print Assumptions EncoderNames.program_encoder_total.
+Check EncoderNames.program_encoder_unique.
+Print Assumptions EncoderNames.program_encoder_unique.
+Check EncoderFrontend.definition_ok_sound.
+Print Assumptions EncoderFrontend.definition_ok_sound.
+Check EncoderFrontend.check_program_sound.
+Print Assumptions EncoderFrontend.check_program_sound.
+Check EncoderFrontend.check_program_coverage.
+Print Assumptions EncoderFrontend.check_program_coverage.
+Check EncoderFrontend.capture_program_coverage.
+Print Assumptions EncoderFrontend.capture_program_coverage.
+Check EncoderFrontend.check_capture_coverage.
+Print Assumptions EncoderFrontend.check_capture_coverage.
+Check EncoderFrontend.check_capture_sound.
+Print Assumptions EncoderFrontend.check_capture_sound.
+Check EncoderFrontend.accepted_sound.
+Print Assumptions EncoderFrontend.accepted_sound.
+Check EncoderFrontend.accepted_execution.
+Print Assumptions EncoderFrontend.accepted_execution.
+Check encoder_kl_checked.
+Print Assumptions encoder_kl_checked.
+Check encoder_kl_sound.
+Print Assumptions encoder_kl_sound.
+Check encoder_kl_execution.
+Print Assumptions encoder_kl_execution.

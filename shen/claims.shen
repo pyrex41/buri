@@ -8,6 +8,7 @@
   [named-resolution-preservation generic-equation proof-available]
   [raw-native-capture-validation generic-equation proof-available]
   [shen-wire-encoder-program source-linked-fragment proof-available]
+  [encoder-registered-kl-preservation instance-translation-validation proof-available]
   [shen-wire-encoder-native-execution implementation-refinement open]
   [shen-equational-kernel-soundness implementation-refinement open]
   [kl-pure-evaluator-adequacy implementation-refinement open]

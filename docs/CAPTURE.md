@@ -97,14 +97,16 @@ algebraic equalities such as commutative rewrites.
 
 ## Regression evidence
 
-The new lane includes 35 Rocq examples and 16 Shen encoder checks. They exercise
+The validation lanes include 51 Rocq examples, 16 Shen encoder checks, and 8
+native KLambda-tagging checks. They exercise
 shadowing, temporary bindings, negative and large integers, numeric/symbol tag
 confusion, reserved names, malformed wire data, and unsupported effects.
 
 Five capture mutations must fail the acceptance proof: a changed target operator,
 truncation, trailing bits, an omitted expected record, and the wrong profile.
 The four existing compiler/equation mutations remain; three encoder/source
-mutations additionally check the source-linked proof. Mutation gates require a
+mutations additionally check the source-linked proof. Six more changed KLambda
+captures exercise [registered-definition validation](FRONTEND.md). Mutation gates require a
 proof unification failure; missing dependencies or a broken toolchain cannot
 masquerade as a successfully rejected program.
 

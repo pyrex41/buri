@@ -67,7 +67,11 @@ loaded source against a rendered first-order program and proves termination,
 unique canonical output, and a decoder round trip. This does not establish native
 execution preservation. Reader/define compilation, primitive contracts, native
 representations, loading without rebinding, and the backend/runtime remain open
-or assumed. See [ENCODER.md](ENCODER.md). Capture origin, source/port provenance,
+or assumed. The registered KLambda output for the three encoder definitions is
+now translation-validated against their proved bodies, with a generic named
+execution and recursive-call preservation theorem. This assumes the fidelity of
+the `ps` metadata and the inert tagging adapter; it does not inspect native code.
+See [ENCODER.md](ENCODER.md) and [FRONTEND.md](FRONTEND.md). Capture origin, source/port provenance,
 exact-byte packaging, and correspondence to real Scheme primitives also retain
 their trust boundaries.
 This is instance translation validation, not universal port preservation.
