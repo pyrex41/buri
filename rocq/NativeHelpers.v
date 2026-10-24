@@ -122,9 +122,9 @@ Theorem machine_division : forall n d,
 Proof.
  intros n d. change
  (NativeRuntime.execute 15 (lookup helpers)
-  (match ratio n d with
-   | Some v => (NativeRuntime.Deliver v,[])
-   | None => (NativeRuntime.Fault Unsupported,[]) end) =
+  (match (match ratio n d with Some v => Returned v | None => Unsupported end) with
+   | Returned v => (NativeRuntime.Deliver v,[])
+   | r => (NativeRuntime.Fault r,[]) end) =
   match ratio n d with Some v => Returned v | None => Unsupported end).
  destruct (ratio n d); reflexivity.
 Qed.

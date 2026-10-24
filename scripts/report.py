@@ -29,7 +29,7 @@ checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
 assert len(rows) == 10 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 166 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert 'BURI_ROCQ_OK 182 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
 assert checks.count('Rejected proof mutation:') == 41
 assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['9']
 host_path = (root / '.tools/host-path').read_text().strip()
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 166,
+        'audited_theorems': 182,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -154,6 +154,10 @@ report = {
         'constructor_capture_sha256': digest(root / '_build/constructor.bits'),
         'constructor_proof_sha256': digest(root / '_build/ConstructorInput.v'),
         'constructor_source_snapshot_sha256': digest(root / '_build/constructor.bits.source'),
+        'buri_evaluator_to_machine_refinement': 'all non-exhausted results, arbitrary programs and inputs; exact errors and unsupported outcomes',
+        'buri_evaluator_to_machine_simulation_proved': True,
+        'buri_simulation_direction': 'functional evaluator to instruction machine; converse and divergence not proved',
+        'buri_simulation_proof_sha256': digest(root / 'rocq/NativeSimulation.v'),
         'chez_to_lexical_machine_simulation_proved': False,
         'universal_native_capsule_codec_refinement_proved': False,
         'assumptions': ['trusted construction and capture provenance', 'restricted environment and Chez lexical semantics',

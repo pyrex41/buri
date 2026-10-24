@@ -125,6 +125,10 @@ Fixpoint decode fuel v := match fuel with
      | Some (Symbol s::xs) => match many xs with Some es => Some (Call s es) | _ => None end
      | _ => None end end end.
 Inductive result := Returned (v : value) | Raised (owner message : value) | Exhausted | Unsupported.
+(* Shared dispatch preserves the exact primitive/error contract in both engines. *)
+Definition external op vs := match op,vs with
+ | "error",[owner;message] => Raised owner message
+ | _,_ => match primitive op vs with Some v => Returned v | _ => Unsupported end end.
 Inductive arguments_result := Values (vs : list value) | ArgumentFailure (r : result).
 Fixpoint eval fuel (p : program) (rho : env) e : result := match fuel with
  | O => Exhausted
@@ -152,9 +156,7 @@ Fixpoint eval fuel (p : program) (rho : env) e : result := match fuel with
      | Values vs => match p s with
        | Some d => if Nat.eqb (List.length (params d)) (List.length vs)
          then eval n p (arguments (params d) vs) (body d) else Unsupported
-       | None => match s,vs with
-         | "error",[owner;message] => Raised owner message
-         | _,_ => match primitive s vs with Some v => Returned v | _ => Unsupported end end end
+       | None => external s vs end
      | ArgumentFailure r => r end
    end end.
 (* Typed transport; unlike the earlier syntax tree, native booleans cannot be

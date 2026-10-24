@@ -26,7 +26,7 @@ Run `make report` for evidence from your own image and toolchain.
 | Wrong compiler instructions and false equations rejected | Forty-one Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 166 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 182 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -93,3 +93,29 @@ unchanged. Chez implementation refinement, the 27 primitive/representation
 contracts, full codec simulation to this lower-level machine, observer/compiler
 provenance, and concurrent input-object mutation remain open. The legacy
 identity guard is still unverified and is not used by the sealed lane.
+
+## Evaluator-to-instruction refinement
+
+`NativeSimulation.v` now proves, for every private program, environment and
+expression, that a non-exhausted functional evaluation has a finite instruction
+execution with exactly the same result. This includes returned values, exact
+raised owner/message payloads and unsupported operations. Recursive calls,
+left-to-right argument evaluation and short-circuiting are covered universally.
+The instruction budget is existential; it is not the evaluator's nesting fuel.
+Any completed instruction execution interleaved with ambient rebindings must
+have that same result, including failures. This assumes the modeled separation
+of private cells and ambient state.
+
+`NativeApplications.v` transfers the actual captured constructor's arbitrary
+three-target assembly and arbitrary-program authority-request proofs to the
+machine, plus both specified malformed-input errors. Sixteen additional audited
+goals cover this bridge and its applications. These are model refinement proofs,
+not additional native test cases or a Chez correctness claim. Both engines now
+share an explicit external primitive/error dispatch definition; its mathematical
+contracts are unchanged.
+
+Still open within the Shen/Buri scope: universal abstract-codec-to-native-model
+refinement; source/reader/compiler/capture/tagging correspondence; the broader
+Shen evaluator and proof checker. Reverse machine-to-evaluator simulation and
+divergence correspondence are not claimed. Chez compiler/runtime verification
+and primitive implementation internals are deferred at the user's direction.

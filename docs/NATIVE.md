@@ -110,6 +110,36 @@ retain their different scopes. Twelve semantic regression examples cover
 evaluation order, shadowing, truthiness, typed booleans, errors and unsupported
 forms. They do not stand in for missing universal refinement proofs.
 
+## Functional evaluator to instruction execution
+
+`NativeSimulation.v` connects the two Buri engines for arbitrary private
+programs, environments and expressions. Every functional result other than fuel
+exhaustion has a finite machine execution with exactly that result. Success
+traces preserve any continuation stack. Error traces may retain unused frames,
+which the machine never resumes; owner and message remain exact. Unsupported
+execution stays unsupported. The argument-list proof preserves order and stops
+at the first failure, including recursive calls and lexical shadowing.
+
+Fuel is deliberately not equated: the evaluator counts nesting depth while the
+machine counts transitions. The theorem supplies a sufficient finite machine
+budget. Exhaustion does not imply divergence and is excluded from this transfer.
+A terminal machine result under any finite ambient rebinding schedule agrees
+with the evaluator result, including errors. No scheduler fairness is assumed
+or proved. This is a forward simulation; a converse and divergence equivalence
+are not established.
+
+`NativeApplications.v` applies the general theorem to the captured constructor:
+assembly for arbitrary three target bodies, authority requests for arbitrary
+program syntax, and both specified malformed-input errors now have machine
+execution proofs. These transfer the existing captured-code theorems; they do
+not introduce a hand-written stand-in constructor. Host activation remains
+outside the pure interpreter, as before.
+
+This closes the evaluator-to-machine link for completed evaluations. It does
+not yet connect the older abstract codec to `Native.eval` for every datum.
+Chez compiler/runtime internals are explicitly deferred; these new obligations
+and proofs concern Buri's own engines and captured Shen-generated code.
+
 ## What remains trusted
 
 The required primitive boundary is reduced from 29 to 27 roots by removing

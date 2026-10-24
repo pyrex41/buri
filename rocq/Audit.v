@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -331,3 +331,35 @@ Check sealed_native_boolean_error.
 Print Assumptions sealed_native_boolean_error.
 Check sealed_native_concurrent.
 Print Assumptions sealed_native_concurrent.
+Check NativeSimulation.eval_trace.
+Print Assumptions NativeSimulation.eval_trace.
+Check NativeSimulation.eval_failure_trace.
+Print Assumptions NativeSimulation.eval_failure_trace.
+Check NativeSimulation.trace_result.
+Print Assumptions NativeSimulation.trace_result.
+Check NativeSimulation.eval_failure_execute.
+Print Assumptions NativeSimulation.eval_failure_execute.
+Check NativeSimulation.trace_execute.
+Print Assumptions NativeSimulation.trace_execute.
+Check NativeSimulation.eval_execute.
+Print Assumptions NativeSimulation.eval_execute.
+Check NativeSimulation.run_invoke.
+Print Assumptions NativeSimulation.run_invoke.
+Check NativeSimulation.eval_concurrent.
+Print Assumptions NativeSimulation.eval_concurrent.
+Check NativeSimulation.eval_terminal_trace.
+Print Assumptions NativeSimulation.eval_terminal_trace.
+Check NativeSimulation.eval_result_execute.
+Print Assumptions NativeSimulation.eval_result_execute.
+Check NativeSimulation.run_result_invoke.
+Print Assumptions NativeSimulation.run_result_invoke.
+Check NativeSimulation.eval_concurrent_result.
+Print Assumptions NativeSimulation.eval_concurrent_result.
+Check constructor_machine_program.
+Print Assumptions constructor_machine_program.
+Check constructor_machine_request.
+Print Assumptions constructor_machine_request.
+Check constructor_machine_rejects_missing.
+Print Assumptions constructor_machine_rejects_missing.
+Check constructor_machine_rejects_bad_definition.
+Print Assumptions constructor_machine_rejects_bad_definition.

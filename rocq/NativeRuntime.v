@@ -17,10 +17,8 @@ Definition apply (p : program) name vs stack : machine := match p name with
  | Some d => if Nat.eqb (List.length (params d)) (List.length vs)
    then (Enter (arguments (params d) vs) (body d),stack)
    else (Fault Unsupported,stack)
- | None => match name,vs with
-   | "error",[owner;message] => (Fault (Raised owner message),stack)
-   | _,_ => match primitive name vs with
-     | Some v => (Deliver v,stack) | _ => (Fault Unsupported,stack) end end end.
+ | None => match external name vs with
+   | Returned v => (Deliver v,stack) | r => (Fault r,stack) end end.
 Definition step (p : program) (state : machine) : option machine :=
  match state with
  | (Enter rho (Lit v),k) => Some (Deliver v,k)
