@@ -10,6 +10,7 @@ test:
 	./scripts/check-shen tests/frontend.shen
 	./scripts/check-shen tests/trust.shen
 	./scripts/check-shen tests/observed.shen
+	./scripts/check-shen tests/bindings.shen
 	python3 tests/gates.py
 
 prove:

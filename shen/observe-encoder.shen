@@ -19,8 +19,11 @@
  (let Mode (set _scm.*native-mode* compatible)
       Locals (set _scm.*native-local-map* [])
       Reset (set buri.observed [])
-      Loaded (buri.observe-forms (read-file Path))
+      Source (read-file-as-string Path)
+      Input (set buri.observed-source Source)
+      Loaded (buri.observe-forms (read-from-string Source))
       Records (reverse (value buri.observed))
       Data [buri-observed-encoder-1 (buri.kl-node Records)]
-   (do (write-to-file Bits (buri.wire Data))
+   (do (write-to-file (cn Bits ".source") Source)
+       (write-to-file Bits (buri.wire Data))
        (write-to-file Transcript (make-string "~S~%" Records)))))

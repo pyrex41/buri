@@ -26,7 +26,7 @@ Run `make report` for evidence from your own image and toolchain.
 | Wrong compiler instructions and false equations rejected | Twenty-six Rocq mutation cases, including eight altered observed source/target pairs | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 100 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 103 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -57,3 +57,10 @@ proved successful source-to-target execution, encoder termination and unique
 output in the admitted semantics. The observer, reader, primitives and Chez
 remain trusted. This adds 12 native observer checks; it does not certify the
 stock loader or a binary, or enforce immutable runtime bindings.
+
+[BINDINGS](BINDINGS.md) documents the single-read source snapshot, explicit
+runtime dependency inventory, and live procedure-identity guard. Eight native
+checks exercise actual helper rebinding and fail-closed execution. Three new
+abstract version-vector theorems are independently checked; native guard
+refinement, full transitive closure and concurrent rebinding protection remain
+open.

@@ -28,8 +28,8 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 7 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 100 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert len(rows) == 8 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 103 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
 assert checks.count('Rejected proof mutation:') == 26
 assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['7']
 host_path = (root / '.tools/host-path').read_text().strip()
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 100,
+        'audited_theorems': 103,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -124,6 +124,17 @@ report = {
         'native_execution_verified': False,
         'backend_binary_verified': False,
     },
+    'binding_guard': {
+        'source': 'shen/binding-guard.shen',
+        'evidence': 'native procedure-identity checks and separate abstract version-vector theorems',
+        'inventory_sha256': digest(root / 'shen/binding-guard.shen'),
+        'source_snapshot_sha256': digest(root / '_build/observed-encoder.bits.source'),
+        'helper_source_sha256': digest(root / 'shen/base.shen'),
+        'single_read': 'the saved string is passed directly to read-from-string',
+        'complete_transitive_runtime_closure': False,
+        'concurrent_rebinding_protection': False,
+        'native_guard_refinement_proved': False,
+    },
     'trust_audit': {
         'ledger': 'docs/TRUST-AUDIT.md',
         'byte_recursion_domain': 'machine-checked: character inputs and recursive halvings stay below 256, counts at most 8',
@@ -137,7 +148,7 @@ report = {
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust'], 'observed': suite_counts['observed']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
     'rejected_proof_mutations': 26,
     'rocq_regression_examples': 59,

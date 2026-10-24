@@ -72,7 +72,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 100 theorem dependencies for custom axioms, independently
+checks all proofs, audits 103 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 

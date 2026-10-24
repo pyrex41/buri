@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -199,3 +199,9 @@ Check observed_encoder_execution.
 Print Assumptions observed_encoder_execution.
 Check ObservedEncoder.paired_execution.
 Print Assumptions ObservedEncoder.paired_execution.
+Check BindingVersions.current_exact.
+Print Assumptions BindingVersions.current_exact.
+Check BindingVersions.current_covers.
+Print Assumptions BindingVersions.current_covers.
+Check BindingVersions.changed_rejected.
+Print Assumptions BindingVersions.changed_rejected.
