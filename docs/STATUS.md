@@ -18,15 +18,15 @@ Run `make report` for evidence from your own image and toolchain.
 | Canonical captured-data transport | Generic codec round-trip, exact decoding, and injectivity proofs | Native primitive and execution correspondence remains open |
 | Exact Shen encoder source matches a correct program | Source equality plus generic termination, unique-output, and decoder round-trip proofs | Admitted first-order semantics; native reader/compiler, primitive, and representation preservation remain open |
 | Registered KLambda for all three encoder functions preserves the proved program | Complete capture validation plus generic named-execution preservation, including recursion and shadowing | Source metadata/capture provenance and tagging, primitive contracts, and backend/runtime remain trusted; not a full compiler proof |
-| Typed tagging protocol recovers the exact syntax tree | Generic Rocq roundtrip, injectivity, wire composition and exact-root validation | Native tagging adapter implementation remains unverified |
-| Byte recursion stays in its finite character domain | Generic call-bound theorem plus exhaustive native checks of 256 codes × 9 counts | Unrestricted native halving has a concrete counterexample; native execution refinement remains open |
+| Typed tagging protocol recovers the exact syntax tree | Generic Rocq roundtrip, injectivity, wire composition and exact-root validation | Captured pure tagging targets now proved; host execution, bootstrap tagging and IO remain trusted |
+| Byte recursion stays in its finite character domain | Generic call-bound theorem plus exhaustive native checks of 256 codes × 9 counts | Unrestricted native halving has a concrete counterexample; sealed target now universally refined in the model; stock native counterexample remains |
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Forty-one Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Forty-five Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 182 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 205 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 71 additional Rocq regression examples and nine
+The native validation lane has 75 additional Rocq regression examples and ten
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -90,7 +90,7 @@ eight new rejected constructor mutations.
 The new exact-rational sealed division avoids the pinned host's inexact-halving
 counterexample. Unused `eq?` and `inexact` imports are removed. The stock lane is
 unchanged. Chez implementation refinement, the 27 primitive/representation
-contracts, full codec simulation to this lower-level machine, observer/compiler
+contracts, observer/compiler
 provenance, and concurrent input-object mutation remain open. The legacy
 identity guard is still unverified and is not used by the sealed lane.
 
@@ -114,8 +114,34 @@ not additional native test cases or a Chez correctness claim. Both engines now
 share an explicit external primitive/error dispatch definition; its mathematical
 contracts are unchanged.
 
-Still open within the Shen/Buri scope: universal abstract-codec-to-native-model
-refinement; source/reader/compiler/capture/tagging correspondence; the broader
-Shen evaluator and proof checker. Reverse machine-to-evaluator simulation and
+The next section closes universal codec refinement and the pure captured tagging
+functions within the model. General source/reader/compiler correctness, observer
+provenance, the broader Shen evaluator and proof checker remain open. Reverse machine-to-evaluator simulation and
 divergence correspondence are not claimed. Chez compiler/runtime verification
 and primitive implementation internals are deferred at the user's direction.
+
+## Universal codec and artifact correspondence
+
+[CODEC-CORRESPONDENCE](CODEC-CORRESPONDENCE.md) records 23 additional audited
+proof goals. The exact decoded sealed encoder now terminates for all finite
+supported datums and returns precisely `Wire.capture`, with decoder roundtrip
+and concurrent-output correctness. Byte encoding covers every natural input and
+count; strings cover every byte string; integer datums cover all Rocq integers.
+These proofs use the actual captured target bodies and their private helpers.
+
+The captured Shen `buri.kl-bytes` and `buri.kl-node` functions now implement the
+typed protocol in the fixed helper model, for all finite syntax nodes. Composition
+with the sealed codec recovers the original admitted syntax tree. The protocol's
+existing numeral bound of 256 applies to that decoding theorem, not to the
+encoder's integer domain. Four new source-reader regression examples, twelve
+native adapter checks, four rejected adapter mutations and a packaging/stale-data
+gate supplement these proofs.
+
+The exact source parses independently into the expected three bodies. Observed
+KLambda/Scheme pairs and sealed records are checked equal, and successful source
+model evaluations agree with the instruction result for every supported datum
+and source fuel. This is translation validation of this encoder artifact chain,
+not a universal compiler theorem. Native observer/reader/IO truthfulness, the
+boolean-aware bootstrap capture adapter and host activation remain unverified.
+The pure tagging proof fixes its helper table; it does not freeze the current
+global exporter in a running Shen process. Chez internals remain deferred.

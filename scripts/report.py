@@ -28,10 +28,10 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 10 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 182 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 41
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['9']
+assert len(rows) == 11 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 205 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 45
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['10']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 182,
+        'audited_theorems': 205,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -73,7 +73,7 @@ report = {
         'source': 'shen/wire.shen',
         'source_sha256': digest(root / 'shen/wire.shen'),
         'proof_input_sha256': digest(root / '_build/EncoderSource.v'),
-        'source_to_program': 'exact rendered-source equality checked inside Rocq',
+        'source_to_program': 'exact rendered-source equality and independent rejecting source parse checked inside Rocq',
         'domain': 'all finite abstract datums and byte strings',
         'evidence': 'source-linked-fragment-proof',
         'proved': ['termination in the admitted semantics', 'unique canonical output',
@@ -97,7 +97,7 @@ report = {
         'semantic_decoder': 'strict admitted grammar inside Rocq; includes explicit composite primitive contracts',
         'capture_provenance': 'assumed; ps metadata is independently mutable',
         'tagged_protocol': 'generic roundtrip, injectivity and exact-root validation proved in CaptureTag',
-        'native_tagging_implementation': 'assumed; protocol theorem does not verify Shen adapter execution',
+        'native_tagging_implementation': 'captured kl-node/kl-bytes target bodies proved in fixed helper model; native execution/provenance remains assumed',
         'generic_frontend_verified': False,
         'backend_or_binary_verified': False,
     },
@@ -118,7 +118,7 @@ report = {
         'administrative_let_preservation': 'generic kernel-checked theorem',
         'execution_scope': 'successful finite execution in the admitted target semantics; encoder termination and unique output',
         'assumptions': ['observer faithfully reports the actual load path',
-                        'reader and exact source byte correspondence', 'native tagging and encoding',
+                        'native reader and capture truthfulness', 'host execution of proved tagging and sealed encoding models',
                         'composite primitive contracts and representations',
                         'immutable transitive helper/global bindings', 'Chez eval and runtime behavior'],
         'exception_payloads_or_divergence_verified': False,
@@ -159,10 +159,29 @@ report = {
         'buri_simulation_direction': 'functional evaluator to instruction machine; converse and divergence not proved',
         'buri_simulation_proof_sha256': digest(root / 'rocq/NativeSimulation.v'),
         'chez_to_lexical_machine_simulation_proved': False,
-        'universal_native_capsule_codec_refinement_proved': False,
+        'universal_native_capsule_codec_refinement_proved': True,
+        'codec_refinement_scope': 'exact captured sealed target in Native/NativeRuntime; all finite pairs, exact integers and byte-spelled symbols',
+        'codec_proof_sha256': digest(root / 'rocq/NativeCodec.v'),
+        'exact_observed_to_sealed_record_identity': True,
+        'independent_source_parse_checked': True,
+        'general_shen_compiler_verified': False,
         'assumptions': ['trusted construction and capture provenance', 'restricted environment and Chez lexical semantics',
                         '27 Chez primitive contracts and their runtime internals', 'representation relation to actual Chez values',
                         'caller retains the opaque procedure and does not mutate input data concurrently'],
+    },
+    'capture_adapter': {
+        'source': 'shen/export-encoder-kl.shen',
+        'source_snapshot_sha256': digest(root / '_build/adapter.bits.source'),
+        'capture_sha256': digest(root / '_build/adapter.bits'),
+        'proof_input_sha256': digest(root / '_build/AdapterInput.v'),
+        'implementation_proof_sha256': digest(root / 'rocq/AdapterCorrect.v'),
+        'captured_target_execution_proved': True,
+        'scope': 'two pure tagging functions, fixed table of captured bodies and seven pinned helpers',
+        'execution_domain': 'all finite EncoderFrontend nodes with natural numerals and byte strings',
+        'decoder_roundtrip_domain': 'admitted nodes: numerals <= 256, matching the existing KLambda protocol',
+        'effectful_exporter_verified': False,
+        'native_boolean_aware_bootstrap_adapter_verified': False,
+        'capture_provenance_verified': False,
     },
     'trust_audit': {
         'ledger': 'docs/TRUST-AUDIT.md',
@@ -173,15 +192,16 @@ report = {
         'unrestricted_native_byte_helper_verified': False,
         'metadata_identifies_executable': False,
         'tagging_adapter_implementation_verified': False,
+        'tagging_adapter_captured_pure_targets_proved': True,
         'binary_source_correspondence_verified': False,
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 41,
-    'rocq_regression_examples': 71,
-    'orchestration_regressions': 9,
+    'rejected_proof_mutations': 45,
+    'rocq_regression_examples': 75,
+    'orchestration_regressions': 10,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',

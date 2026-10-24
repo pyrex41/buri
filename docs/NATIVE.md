@@ -103,12 +103,9 @@ helper coverage and executions for integers, symbols, pairs and type errors.
 completed-output uniqueness theorem on that captured capsule.
 
 This is not a liveness theorem: a scheduler can starve computation forever.
-There is no theorem yet equating every execution of the earlier abstract codec
-with this lower-level machine. The existing abstract codec termination theorem,
-the new operational helper theorems, and the checked concrete capsule executions
-retain their different scopes. Twelve semantic regression examples cover
-evaluation order, shadowing, truthiness, typed booleans, errors and unsupported
-forms. They do not stand in for missing universal refinement proofs.
+Universal codec refinement to this machine is now proved in `NativeCodec.v`;
+see [CODEC-CORRESPONDENCE](CODEC-CORRESPONDENCE.md). The earlier concrete executions
+remain regression evidence, separate from the new quantified theorem.
 
 ## Functional evaluator to instruction execution
 
@@ -135,8 +132,8 @@ execution proofs. These transfer the existing captured-code theorems; they do
 not introduce a hand-written stand-in constructor. Host activation remains
 outside the pure interpreter, as before.
 
-This closes the evaluator-to-machine link for completed evaluations. It does
-not yet connect the older abstract codec to `Native.eval` for every datum.
+This closes the evaluator-to-machine link for completed evaluations. The codec connection is now proved for all finite supported datums in
+`NativeCodec.v`.
 Chez compiler/runtime internals are explicitly deferred; these new obligations
 and proofs concern Buri's own engines and captured Shen-generated code.
 
@@ -155,11 +152,10 @@ The remaining implementation obligations are:
 2. Verify the 27 primitive implementations and their transitive runtime
    dependencies against the explicit contracts. Printers, exact arithmetic,
    GC, compiler and native artifact execution remain below this boundary.
-3. Connect all admitted composite encoder operations and the abstract codec
-   to the lower-level machine universally. Concrete executions are not that
-   theorem.
-4. Prove source/reader/compiler/capture and native tagging correspondence.
-   Exact bytes and captured-target proofs cannot prove provenance.
+3. Prove general Shen source/reader/compiler correctness and native observer,
+   bootstrap tagging, IO and installation correspondence. The encoder artifact
+   chain and pure captured tagging bodies are now checked in the model; exact
+   bytes and target proofs still cannot establish native provenance.
 
 The legacy identity guard is still unverified and is not called by this lane.
 Concurrent mutation of input objects or replacement of the caller's procedure

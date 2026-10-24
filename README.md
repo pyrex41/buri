@@ -45,7 +45,7 @@ ultimately depends on.
   order, lexical capture, lazy branches, currying, exceptions, large integers,
   and freeze/thaw. These are tests, not a preservation proof.
 - **Adversarial gates:** 105 Shen kernel/evaluator/encoder/adapter checks, 51 Rocq adversarial examples,
-  nine orchestration checks, and forty-one compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
+  ten orchestration checks, and forty-five compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
   tests, open obligations, and assumptions distinct.
 
 Read [STATUS](docs/STATUS.md) and [TRUST](docs/TRUST.md) before interpreting any
@@ -72,7 +72,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 182 theorem dependencies for custom axioms, independently
+checks all proofs, audits 205 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
@@ -143,3 +143,10 @@ remains an explicit obligation.
 exact shim bodies and an instruction-level lexical machine under arbitrary
 ambient rebinding. The remaining native boundary is explicit: Chez/library
 implementation and representation contracts, not an assumed correct shim.
+
+The exact sealed encoder now has universal codec refinement in Rocq: all finite
+supported datums terminate in the instruction model with canonical bytes and
+roundtrip decoding. The captured pure Shen tagging functions have execution
+proofs too. Independent source parsing and exact compiler-record identity bind
+the codec artifacts together. See [CODEC-CORRESPONDENCE](docs/CODEC-CORRESPONDENCE.md)
+for the admitted domains and remaining native provenance boundary.

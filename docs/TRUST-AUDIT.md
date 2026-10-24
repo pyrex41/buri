@@ -100,7 +100,7 @@ These are review evidence, not proof that the release binary was built from them
 The observed compilation path is now implemented for the three encoder
 definitions; see [OBSERVED](OBSERVED.md). It captures and installs actual
 KLambda/Scheme pairs and validates the target fragment, including its sequential
-bindings. The tagging adapter is not yet validated through this path. A fresh call that *recompiles* `ps` output is useful for
+bindings. The pure tagging targets are now captured and proved in a fixed helper model; native observer/IO truthfulness remains open. A fresh call that *recompiles* `ps` output is useful for
 compiler testing but still does not show what was installed earlier. Capture
 must occur on the load path, and the artifact must bind transitive helper and
 primitive identities. Keep all of these obligations visible until each is
@@ -114,3 +114,15 @@ contracts, exact division and instruction-level rebinding isolation. These
 replace whole-helper assumptions in the admitted native model. They do not
 prove Chez's primitive implementations or the mapping from its executing
 machine to that model. The legacy guard remains outside the sealed path.
+
+## Universal codec and pure adapter checkpoint
+
+[CODEC-CORRESPONDENCE](CODEC-CORRESPONDENCE.md) discharges the abstract-codec to
+captured native-model gap for finite supported datums. It also proves captured
+pure tagging-body execution and composes it with encoding and decoding. The
+encoder uses the existing 27 primitive roots; tagging additionally uses `cons`,
+`list`, and `string?`. The new `string?` mathematical classification contract
+is not a proof of Chez's implementation. Fixed helper-table assumptions, native
+representation, bootstrap observer/tagger and IO remain explicit. This does not
+certify the stock inexact encoder, arbitrary Shen compiler inputs, or live global
+exporter behavior under rebinding.

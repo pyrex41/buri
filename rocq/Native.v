@@ -55,6 +55,7 @@ Definition primitive op args : option value := match op,args with
  | "integer?",[x] => Some (Boolean (integral x))
  | "exact?",[x] => Some (Boolean (exact x))
  | "boolean?",[x] => Some (Boolean (match x with Boolean _ => true | _ => false end))
+ | "string?",[x] => Some (Boolean (match x with Text _ => true | _ => false end))
  | "symbol?",[x] => Some (Boolean (match x with Symbol _ => true | _ => false end))
  | "symbol->string",[Symbol s] => Some (Text s)
  | "number->string",[Integer z;Integer 10] => Some (Text (spelling z))

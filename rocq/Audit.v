@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -363,3 +363,49 @@ Check constructor_machine_rejects_missing.
 Print Assumptions constructor_machine_rejects_missing.
 Check constructor_machine_rejects_bad_definition.
 Print Assumptions constructor_machine_rejects_bad_definition.
+Check NativeComposition.eval_monotone.
+Print Assumptions NativeComposition.eval_monotone.
+Check NativeComposition.runs_run.
+Print Assumptions NativeComposition.runs_run.
+Check NativeCodec.byte_correct.
+Print Assumptions NativeCodec.byte_correct.
+Check NativeCodec.string_correct.
+Print Assumptions NativeCodec.string_correct.
+Check NativeCodec.datum_correct.
+Print Assumptions NativeCodec.datum_correct.
+Check NativeCodec.evaluator_correct.
+Print Assumptions NativeCodec.evaluator_correct.
+Check NativeCodec.machine_correct.
+Print Assumptions NativeCodec.machine_correct.
+Check NativeCodec.machine_start_correct.
+Print Assumptions NativeCodec.machine_start_correct.
+Check NativeCodec.concurrent_correct.
+Print Assumptions NativeCodec.concurrent_correct.
+Check NativeCodec.machine_roundtrip.
+Print Assumptions NativeCodec.machine_roundtrip.
+Check adapter_exact.
+Print Assumptions adapter_exact.
+Check adapter_names.
+Print Assumptions adapter_names.
+Check AdapterCorrect.bytes_correct.
+Print Assumptions AdapterCorrect.bytes_correct.
+Check AdapterCorrect.node_correct.
+Print Assumptions AdapterCorrect.node_correct.
+Check AdapterCorrect.tag_wire.
+Print Assumptions AdapterCorrect.tag_wire.
+Check AdapterCorrect.adapter_machine.
+Print Assumptions AdapterCorrect.adapter_machine.
+Check AdapterCorrect.adapter_wire_roundtrip.
+Print Assumptions AdapterCorrect.adapter_wire_roundtrip.
+Check SourceReader.encoder_source_parsed.
+Print Assumptions SourceReader.encoder_source_parsed.
+Check CodecCorrespondence.exact_compiler_records.
+Print Assumptions CodecCorrespondence.exact_compiler_records.
+Check CodecCorrespondence.source_to_machine.
+Print Assumptions CodecCorrespondence.source_to_machine.
+Check CodecCorrespondence.compiled_output_agrees.
+Print Assumptions CodecCorrespondence.compiled_output_agrees.
+Check CodecCorrespondence.compiler_records_present.
+Print Assumptions CodecCorrespondence.compiler_records_present.
+Check CodecCorrespondence.source_machine_total.
+Print Assumptions CodecCorrespondence.source_machine_total.
