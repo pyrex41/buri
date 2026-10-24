@@ -1,5 +1,8 @@
 #!/bin/sh
 set -eu
+# Literal observed captures exceed the default native OCaml parser stack.
+# This changes a resource limit, never the proof acceptance rules.
+ulimit -s 65536
 root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 tool=${1:-coqc}
 shift

@@ -72,7 +72,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 83 theorem dependencies for custom axioms, independently
+checks all proofs, audits 100 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
@@ -127,3 +127,8 @@ foundation to keep the correspondence obligations tractable. See the
 The [trust audit](docs/TRUST-AUDIT.md) records the remaining obligations, proven
 typed transport protocol, reachable byte domain, and concrete counterexamples
 to unrestricted native halving and metadata/executable identity.
+
+The [observed compilation lane](docs/OBSERVED.md) now validates the three paired
+KLambda/Scheme definitions captured during actual installation by a controlled
+loader. It proves administrative binding preservation and canonical target
+execution under the explicit primitive and runtime assumptions.

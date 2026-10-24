@@ -105,3 +105,12 @@ closure criteria. Two assumptions cannot be used without qualification: native
 halving is not exact on all naturals, and `ps` metadata can change independently
 of executable behavior. `CaptureTag.v` now proves the typed transport protocol
 lossless, but does not prove the native tagging adapter implements it.
+
+## Observed target lane
+
+The [observed loader](OBSERVED.md) validates actual paired frontend/backend
+outputs while installing that captured Scheme value in a fresh controlled
+image. It does not depend on `ps` metadata. Its observer fidelity, reader,
+tagging/serialization execution, primitive contracts, immutable transitive
+bindings and Chez runtime remain assumptions. Administrative sequencing and
+successful target behavior are now proved in the admitted target semantics.

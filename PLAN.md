@@ -258,3 +258,11 @@ B05/B06 may produce translation-validation evidence for the pure fragment, but
 cannot bypass the source-correspondence obligation. B07–B12 expand toward the
 real runtime; B13 follows shared-contract stability. No amount of test volume
 or proof-script volume changes an open obligation into a theorem.
+
+## Observed encoder compilation checkpoint
+
+The controlled observed-loader lane and paired encoder target validator are
+implemented; see docs/OBSERVED.md. Next: validate the tagging adapter, discharge
+native primitive/representation obligations, and bind certificates to immutable
+transitive helper versions. Stock-loader interception, exception payloads,
+divergence, native binary correctness and rebinding enforcement remain open.

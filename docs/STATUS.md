@@ -23,10 +23,10 @@ Run `make report` for evidence from your own image and toolchain.
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Eighteen Rocq mutation cases, including six altered KLambda captures | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Twenty-six Rocq mutation cases, including eight altered observed source/target pairs | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 83 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 100 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 51 additional Rocq regression examples and six
+The native validation lane has 59 additional Rocq regression examples and seven
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -49,3 +49,11 @@ implementation-correspondence proofs.
 [TRUST-AUDIT](TRUST-AUDIT.md) records every remaining trust obligation, the
 large-integer halving and mutable-metadata counterexamples, and 260 native trust
 regressions. The tagged protocol is proved; its Shen implementation is not.
+
+[OBSERVED](OBSERVED.md) describes the new controlled load path: actual frontend
+KLambda and actual backend Scheme are captured as the Scheme is installed.
+All three pairs are validated, with generic administrative-let preservation and
+proved successful source-to-target execution, encoder termination and unique
+output in the admitted semantics. The observer, reader, primitives and Chez
+remain trusted. This adds 12 native observer checks; it does not certify the
+stock loader or a binary, or enforce immutable runtime bindings.

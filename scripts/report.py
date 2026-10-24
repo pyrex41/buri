@@ -28,10 +28,10 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 6 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 83 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 18
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['6']
+assert len(rows) == 7 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 100 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 26
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['7']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,14 +46,15 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 83,
+        'audited_theorems': 100,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
                   'exact wire decoding, lexical resolution and symbolic normalization',
                   'raw captured-data validation and complete record coverage',
                   'source-linked encoder termination, unique output and decoding roundtrip',
-                  'named recursive program resolution and registered KLambda validation'],
+                  'named recursive program resolution and registered KLambda validation',
+                  'observed paired compilation validation and target administrative-let preservation'],
     },
     'equation_bridge': {'checked_equations': 18, 'checked_theorem_statements': 2,
                        'exporter_correctness': 'assumed; not mechanically proved'},
@@ -99,6 +100,30 @@ report = {
         'generic_frontend_verified': False,
         'backend_or_binary_verified': False,
     },
+    'observed_compilation_validation': {
+        'source': 'shen/wire.shen',
+        'observer': 'shen/observe-encoder.shen',
+        'observer_sha256': digest(root / 'shen/observe-encoder.shen'),
+        'capture_sha256': digest(root / '_build/observed-encoder.bits'),
+        'transcript_sha256': digest(root / '_build/observed-encoder.sexp'),
+        'proof_input_sha256': digest(root / '_build/ObservedCapture.v'),
+        'evidence': 'instance-translation-validation',
+        'path': 'controlled loader: actual frontend -> actual backend -> eval of the captured Scheme value',
+        'stock_loader_intercepted': False,
+        'reads_ps_metadata': False,
+        'backend_mode': 'compatible; empty native-local map',
+        'paired_definitions': 3,
+        'coverage': 'all three source and target bodies, parameters and recursive callees',
+        'administrative_let_preservation': 'generic kernel-checked theorem',
+        'execution_scope': 'successful finite execution in the admitted target semantics; encoder termination and unique output',
+        'assumptions': ['observer faithfully reports the actual load path',
+                        'reader and exact source byte correspondence', 'native tagging and encoding',
+                        'composite primitive contracts and representations',
+                        'immutable transitive helper/global bindings', 'Chez eval and runtime behavior'],
+        'exception_payloads_or_divergence_verified': False,
+        'native_execution_verified': False,
+        'backend_binary_verified': False,
+    },
     'trust_audit': {
         'ledger': 'docs/TRUST-AUDIT.md',
         'byte_recursion_domain': 'machine-checked: character inputs and recursive halvings stay below 256, counts at most 8',
@@ -112,11 +137,11 @@ report = {
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 18,
-    'rocq_regression_examples': 51,
-    'orchestration_regressions': 6,
+    'rejected_proof_mutations': 26,
+    'rocq_regression_examples': 59,
+    'orchestration_regressions': 7,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',

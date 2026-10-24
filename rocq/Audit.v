@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -165,3 +165,37 @@ Check ByteDomain.calls_bounded.
 Print Assumptions ByteDomain.calls_bounded.
 Check ByteDomain.string_byte_domain.
 Print Assumptions ByteDomain.string_byte_domain.
+Check EncoderScheme.rename_exec.
+Print Assumptions EncoderScheme.rename_exec.
+Check EncoderScheme.anf_preserves.
+Print Assumptions EncoderScheme.anf_preserves.
+Check EncoderScheme.exec_deterministic.
+Print Assumptions EncoderScheme.exec_deterministic.
+Check EncoderScheme.evaluator_exec.
+Print Assumptions EncoderScheme.evaluator_exec.
+Check EncoderScheme.encoder_target_total.
+Print Assumptions EncoderScheme.encoder_target_total.
+Check EncoderScheme.encoder_target_unique.
+Print Assumptions EncoderScheme.encoder_target_unique.
+Check ObservedEncoder.target_ok_sound.
+Print Assumptions ObservedEncoder.target_ok_sound.
+Check ObservedEncoder.check_pair_sound.
+Print Assumptions ObservedEncoder.check_pair_sound.
+Check ObservedEncoder.check_program_coverage.
+Print Assumptions ObservedEncoder.check_program_coverage.
+Check ObservedEncoder.coverage_resolves.
+Print Assumptions ObservedEncoder.coverage_resolves.
+Check ObservedEncoder.capture_coverage.
+Print Assumptions ObservedEncoder.capture_coverage.
+Check ObservedEncoder.accepted_sound.
+Print Assumptions ObservedEncoder.accepted_sound.
+Check ObservedEncoder.exec_table.
+Print Assumptions ObservedEncoder.exec_table.
+Check ObservedEncoder.checked_execution.
+Print Assumptions ObservedEncoder.checked_execution.
+Check observed_encoder_checked.
+Print Assumptions observed_encoder_checked.
+Check observed_encoder_execution.
+Print Assumptions observed_encoder_execution.
+Check ObservedEncoder.paired_execution.
+Print Assumptions ObservedEncoder.paired_execution.
