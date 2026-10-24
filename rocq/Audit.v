@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -151,3 +151,17 @@ Check encoder_kl_sound.
 Print Assumptions encoder_kl_sound.
 Check encoder_kl_execution.
 Print Assumptions encoder_kl_execution.
+Check CaptureTag.bytes_roundtrip.
+Print Assumptions CaptureTag.bytes_roundtrip.
+Check CaptureTag.tag_roundtrip.
+Print Assumptions CaptureTag.tag_roundtrip.
+Check CaptureTag.tag_injective.
+Print Assumptions CaptureTag.tag_injective.
+Check CaptureTag.wire_tag_roundtrip.
+Print Assumptions CaptureTag.wire_tag_roundtrip.
+Check CaptureTag.capture_root_exact.
+Print Assumptions CaptureTag.capture_root_exact.
+Check ByteDomain.calls_bounded.
+Print Assumptions ByteDomain.calls_bounded.
+Check ByteDomain.string_byte_domain.
+Print Assumptions ByteDomain.string_byte_domain.

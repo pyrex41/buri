@@ -85,7 +85,7 @@ canonical output for the concrete registered program.
 
 ## Boundary still open
 
-The capture's origin, the correctness of the small tagging adapter, the host's
+The capture's origin, the native correctness of the small tagging adapter, the host's
 source metadata, and faithful loading without rebinding remain assumptions.
 The record cannot prove that it came from the claimed process, or that `ps`
 identifies the code actually compiled or executed by the backend.
@@ -108,3 +108,11 @@ primitive forms, typed transport, non-byte characters, profile, and fuel.
 Eight native adapter cases check tagging distinctions, improper pairs, embedded
 zero bytes, and refusal of unsupported floats. These tests remain distinct from
 the generic preservation theorems.
+
+## Follow-up trust audit
+
+`CaptureTag.v` now proves that canonical typed tagging is injective and decoded
+without loss, and that acceptance concerns exactly the represented root. This
+is a protocol theorem with an explicit producer-correspondence premise. Native
+adapter execution remains open. [TRUST-AUDIT](TRUST-AUDIT.md) includes the
+reproduced metadata/executable separation and primitive-domain counterexample.

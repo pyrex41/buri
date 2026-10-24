@@ -8,6 +8,7 @@ test:
 	./scripts/check-shen tests/evaluator.shen
 	./scripts/check-shen tests/wire.shen
 	./scripts/check-shen tests/frontend.shen
+	./scripts/check-shen tests/trust.shen
 	python3 tests/gates.py
 
 prove:

@@ -18,13 +18,15 @@ Run `make report` for evidence from your own image and toolchain.
 | Canonical captured-data transport | Generic codec round-trip, exact decoding, and injectivity proofs | Native primitive and execution correspondence remains open |
 | Exact Shen encoder source matches a correct program | Source equality plus generic termination, unique-output, and decoder round-trip proofs | Admitted first-order semantics; native reader/compiler, primitive, and representation preservation remain open |
 | Registered KLambda for all three encoder functions preserves the proved program | Complete capture validation plus generic named-execution preservation, including recursion and shadowing | Source metadata/capture provenance and tagging, primitive contracts, and backend/runtime remain trusted; not a full compiler proof |
+| Typed tagging protocol recovers the exact syntax tree | Generic Rocq roundtrip, injectivity, wire composition and exact-root validation | Native tagging adapter implementation remains unverified |
+| Byte recursion stays in its finite character domain | Generic call-bound theorem plus exhaustive native checks of 256 codes × 9 counts | Unrestricted native halving has a concrete counterexample; native execution refinement remains open |
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
 | Wrong compiler instructions and false equations rejected | Eighteen Rocq mutation cases, including six altered KLambda captures | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 76 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 83 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -43,3 +45,7 @@ evaluator, Shen proof checker, and native execution of the encoder still require
 implementation-correspondence proofs.
 
 [FRONTEND](FRONTEND.md) specifies the registered-KLambda validation boundary.
+
+[TRUST-AUDIT](TRUST-AUDIT.md) records every remaining trust obligation, the
+large-integer halving and mutable-metadata counterexamples, and 260 native trust
+regressions. The tagged protocol is proved; its Shen implementation is not.

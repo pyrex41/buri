@@ -97,3 +97,11 @@ binary was built from the reviewed upstream source. Bootstrap checks archive
 identity, not compiler correctness. Loading PR #117 establishes which checker
 code ran, not that the optimization is sound. The Búri checks currently run under
 `tc -`; the Rocq proofs carry the independent logical assurance.
+
+## Audited assumptions
+
+[TRUST-AUDIT](TRUST-AUDIT.md) separates the outstanding obligations and their
+closure criteria. Two assumptions cannot be used without qualification: native
+halving is not exact on all naturals, and `ps` metadata can change independently
+of executable behavior. `CaptureTag.v` now proves the typed transport protocol
+lossless, but does not prove the native tagging adapter implements it.

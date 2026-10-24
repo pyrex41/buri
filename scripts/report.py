@@ -28,8 +28,8 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 5 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 76 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert len(rows) == 6 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 83 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
 assert checks.count('Rejected proof mutation:') == 18
 assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['6']
 host_path = (root / '.tools/host-path').read_text().strip()
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 76,
+        'audited_theorems': 83,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -93,12 +93,26 @@ report = {
         'named_resolution_and_recursive_calls': 'machine-checked for every abstract fuel and environment satisfying scope correspondence',
         'definition_coverage': 'all three expected definitions in order; no extra or missing definitions',
         'semantic_decoder': 'strict admitted grammar inside Rocq; includes explicit composite primitive contracts',
-        'capture_provenance_and_tagging': 'assumed; not mechanically proved',
+        'capture_provenance': 'assumed; ps metadata is independently mutable',
+        'tagged_protocol': 'generic roundtrip, injectivity and exact-root validation proved in CaptureTag',
+        'native_tagging_implementation': 'assumed; protocol theorem does not verify Shen adapter execution',
         'generic_frontend_verified': False,
         'backend_or_binary_verified': False,
     },
+    'trust_audit': {
+        'ledger': 'docs/TRUST-AUDIT.md',
+        'byte_recursion_domain': 'machine-checked: character inputs and recursive halvings stay below 256, counts at most 8',
+        'native_byte_contracts': {'evidence': 'finite-domain execution tests', 'inputs': 256, 'counts_per_input': 9},
+        'counterexamples': ['unrestricted natural halving is false on the pinned host',
+                            'ps metadata can differ from the installed executable'],
+        'unrestricted_native_byte_helper_verified': False,
+        'metadata_identifies_executable': False,
+        'tagging_adapter_implementation_verified': False,
+        'binary_source_correspondence_verified': False,
+    },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
-                   'wire': suite_counts['wire'], 'frontend': suite_counts['frontend']},
+                   'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
+                   'trust': suite_counts['trust']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
     'rejected_proof_mutations': 18,
     'rocq_regression_examples': 51,

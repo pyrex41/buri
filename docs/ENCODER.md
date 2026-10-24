@@ -61,7 +61,7 @@ Connecting native execution to them remains an explicit obligation.
 |---|---|
 | `cn`, `= S ""`, `pos S 0`, `tlstr S` | Byte-string concatenation, emptiness, first character, and tail |
 | `string->n` | Character code is exactly its unsigned eight-bit ASCII value |
-| `floor (/ N 2)` | Natural-number halving, without rounding through an inexact representation |
+| `floor (/ N 2)` | Halving agrees with `Nat.div2` on reachable byte codes 0–255; this contract is false for arbitrary native naturals |
 | `= N (* Half 2)`, `- Count 1` | Exact integer comparison, multiplication, and subtraction on the reachable nonnegative domain |
 | `and`, `>=`, `<` | Byte-range check with the shown Boolean meaning |
 | `= X []`, `cons?`, `hd`, `tl` | Nil/pair discrimination and projection for finite acyclic data |
@@ -93,3 +93,13 @@ atom tag, a reversed bit choice, and substituted source bytes. Mutations must
 produce an actual proof unification failure. Missing tools/imports cannot count
 as rejection. The report records program proof and native execution assumptions
 separately.
+
+## Native domain qualification
+
+The mathematical `byte_correct` theorem still quantifies over all naturals.
+Its unrestricted native refinement is false: the pinned port rounds some large
+odd quotients before `floor`. `ByteDomain.v` bounds the mathematical recursive
+call sequence for character encoding to codes below 256 and counts at most 8;
+all 256 × 9 native input pairs pass an independent subtraction-only oracle.
+This finite-domain test does not establish native primitive refinement. See
+[TRUST-AUDIT](TRUST-AUDIT.md) for the exact counterexample and obligations.
