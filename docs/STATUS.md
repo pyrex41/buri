@@ -23,10 +23,10 @@ Run `make report` for evidence from your own image and toolchain.
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Twenty-six Rocq mutation cases, including eight altered observed source/target pairs | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Thirty-three Rocq mutation cases, including seven altered sealed capsules | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 103 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 111 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 59 additional Rocq regression examples and seven
+The native validation lane has 59 additional Rocq regression examples and eight
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -64,3 +64,12 @@ checks exercise actual helper rebinding and fail-closed execution. Three new
 abstract version-vector theorems are independently checked; native guard
 refinement, full transitive closure and concurrent rebinding protection remain
 open.
+
+[SEALED](SEALED.md) adds a separate immutable execution lane: three checked target
+bodies plus seven private helper lambdas, with complete syntactic dependency
+coverage up to 29 named Chez primitives. Eight additional audited proof goals
+cover closure, exact target linkage, dependency-resolution noninterference and
+the exact capture. There are 270 new native checks, including a synchronized
+concurrent global-rebinding regression. This lane does not use the legacy
+identity guard. Native constructor/shim refinement, Chez/library execution,
+primitive internals and concurrent input-data mutation are not proved.

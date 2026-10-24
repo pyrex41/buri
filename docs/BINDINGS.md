@@ -1,5 +1,10 @@
 # Source snapshots and live dependency checks
 
+**Legacy sequential lane.** For protection from global rebinding, use the
+[sealed encoder](SEALED.md). It removes this identity guard from execution by
+using private lexical procedures. The limitations below still apply to
+`buri.guarded-wire`; they have not been retroactively proved away.
+
 Three additions strengthen the controlled execution lane:
 
 1. The observer reads the file once into a string, passes that same string to

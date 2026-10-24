@@ -45,7 +45,7 @@ ultimately depends on.
   order, lexical capture, lazy branches, currying, exceptions, large integers,
   and freeze/thaw. These are tests, not a preservation proof.
 - **Adversarial gates:** 105 Shen kernel/evaluator/encoder/adapter checks, 51 Rocq adversarial examples,
-  six orchestration checks, and eighteen compiler, capture, or encoder mutations rejected by Rocq. Claim reports keep proofs, ground replay,
+  eight orchestration checks, and thirty-three compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
   tests, open obligations, and assumptions distinct.
 
 Read [STATUS](docs/STATUS.md) and [TRUST](docs/TRUST.md) before interpreting any
@@ -72,7 +72,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 103 theorem dependencies for custom axioms, independently
+checks all proofs, audits 111 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
@@ -132,3 +132,9 @@ The [observed compilation lane](docs/OBSERVED.md) now validates the three paired
 KLambda/Scheme definitions captured during actual installation by a controlled
 loader. It proves administrative binding preservation and canonical target
 execution under the explicit primitive and runtime assumptions.
+
+The [sealed encoder](docs/SEALED.md) runs the checked target bodies with seven
+private helper procedures and a restricted Chez import environment. Its exact
+capture is checked for lexical dependency closure and target linkage. It avoids
+the legacy identity guard's rebinding race; native primitive and constructor
+refinement remain explicit obligations.

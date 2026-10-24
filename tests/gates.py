@@ -29,6 +29,8 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     (tree / '_build/EquationBridge.v').write_text('stale previously accepted source')
     (tree / '_build/observed-encoder.bits').write_text('stale capture')
     (tree / '_build/ObservedCapture.v').write_text('stale proof')
+    (tree / '_build/sealed.bits').write_text('stale sealed capture')
+    (tree / '_build/SealedInput.v').write_text('stale sealed proof')
     (tree / '_build/encoder-kl.bits').write_text('stale capture')
     (tree / '_build/EncoderKLambda.v').write_text('stale proof input')
     result = subprocess.run([str(tree / 'scripts/prove')], capture_output=True, text=True)
@@ -38,15 +40,17 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     assert not (tree / '_build/EncoderKLambda.v').exists()
     assert not (tree / '_build/observed-encoder.bits').exists()
     assert not (tree / '_build/ObservedCapture.v').exists()
+    assert not (tree / '_build/sealed.bits').exists()
+    assert not (tree / '_build/SealedInput.v').exists()
     assert 'BURI_ROCQ_OK' not in result.stdout
     count += 1
 
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
-    for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py']:
+    for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
     executable(tree / 'scripts/rocq', '#!/bin/sh\necho "Error: Cannot find a physical path bound to logical path Buri"\nexit 1\n')
     result = subprocess.run([str(tree / 'scripts/proof-mutations')], capture_output=True, text=True)
@@ -98,6 +102,17 @@ with tempfile.TemporaryDirectory(prefix='buri-observed-gate-') as directory:
     capture.write_bytes(b'01')
     result = subprocess.run(['python3', str(root / 'scripts/check-observed-package.py'), str(capture), str(module)], capture_output=True, text=True)
     assert result.returncode != 0 and 'exact observed compilation bytes' in result.stderr
+    count += 1
+
+with tempfile.TemporaryDirectory(prefix='buri-sealed-gate-') as directory:
+    tree = Path(directory)
+    capture, module = tree / 'capture.bits', tree / 'Capture.v'
+    capture.write_bytes(b'00')
+    subprocess.run(['python3', str(root / 'scripts/package-sealed.py'), str(capture), str(module)], check=True)
+    subprocess.run(['python3', str(root / 'scripts/check-sealed-package.py'), str(capture), str(module)], check=True)
+    capture.write_bytes(b'01')
+    result = subprocess.run(['python3', str(root / 'scripts/check-sealed-package.py'), str(capture), str(module)], capture_output=True, text=True)
+    assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
 print(f'BURI_GATE_TESTS_OK {count}')

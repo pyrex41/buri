@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed SealedInput.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -205,3 +205,19 @@ Check BindingVersions.current_covers.
 Print Assumptions BindingVersions.current_covers.
 Check BindingVersions.changed_rejected.
 Print Assumptions BindingVersions.changed_rejected.
+Check Sealed.guard_sound.
+Print Assumptions Sealed.guard_sound.
+Check Sealed.guard_complete.
+Print Assumptions Sealed.guard_complete.
+Check Sealed.resolution_noninterference.
+Print Assumptions Sealed.resolution_noninterference.
+Check Sealed.no_dynamic_authority.
+Print Assumptions Sealed.no_dynamic_authority.
+Check SealedCapture.node_eqb_sound.
+Print Assumptions SealedCapture.node_eqb_sound.
+Check SealedCapture.linked_exact.
+Print Assumptions SealedCapture.linked_exact.
+Check SealedCapture.check_sound.
+Print Assumptions SealedCapture.check_sound.
+Check sealed_checked.
+Print Assumptions sealed_checked.

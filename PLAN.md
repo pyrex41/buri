@@ -266,3 +266,12 @@ implemented; see docs/OBSERVED.md. Next: validate the tagging adapter, discharge
 native primitive/representation obligations, and bind certificates to immutable
 transitive helper versions. Stock-loader interception, exception payloads,
 divergence, native binary correctness and rebinding enforcement remain open.
+
+## Sealed encoder checkpoint
+
+The capsule now closes application dependencies at 29 named Chez primitive roots,
+checks exact helper syntax and target linkage, and executes through private
+lexical procedures. Native constructor/library semantics and shim contracts still
+need refinement. The legacy identity guard is bypassed in this lane; it remains
+unverified. Stock dynamic execution and concurrent input mutation remain outside
+this protection. See docs/SEALED.md for exact evidence and limits.
