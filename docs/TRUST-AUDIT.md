@@ -63,7 +63,7 @@ source, compiler path, primitives, and execution still need refinement.
 | Shen reader and frontend | Exact encoder source equation; three registered KLambda bodies checked | Link actual reader/compiler input to captured output; validate supported instances or prove compiler transformations generally, including macros and factorization |
 | Shen-Scheme backend | Twelve arithmetic schemas and three observed encoder targets checked; administrative-let preservation proved | Extend target semantics/validator to the encoder's actual Scheme: sequential lets, conditionals, recursive calls, strings, pairs, arithmetic and explicit errors; prove each admitted transformation |
 | Chez and native artifact | Pinned release archive and local binary hashes; source-to-binary correspondence unproved | Reproducible build evidence plus machine-code validation or a verified backend; reproducibility alone proves identity, not semantic correctness |
-| Dynamic loading and rebinding | Sealed lane uses private lexical procedures with checked syntactic closure and target/helper linkage; synchronized native rebinding test; stock and legacy guard paths remain mutable | Refine constructor and Chez lexical/library execution; discharge the 29 primitive-root contracts and internals. See [SEALED](SEALED.md). |
+| Dynamic loading and rebinding | Sealed lane uses private lexical procedures with checked syntactic closure and target/helper linkage; synchronized native rebinding test; stock and legacy guard paths remain mutable | Refine constructor and Chez lexical/library execution; discharge the 27 primitive-root contracts and internals. See [SEALED](SEALED.md). |
 | Exceptions and resources | Models distinguish returned, exhausted and stuck; native exceptions/stack/heap not refined | Relate native exceptions and termination outcomes explicitly; separate partial correctness from resource adequacy and prove or bound the required resources |
 | Rocq checker/toolchain | No custom axioms; independent `coqchk` replay | Keep a small explicit checking base; independently replay/diversify or use a verified checker; its executing machine still needs a trust root |
 | Theorem/specification fidelity | Reviewed admitted semantics and explicit hypotheses | Review/refine against language and port behavior; counterexample-driven domain correction; proofs cannot establish that a chosen specification expresses user intent |
@@ -106,3 +106,11 @@ must occur on the load path, and the artifact must bind transitive helper and
 primitive identities. Keep all of these obligations visible until each is
 actually discharged; do not label protocol roundtrip as adapter verification or
 bounded native tests as a universal port proof.
+
+## Captured native execution checkpoint
+
+[NATIVE](NATIVE.md) records code-linked constructor assembly, fixed helper-body
+contracts, exact division and instruction-level rebinding isolation. These
+replace whole-helper assumptions in the admitted native model. They do not
+prove Chez's primitive implementations or the mapping from its executing
+machine to that model. The legacy guard remains outside the sealed path.

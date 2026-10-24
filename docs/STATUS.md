@@ -23,10 +23,10 @@ Run `make report` for evidence from your own image and toolchain.
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Thirty-three Rocq mutation cases, including seven altered sealed capsules | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Forty-one Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 111 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 166 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 59 additional Rocq regression examples and eight
+The native validation lane has 71 additional Rocq regression examples and nine
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -67,9 +67,29 @@ open.
 
 [SEALED](SEALED.md) adds a separate immutable execution lane: three checked target
 bodies plus seven private helper lambdas, with complete syntactic dependency
-coverage up to 29 named Chez primitives. Eight additional audited proof goals
+coverage up to 27 named Chez primitives. Eight additional audited proof goals
 cover closure, exact target linkage, dependency-resolution noninterference and
-the exact capture. There are 270 new native checks, including a synchronized
+the exact capture. There are 271 sealed native checks, including a synchronized
 concurrent global-rebinding regression. This lane does not use the legacy
-identity guard. Native constructor/shim refinement, Chez/library execution,
-primitive internals and concurrent input-data mutation are not proved.
+identity guard. Captured constructor/shim execution is now proved in the model
+below; Chez/library implementation, primitive internals and concurrent input-data
+mutation are not proved.
+
+[NATIVE](NATIVE.md) replaces the remaining constructor/shim assumptions with
+code-linked execution proofs in an explicit pure Scheme model. The new observer
+captures all ten generated constructor definitions, with typed booleans. Twelve
+proof goals check exact decoding, all constructor components, assembly for
+arbitrary supplied target bodies, failure cases and the authority/entry shapes.
+The exact seven helper bodies are interpreted and proved, including all-natural
+exact halving and specified boolean errors. An instruction machine proves that
+arbitrary ambient rebinding steps cannot change a completed private result;
+this is instantiated on the exact decoded capsule. There are 55 new audited
+goals, 12 additional semantic regression examples, 19 new native checks, and
+eight new rejected constructor mutations.
+
+The new exact-rational sealed division avoids the pinned host's inexact-halving
+counterexample. Unused `eq?` and `inexact` imports are removed. The stock lane is
+unchanged. Chez implementation refinement, the 27 primitive/representation
+contracts, full codec simulation to this lower-level machine, observer/compiler
+provenance, and concurrent input-object mutation remain open. The legacy
+identity guard is still unverified and is not used by the sealed lane.

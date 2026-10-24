@@ -12,6 +12,7 @@ test:
 	./scripts/check-shen tests/observed.shen
 	./scripts/check-shen tests/bindings.shen
 	./scripts/check-shen tests/sealed.shen
+	./scripts/check-shen tests/constructor.shen
 	python3 tests/gates.py
 
 prove:

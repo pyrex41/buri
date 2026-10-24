@@ -6,9 +6,9 @@ Import ListNotations.
 Open Scope string_scope.
 Module Sealed.
 Import EncoderFrontend.EncoderFrontend.
-Definition primitives := ["eq?";"eqv?";"equal?";"null?";"pair?";"car";"cdr";
+Definition primitives := ["eqv?";"equal?";"null?";"pair?";"car";"cdr";
  "+";"-";"*";"/";">=";"<";"string-append";"string-ref";"string";"substring";
- "string-length";"char->integer";"integer?";"exact?";"number?";"inexact";
+ "string-length";"char->integer";"integer?";"exact?";"number?";
  "floor";"boolean?";"symbol?";"symbol->string";"number->string";"error"].
 Definition member s xs := existsb (String.eqb s) xs.
 Fixpoint names xs := match xs with
@@ -137,9 +137,7 @@ Definition lam args body := app "lambda" [L (map Sym args);body].
 (* The shims are pinned as syntax too: an attacker cannot shadow a primitive
    or substitute another body while retaining a closed dependency graph. *)
 Definition helper_template := L [
- L [Sym "non-rational-/";lam ["x";"y"]
-   (app "let" [L [L [Sym "r";app "/" [Sym "x";Sym "y"]]];
-     app "if" [app "integer?" [Sym "r"];Sym "r";app "inexact" [Sym "r"]]])];
+ L [Sym "non-rational-/";lam ["x";"y"] (app "/" [Sym "x";Sym "y"])];
  L [Sym "kl:floor";lam ["x"] (app "floor" [Sym "x"])];
  L [Sym "kl:=";lam ["x";"y"] (app "equal?" [Sym "x";Sym "y"])];
  L [Sym "kl:_scm.assert-boolean";lam ["x"]

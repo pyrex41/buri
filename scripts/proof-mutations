@@ -35,6 +35,7 @@ Path('_build/mutations/FalseNativeOutput.v').write_text(native.replace(old, 'sev
 PY
 python3 tests/mutate-observed.py
 python3 tests/mutate-sealed.py
+python3 tests/mutate-constructor.py
 for name in CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile; do
   python3 scripts/package-wire.py "_build/mutations/$name.bits" "_build/mutations/$name.v"
 done
@@ -47,7 +48,10 @@ done
 for name in SealedUnknown SealedEval SealedMutation SealedDifferentTarget SealedDifferentHelper SealedMissingHelper SealedExtraImport; do
   python3 scripts/package-sealed.py "_build/mutations/$name.bits" "_build/mutations/$name.v"
 done
-for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile WrongEncoderTag WrongEncoderBit FalseEncoderSource KLChangedDivisor KLChangedTag KLWrongBinder KLDuplicateParameters KLOmittedDefinition KLWrongCallee ObservedWrongTag ObservedWrongDivisor ObservedWrongCallee ObservedParallelLet ObservedChangedSource ObservedUnboundTemporary ObservedReorderedPairs ObservedOmittedPair SealedUnknown SealedEval SealedMutation SealedDifferentTarget SealedDifferentHelper SealedMissingHelper SealedExtraImport; do
+for name in CtorLambda CtorAuthority CtorBoolean CtorExecutor CtorEntry CtorAppendOrder CtorOmitted CtorExtra; do
+  python3 scripts/package-constructor.py "_build/mutations/$name.bits" "_build/mutations/$name.v"
+done
+for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile WrongEncoderTag WrongEncoderBit FalseEncoderSource KLChangedDivisor KLChangedTag KLWrongBinder KLDuplicateParameters KLOmittedDefinition KLWrongCallee ObservedWrongTag ObservedWrongDivisor ObservedWrongCallee ObservedParallelLet ObservedChangedSource ObservedUnboundTemporary ObservedReorderedPairs ObservedOmittedPair SealedUnknown SealedEval SealedMutation SealedDifferentTarget SealedDifferentHelper SealedMissingHelper SealedExtraImport CtorLambda CtorAuthority CtorBoolean CtorExecutor CtorEntry CtorAppendOrder CtorOmitted CtorExtra; do
   if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
     echo "Mutant incorrectly accepted: $name" >&2; exit 1
   fi

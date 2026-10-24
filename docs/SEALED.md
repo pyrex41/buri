@@ -38,12 +38,12 @@ lambda bindings, parallel let, sequential let*, conditionals, conjunction,
 disjunction, quotation and named applications. Unsupported forms fail closed.
 It checks the whole assembled capsule, not just a hand-maintained call list.
 
-Every free identifier must be one of these 29 primitive roots:
+Every free identifier must be one of these 27 primitive roots:
 
 ```
-eq? eqv? equal? null? pair? car cdr + - * / >= <
+eqv? equal? null? pair? car cdr + - * / >= <
 string-append string-ref string substring string-length char->integer
-integer? exact? number? inexact floor boolean? symbol? symbol->string
+integer? exact? number? floor boolean? symbol? symbol->string
 number->string error
 ```
 
@@ -58,7 +58,8 @@ strings, integers, exceptions, GC, library implementation, compiler, OS and
 hardware remain trusted. The capsule contains no decimal-classification helper
 chain or mutable Shen globals. Its private classification uses exact native
 integers, its integer spelling uses radix-10 `number->string`, and symbol
-spelling uses `symbol->string`. These are a new, explicit execution profile;
+spelling uses `symbol->string`. Division now keeps exact rationals until floor, avoiding native rounding.
+These are a new, explicit execution profile;
 equivalence to every edge case of stock Shen primitives is not asserted.
 Booleans, inexact numbers and strings as input datums are rejected. Supported
 symbols must have byte-valued spellings. Pair inputs must be finite and must
@@ -85,14 +86,15 @@ soundness of the combined capture check.
 The existing generic target execution theorems apply in their admitted
 semantics. The new noninterference theorem is about dependency resolution, not
 an operational proof of Chez execution, scheduling or native machine code.
-The seven shim bodies are traversed for dependencies but their implementation
-of the abstract primitive contracts is not yet formally refined. Observer,
+The seven shim bodies are now interpreted and proved in the explicit primitive
+semantics described in [NATIVE](NATIVE.md). Their correspondence to Chez values
+and primitive implementations is still an obligation. Observer,
 constructor and packaging provenance remain explicit assumptions; exact-byte
 packaging and fresh regeneration are checked by orchestration.
 
 ## Native and negative evidence
 
-The 270 native checks include a condition-variable rendezvous: a second Chez
+The 271 native checks include a condition-variable rendezvous: a second Chez
 thread poisons the global encoder binding and keeps it poisoned until calls to
 the private capsule finish. The test verifies both that the global binding is
 poisoned and that the capsule returns the expected values, then waits for the
@@ -103,15 +105,15 @@ thread scheduling or primitive correctness.
 
 Seven malformed capsules must fail actual Rocq proof compilation: unknown
 dependency, eval dependency, mutation form, changed target, changed helper, omitted helper, and
-expanded imports. An eighth orchestration regression rejects a mismatched
+expanded imports. A ninth orchestration regression rejects a mismatched
 packaged capsule.
 
 ## Remaining work
 
 The old guard's native implementation remains unverified, but this lane does
-not rely on it. To turn the capsule's operational isolation into a native
-execution theorem, refine the constructor/library environment and private shim
-bodies, then discharge the 29 primitive contracts against Chez semantics.
+not rely on it. The captured constructor and shim bodies now have execution proofs; see
+[NATIVE](NATIVE.md). To obtain a theorem about actual Chez execution, relate
+Chez to the proved lexical machine and discharge the 27 primitive contracts.
 Runtime internals below those roots still require their own implementation
 proofs. Concurrent mutation of input objects is a separate problem from global
 procedure rebinding and is not protected here.

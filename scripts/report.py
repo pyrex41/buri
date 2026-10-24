@@ -28,10 +28,10 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 9 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 111 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 33
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['8']
+assert len(rows) == 10 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 166 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 41
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['9']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 111,
+        'audited_theorems': 166,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -54,7 +54,8 @@ report = {
                   'raw captured-data validation and complete record coverage',
                   'source-linked encoder termination, unique output and decoding roundtrip',
                   'named recursive program resolution and registered KLambda validation',
-                  'observed paired compilation validation and target administrative-let preservation'],
+                  'observed paired compilation validation and target administrative-let preservation',
+                  'captured native constructor assembly and authority plan', 'exact helper contracts and instruction-level rebinding isolation'],
     },
     'equation_bridge': {'checked_equations': 18, 'checked_theorem_statements': 2,
                        'exporter_correctness': 'assumed; not mechanically proved'},
@@ -140,17 +141,23 @@ report = {
         'source_sha256': digest(root / 'shen/sealed-encoder.shen'),
         'capture_sha256': digest(root / '_build/sealed.bits'),
         'proof_input_sha256': digest(root / '_build/SealedInput.v'),
-        'evidence': 'kernel-checked syntactic dependency closure and target linkage; native isolation tests',
-        'application_dependency_closure': 'all capsule bodies checked, including seven private helpers, up to 29 named Chez primitives',
+        'evidence': 'exact native syntax validation, constructor execution, helper contracts, lexical-machine interleaving proofs; native regressions',
+        'application_dependency_closure': 'all capsule bodies checked, including seven private helpers, up to 27 named Chez primitives',
         'runtime_dependency_closure_below_primitive_boundary': False,
         'mutable_shen_global_dependencies_in_capsule': [],
         'guard_strategy': 'private lexical procedures evaluated in an only-import Chez library environment',
         'legacy_identity_guard_used': False,
         'concurrent_global_rebinding': 'isolated after construction, conditional on Chez lexical/library semantics; synchronized native regression',
-        'formal_noninterference_scope': 'dependency resolution under changes outside the primitive boundary, not native execution',
-        'construction_and_helper_primitive_refinement_proved': False,
+        'formal_noninterference_scope': 'instruction-level pure lexical machine on the decoded capsule; arbitrary ambient rebindings; no Chez simulation claim',
+        'captured_constructor_pure_scheme_execution': 'universally quantified target preservation, assembly, import plan and executor/entry shape',
+        'helper_body_contracts': 'proved for the exact seven shim bodies in explicit primitive semantics; includes all-natural exact halving',
+        'constructor_capture_sha256': digest(root / '_build/constructor.bits'),
+        'constructor_proof_sha256': digest(root / '_build/ConstructorInput.v'),
+        'constructor_source_snapshot_sha256': digest(root / '_build/constructor.bits.source'),
+        'chez_to_lexical_machine_simulation_proved': False,
+        'universal_native_capsule_codec_refinement_proved': False,
         'assumptions': ['trusted construction and capture provenance', 'restricted environment and Chez lexical semantics',
-                        'private shim primitive/representation contracts', '29 Chez primitives and their runtime internals',
+                        '27 Chez primitive contracts and their runtime internals', 'representation relation to actual Chez values',
                         'caller retains the opaque procedure and does not mutate input data concurrently'],
     },
     'trust_audit': {
@@ -166,11 +173,11 @@ report = {
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 33,
-    'rocq_regression_examples': 59,
-    'orchestration_regressions': 8,
+    'rejected_proof_mutations': 41,
+    'rocq_regression_examples': 71,
+    'orchestration_regressions': 9,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',

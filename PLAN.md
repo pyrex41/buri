@@ -275,3 +275,14 @@ lexical procedures. Native constructor/library semantics and shim contracts stil
 need refinement. The legacy identity guard is bypassed in this lane; it remains
 unverified. Stock dynamic execution and concurrent input mutation remain outside
 this protection. See docs/SEALED.md for exact evidence and limits.
+
+## Captured native constructor and lexical machine checkpoint
+
+Pure constructor execution is now checked against its actual generated Scheme,
+including universal preservation of supplied targets and exact authority plans.
+The seven fixed shim bodies have mathematical primitive-contract proofs; the
+sealed division is exact. The instruction machine and decoded capsule have
+interleaving/unique-output theorems. Next obligations are Chez-to-machine
+simulation and 27 primitive/representation implementations, plus universal
+codec refinement between the earlier abstract encoder and this lower machine.
+See docs/NATIVE.md. The legacy guard is not used by this path and is unverified.

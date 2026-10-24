@@ -1,14 +1,13 @@
-\\ Trusted construction only. The returned procedure has no Shen global reads.
+\\ Pure assembly is checked in Native; activation/provenance still trusted.
 \\ Its authority is still supplied by translation validation of the records.
 (tc -)
 (define buri.sealed-imports ->
  [lambda let let* letrec if and or quote
-  eq? eqv? equal? null? pair? car cdr + - * / >= <
+  eqv? equal? null? pair? car cdr + - * / >= <
   string-append string-ref string substring string-length char->integer
-  integer? exact? number? inexact floor boolean? symbol? symbol->string number->string error])
+  integer? exact? number? floor boolean? symbol? symbol->string number->string error])
 (define buri.sealed-helpers ->
- [[(intern "non-rational-/") [lambda [x y]
-    [let [[r [/ x y]]] [if [integer? r] r [inexact r]]]]]
+ [[(intern "non-rational-/") [lambda [x y] [/ x y]]]
   [(intern "kl:floor") [lambda [x] [floor x]]]
   [(intern "kl:=") [lambda [x y] [equal? x y]]]
   [(intern "kl:_scm.assert-boolean") [lambda [x]
@@ -25,12 +24,15 @@
  [[_ A] [_ B] [_ C]] ->
   [(buri.sealed-definition A) (buri.sealed-definition B) (buri.sealed-definition C)]
  _ -> (simple-error "Sealed encoder requires exactly three observed pairs"))
+(define buri.sealed-append [] Right -> Right
+ [Head | Tail] Right -> [Head | (buri.sealed-append Tail Right)]
+ _ _ -> (simple-error "Sealed append requires a proper list"))
 (define buri.sealed-program Records ->
- [letrec (append (buri.sealed-helpers) (buri.sealed-targets Records)) (intern "kl:buri.wire")])
-(define buri.sealed-eval Program ->
- ((foreign scm.eval)
+ [letrec (buri.sealed-append (buri.sealed-helpers) (buri.sealed-targets Records)) (intern "kl:buri.wire")])
+(define buri.sealed-request Program ->
   [eval [quote Program]
-    [environment [quote [only [chezscheme] | (buri.sealed-imports)]]]]))
+    [environment [quote [only [chezscheme] | (buri.sealed-imports)]]]])
+(define buri.sealed-eval Program -> ((foreign scm.eval) (buri.sealed-request Program)))
 (define buri.make-sealed-encoder Records -> (buri.sealed-eval (buri.sealed-program Records)))
 (define buri.export-sealed Records Path ->
  (let Program (buri.sealed-program Records)

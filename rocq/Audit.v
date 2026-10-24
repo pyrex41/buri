@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed SealedInput.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -221,3 +221,113 @@ Check SealedCapture.check_sound.
 Print Assumptions SealedCapture.check_sound.
 Check sealed_checked.
 Print Assumptions sealed_checked.
+Check NativeRuntime.execute_trace.
+Print Assumptions NativeRuntime.execute_trace.
+Check NativeRuntime.step_deterministic.
+Print Assumptions NativeRuntime.step_deterministic.
+Check NativeRuntime.terminal_unique.
+Print Assumptions NativeRuntime.terminal_unique.
+Check NativeRuntime.erase_rebindings.
+Print Assumptions NativeRuntime.erase_rebindings.
+Check NativeRuntime.concurrent_output_unique.
+Print Assumptions NativeRuntime.concurrent_output_unique.
+Check NativeRuntime.every_world_schedule_preserves_trace.
+Print Assumptions NativeRuntime.every_world_schedule_preserves_trace.
+Check NativeHelpers.helpers_exact.
+Print Assumptions NativeHelpers.helpers_exact.
+Check NativeHelpers.boolean_identity.
+Print Assumptions NativeHelpers.boolean_identity.
+Check NativeHelpers.boolean_type_error.
+Print Assumptions NativeHelpers.boolean_type_error.
+Check NativeHelpers.exact_integer_classification.
+Print Assumptions NativeHelpers.exact_integer_classification.
+Check NativeHelpers.inexact_classification.
+Print Assumptions NativeHelpers.inexact_classification.
+Check NativeHelpers.fraction_classification.
+Print Assumptions NativeHelpers.fraction_classification.
+Check NativeHelpers.symbol_classification.
+Print Assumptions NativeHelpers.symbol_classification.
+Check NativeHelpers.integer_spelling.
+Print Assumptions NativeHelpers.integer_spelling.
+Check NativeHelpers.symbol_spelling.
+Print Assumptions NativeHelpers.symbol_spelling.
+Check NativeHelpers.exact_division.
+Print Assumptions NativeHelpers.exact_division.
+Check NativeHelpers.exact_floor.
+Print Assumptions NativeHelpers.exact_floor.
+Check NativeHelpers.fractional_floor.
+Print Assumptions NativeHelpers.fractional_floor.
+Check NativeHelpers.exact_halving.
+Print Assumptions NativeHelpers.exact_halving.
+Check NativeHelpers.natural_halving.
+Print Assumptions NativeHelpers.natural_halving.
+Check NativeHelpers.integer_equality.
+Print Assumptions NativeHelpers.integer_equality.
+Check NativeHelpers.machine_boolean_identity.
+Print Assumptions NativeHelpers.machine_boolean_identity.
+Check NativeHelpers.machine_boolean_error.
+Print Assumptions NativeHelpers.machine_boolean_error.
+Check NativeHelpers.machine_integer_classification.
+Print Assumptions NativeHelpers.machine_integer_classification.
+Check NativeHelpers.machine_inexact_classification.
+Print Assumptions NativeHelpers.machine_inexact_classification.
+Check NativeHelpers.machine_symbol_classification.
+Print Assumptions NativeHelpers.machine_symbol_classification.
+Check NativeHelpers.machine_integer_spelling.
+Print Assumptions NativeHelpers.machine_integer_spelling.
+Check NativeHelpers.machine_symbol_spelling.
+Print Assumptions NativeHelpers.machine_symbol_spelling.
+Check NativeHelpers.machine_integer_equality.
+Print Assumptions NativeHelpers.machine_integer_equality.
+Check NativeHelpers.machine_floor.
+Print Assumptions NativeHelpers.machine_floor.
+Check NativeHelpers.machine_fractional_floor.
+Print Assumptions NativeHelpers.machine_fractional_floor.
+Check NativeHelpers.machine_division.
+Print Assumptions NativeHelpers.machine_division.
+Check NativeHelpers.helper_execution_ignores_rebinding.
+Print Assumptions NativeHelpers.helper_execution_ignores_rebinding.
+Check constructor_exact.
+Print Assumptions constructor_exact.
+Check constructor_definitions_complete.
+Print Assumptions constructor_definitions_complete.
+Check constructor_definition.
+Print Assumptions constructor_definition.
+Check constructor_targets.
+Print Assumptions constructor_targets.
+Check constructor_helpers.
+Print Assumptions constructor_helpers.
+Check constructor_imports.
+Print Assumptions constructor_imports.
+Check constructor_program_correct.
+Print Assumptions constructor_program_correct.
+Check constructor_rejects_missing.
+Print Assumptions constructor_rejects_missing.
+Check constructor_rejects_bad_definition.
+Print Assumptions constructor_rejects_bad_definition.
+Check constructor_request.
+Print Assumptions constructor_request.
+Check constructor_executor_shape.
+Print Assumptions constructor_executor_shape.
+Check constructor_entry_shape.
+Print Assumptions constructor_entry_shape.
+Check sealed_native_exact.
+Print Assumptions sealed_native_exact.
+Check sealed_native_complete.
+Print Assumptions sealed_native_complete.
+Check sealed_native_helpers.
+Print Assumptions sealed_native_helpers.
+Check sealed_native_nil.
+Print Assumptions sealed_native_nil.
+Check sealed_native_integer.
+Print Assumptions sealed_native_integer.
+Check sealed_native_symbol.
+Print Assumptions sealed_native_symbol.
+Check sealed_native_pair.
+Print Assumptions sealed_native_pair.
+Check sealed_native_string_error.
+Print Assumptions sealed_native_string_error.
+Check sealed_native_boolean_error.
+Print Assumptions sealed_native_boolean_error.
+Check sealed_native_concurrent.
+Print Assumptions sealed_native_concurrent.

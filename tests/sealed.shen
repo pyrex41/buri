@@ -33,6 +33,8 @@
  N -> (do (buri.test [sealed-byte N] (buri.sealed-counts N 8) true)
           (buri.sealed-bytes (+ N 1))))
 (buri.sealed-bytes 0)
+(buri.test sealed-large-halving-regression
+ (buri.sealed-byte-call (value buri.byte-capsule) 9007199254740995 8) "11000000")
 \\ Native synchronization harness only. No harness capabilities enter capsule.
 \\ Install the test harness in Chez, then pass the capsule as an opaque value.
 (define buri.sealed-concurrent Capsule ->
