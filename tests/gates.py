@@ -35,6 +35,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     (tree / '_build/ConstructorInput.v').write_text('stale constructor proof')
     (tree / '_build/adapter.bits').write_text('stale adapter capture')
     (tree / '_build/AdapterInput.v').write_text('stale adapter proof')
+    (tree / '_build/CheckedIOInput.v').write_text('stale checked IO proof')
     for name in ['bootstrap', 'observer', 'compiler-pass']:
         (tree / '_build' / (name + '.bits')).write_text('stale provenance capture')
     (tree / '_build/encoder-kl.bits').write_text('stale capture')
@@ -52,6 +53,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     assert not (tree / '_build/ConstructorInput.v').exists()
     assert not (tree / '_build/adapter.bits').exists()
     assert not (tree / '_build/AdapterInput.v').exists()
+    assert not (tree / '_build/CheckedIOInput.v').exists()
     for name in ['bootstrap', 'observer', 'compiler-pass']:
         assert not (tree / '_build' / (name + '.bits')).exists()
     assert 'BURI_ROCQ_OK' not in result.stdout
@@ -60,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
     for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py', 'package-constructor.py', 'package-adapter.py', 'package-provenance.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
@@ -149,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='buri-adapter-gate-') as directory:
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
-for profile in ['bootstrap','observer','compiler_pass']:
+for profile in ['bootstrap','observer','compiler_pass','checked_io']:
     with tempfile.TemporaryDirectory(prefix='buri-provenance-gate-') as directory:
         capture, module = Path(directory)/'capture.bits', Path(directory)/'Capture.v'
         capture.write_bytes(b'00')

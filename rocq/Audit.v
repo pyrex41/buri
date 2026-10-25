@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -461,3 +461,35 @@ Check CompilerPassCorrect.merge_two_preserves.
 Print Assumptions CompilerPassCorrect.merge_two_preserves.
 Check CompilerPassCorrect.merge_two_preserves_effects.
 Print Assumptions CompilerPassCorrect.merge_two_preserves_effects.
+Check ObserverIO.source_binding_unique.
+Print Assumptions ObserverIO.source_binding_unique.
+Check ObserverIO.all_entry_writes_checked.
+Print Assumptions ObserverIO.all_entry_writes_checked.
+Check CompilerBindings.literal_stable.
+Print Assumptions CompilerBindings.literal_stable.
+Check CompilerBindings.variable_stable.
+Print Assumptions CompilerBindings.variable_stable.
+Check CompilerBindings.if_stable.
+Print Assumptions CompilerBindings.if_stable.
+Check CompilerBindings.let_stable.
+Print Assumptions CompilerBindings.let_stable.
+Check CompilerBindings.merge_many_decodes.
+Print Assumptions CompilerBindings.merge_many_decodes.
+Check CompilerBindings.merge_many_preserves.
+Print Assumptions CompilerBindings.merge_many_preserves.
+Check CompilerBindings.merge_many_preserves_effects.
+Print Assumptions CompilerBindings.merge_many_preserves_effects.
+Check CompilerBindings.captured_many_machine_preserves.
+Print Assumptions CompilerBindings.captured_many_machine_preserves.
+Check checked_io_exact.
+Print Assumptions checked_io_exact.
+Check checked_io_names.
+Print Assumptions checked_io_names.
+Check CheckedFileIO.captured_checked_write.
+Print Assumptions CheckedFileIO.captured_checked_write.
+Check CheckedFileIO.successful_write_is_observed.
+Print Assumptions CheckedFileIO.successful_write_is_observed.
+Check CheckedFileIO.corrupt_write_rejected.
+Print Assumptions CheckedFileIO.corrupt_write_rejected.
+Check CheckedFileIO.failed_write_not_read.
+Print Assumptions CheckedFileIO.failed_write_not_read.

@@ -23,10 +23,10 @@ Run `make report` for evidence from your own image and toolchain.
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Fifty Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Fifty-two Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 231 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 247 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 78 additional Rocq regression examples and thirteen
+The native validation lane has 78 additional Rocq regression examples and fourteen
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -179,3 +179,39 @@ last operand, so `(and 1 2)` returns `2`, not true. Three new Rocq regressions
 cover empty, single and multiple operands; existing boolean-only proofs are
 rechecked. There are 25 additional native checks, five new rejected mutations,
 and three new literal/stale packaging checks.
+
+## Checked writes and full binding-list preservation
+
+[CHECKED-IO](CHECKED-IO.md) adds sixteen audited goals and fixes a native
+counterexample: `write-to-file` returns its requested text under `*hush*` while
+writing an empty file. Controlled encoder/constructor observers now use
+`buri.checked-write` for all outputs. It writes, reads back and raises an error
+on mismatch. Thirteen native IO cases include this counterexample, mismatch
+rejection, observer rejection, empty-file correctness and recovery.
+
+`CheckedFileIO.v` proves the actual captured wrapper against an arbitrary writer
+which may lie, corrupt the file world, partially mutate it or fail. A successful
+return implies that the requested path looks up to the requested text in the
+final modeled world. Corruption is rejected; writer failures do not read back.
+This removes the assumption that the writer's success return proves persistence.
+It retains truthful reads, correct native equality/execution and stable context
+as explicit contracts. It does not prove atomicity, durability, cleanup or future
+immunity from concurrent file mutation.
+
+`ObserverIO.v` additionally checks the source variable is bound once and all
+three entry writes call the checked wrapper. `ObserverEffects.eval_with` now
+allows a supplied effect handler while preserving the existing installer proofs.
+The captures were regenerated; changed generated names are validated again.
+
+`CompilerBindings.v` closes the previously open many-binding preservation case
+of the source-pinned `merge-nested-lets` pass. Arbitrary-length lists, empty lists
+and repeated binding names retain their decoded expression, every pure outcome
+and every modeled effect trace. Stable subexpression decoding is an explicit
+admission relation, with literal/variable/conditional/let construction lemmas.
+A theorem links actual captured pass execution to that preservation result.
+Other compiler passes and general Shen frontend/backend correctness remain open.
+
+Two new tampering fixtures must fail proof compilation: bypassing comparison or
+replacing the read-back call. Literal-package checks include the checked wrapper.
+Underlying native reads, activation, observer concurrency and Chez internals are
+not relabelled as verified by these new component proofs.

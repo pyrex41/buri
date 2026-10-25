@@ -47,4 +47,7 @@ ObserverEffects.v
 ObserverIO.v
 CompilerPassInput.v
 CompilerPassCorrect.v
+CompilerBindings.v
+CheckedIOInput.v
+CheckedFileIO.v
 Audit.v

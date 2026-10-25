@@ -16,6 +16,7 @@ test:
 	./scripts/check-shen tests/adapter.shen
 	./scripts/check-shen tests/bootstrap.shen
 	./scripts/check-shen tests/compilerpass.shen
+	./scripts/check-shen tests/checkedio.shen
 	python3 tests/gates.py
 
 prove:

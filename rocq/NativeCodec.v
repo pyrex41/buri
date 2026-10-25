@@ -44,8 +44,8 @@ Proof.
  induction count as [|count IH]; intro n; start_run.
  - exists 10; reflexivity.
  - eapply branch with (flag:=false).
-   + change (executes P (arguments ["V5939";"V5940"] [Integer (Z.of_nat n);Integer (Z.of_nat (S count))])
-       (Call "eqv?" [Var "V5940";Lit (Integer 0)]) (Boolean false)).
+   + change (executes P (arguments ["V5945";"V5946"] [Integer (Z.of_nat n);Integer (Z.of_nat (S count))])
+       (Call "eqv?" [Var "V5946";Lit (Integer 0)]) (Boolean false)).
      exists 10. change (Returned (Boolean (Z.eqb (Z.of_nat (S count)) 0)) = Returned (Boolean false)).
      assert (Z.eqb (Z.of_nat (S count)) 0 = false) as Z by (apply Z.eqb_neq; lia). rewrite Z; reflexivity.
    + cbn [body]. eapply binding; [apply half; small|].

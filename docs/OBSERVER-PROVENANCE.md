@@ -87,8 +87,8 @@ exactly the same Native expression before and after the transformation.
 Consequently every pure evaluator outcome and every modeled state/effect trace
 is identical, for arbitrary private programs, environments, fuel and effect
 responses. The decoding premises are explicit; no proof claims success for
-malformed syntax or every compiler pass. The many-binding case currently has an
-assembly proof, not a general semantic preservation theorem.
+malformed syntax or every compiler pass. The arbitrary-length binding-list case now has a preservation theorem too;
+see `CompilerBindings.v` and [CHECKED-IO](CHECKED-IO.md).
 
 This is a first generic proof about a source-pinned upstream pass. It is not
 universal correctness of the entire Shen frontend or backend.
@@ -106,3 +106,12 @@ Tampering fixtures change bootstrap boolean tagging or pair traversal, observer
 activation or publication, and the upstream pass keyword. IO origin, native
 primitive contracts, mutable construction bindings and the remaining compiler
 are still explicit trust obligations. There are no custom axioms.
+
+## Checked IO follow-up
+
+Controlled observer writes now use a captured read-back checking wrapper.
+`write-to-file` alone has a native counterexample under `*hush*`; its return value
+is not evidence of persistence. [CHECKED-IO](CHECKED-IO.md) proves the wrapper's
+conditional file-world postcondition and documents the still-trusted read/native
+execution boundary. The captured entry also checks unique binding of the source
+variable and use of the wrapper for all three outputs.

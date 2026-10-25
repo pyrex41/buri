@@ -24,6 +24,13 @@
       Loaded (buri.observe-forms (read-from-string Source))
       Records (reverse (value buri.observed))
       Data [buri-observed-encoder-1 (buri.kl-node Records)]
-   (do (write-to-file (cn Bits ".source") Source)
-       (write-to-file Bits (buri.wire Data))
-       (write-to-file Transcript (make-string "~S~%" Records)))))
+   (do (buri.checked-write (cn Bits ".source") Source)
+       (buri.checked-write Bits (buri.wire Data))
+       (buri.checked-write Transcript (make-string "~S~%" Records)))))
+
+\\ Verify actual persisted text; write-to-file alone may be suppressed by *hush*.
+(define buri.checked-write Path Text ->
+ (let Written (write-to-file Path Text)
+      Actual (read-file-as-string Path)
+   (if (= Actual Text) Text
+       (simple-error "Snapshot write verification failed"))))

@@ -137,3 +137,14 @@ reader and whole-compiler correctness, source/binary identity, and live mutable
 observer bindings are still assumptions. No model trace theorem is labelled
 native IO verification. The discovered `and` final-value decoder bug is fixed
 and all earlier proofs are replayed against the correction.
+
+## Silent writer counterexample and checked output
+
+The pinned host can return the requested string from `write-to-file` while
+persisting an empty file when `*hush*` is true. This disproves unconditional
+trust in a successful writer return. Controlled observers now use checked writes;
+see [CHECKED-IO](CHECKED-IO.md). The captured wrapper is proved to reject mismatch
+against the modeled current file world even with an arbitrary faulty writer.
+Truthful reads and native execution remain explicit. Atomicity and durability
+are not claimed. Compiler preservation now includes arbitrary binding lists for
+the source-pinned merge pass under stable-decoding premises.

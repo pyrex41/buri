@@ -7,7 +7,8 @@ Module ObserverEffects.
 Import Native.Native.
 Open Scope string_scope.
 Inductive event := Arity (name count:value) | Compile (source:value) (response:result)
- | Activate (target:value) (response:result) | ReadRecords | WriteRecords (records:value).
+ | Activate (target:value) (response:result) | ReadRecords | WriteRecords (records:value)
+ | WriteFile (path text:value) (response:result) | ReadFile (path text:value).
 Record outcome := Out { answer:result; records:value; trace:list event }.
 Definition computation := value -> outcome.
 Definition return_result r : computation := fun st => Out r st [].
@@ -29,11 +30,11 @@ Definition dispatch (compiler activate:value->result) op vs : computation := fun
  | "kl:set",[Symbol "buri.observed";new] => Out (Returned new) new [WriteRecords new]
  | "begin",_ => Out (Returned (last vs Nil)) st []
  | _,_ => Out (external op vs) st [] end.
-Fixpoint eval fuel (p:program) compiler activate (rho:env) e : computation :=
+Fixpoint eval_with fuel (p:program) (operation:string->list value->computation) (rho:env) e : computation :=
  match fuel with
  | O => return_result Exhausted
  | S n =>
-   let run:=eval n p compiler activate in
+   let run:=eval_with n p operation in
    let many:=fix many es (k:list value -> computation) := match es with
     | [] => k []
     | a::rest => bind (run rho a) (fun v => many rest (fun vs => k (v::vs))) end in
@@ -47,8 +48,9 @@ Fixpoint eval fuel (p:program) compiler activate (rho:env) e : computation :=
    | Call name es => many es (fun vs => match p name with
      | Some d => if Nat.eqb (List.length (params d)) (List.length vs)
        then run (arguments (params d) vs) (body d) else return_result Unsupported
-     | None => dispatch compiler activate name vs end)
+     | None => operation name vs end)
    end end.
+Definition eval fuel p compiler activate := eval_with fuel p (dispatch compiler activate).
 Definition invoke fuel compiler activate name args : computation :=
  match lookup observer_program name with
  | Some d => if Nat.eqb (List.length (params d)) (List.length args)
@@ -72,7 +74,7 @@ Theorem captured_install_success : forall compiler activate name args body targe
 Proof.
  intros compiler activate name args body target result previous C A.
  match goal with |- _ = ?rhs => change (eval 30 (lookup observer_program) compiler activate
- (arguments ["V5956"] [form (Symbol name) args body])
+ (arguments ["V5962"] [form (Symbol name) args body])
  (Native.body (match lookup observer_program "kl:buri.install-observed" with Some d=>d |None=>Def [] (Lit Nil) end)) previous = rhs) end.
  pose proof (elements_list args) as LEN.
  vm_compute in LEN,C,A. vm_compute.
