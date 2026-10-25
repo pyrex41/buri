@@ -120,7 +120,9 @@ Fixpoint decode fuel v := match fuel with
              | Some c,Some b,Some rest => Some (If c b rest) | _,_,_ => None end
            | _ => None end end) clauses
      | Some (Symbol "and"::xs) => match many xs with
-       | Some es => Some (fold_right And (Lit (Boolean true)) es) | _ => None end
+       | Some es => Some (match (fold_right (fun a tail => Some (match tail with
+         | None => a | Some b => And a b end)) None es) with
+         | Some e => e | None => Lit (Boolean true) end) | _ => None end
      | Some (Symbol "or"::xs) => match many xs with
        | Some es => Some (fold_right Or (Lit (Boolean false)) es) | _ => None end
      | Some (Symbol s::xs) => match many xs with Some es => Some (Call s es) | _ => None end

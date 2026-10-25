@@ -43,3 +43,12 @@ Proof. reflexivity. Qed.
 Example fault_cannot_forge_success : NativeRuntime.execute 10 no_program
  (NativeRuntime.Fault (Returned (Integer 1)),[]) = Unsupported.
 Proof. reflexivity. Qed.
+
+Example and_keeps_last_value :
+ match decode 20 (L [Symbol "and";Integer 1;Integer 2]) with
+ | Some e => eval 20 no_program no_environment e | _ => Unsupported end = Returned (Integer 2).
+Proof. reflexivity. Qed.
+Example and_single_value : decode 20 (L [Symbol "and";Integer 7]) = Some (Lit (Integer 7)).
+Proof. reflexivity. Qed.
+Example and_empty_identity : decode 20 (L [Symbol "and"]) = Some (Lit (Boolean true)).
+Proof. reflexivity. Qed.

@@ -40,4 +40,11 @@ AdapterInput.v
 AdapterCorrect.v
 SourceReader.v
 CodecCorrespondence.v
+BootstrapInput.v
+BootstrapCorrect.v
+ObserverInput.v
+ObserverEffects.v
+ObserverIO.v
+CompilerPassInput.v
+CompilerPassCorrect.v
 Audit.v

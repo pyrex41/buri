@@ -126,3 +126,14 @@ is not a proof of Chez's implementation. Fixed helper-table assumptions, native
 representation, bootstrap observer/tagger and IO remain explicit. This does not
 certify the stock inexact encoder, arbitrary Shen compiler inputs, or live global
 exporter behavior under rebinding.
+
+## Bootstrap and observer-effects checkpoint
+
+[OBSERVER-PROVENANCE](OBSERVER-PROVENANCE.md) proves the captured boolean-aware
+bootstrap tagging bodies and exact installer effect ordering/failure behavior.
+It checks the captured entry's read/parse/snapshot variable flow and begins
+source-pinned upstream compiler-pass preservation. Native effect truthfulness,
+reader and whole-compiler correctness, source/binary identity, and live mutable
+observer bindings are still assumptions. No model trace theorem is labelled
+native IO verification. The discovered `and` final-value decoder bug is fixed
+and all earlier proofs are replayed against the correction.

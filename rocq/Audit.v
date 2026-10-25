@@ -1,4 +1,4 @@
-From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence.
+From Buri Require Import Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture Encoder EncoderSource EncoderNames EncoderFrontend EncoderKLambda CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture BindingVersions Sealed Native NativeRuntime NativeHelpers SealedInput ConstructorInput NativeSimulation NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect.
 Check nadd_standard.
 Print Assumptions nadd_standard.
 Check nmul_standard.
@@ -409,3 +409,55 @@ Check CodecCorrespondence.compiler_records_present.
 Print Assumptions CodecCorrespondence.compiler_records_present.
 Check CodecCorrespondence.source_machine_total.
 Print Assumptions CodecCorrespondence.source_machine_total.
+Check bootstrap_exact.
+Print Assumptions bootstrap_exact.
+Check bootstrap_names.
+Print Assumptions bootstrap_names.
+Check BootstrapCorrect.bytes_correct.
+Print Assumptions BootstrapCorrect.bytes_correct.
+Check BootstrapCorrect.node_correct.
+Print Assumptions BootstrapCorrect.node_correct.
+Check BootstrapCorrect.tag_roundtrip.
+Print Assumptions BootstrapCorrect.tag_roundtrip.
+Check BootstrapCorrect.machine_correct.
+Print Assumptions BootstrapCorrect.machine_correct.
+Check BootstrapCorrect.wire_roundtrip.
+Print Assumptions BootstrapCorrect.wire_roundtrip.
+Check BootstrapCorrect.booleans_not_symbols.
+Print Assumptions BootstrapCorrect.booleans_not_symbols.
+Check observer_exact.
+Print Assumptions observer_exact.
+Check observer_names.
+Print Assumptions observer_names.
+Check ObserverEffects.captured_install_success.
+Print Assumptions ObserverEffects.captured_install_success.
+Check ObserverEffects.captured_compile_failure.
+Print Assumptions ObserverEffects.captured_compile_failure.
+Check ObserverEffects.captured_activation_failure.
+Print Assumptions ObserverEffects.captured_activation_failure.
+Check ObserverEffects.published_target_was_activated.
+Print Assumptions ObserverEffects.published_target_was_activated.
+Check ObserverIO.entry_from_capture.
+Print Assumptions ObserverIO.entry_from_capture.
+Check ObserverIO.source_read_parse_snapshot.
+Print Assumptions ObserverIO.source_read_parse_snapshot.
+Check ObserverIO.single_source_read_token.
+Print Assumptions ObserverIO.single_source_read_token.
+Check ObserverIO.single_source_parse_token.
+Print Assumptions ObserverIO.single_source_parse_token.
+Check compiler_pass_exact.
+Print Assumptions compiler_pass_exact.
+Check compiler_pass_names.
+Print Assumptions compiler_pass_names.
+Check CompilerPassCorrect.captured_merge_many.
+Print Assumptions CompilerPassCorrect.captured_merge_many.
+Check CompilerPassCorrect.captured_merge_two.
+Print Assumptions CompilerPassCorrect.captured_merge_two.
+Check CompilerPassCorrect.captured_merge_two_machine.
+Print Assumptions CompilerPassCorrect.captured_merge_two_machine.
+Check CompilerPassCorrect.merge_two_decodes.
+Print Assumptions CompilerPassCorrect.merge_two_decodes.
+Check CompilerPassCorrect.merge_two_preserves.
+Print Assumptions CompilerPassCorrect.merge_two_preserves.
+Check CompilerPassCorrect.merge_two_preserves_effects.
+Print Assumptions CompilerPassCorrect.merge_two_preserves_effects.

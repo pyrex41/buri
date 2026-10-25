@@ -14,6 +14,8 @@ test:
 	./scripts/check-shen tests/sealed.shen
 	./scripts/check-shen tests/constructor.shen
 	./scripts/check-shen tests/adapter.shen
+	./scripts/check-shen tests/bootstrap.shen
+	./scripts/check-shen tests/compilerpass.shen
 	python3 tests/gates.py
 
 prove:

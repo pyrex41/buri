@@ -28,10 +28,10 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 11 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 205 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 45
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['10']
+assert len(rows) == 13 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 231 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 50
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['13']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 205,
+        'audited_theorems': 231,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -181,7 +181,38 @@ report = {
         'decoder_roundtrip_domain': 'admitted nodes: numerals <= 256, matching the existing KLambda protocol',
         'effectful_exporter_verified': False,
         'native_boolean_aware_bootstrap_adapter_verified': False,
+        'bootstrap_captured_pure_targets_proved': True,
         'capture_provenance_verified': False,
+    },
+    'observer_and_bootstrap': {
+        'bootstrap_capture_sha256': digest(root / '_build/bootstrap.bits'),
+        'bootstrap_source_snapshot_sha256': digest(root / '_build/bootstrap.bits.source'),
+        'bootstrap_proof_sha256': digest(root / 'rocq/BootstrapCorrect.v'),
+        'bootstrap_captured_execution': 'all finite typed nodes with natural numerals and native booleans; fixed helper model',
+        'bootstrap_roundtrip_domain': 'typed syntax with numerals at most 256',
+        'observer_capture_sha256': digest(root / '_build/observer.bits'),
+        'observer_source_snapshot_sha256': digest(root / '_build/observer.bits.source'),
+        'installer_proof_sha256': digest(root / 'rocq/ObserverEffects.v'),
+        'installer_captured_effect_sequence_proved': True,
+        'installer_scope': 'exact one-definition target in explicit state/effect semantics; compile and activation responses remain external contracts',
+        'publication_after_success': True,
+        'failed_compile_or_activation_preserves_records': True,
+        'arity_side_effects_rolled_back': False,
+        'observer_io_plan_proved': 'captured entry token counts and shared source variable in read/parse/snapshot; structural proof only',
+        'native_read_write_truthfulness_verified': False,
+        'native_effect_machine_correspondence_verified': False,
+        'full_effectful_observer_verified': False,
+    },
+    'upstream_compiler_pass': {
+        'source': 'ports/upstream/compiler.shen',
+        'upstream_blob': '42ac753b8f305c578998b74693fc85b28112a814',
+        'extracted_source': 'ports/compiler-merge.shen',
+        'capture_sha256': digest(root / '_build/compiler-pass.bits'),
+        'proof_sha256': digest(root / 'rocq/CompilerPassCorrect.v'),
+        'pass': '_scm.merge-nested-lets',
+        'captured_assembly': 'arbitrary bindings/bodies for both supported merge cases',
+        'semantic_preservation': 'two-binding case, admitted operand decoding; every evaluator result and modeled effect trace',
+        'general_compiler_correctness': False,
     },
     'trust_audit': {
         'ledger': 'docs/TRUST-AUDIT.md',
@@ -197,11 +228,11 @@ report = {
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter'], 'bootstrap': suite_counts['bootstrap'], 'compilerpass': suite_counts['compilerpass']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 45,
-    'rocq_regression_examples': 75,
-    'orchestration_regressions': 10,
+    'rejected_proof_mutations': 50,
+    'rocq_regression_examples': 78,
+    'orchestration_regressions': 13,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',

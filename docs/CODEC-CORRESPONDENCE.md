@@ -55,9 +55,9 @@ natural-number syntax datatype.
 
 The two pure functions additionally require `cons`, `list`, and `string?`.
 Their fixed helper table is a model assumption. The current global exporter is
-not thereby made immutable or certified under live rebinding. Native boolean-aware
-bootstrap capture (`buri.native-node`), source reading, loader effects and IO
-are still provenance obligations. The adapter's own source-to-target compiler
+not thereby made immutable or certified under live rebinding. The boolean-aware bootstrap pure targets are now proved too; see
+[OBSERVER-PROVENANCE](OBSERVER-PROVENANCE.md). Their native self-capture, source
+reading, loader effects and IO remain provenance obligations. The adapter's own source-to-target compiler
 execution is captured, not universally proved.
 
 ## Source and compiler artifact chain
@@ -95,7 +95,7 @@ rejected. Native cases and these adversarial fixtures remain tests, separately
 reported from universal theorems.
 
 Still unverified within the broader Shen/Buri system: general reader/frontend/
-backend correctness, the observer and bootstrap tagger, effectful exporter IO,
+backend correctness, native observer and bootstrap execution provenance, effectful exporter IO,
 installed-code provenance, the broad Shen evaluator and certificate checker.
 Actual host activation and representation correspondence remain trusted too.
 Chez compiler/runtime internals are deferred as requested. These obligations are

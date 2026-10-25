@@ -23,10 +23,10 @@ Run `make report` for evidence from your own image and toolchain.
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Forty-five Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Fifty Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 205 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 231 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 75 additional Rocq regression examples and ten
+The native validation lane has 78 additional Rocq regression examples and thirteen
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -145,3 +145,37 @@ not a universal compiler theorem. Native observer/reader/IO truthfulness, the
 boolean-aware bootstrap capture adapter and host activation remain unverified.
 The pure tagging proof fixes its helper table; it does not freeze the current
 global exporter in a running Shen process. Chez internals remain deferred.
+
+## Bootstrap, captured observer effects, and upstream compiler pass
+
+[OBSERVER-PROVENANCE](OBSERVER-PROVENANCE.md) adds 26 audited goals. The actual
+boolean-aware `buri.native-bytes`/`buri.native-node` targets now have universal
+model execution proofs and typed decoding roundtrip for the admitted numeral
+profile. Booleans remain distinct from symbols. This closes their pure target
+algorithm obligation, not the truthfulness of the self-capture process.
+
+The captured `buri.install-observed` body is now executed in explicit state/effect
+semantics. For arbitrary valid definition names/arguments/bodies and arbitrary
+successful compiler/activation responses, the exact compiled target is activated
+before the source/target record is read and prepended. A failed compiler or
+activation response preserves prior records and makes no publication. Other
+side effects, including stored arity, are not rolled back. These are conditional
+execution proofs against specified external operations, not verification of
+native host effects or a refinement theorem for the entire observer.
+
+The captured entry is checked structurally for one source-read token, one parse
+token, and the same lexical source variable flowing to parsing and snapshot
+writing. This is an IO-plan check, not a proof that file IO is truthful.
+
+The pinned upstream Shen compiler source is vendored with its exact Git blob
+identity and license. The extracted, package-qualified `merge-nested-lets` pass
+is recompiled/captured. Both transformation cases preserve arbitrary supplied
+bindings/bodies. For the two-binding case with admitted subexpression decoding,
+all pure evaluator outcomes and modeled state/effect traces are unchanged.
+General compiler correctness remains open beyond this pass and profile.
+
+This work exposed and fixed a model decoder defect: Scheme `and` returns its
+last operand, so `(and 1 2)` returns `2`, not true. Three new Rocq regressions
+cover empty, single and multiple operands; existing boolean-only proofs are
+rechecked. There are 25 additional native checks, five new rejected mutations,
+and three new literal/stale packaging checks.

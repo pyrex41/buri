@@ -92,8 +92,7 @@ Proof.
    + eapply conjunction with (flag:=true).
      * exists 10. change (Returned (Boolean (Z.geb (Z.of_nat (nat_of_ascii c)) 0)) = Returned (Boolean true)).
        rewrite (proj1 (char_range c)); reflexivity.
-     * eapply conjunction with (flag:=true); [|apply literal].
-       exists 10. change (Returned (Boolean (Z.ltb (Z.of_nat (nat_of_ascii c)) 256)) = Returned (Boolean true)).
+     * exists 10. change (Returned (Boolean (Z.ltb (Z.of_nat (nat_of_ascii c)) 256)) = Returned (Boolean true)).
        rewrite (proj2 (char_range c)); reflexivity.
    + eapply primitive_call.
      * constructor; [apply literal|constructor; [|constructor]].
