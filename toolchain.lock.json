@@ -26,6 +26,7 @@
   },
   "port_sources": {
     "src/compiler.shen": "42ac753b8f305c578998b74693fc85b28112a814",
-    "src/primitives.scm": "92b8875a276848b473c59879f075f429ba44a7a0"
+    "src/primitives.scm": "92b8875a276848b473c59879f075f429ba44a7a0",
+    "src/overrides.shen": "3f20b5f1b952c9c6aae3d32403da1f34095db433"
   }
 }

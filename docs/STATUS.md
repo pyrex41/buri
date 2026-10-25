@@ -23,10 +23,10 @@ Run `make report` for evidence from your own image and toolchain.
 | Every supplied capture record is checked in order | Generic record-coverage theorem and an exact 12-record release check | Cannot establish the provenance of the supplied data |
 | Native Shen-Scheme agrees on selected cases | 105 actual execution comparisons | Sampled evidence only |
 | Kernel/evaluator reject regressions and malformed evidence | 45 kernel, 36 evaluator, and 16 encoder and 8 capture-adapter checks | Tests do not establish checker soundness |
-| Wrong compiler instructions and false equations rejected | Fifty-two Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
+| Wrong compiler instructions and false equations rejected | Fifty-seven Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 247 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 282 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -37,7 +37,7 @@ exists; it is not acceptance of the current checkout. Only a fresh successful
 gate run produces `_build/report.json`. Reports are unsigned and retain exact
 source hashes, toolchain identity, theorem log, and remaining assumptions.
 
-The native validation lane has 78 additional Rocq regression examples and fourteen
+The native validation lane has 78 additional Rocq regression examples and eighteen
 orchestration checks. The raw input string, decoded records, names, and arithmetic
 normalization are covered by the new formal path described in [CAPTURE](CAPTURE.md).
 [ENCODER](ENCODER.md) describes the source-linked program proof. The broader Shen
@@ -215,3 +215,43 @@ Two new tampering fixtures must fail proof compilation: bypassing comparison or
 replacing the read-back call. Literal-package checks include the checked wrapper.
 Underlying native reads, activation, observer concurrency and Chez internals are
 not relabelled as verified by these new component proofs.
+
+## Source-linked numeric, ordering, loader, and read-wrapper proofs
+
+[CORRECTNESS](CORRECTNESS.md) defines the full correctness target and the
+remaining six-part implementation sequence. Thirty-five additional audited
+claims bring the inventory to 282. New source pins include the actual primitive
+and override files, not ideal replacements.
+
+`StockDivision.v` proves the parsed upstream division wrapper's branch behavior
+for the admitted exact inputs and arbitrary rounding results. The existing
+private exact helper now has signed floor-division correctness for all integer
+numerators and positive denominators. Stock precision loss remains a failure of
+the encoder's exact-halving requirement; whether it violates Shen's allowed
+numeric semantics is not established. Negative denominators remain outside the
+formal ratio profile, despite passing native numeric tests.
+
+`OrderCallCorrect.v` proves captured fresh-name acceptance, collision exhaustion,
+success implies absence, and preservation of existing symbol bindings under its
+specified occurrence and constant-generator contracts. It also checks an actual
+captured two-computation transformation and proves generic two-nullary-call
+preservation for arbitrary modeled effects/errors, with adjusted evaluator fuel.
+This is not preservation for arbitrary call inputs or higher-order operators.
+
+`ObserverPipeline.v` executes the captured three-form loader and installer
+together: arbitrary valid frontend results compile, activate and publish in
+order. First/second frontend failures and third backend failure retain exact
+completed prefixes; no rollback is claimed. The complete observer entry and
+native compiler/activation correspondence remain open.
+
+`IOReadCorrect.v` proves that the actual captured Shen read override constructs
+the home-directory prefix and forwards the exact native read outcome/state/trace.
+The remaining foundation is the Chez reader, stable home lookup, and native
+execution correspondence. The theorem does not establish IO truthfulness by
+assuming that the entire Shen wrapper was truthful.
+
+Thirty-nine new native assertions bring native checks to 868 across fifteen
+suites. Five additional rejected mutations bring the total to 57. Eighteen
+orchestration regressions check literal/stale/error handling. All native samples,
+ground captured transformations and universal formal statements remain distinct.
+Full Shen/port correctness is still OPEN; Chez internals remain deferred.

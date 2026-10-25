@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
     for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py', 'package-constructor.py', 'package-adapter.py', 'package-provenance.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
@@ -151,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='buri-adapter-gate-') as directory:
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
-for profile in ['bootstrap','observer','compiler_pass','checked_io']:
+for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read']:
     with tempfile.TemporaryDirectory(prefix='buri-provenance-gate-') as directory:
         capture, module = Path(directory)/'capture.bits', Path(directory)/'Capture.v'
         capture.write_bytes(b'00')
@@ -161,5 +161,15 @@ for profile in ['bootstrap','observer','compiler_pass','checked_io']:
         result = subprocess.run(['python3', str(root/'scripts/check-provenance-package.py'), profile, str(capture), str(module)], capture_output=True, text=True)
         assert result.returncode != 0 and 'does not match source bytes' in result.stderr
         count += 1
+
+with tempfile.TemporaryDirectory(prefix='buri-source-literal-') as directory:
+    source, module = Path(directory)/'source.scm', Path(directory)/'Source.v'
+    source.write_text('(define (f x) "quoted text")\n')
+    subprocess.run(['python3', str(root/'scripts/package-implementation.py'), 'stock_division', str(source), str(module)], check=True)
+    subprocess.run(['python3', str(root/'scripts/check-implementation-package.py'), 'stock_division', str(source), str(module)], check=True)
+    module.write_text(module.read_text().replace('quoted text','changed text'))
+    result = subprocess.run(['python3', str(root/'scripts/check-implementation-package.py'), 'stock_division', str(source), str(module)], capture_output=True, text=True)
+    assert result.returncode != 0 and 'does not match source bytes' in result.stderr
+    count += 1
 
 print(f'BURI_GATE_TESTS_OK {count}')

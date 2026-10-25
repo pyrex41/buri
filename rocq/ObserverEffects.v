@@ -6,7 +6,7 @@ Import ListNotations.
 Module ObserverEffects.
 Import Native.Native.
 Open Scope string_scope.
-Inductive event := Arity (name count:value) | Compile (source:value) (response:result)
+Inductive event := Frontend (source:value) (response:result) | Arity (name count:value) | Compile (source:value) (response:result)
  | Activate (target:value) (response:result) | ReadRecords | WriteRecords (records:value)
  | WriteFile (path text:value) (response:result) | ReadFile (path text:value).
 Record outcome := Out { answer:result; records:value; trace:list event }.

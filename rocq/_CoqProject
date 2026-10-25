@@ -50,4 +50,12 @@ CompilerPassCorrect.v
 CompilerBindings.v
 CheckedIOInput.v
 CheckedFileIO.v
+StockDivisionInput.v
+StockDivision.v
+OrderCallInput.v
+OrderCallCorrect.v
+ObserverFormsInput.v
+ObserverPipeline.v
+IOReadInput.v
+IOReadCorrect.v
 Audit.v

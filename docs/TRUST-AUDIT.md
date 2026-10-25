@@ -148,3 +148,13 @@ against the modeled current file world even with an arbitrary faulty writer.
 Truthful reads and native execution remain explicit. Atomicity and durability
 are not claimed. Compiler preservation now includes arbitrary binding lists for
 the source-pinned merge pass under stable-decoding premises.
+
+
+The [implementation correctness ledger](CORRECTNESS.md) narrows several wrapper
+and observer obligations. Actual stock division delegates fractional results to
+inexact conversion; the large-integer example refutes the codec's exact-halving
+requirement, without establishing a violation of Shen's permitted numeric
+semantics. The captured read override now has a path-construction and exact
+forwarding proof, while Chez reads remain trusted. The three-form observer loader
+has composed success and selected failure-prefix proofs; its frontend/compiler,
+activation and full higher-order IO entry are not verified by those statements.

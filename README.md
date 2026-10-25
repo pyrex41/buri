@@ -45,7 +45,7 @@ ultimately depends on.
   order, lexical capture, lazy branches, currying, exceptions, large integers,
   and freeze/thaw. These are tests, not a preservation proof.
 - **Adversarial gates:** 105 Shen kernel/evaluator/encoder/adapter checks, 51 Rocq adversarial examples,
-  fourteen orchestration checks, and fifty-two compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
+  eighteen orchestration checks, and fifty-seven compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
   tests, open obligations, and assumptions distinct.
 
 Read [STATUS](docs/STATUS.md) and [TRUST](docs/TRUST.md) before interpreting any
@@ -72,7 +72,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 247 theorem dependencies for custom axioms, independently
+checks all proofs, audits 282 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
@@ -164,3 +164,7 @@ now read each output back and reject mismatches. The captured wrapper's success
 postcondition is proved against a truthful-read contract. Compiler preservation
 also now covers arbitrary binding lists, including effects and shadowing, under
 explicit syntax-admission premises.
+
+[Implementation correctness ledger](docs/CORRECTNESS.md) records the exact
+numeric-wrapper, fresh-name, call-ordering, three-definition loader and read
+adapter proofs, their domains, and the remaining path to full preservation.

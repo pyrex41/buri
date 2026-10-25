@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 kind, source, destination = sys.argv[1:]
-if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io'):
+if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read'):
     raise SystemExit('Unknown packaging profile')
 bits = Path(source).read_bytes()
 if not bits or any(b not in b'01' for b in bits):
@@ -11,7 +11,10 @@ if not bits or any(b not in b'01' for b in bits):
 count, names = {'bootstrap': (2, ['kl:buri.native-bytes', 'kl:buri.native-node']),
                 'observer': (1, ['kl:buri.install-observed']),
                 'compiler_pass': (1, ['kl:_scm.merge-nested-lets']),
-                'checked_io': (1, ['kl:buri.checked-write'])}[kind]
+                'checked_io': (1, ['kl:buri.checked-write']),
+                'order_call': (6, ['kl:_scm.merge-nested-lets','kl:_scm.simple-scheme-expression?','kl:_scm.has-computation?','kl:_scm.fresh-call-variable','kl:_scm.order-call-inputs','kl:_scm.order-call']),
+                'observer_forms': (2, ['kl:buri.install-observed','kl:buri.observe-forms']),
+                'io_read': (1, ['kl:read-file-as-string'])}[kind]
 text = '''From Coq Require Import List String.
 From Buri Require Import Wire Native.
 Import ListNotations Native.Native.

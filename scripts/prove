@@ -6,7 +6,7 @@ mkdir -p _build/rocq
 rm -f _build/EquationBridge.v _build/NativeOutput.v _build/compiler-output.sexp \
  _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v _build/EncoderSource.v \
  _build/encoder-kl.bits _build/encoder-kl.sexp _build/EncoderKLambda.v \
- _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v
+ _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v _build/StockDivisionInput.v _build/OrderCallInput.v _build/ObserverFormsInput.v _build/IOReadInput.v _build/io-read.bits _build/io-read.bits.source _build/io-read.bits.sexp _build/order-call.bits _build/order-call.bits.source _build/order-call.bits.sexp
 scripts/rocq coqc --version > _build/rocq-version.log
 grep -q 'version 8.18.0' _build/rocq-version.log || { cat _build/rocq-version.log; exit 1; }
 # Require a fresh image and regenerate the bridge from actual loaded equations.
@@ -75,11 +75,13 @@ python3 scripts/package-adapter.py _build/adapter.bits _build/AdapterInput.v
 python3 scripts/check-adapter-package.py _build/adapter.bits _build/AdapterInput.v
 diff -u rocq/AdapterInput.v _build/AdapterInput.v
 python3 scripts/check-upstream-pass.py
-for profile in bootstrap observer compiler_pass; do
+for profile in bootstrap observer compiler_pass order_call io_read; do
  case "$profile" in
   bootstrap) source=shen/observe-constructor.shen; capture=bootstrap; module=BootstrapInput ;;
   observer) source=shen/observe-encoder.shen; capture=observer; module=ObserverInput ;;
   compiler_pass) source=ports/compiler-merge.shen; capture=compiler-pass; module=CompilerPassInput ;;
+  order_call) source=ports/compiler-order.shen; capture=order-call; module=OrderCallInput ;;
+  io_read) source=ports/io-read.shen; capture=io-read; module=IOReadInput ;;
  esac
  scripts/shen -l buri.shen -l shen/wire.shen -l shen/observe-encoder.shen -l shen/observe-constructor.shen \
   -e "(buri.observe-constructor \"$source\" \"_build/$capture.bits\")" \
@@ -95,19 +97,25 @@ done
 python3 scripts/package-provenance.py checked_io _build/observer.bits _build/CheckedIOInput.v
 python3 scripts/check-provenance-package.py checked_io _build/observer.bits _build/CheckedIOInput.v
 diff -u rocq/CheckedIOInput.v _build/CheckedIOInput.v
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests EncoderNames EncoderFrontend EncoderKLambda EncoderFrontendTests CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture ObservedTests BindingVersions Sealed Native NativeRuntime NativeSimulation NativeHelpers NativeTests SealedInput ConstructorInput NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO Audit; do
+python3 scripts/package-provenance.py observer_forms _build/observer.bits _build/ObserverFormsInput.v
+python3 scripts/check-provenance-package.py observer_forms _build/observer.bits _build/ObserverFormsInput.v
+diff -u rocq/ObserverFormsInput.v _build/ObserverFormsInput.v
+python3 scripts/package-implementation.py stock_division ports/stock-division.scm _build/StockDivisionInput.v
+python3 scripts/check-implementation-package.py stock_division ports/stock-division.scm _build/StockDivisionInput.v
+diff -u rocq/StockDivisionInput.v _build/StockDivisionInput.v
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests EncoderNames EncoderFrontend EncoderKLambda EncoderFrontendTests CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture ObservedTests BindingVersions Sealed Native NativeRuntime NativeSimulation NativeHelpers NativeTests SealedInput ConstructorInput NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO StockDivisionInput StockDivision OrderCallInput OrderCallCorrect ObserverFormsInput ObserverPipeline IOReadInput IOReadCorrect Audit; do
   cp "rocq/$module.v" "_build/rocq/$module.v"
   rm -f "_build/rocq/$module.vo" "_build/rocq/$module.vos" "_build/rocq/$module.vok"
 done
 cd _build/rocq
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests EncoderNames EncoderFrontend EncoderKLambda EncoderFrontendTests CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture ObservedTests BindingVersions Sealed Native NativeRuntime NativeSimulation NativeHelpers NativeTests SealedInput ConstructorInput NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO Audit; do
+for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests EncoderNames EncoderFrontend EncoderKLambda EncoderFrontendTests CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture ObservedTests BindingVersions Sealed Native NativeRuntime NativeSimulation NativeHelpers NativeTests SealedInput ConstructorInput NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO StockDivisionInput StockDivision OrderCallInput OrderCallCorrect ObserverFormsInput ObserverPipeline IOReadInput IOReadCorrect Audit; do
   if ! "$root/scripts/rocq" coqc -Q . Buri "$module.v" > "$module.log" 2>&1; then
     cat "$module.log"; exit 1
   fi
 done
 if grep -q '^Axioms:' Audit.log; then cat Audit.log; exit 1; fi
-[ "$(grep -c '^Closed under the global context$' Audit.log)" = 247 ] || {
+[ "$(grep -c '^Closed under the global context$' Audit.log)" = 282 ] || {
   cat Audit.log; echo 'Unexpected theorem assumption inventory' >&2; exit 1;
 }
-"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Wire Buri.Resolve Buri.Normalize Buri.NativeValidation Buri.NativeCapture Buri.WireTests Buri.Encoder Buri.EncoderSource Buri.EncoderTests Buri.EncoderNames Buri.EncoderFrontend Buri.EncoderKLambda Buri.EncoderFrontendTests Buri.CaptureTag Buri.ByteDomain Buri.EncoderScheme Buri.ObservedEncoder Buri.ObservedCapture Buri.ObservedTests Buri.BindingVersions Buri.Sealed Buri.Native Buri.NativeRuntime Buri.NativeSimulation Buri.NativeHelpers Buri.NativeTests Buri.SealedInput Buri.ConstructorInput Buri.NativeApplications Buri.NativeComposition Buri.NativeCodec Buri.AdapterInput Buri.AdapterCorrect Buri.SourceReader Buri.CodecCorrespondence Buri.BootstrapInput Buri.BootstrapCorrect Buri.ObserverInput Buri.ObserverEffects Buri.ObserverIO Buri.CompilerPassInput Buri.CompilerPassCorrect Buri.CompilerBindings Buri.CheckedIOInput Buri.CheckedFileIO Buri.Audit
-printf 'BURI_ROCQ_OK 247 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n'
+"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Wire Buri.Resolve Buri.Normalize Buri.NativeValidation Buri.NativeCapture Buri.WireTests Buri.Encoder Buri.EncoderSource Buri.EncoderTests Buri.EncoderNames Buri.EncoderFrontend Buri.EncoderKLambda Buri.EncoderFrontendTests Buri.CaptureTag Buri.ByteDomain Buri.EncoderScheme Buri.ObservedEncoder Buri.ObservedCapture Buri.ObservedTests Buri.BindingVersions Buri.Sealed Buri.Native Buri.NativeRuntime Buri.NativeSimulation Buri.NativeHelpers Buri.NativeTests Buri.SealedInput Buri.ConstructorInput Buri.NativeApplications Buri.NativeComposition Buri.NativeCodec Buri.AdapterInput Buri.AdapterCorrect Buri.SourceReader Buri.CodecCorrespondence Buri.BootstrapInput Buri.BootstrapCorrect Buri.ObserverInput Buri.ObserverEffects Buri.ObserverIO Buri.CompilerPassInput Buri.CompilerPassCorrect Buri.CompilerBindings Buri.CheckedIOInput Buri.CheckedFileIO Buri.StockDivisionInput Buri.StockDivision Buri.OrderCallInput Buri.OrderCallCorrect Buri.ObserverFormsInput Buri.ObserverPipeline Buri.IOReadInput Buri.IOReadCorrect Buri.Audit
+printf 'BURI_ROCQ_OK 282 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n'

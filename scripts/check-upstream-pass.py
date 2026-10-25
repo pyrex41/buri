@@ -12,3 +12,43 @@ original = text[a:b].strip()
 qualified = Path('ports/compiler-merge.shen').read_text().split('(tc -)\n', 1)[1].strip()
 if qualified != original.replace('(define merge-nested-lets', '(define _scm.merge-nested-lets', 1):
     raise SystemExit('Extracted compiler pass differs beyond its qualified entry name')
+
+# The order pass may only qualify names into its existing package namespace.
+import re
+helpers = ['merge-nested-lets','simple-scheme-expression?','has-computation?',
+           'fresh-call-variable','order-call-inputs','order-call']
+def extract(source, name):
+    start = source.index('(define ' + name + '\n')
+    depth = 0
+    for i in range(start, len(source)):
+        depth += (source[i] == '(') - (source[i] == ')')
+        if depth == 0:
+            return source[start:i+1]
+    raise SystemExit('Unterminated upstream definition')
+forms = []
+for name in helpers:
+    form = extract(text, name)
+    form = re.sub(r'(?<=\()(' + '|'.join(re.escape(n) for n in helpers) + r')(?=[\s)])', r'_scm.\1', form)
+    form = form.replace('(define ' + name + '\n', '(define _scm.' + name + '\n', 1)
+    forms.append(form)
+if Path('ports/compiler-order.shen').read_text() != '(tc -)\n' + '\n\n'.join(forms) + '\n':
+    raise SystemExit('Extracted ordering helpers differ beyond package qualification')
+primitive = Path('ports/upstream/primitives.scm').read_bytes()
+identity = hashlib.sha1(b'blob ' + str(len(primitive)).encode() + b'\0' + primitive).hexdigest()
+if identity != '92b8875a276848b473c59879f075f429ba44a7a0':
+    raise SystemExit('Pinned upstream primitives blob mismatch')
+pt = primitive.decode()
+a = pt.index('(define (non-rational-/')
+b = pt.index('\n\n', a)
+if Path('ports/stock-division.scm').read_text() != pt[a:b] + '\n':
+    raise SystemExit('Extracted stock division differs from upstream')
+
+override = Path('ports/upstream/overrides.shen').read_bytes()
+if hashlib.sha1(b'blob ' + str(len(override)).encode() + b'\0' + override).hexdigest() != '3f20b5f1b952c9c6aae3d32403da1f34095db433':
+    raise SystemExit('Pinned upstream overrides blob mismatch')
+read_body = extract(override.decode(), 'read-file-as-string')
+if override.decode().count(read_body) != override.decode().count('(define read-file-as-string\n'):
+    raise SystemExit('Repeated upstream read overrides disagree')
+expected = '(tc -)\n' + read_body + '\n'
+if Path('ports/io-read.shen').read_text() != expected:
+    raise SystemExit('Extracted read wrapper differs from upstream')

@@ -28,10 +28,10 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 14 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 247 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 52
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['14']
+assert len(rows) == 15 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 282 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 57
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['18']
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,7 +46,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 247,
+        'audited_theorems': 282,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -227,6 +227,25 @@ report = {
         'semantic_preservation': 'both cases, arbitrary binding lists with stable operand decoding; every evaluator result and arbitrary modeled effect handler',
         'general_compiler_correctness': False,
     },
+    'implementation_correctness': {
+        'stock_division_source_blob': '92b8875a276848b473c59879f075f429ba44a7a0',
+        'numeric_proof_sha256': digest(root / 'rocq/StockDivision.v'),
+        'numeric_scope': 'actual independently parsed wrapper: exact integral quotients, external rounding for fractions; positive denominator model only',
+        'replacement_floor_division': 'all integer numerators and positive integer denominators, fixed exact-helper model',
+        'compiler_order_capture_sha256': digest(root / '_build/order-call.bits'),
+        'compiler_order_proof_sha256': digest(root / 'rocq/OrderCallCorrect.v'),
+        'freshness_scope': 'actual captured guard/loop under a constant symbol generator and specified occurrences; collision exhaustion and preservation of existing symbol bindings',
+        'ordering_scope': 'generic two nullary computations preserve arbitrary modeled effects/errors; exact captured transformation of one syntax instance',
+        'arbitrary_call_ordering_proved': False,
+        'observer_pipeline_proof_sha256': digest(root / 'rocq/ObserverPipeline.v'),
+        'observer_pipeline_scope': 'actual captured three-form loader: arbitrary valid translated definitions; exact success trace; first/second frontend failure and third backend failure',
+        'read_override_capture_sha256': digest(root / '_build/io-read.bits'),
+        'read_override_proof_sha256': digest(root / 'rocq/IOReadCorrect.v'),
+        'read_override_scope': 'actual captured Shen wrapper constructs home-directory prefix and exactly forwards the host read outcome/state/trace; Chez read contract remains trusted',
+        'full_observer_entry_verified': False,
+        'native_io_correspondence_verified': False,
+        'whole_compiler_verified': False,
+    },
     'trust_audit': {
         'ledger': 'docs/TRUST-AUDIT.md',
         'byte_recursion_domain': 'machine-checked: character inputs and recursive halvings stay below 256, counts at most 8',
@@ -241,11 +260,11 @@ report = {
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter'], 'bootstrap': suite_counts['bootstrap'], 'compilerpass': suite_counts['compilerpass'], 'checkedio': suite_counts['checkedio']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter'], 'bootstrap': suite_counts['bootstrap'], 'compilerpass': suite_counts['compilerpass'], 'checkedio': suite_counts['checkedio'], 'correctness': suite_counts['correctness']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 52,
+    'rejected_proof_mutations': 57,
     'rocq_regression_examples': 78,
-    'orchestration_regressions': 14,
+    'orchestration_regressions': 18,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',
