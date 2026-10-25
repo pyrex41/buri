@@ -26,7 +26,7 @@ Run `make report` for evidence from your own image and toolchain.
 | Wrong compiler instructions and false equations rejected | Fifty-seven Rocq mutation cases, including eight altered native constructors | Tests of the gates, not a completeness claim |
 | Full Shen-Scheme or any other port correct | OPEN | No verified-port claim |
 
-The audit enumerates 282 theorems/corollaries/bridge goals and prints their exact
+The audit enumerates 347 theorems/corollaries/bridge goals and prints their exact
 signatures and assumptions. It requires no custom axioms and independently
 rechecks their compiled proof objects. The rule-validity premise of
 `check_sound_under_rules` is an explicit theorem hypothesis, not a discharged
@@ -116,8 +116,8 @@ contracts are unchanged.
 
 The next section closes universal codec refinement and the pure captured tagging
 functions within the model. General source/reader/compiler correctness, observer
-provenance, the broader Shen evaluator and proof checker remain open. Reverse machine-to-evaluator simulation and
-divergence correspondence are not claimed. Chez compiler/runtime verification
+provenance, the broader Shen evaluator and proof checker remain open. That increment supplied only forward refinement; the later six-stage work below
+adds reverse result and divergence correspondence for the existing pure core. Chez compiler/runtime verification
 and primitive implementation internals are deferred at the user's direction.
 
 ## Universal codec and artifact correspondence
@@ -255,3 +255,47 @@ suites. Five additional rejected mutations bring the total to 57. Eighteen
 orchestration regressions check literal/stale/error handling. All native samples,
 ground captured transformations and universal formal statements remain distinct.
 Full Shen/port correctness is still OPEN; Chez internals remain deferred.
+
+
+## Six-stage refinement and a private congruence kernel
+
+[SIX-STAGES](SIX-STAGES.md) records 65 additional audited goals (347 total).
+The first-order effect evaluator now has completed-result fuel monotonicity,
+environment congruence and fresh-binding preservation. Fresh administrative let
+insertion handles arbitrary operands/argument tails and every modeled completed
+outcome, state and trace, in both directions. Stateful noncompletion includes
+external exhaustion and is not relabelled divergence.
+
+The pure evaluator is exactly the empty-trace specialization. Reverse instruction
+refinement now covers every non-exhausted result, including errors/unsupported,
+and pure-model divergence correspondence holds in both directions. This closes
+the old formal-core reverse gap, not native Chez execution correspondence.
+
+The captured fresh-name loop supports changing/erroring stateful generators and
+finite-supply progress under explicit symbol/count contracts. The actual
+three-form observer loader has one complete outcome summary covering all nine
+failure positions. Native division wrapper behavior is proved for arbitrary
+input values and named primitive responses, with signed denominator normalization;
+underlying primitive/representation contracts remain explicit.
+
+The new executable Shen axiom-free congruence deriver agrees universally with the
+Rocq checker on typed certificates. Rejecting raw admission is canonical, complete
+for its declared profile, and semantically sound. It does not admit artifact rules,
+verify the original EQ-1 induction kernel, or establish arbitrary business logic.
+A separate captured constructor assembles exactly that private table with one
+private equality helper. Exact activation wiring, seventeen imports, raw Scheme
+identifier closure, scoped authority and model rebinding soundness are checked.
+The producer builds/activates from the same literal-checked core records.
+
+Native regressions exercise the private capsule under sequential and synchronized
+hostile rebinding, without native eval of certificate payloads. There are 914
+native checks across seventeen suites, 96 additional Rocq regression examples,
+71 rejected mutations and twenty-two orchestration regressions. Native capture,
+construction-context stability, primitive/representation and Chez contracts are
+not silently discharged. Full observer entry, general KLambda/compiler preservation
+and the remaining six-stage acceptance conditions stay open in
+`spec/six-stages.json`; all six stages are explicitly partial.
+
+The report collector captures child output through a pipe and writes the complete
+log only after child exit. Regressions cover replaced/truncated logs on success
+and failure; missing markers and failed child status still prevent a report.

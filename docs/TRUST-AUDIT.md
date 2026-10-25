@@ -158,3 +158,11 @@ semantics. The captured read override now has a path-construction and exact
 forwarding proof, while Chez reads remain trusted. The three-form observer loader
 has composed success and selected failure-prefix proofs; its frontend/compiler,
 activation and full higher-order IO entry are not verified by those statements.
+
+
+[SIX-STAGES](SIX-STAGES.md) records the newer reverse-model proof, general effect
+and freshness contracts, all loader outcome combinations, and the sealed
+congruence checker. That checker's code/authority records are distinct from inert
+certificate input. Its own captured construction and raw identifier closure are
+proved; Chez activation, native capture identity and representation contracts
+remain explicit. All six full stages remain partial in the checked ledger.

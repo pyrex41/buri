@@ -1,0 +1,172 @@
+{
+  "schema": "buri-six-stage-ledger-1",
+  "full_plan_complete": false,
+  "chez_internals": "deferred",
+  "inventory_kind": "scoped claims, not stage completion inferred from theorem counts",
+  "stages": [
+    {
+      "id": 1,
+      "name": "Language contract",
+      "status": "partial",
+      "established": [
+        {
+          "profile": "First-order Scheme core with arbitrary explicit effects and immutable lexical environments",
+          "evidence": [
+            "EffectContract.eval_completed_monotone",
+            "EffectContract.environment_congruence",
+            "EffectContract.fresh_binding_preserves_effects",
+            "PureEffectBridge.pure_erasure"
+          ]
+        },
+        {
+          "profile": "Total typed admission of finite axiom-free congruence certificates",
+          "evidence": [
+            "EqualityAdmission.admission_decision_complete",
+            "EqualityAdmission.raw_acceptance_sound"
+          ]
+        }
+      ],
+      "remaining": [
+        "KLambda computed calls and closures",
+        "Currying and dynamic function/value mutation",
+        "Vector/heap aliasing and effect semantics",
+        "Implementation correspondence for the full executable Shen evaluator"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Primitive wrappers",
+      "status": "partial",
+      "established": [
+        {
+          "profile": "Actual division wrapper for arbitrary input values and primitive outcomes; signed exact normalization",
+          "evidence": [
+            "StockDivisionGeneral.all_value_wrapper_contract",
+            "StockDivisionGeneral.division_failure_is_not_rounded",
+            "StockDivisionGeneral.negative_denominator_normalized",
+            "StockDivisionGeneral.signed_exact_wrapper"
+          ]
+        }
+      ],
+      "remaining": [
+        "Shen community equality/string/vector wrappers and all representations",
+        "Native representation correspondence",
+        "Chez primitive arithmetic/classification/rounding contracts remain the deferred foundation"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Compiler pipeline",
+      "status": "partial",
+      "established": [
+        {
+          "profile": "Fresh let insertion around arbitrary operands and argument tails, under explicit freshness",
+          "evidence": [
+            "CallRefinement.fresh_let_observational_equivalence",
+            "CallRefinement.fresh_let_noncompletion_equivalence"
+          ]
+        },
+        {
+          "profile": "Captured fresh-name loop under symbol/count interface contracts, with arbitrary changing/erroring generators and finite-supply progress",
+          "evidence": [
+            "FreshSupply.captured_iteration",
+            "FreshSupply.successful_candidate_is_absent",
+            "FreshSupply.finite_supply_finds_first_absent"
+          ]
+        }
+      ],
+      "remaining": [
+        "Compose freshness and operand lifting through every order-call-inputs branch",
+        "Kernel occurrences/gensym implementation correspondence; symbol-generator/count interface contracts",
+        "General source decoder and binding admission",
+        "All remaining Shen frontend/backend passes, computed operators and closures"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Native execution relation",
+      "status": "partial",
+      "established": [
+        {
+          "profile": "All private first-order model programs: evaluator/instruction results in both directions and divergence",
+          "evidence": [
+            "NativeReverse.evaluator_machine_equivalence",
+            "NativeReverse.divergence_equivalence"
+          ]
+        },
+        {
+          "profile": "Actual EQ2 capsule construction, table identity, activation wiring, raw identifiers and scoped authority",
+          "evidence": [
+            "EqualitySealCorrect.captured_four_definition_program",
+            "EqualitySealCorrect.capsule_lookup_agrees",
+            "EqualitySealCorrect.raw_identifier_closure",
+            "EqualitySealCorrect.captured_native_activation",
+            "EqualitySealCorrect.sealed_checker_concurrent_sound"
+          ]
+        }
+      ],
+      "remaining": [
+        "General generated Scheme representation/execution relation beyond the admitted core",
+        "Native-to-model and self-capture provenance",
+        "Chez compiler/runtime internals remain explicitly deferred"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Whole observer and IO",
+      "status": "partial",
+      "established": [
+        {
+          "profile": "Actual captured three-form loader: every frontend/backend/activation outcome and failure position",
+          "evidence": [
+            "ObserverTotal.installer_all_outcomes",
+            "ObserverTotal.stage_all_outcomes",
+            "ObserverTotal.captured_loader_all_outcomes"
+          ]
+        },
+        {
+          "profile": "Checked writes and actual read override forwarding",
+          "evidence": [
+            "CheckedFileIO.successful_write_is_observed",
+            "IOReadCorrect.captured_read_forwards_exactly"
+          ]
+        }
+      ],
+      "remaining": [
+        "Full higher-order observer entry including parsing, encoding and all writes",
+        "Native capture/activation effect provenance",
+        "Port cleanup and concurrent input-object mutation",
+        "Atomicity/durability and filesystem contracts"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Shen frontend and proof machinery",
+      "status": "partial",
+      "established": [
+        {
+          "profile": "Actual compiled axiom-free Shen congruence deriver for all typed certificates",
+          "evidence": [
+            "EqualityCoreCorrect.captured_checker",
+            "EqualityCoreCorrect.actual_checker_sound",
+            "EqualityCoreCorrect.captured_dependency_closure"
+          ]
+        },
+        {
+          "profile": "Inert raw admission, private native capsule and admitted semantic soundness",
+          "evidence": [
+            "EqualityAdmission.read_certificate_canonical",
+            "EqualityAdmission.admitted_native_agreement",
+            "EqualitySealCorrect.sealed_checker_sound"
+          ]
+        }
+      ],
+      "remaining": [
+        "Original EQ-1 induction checker implementation correspondence",
+        "Shen typechecker/sequent rules and admission soundness",
+        "General Shen-to-KLambda preservation",
+        "Macros, loading and dynamic evaluation preservation"
+      ]
+    }
+  ]
+}

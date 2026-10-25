@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 kind, source, destination = sys.argv[1:]
-if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read'):
+if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal'):
     raise SystemExit('Unknown packaging profile')
 bits = Path(source).read_bytes()
 if not bits or any(b not in b'01' for b in bits):
@@ -14,7 +14,9 @@ count, names = {'bootstrap': (2, ['kl:buri.native-bytes', 'kl:buri.native-node']
                 'checked_io': (1, ['kl:buri.checked-write']),
                 'order_call': (6, ['kl:_scm.merge-nested-lets','kl:_scm.simple-scheme-expression?','kl:_scm.has-computation?','kl:_scm.fresh-call-variable','kl:_scm.order-call-inputs','kl:_scm.order-call']),
                 'observer_forms': (2, ['kl:buri.install-observed','kl:buri.observe-forms']),
-                'io_read': (1, ['kl:read-file-as-string'])}[kind]
+                'io_read': (1, ['kl:read-file-as-string']),
+                'equality_core': (4, ['kl:buri.eq2-derive','kl:buri.eq2-sym','kl:buri.eq2-trans','kl:buri.eq2-cong']),
+                'equality_seal': (4, ['kl:buri.eq2-seal-definition','kl:buri.eq2-seal-program','kl:buri.eq2-seal-request','kl:buri.make-sealed-eq2'])}[kind]
 text = '''From Coq Require Import List String.
 From Buri Require Import Wire Native.
 Import ListNotations Native.Native.
@@ -38,4 +40,9 @@ Global Opaque CAP_text CAP_nodes CAP_decode.
 text = text.replace('CAP', kind).replace('BITS', bits.decode('ascii')).replace('COUNT', str(count))
 text = text.replace('OFFSET', '3' if kind == 'checked_io' else '0')
 text = text.replace('NAMES', '[' + ';'.join('"' + n + '"' for n in names) + ']')
+if kind in ('equality_core','equality_seal'):
+    complete = ('Theorem '+kind+'_complete : match '+kind+'_nodes with\n'
+                ' | Some xs => List.length xs = '+str(count)+' | None => False end.\n'
+                'Proof. vm_compute; reflexivity. Qed.\n')
+    text = text.replace('Global Opaque', complete+'Global Opaque')
 Path(destination).write_text(text)

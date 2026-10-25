@@ -11,7 +11,7 @@ Búri has **not** established this whole-system theorem. The entries below are
 implementation-linked components of it. Chez internals remain deferred; that
 choice does not make the Shen compiler, wrappers or observer implicitly correct.
 
-## What this increment establishes
+## Prior component proofs
 
 | Actual implementation | Checked claim | Remaining boundary |
 |---|---|---|
@@ -109,3 +109,14 @@ not universal native correctness proofs.
 A milestone is complete only when its acceptance statement is proved about the
 implementation or its outputs. A new oracle assumption, native regression,
 source hash or theorem count cannot discharge that condition by itself.
+
+
+## Current six-stage progress
+
+[SIX-STAGES](SIX-STAGES.md) describes the newer general effect/freshness results,
+reverse execution/divergence correspondence, complete loader failure summary,
+all-value division wrapper contract, and the executable sealed congruence kernel.
+The machine-readable `spec/six-stages.json` ledger is checked against the fresh
+audit. All six full stages remain partial. The new congruence profile has no
+artifact-supplied axioms and does not replace the original induction checker or
+verify Shen's entire typechecker/compiler.

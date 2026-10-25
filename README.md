@@ -44,8 +44,8 @@ ultimately depends on.
 - **Real Shen-Scheme comparisons:** 105 native cases, including evaluation
   order, lexical capture, lazy branches, currying, exceptions, large integers,
   and freeze/thaw. These are tests, not a preservation proof.
-- **Adversarial gates:** 105 Shen kernel/evaluator/encoder/adapter checks, 51 Rocq adversarial examples,
-  eighteen orchestration checks, and fifty-seven compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
+- **Adversarial gates:** 105 Shen kernel/evaluator/encoder/adapter checks, 96 additional Rocq regression examples,
+  twenty-two orchestration checks, and seventy-one compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
   tests, open obligations, and assumptions distinct.
 
 Read [STATUS](docs/STATUS.md) and [TRUST](docs/TRUST.md) before interpreting any
@@ -72,7 +72,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 282 theorem dependencies for custom axioms, independently
+checks all proofs, audits 347 theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
@@ -168,3 +168,9 @@ explicit syntax-admission premises.
 [Implementation correctness ledger](docs/CORRECTNESS.md) records the exact
 numeric-wrapper, fresh-name, call-ordering, three-definition loader and read
 adapter proofs, their domains, and the remaining path to full preservation.
+
+[Six-stage progress](docs/SIX-STAGES.md) now includes two-way pure instruction
+refinement, general effect-preserving let insertion, changing-generator freshness,
+all loader failure positions, and an executable private axiom-free congruence
+kernel with checked raw admission and native rebinding regressions. The full
+six-stage goal remains open; its scoped evidence ledger is machine checked.

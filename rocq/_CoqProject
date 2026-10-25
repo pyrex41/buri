@@ -58,4 +58,17 @@ ObserverFormsInput.v
 ObserverPipeline.v
 IOReadInput.v
 IOReadCorrect.v
+EffectContract.v
+CallRefinement.v
+PureEffectBridge.v
+NativeReverse.v
+StockDivisionGeneral.v
+ObserverTotal.v
+FreshSupply.v
+EqualityCoreInput.v
+EqualityCoreCorrect.v
+EqualityAdmission.v
+EqualitySealInput.v
+EqualitySealCorrect.v
+StageTests.v
 Audit.v

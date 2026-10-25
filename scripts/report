@@ -3,6 +3,6 @@ set -eu
 cd "$(dirname "$0")/.."
 mkdir -p _build
 python3 scripts/report.py before
-make check > _build/check.log 2>&1 || { cat _build/check.log; exit 1; }
+python3 scripts/report.py check
 python3 scripts/report.py after
 cat _build/check.log

@@ -18,6 +18,8 @@ test:
 	./scripts/check-shen tests/compilerpass.shen
 	./scripts/check-shen tests/checkedio.shen
 	./scripts/check-shen tests/correctness.shen
+	./scripts/check-shen tests/stages.shen
+	./scripts/check-shen tests/equalityseal.shen
 	python3 tests/gates.py
 
 prove:

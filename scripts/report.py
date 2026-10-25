@@ -23,15 +23,32 @@ if sys.argv[1] == 'before':
     (root / '_build/report.json').unlink(missing_ok=True)
     sys.exit(0)
 
+if sys.argv[1] == 'check':
+    # Own the completed log: children never inherit its writable descriptor.
+    result = subprocess.run(['make', 'check'], cwd=root,
+                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    (root / '_build/check.log').write_bytes(result.stdout)
+    if result.returncode:
+        sys.stdout.buffer.write(result.stdout)
+    sys.exit(result.returncode)
+
 before = json.loads((root / '_build/source-before.json').read_text())
 assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 15 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 282 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 57
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['18']
+assert len(rows) == 17 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance'}, 'Incomplete suite gates'
+assert 'BURI_ROCQ_OK 347 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 71
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['22']
+ledger = json.loads((root / 'spec/six-stages.json').read_text())
+assert [stage['id'] for stage in ledger['stages']] == list(range(1,7))
+assert not ledger['full_plan_complete'] and all(stage['status'] == 'partial' for stage in ledger['stages'])
+audit_source = (root / 'rocq/Audit.v').read_text()
+for stage in ledger['stages']:
+    for claim in stage['established']:
+        for name in claim['evidence']:
+            assert 'Check ' + name + '.' in audit_source, 'Missing audited evidence: ' + name
 host_path = (root / '.tools/host-path').read_text().strip()
 host_root = (root / host_path).resolve().parents[1]
 host_files = {str(p.relative_to(root)): digest(p) for p in sorted(host_root.rglob('*'))
@@ -46,7 +63,7 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 282,
+        'audited_theorems': 347,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -246,6 +263,59 @@ report = {
         'native_io_correspondence_verified': False,
         'whole_compiler_verified': False,
     },
+    'six_stage_plan': {
+        'complete': False,
+        'ledger': ledger,
+        'ledger_sha256': digest(root / 'spec/six-stages.json'),
+        'scope_evidence_freshly_audited': True,
+        'evidence_does_not_imply_entire_stage_complete': True,
+    },
+    'general_refinement': {
+        'effects_proof_sha256': digest(root / 'rocq/EffectContract.v'),
+        'call_lifting_proof_sha256': digest(root / 'rocq/CallRefinement.v'),
+        'reverse_machine_proof_sha256': digest(root / 'rocq/NativeReverse.v'),
+        'pure_effect_bridge_sha256': digest(root / 'rocq/PureEffectBridge.v'),
+        'both_directions_all_non_exhausted_results': True,
+        'pure_model_divergence_equivalence': True,
+        'stateful_noncompletion_includes_external_exhaustion': True,
+        'generic_fresh_operand_lifting': 'arbitrary admitted operand and argument tail; all modeled effects, failures and traces; existential fuel',
+        'native_chez_correspondence_verified': False,
+    },
+    'general_wrappers_and_loader': {
+        'division_proof_sha256': digest(root / 'rocq/StockDivisionGeneral.v'),
+        'division_profile': 'all input values under named division, classification and rounding contracts; signed exact denominator extension',
+        'zero_error_payload_verified': False,
+        'fresh_generator_proof_sha256': digest(root / 'rocq/FreshSupply.v'),
+        'fresh_generator_profile': 'arbitrary stateful/erroring generators; every successful candidate is absent; first available finite-supply candidate terminates',
+        'observer_proof_sha256': digest(root / 'rocq/ObserverTotal.v'),
+        'observer_profile': 'all nine failure positions and success of the actual captured three-form loader, under admitted frontend outputs',
+        'full_observer_entry_verified': False,
+    },
+    'axiom_free_shen_checker': {
+        'source': 'shen/equality-core.shen',
+        'capture_sha256': digest(root / '_build/equality-core.bits'),
+        'proof_sha256': digest(root / 'rocq/EqualityCoreCorrect.v'),
+        'admission_proof_sha256': digest(root / 'rocq/EqualityAdmission.v'),
+        'profile': 'finite typed Refl/Sym/Trans/Cong certificates over uninterpreted first-order terms; no artifact rules',
+        'all_typed_certificates_refine_equality_check_empty': True,
+        'raw_acceptance_sound': True,
+        'original_eq1_induction_checker_verified': False,
+        'shen_typechecker_verified': False,
+        'native_binary_verified': False,
+    },
+    'private_checker_capsule': {
+        'source': 'shen/sealed-equality.shen',
+        'capture_sha256': digest(root / '_build/equality-seal.bits'),
+        'proof_sha256': digest(root / 'rocq/EqualitySealCorrect.v'),
+        'construction_and_table_correspondence': True,
+        'exact_activation_request_wiring': True,
+        'raw_identifier_closure_checked': True,
+        'native_imports': ['lambda','let','let*','letrec','if','cond','and','or','quote','eq?','equal?','null?','pair?','car','cdr','cons','list'],
+        'ambient_rebinding_model_soundness': True,
+        'native_rebinding_evidence': 'sampled sequential and synchronized hostile rebinding',
+        'code_authority': 'controlled compiler records; certificate data is never evaluated as native code',
+        'remaining_contracts': ['stable construction context','actual capture provenance','Chez eval/environment, primitive and representation semantics','immutable input data'],
+    },
     'trust_audit': {
         'ledger': 'docs/TRUST-AUDIT.md',
         'byte_recursion_domain': 'machine-checked: character inputs and recursive halvings stay below 256, counts at most 8',
@@ -260,11 +330,11 @@ report = {
     },
     'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
-                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter'], 'bootstrap': suite_counts['bootstrap'], 'compilerpass': suite_counts['compilerpass'], 'checkedio': suite_counts['checkedio'], 'correctness': suite_counts['correctness']},
+                   'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter'], 'bootstrap': suite_counts['bootstrap'], 'compilerpass': suite_counts['compilerpass'], 'checkedio': suite_counts['checkedio'], 'correctness': suite_counts['correctness'], 'stages': suite_counts['stages'], 'equalityseal': suite_counts['equalityseal']},
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 57,
-    'rocq_regression_examples': 78,
-    'orchestration_regressions': 18,
+    'rejected_proof_mutations': 71,
+    'rocq_regression_examples': 96,
+    'orchestration_regressions': 22,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
              'Shen-to-KLambda compiler preservation', 'Shen-Scheme backend preservation',
              'primitive representation correctness', 'System S and PR117 preservation',

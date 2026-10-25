@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py','mutate-stages.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
     for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py', 'package-constructor.py', 'package-adapter.py', 'package-provenance.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
@@ -151,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='buri-adapter-gate-') as directory:
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
-for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read']:
+for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read','equality_core','equality_seal']:
     with tempfile.TemporaryDirectory(prefix='buri-provenance-gate-') as directory:
         capture, module = Path(directory)/'capture.bits', Path(directory)/'Capture.v'
         capture.write_bytes(b'00')
@@ -171,5 +171,22 @@ with tempfile.TemporaryDirectory(prefix='buri-source-literal-') as directory:
     result = subprocess.run(['python3', str(root/'scripts/check-implementation-package.py'), 'stock_division', str(source), str(module)], capture_output=True, text=True)
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
+
+with tempfile.TemporaryDirectory(prefix='buri-report-log-') as directory:
+    import os
+    tree = Path(directory)
+    (tree / 'scripts').mkdir()
+    (tree / '_build').mkdir()
+    shutil.copy(root / 'scripts/report.py', tree / 'scripts/report.py')
+    env = dict(os.environ, PATH=str(tree / 'bin') + os.pathsep + os.environ['PATH'])
+    for code in [0, 7]:
+        executable(tree / 'bin/make',
+                   '#!/bin/sh\necho BEFORE\necho stale > _build/check.log\necho AFTER\nexit ' + str(code) + '\n')
+        result = subprocess.run(['python3', str(tree / 'scripts/report.py'), 'check'],
+                                env=env, capture_output=True, text=True)
+        assert result.returncode == code
+        assert (tree / '_build/check.log').read_text() == 'BEFORE\nAFTER\n'
+        assert result.stdout == ('BEFORE\nAFTER\n' if code else '')
+        count += 1
 
 print(f'BURI_GATE_TESTS_OK {count}')
