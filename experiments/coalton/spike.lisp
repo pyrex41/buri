@@ -1,0 +1,32 @@
+;;; Optional independent typing/interop experiment, not Buri executable semantics.
+;;; Requires the pinned Coalton and dependencies to be visible to ASDF.
+(require :asdf)
+(asdf:load-system :coalton)
+(defpackage #:shen-coalton-spike (:use #:coalton #:coalton-prelude))
+(in-package #:shen-coalton-spike)
+(named-readtables:in-readtable coalton:coalton)
+(coalton-toplevel
+  (define-type Expr (Literal Integer) (Add Expr Expr))
+  (declare evaluate (Expr -> Integer))
+  (define (evaluate e)
+    (match e
+      ((Literal n) n)
+      ((Add a b) (+ (evaluate a) (evaluate b))))))
+(cl:assert (cl:= 42 (coalton (evaluate (Add (Literal 20) (Literal 22))))))
+(cl:format cl:t "~%PASS typed IR evaluates to 42~%")
+(cl:let ((rejected cl:nil))
+  (cl:handler-case
+      (cl:macroexpand-1 '(coalton (evaluate 42)))
+    (coalton-impl/typechecker/base:tc-error (e) (cl:setf rejected cl:t)
+      (cl:format cl:t "PASS ill-typed expression rejected (~A)~%" (cl:type-of e))))
+  (cl:assert rejected))
+(cl:defun admit-integer (raw)
+  (cl:check-type raw cl:integer)
+  (coalton (evaluate (Literal (lisp (-> Integer) () raw)))))
+(cl:assert (cl:= 17 (admit-integer 17)))
+(cl:let ((rejected cl:nil))
+  (cl:handler-case (admit-integer "not an integer")
+    (cl:type-error () (cl:setf rejected cl:t)))
+  (cl:assert rejected)
+  (cl:format cl:t "PASS explicit Lisp boundary rejects string~%"))
+(cl:format cl:t "NOTE: independent experiment only; no Rocq proof or Buri/Shen integration.~%")

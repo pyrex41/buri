@@ -693,3 +693,15 @@ Check EqualitySealCorrect.raw_identifier_closure.
 Print Assumptions EqualitySealCorrect.raw_identifier_closure.
 Check EqualitySealCorrect.missing_cond_is_detected.
 Print Assumptions EqualitySealCorrect.missing_cond_is_detected.
+
+From Buri Require Import SchemePortMerge CLPortGuard CLPortCapture.
+Print Assumptions SchemePortMerge.SchemePortMerge.arbitrary_tail_decodes.
+Print Assumptions SchemePortMerge.SchemePortMerge.arbitrary_tail_preserves.
+Print Assumptions SchemePortMerge.SchemePortMerge.arbitrary_tail_preserves_effects.
+Print Assumptions SchemePortMerge.SchemePortMerge.captured_arbitrary_tail_preservation.
+Print Assumptions CLPortGuard.CLPortGuard.admission_exact.
+Print Assumptions CLPortGuard.CLPortGuard.actual_guard_refinement.
+Print Assumptions CLPortGuard.CLPortGuard.conditional_refinement.
+Print Assumptions CLPortGuard.CLPortGuard.other_values_rejected.
+Print Assumptions CLPortCapture.captured_guard_admitted.
+Print Assumptions CLPortCapture.captured_guard_correct.

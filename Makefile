@@ -1,4 +1,4 @@
-.PHONY: bootstrap test prove conformance check report demo
+.PHONY: bootstrap test prove conformance check report demo check-cl-port
 bootstrap:
 	./scripts/bootstrap
 	./scripts/bootstrap-rocq
@@ -20,6 +20,8 @@ test:
 	./scripts/check-shen tests/correctness.shen
 	./scripts/check-shen tests/stages.shen
 	./scripts/check-shen tests/equalityseal.shen
+	./scripts/check-shen tests/scheme-port-merge.shen
+	./scripts/check-shen tests/cl-port-guard.shen
 	python3 tests/gates.py
 
 prove:
@@ -36,3 +38,7 @@ report:
 
 demo:
 	./scripts/shen -l buri.shen -l proofs/compiler.shen -e '(buri.prove)' -e '(buri.normalize [run [compile [add [lit [succ [zero]]] [lit [succ [succ [zero]]]]] [halt]] [nil]] 100)'
+
+# Native source regeneration requires the separately pinned Shen-CL checkout.
+check-cl-port:
+	./scripts/check-cl-port.sh

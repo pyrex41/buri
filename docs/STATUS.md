@@ -299,3 +299,34 @@ and the remaining six-stage acceptance conditions stay open in
 The report collector captures child output through a pipe and writes the complete
 log only after child exit. Regressions cover replaced/truncated logs on success
 and failure; missing markers and failed child status still prevent a report.
+
+## Parallel Shen-Scheme and Shen-CL work
+
+The shared semantic obligations now have two implementation tracks. See
+[SCHEME-PORT](SCHEME-PORT.md), [CL-PORT](CL-PORT.md), and the optional
+[Coalton assessment](COALTON-ASSESSMENT.md).
+
+`SchemePortMerge.v` extends the actual captured Scheme merge pass to arbitrary
+successfully decoded sequential binding tails. It proves that the captured pass
+produces a target with the same decoded expression, preserving all modeled
+outcomes, state and traces. It introduces no new primitive oracle or custom axiom.
+Decoding depth and admissibility remain explicit premises.
+
+`CLPortGuard.v` defines a deliberately restricted CL AST semantics and proves
+strict boolean behavior for every modeled input of the exactly admitted guard
+body. `CLPortCapture.v` checks the captured body against that syntax. Conditional
+continuations preserve their modeled observations; the actual Shen-CL compiler's
+IF lowering is not yet proved. Object identity, formatting/error behavior and
+SBCL execution remain contracts. The inert Shen adapter is executable and tested,
+but its correspondence with the Rocq admission checker is not proved.
+
+The native `make check-cl-port` gate separately regenerates the capture from
+Shen-CL revision `4844072dde0208c3e4b99dcbfea58e4fdfd812e8`, compares both Rocq
+and Shen data, exercises SBCL, and rejects three altered guard captures. This
+requires a separate pinned checkout and SBCL; the default proof gate checks the
+stored inert capture and does not claim fresh CL source regeneration.
+
+Ten additional statements join the assumption audit (357 total). Native tests,
+source capture and universal model proofs remain separate evidence. Neither port
+is fully verified, and Chez, SBCL, runtime and ARM execution refinement remain
+open. Coalton adds no theorem and is not used in the acceptance path.
