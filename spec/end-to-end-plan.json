@@ -1,0 +1,621 @@
+{
+  "schema": "buri-end-to-end-plan-1",
+  "kind": "planning-ledger-not-proof-evidence",
+  "baseline_commit": "97b38751db00398621d0fb32e11068c0aa81864f",
+  "full_plan_complete": false,
+  "target": "closed-deployment-both-ports",
+  "ultimate_foundations": [
+    "chosen logic and ultimate checking root",
+    "specification meaning",
+    "bottom ISA and device models",
+    "physical correspondence"
+  ],
+  "work_packages": [
+    {
+      "id": "E2E-01",
+      "title": "Freeze the completion contract.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [],
+      "evidence": [],
+      "acceptance": "each\nrequired feature and claim has a named semantics and an owning work package;\neach provisional exclusion has an enforcement test and a scheduled closure step.\nRemoving a required feature changes the release charter rather than completing it.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-02",
+      "title": "Replace prose-only gaps with an obligation graph.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01"
+      ],
+      "evidence": [],
+      "acceptance": "every current gap\nmaps to a package below; no dependency cycles are discharged by assuming each\nother. Joint invariants or well-founded constructions must close such cycles.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-03",
+      "title": "Pin and reproduce the entire build.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01",
+        "E2E-02"
+      ],
+      "evidence": [],
+      "acceptance": "the\nrelease can be rebuilt and its differences explained. Reproducibility establishes\nidentity evidence, never semantic preservation; steps 20\u201332 discharge that gap.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-04",
+      "title": "Define observations, failures and external interaction.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01"
+      ],
+      "evidence": [],
+      "acceptance": "no later pass can hide an error, failed write or infinite internal loop by\nchoosing a weaker observation vocabulary.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-05",
+      "title": "Complete the language value and store model.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04"
+      ],
+      "evidence": [],
+      "acceptance": "each primitive domain and every accepted boundary value has defined meaning.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-06",
+      "title": "Complete KLambda semantics.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-05"
+      ],
+      "evidence": [],
+      "acceptance": "every\nrequired KLambda form and primitive has a semantic rule; no full-language claim\nis made from the existing first-order fragment alone.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-07",
+      "title": "Verify the executable Shen semantics.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06"
+      ],
+      "evidence": [],
+      "acceptance": "every accepted\nexecution result has a formal witness, with the promised converse/completeness\nwithin the stated evaluator profile and sufficient resources.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-08",
+      "title": "Specify and prove the application contract logic.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-05",
+        "E2E-06"
+      ],
+      "evidence": [],
+      "acceptance": "checked\nderivability entails the stated semantic property under exactly the recorded\npremises. This does not assert a terminating decision procedure for validity.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-09",
+      "title": "Close every certificate checker and admission path.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-07",
+        "E2E-08"
+      ],
+      "evidence": [],
+      "acceptance": "all acceptance routes imply the same soundness theorem; no alternate UI, cache,\nserializer or fast path bypasses it. Native checker execution is closed in 32.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-10",
+      "title": "Prove the Shen type/sequent and effect systems.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-07",
+        "E2E-08",
+        "E2E-09"
+      ],
+      "evidence": [],
+      "acceptance": "each advertised \u201ccorrect by construction\u201d guarantee names a proved judgment;\npost-check redefinition invalidates or revalidates dependent claims.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-11",
+      "title": "Verify bytes, readers, codecs and tagging.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-05",
+        "E2E-06",
+        "E2E-07",
+        "E2E-09"
+      ],
+      "evidence": [],
+      "acceptance": "the\nartifact actually checked denotes the exact admitted bytes and no hidden suffix,\nreader evaluation or metadata substitution can change their interpretation.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-12",
+      "title": "Prove the complete Shen frontend.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-07",
+        "E2E-10",
+        "E2E-11"
+      ],
+      "evidence": [],
+      "acceptance": "source properties reach\nKLambda without an unproved \u201cthe frontend did the right thing\u201d premise, including\nerrors, partial installation and dynamic definitions.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-13",
+      "title": "Close the standard and application library surface.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-07",
+        "E2E-08",
+        "E2E-09",
+        "E2E-10",
+        "E2E-11",
+        "E2E-12"
+      ],
+      "evidence": [],
+      "acceptance": "no reachable helper is justified solely because it is \u201cstandard\u201d or community code.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-14",
+      "title": "Complete the generated Scheme and CL semantics.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-05",
+        "E2E-06",
+        "E2E-11"
+      ],
+      "evidence": [],
+      "acceptance": "each\nrequired emitted form has a meaning and a port-level refinement obligation.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-15",
+      "title": "Finish the actual Shen-Scheme compiler.",
+      "lane": "scheme-port",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-12",
+        "E2E-14"
+      ],
+      "evidence": [],
+      "acceptance": "no required compiler branch remains an oracle or merely a sampled schema.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-16",
+      "title": "Finish the actual Shen-CL compiler.",
+      "lane": "cl-port",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-12",
+        "E2E-14"
+      ],
+      "evidence": [],
+      "acceptance": "the same Shen\ncontract can be transported through either port, with explicit port-specific\nrepresentation and platform premises and no missing compiler branch.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-17",
+      "title": "Discharge every primitive and helper wrapper.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-05",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16"
+      ],
+      "evidence": [],
+      "acceptance": "no root is\nhidden behind an aggregate \u201cruntime behaves correctly\u201d assumption.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-18",
+      "title": "Verify the whole observer and provenance pipeline.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-09",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17"
+      ],
+      "evidence": [],
+      "acceptance": "successful evidence describes exactly the code installed, while\nnative IO and deployment identity obligations flow explicitly to 26\u201331.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-19",
+      "title": "Verify dynamic eval, loading and redefinition.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-10",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17",
+        "E2E-18"
+      ],
+      "evidence": [],
+      "acceptance": "all execution entry points, including REPL/FFI callbacks and mutable code objects,\nare covered. A sealed-only milestone is not full dynamic Shen coverage.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-20",
+      "title": "Establish the authoritative ARM proof foundation.",
+      "lane": "arm-foundation",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01",
+        "E2E-03",
+        "E2E-04"
+      ],
+      "evidence": [],
+      "acceptance": "exact\ninstructions are checked against the selected ISA model; no disassembly-text or\ntoy-ISA agreement is substituted. Tool compatibility and missing mechanisms are\nresearch deliverables, not assumed available integrations.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-21",
+      "title": "Prove both native representation relations.",
+      "lane": "native-representations",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-05",
+        "E2E-14",
+        "E2E-20"
+      ],
+      "evidence": [],
+      "acceptance": "all native values and\nmemory accesses used by the admitted execution paths have justified meanings.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-22",
+      "title": "Close Chez compilation to ARM.",
+      "lane": "chez-native",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-14",
+        "E2E-15",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "every required code\npath/configuration is handled, or a universal compiler proof supplies the result.\nA validator may reject an output safely, but cannot then claim universal coverage\nof that unsupported required output. Generic closure uses compositional schemas,\nnot a test corpus. Proving outputs does not claim all unrelated Chez programs or\nall possible compiler invocations are correct.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-23",
+      "title": "Close SBCL compilation to ARM.",
+      "lane": "sbcl-native",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-14",
+        "E2E-16",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "the SBCL execution path has\nthe same coverage standard as Chez, without treating SBCL as a trusted oracle.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-24",
+      "title": "Verify native runtime code and support libraries.",
+      "lane": "native-runtime",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-17",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "no opaque native call remains in a required path. Replacing a dependency\nwith smaller code requires a proved API refinement and an explicit version change.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-25",
+      "title": "Verify allocation and garbage collection.",
+      "lane": "native-runtime",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-21",
+        "E2E-24"
+      ],
+      "evidence": [],
+      "acceptance": "successful collections and all modeled failure paths preserve the runtime\ninvariant; there is no implicit \u201cGC works\u201d premise.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-26",
+      "title": "Verify the executable lifecycle and exact loaded bytes.",
+      "lane": "native-lifecycle",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-19",
+        "E2E-22",
+        "E2E-23",
+        "E2E-24",
+        "E2E-25"
+      ],
+      "evidence": [],
+      "acceptance": "no gap remains between proved binary contents and modeled loaded code;\nsecure boot/physical identity roots are separately recorded in 31\u201332.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-27",
+      "title": "Prove OS/ABI and IO boundary implementations.",
+      "lane": "system",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-17",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "every interaction is explicit and wrapper correctness is discharged.\nThe remaining OS implementation relations are mandatory inputs to step 31,\nnot a declaration that the whole deployment is finished.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-28",
+      "title": "Close concurrency, scheduling and ARM weak memory.",
+      "lane": "concurrency",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-19",
+        "E2E-21",
+        "E2E-24",
+        "E2E-25",
+        "E2E-26",
+        "E2E-27"
+      ],
+      "evidence": [],
+      "acceptance": "all admitted interleavings and actual\nruntime threads are covered; a sequential test cannot close this package.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-29",
+      "title": "Connect TLA+ and distributed behavior.",
+      "lane": "temporal",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-08",
+        "E2E-19",
+        "E2E-27",
+        "E2E-28"
+      ],
+      "evidence": [],
+      "acceptance": "safety and conditional liveness are proved under\nthe exact fault/environment model; arbitrary permanent partition or hardware\nfailure is not hidden behind an unconditional availability claim.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-30",
+      "title": "Prove security and resource claims separately.",
+      "lane": "security-resources",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-08",
+        "E2E-10",
+        "E2E-21",
+        "E2E-25",
+        "E2E-28",
+        "E2E-29"
+      ],
+      "evidence": [],
+      "acceptance": "each\nadvertised guarantee has the right theorem, with environmental liveness and\nphysical side-channel assumptions exposed. No claim of universal termination.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-31",
+      "title": "Close the deployment software below the process.",
+      "lane": "system",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-20",
+        "E2E-26",
+        "E2E-27",
+        "E2E-28",
+        "E2E-29",
+        "E2E-30"
+      ],
+      "evidence": [],
+      "acceptance": "no required software component is an unproved OS oracle.\nExisting kernel proofs must be bridged into the checking trust story; assumptions\nabout unverified configurations, assembly or initialization are not inherited\nsilently. Hardware/device behavior remains an explicit physical foundation.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-32",
+      "title": "Close checker execution and bootstrap trust.",
+      "lane": "checker-bootstrap",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-09",
+        "E2E-20",
+        "E2E-26",
+        "E2E-31"
+      ],
+      "evidence": [],
+      "acceptance": "neither Shen execution nor an unproved extraction/compiler silently\ndecides theorem validity in the final acceptance route.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-33",
+      "title": "Prove complete application examples on both ports.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-08",
+        "E2E-09",
+        "E2E-10",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17",
+        "E2E-18",
+        "E2E-19",
+        "E2E-26",
+        "E2E-27",
+        "E2E-28",
+        "E2E-29",
+        "E2E-30",
+        "E2E-32"
+      ],
+      "evidence": [],
+      "acceptance": "each example is end to end; finite examples demonstrate integration, while the\ngeneric language/compiler results establish coverage beyond those examples.\nFuture applications still require their own contracts and certificates.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-34",
+      "title": "Prove the composition theorem and close every premise.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01",
+        "E2E-02",
+        "E2E-03",
+        "E2E-04",
+        "E2E-05",
+        "E2E-06",
+        "E2E-07",
+        "E2E-08",
+        "E2E-09",
+        "E2E-10",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17",
+        "E2E-18",
+        "E2E-19",
+        "E2E-20",
+        "E2E-21",
+        "E2E-22",
+        "E2E-23",
+        "E2E-24",
+        "E2E-25",
+        "E2E-26",
+        "E2E-27",
+        "E2E-28",
+        "E2E-29",
+        "E2E-30",
+        "E2E-31",
+        "E2E-32",
+        "E2E-33"
+      ],
+      "evidence": [],
+      "acceptance": "zero unproved software premises outside the declared ultimate checking root for\nthe closed endpoint and\nzero required coverage holes. Unsupported output safely rejected by a validator\nremains a coverage failure until its required case is implemented and proved.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-35",
+      "title": "Make closure enforceable in CI and deployment.",
+      "lane": "release-engineering",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-02",
+        "E2E-03",
+        "E2E-34"
+      ],
+      "evidence": [],
+      "acceptance": "modifying\nany correctness-relevant input invalidates the old proof bundle, and no mutable\nlabel or forgeable success token authorizes execution. Nix/Earthbuild repeatability\nand signed provenance support this process but do not replace semantic checks.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-36",
+      "title": "Perform independent closure review and release.",
+      "lane": "independent-review",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-32",
+        "E2E-33",
+        "E2E-34",
+        "E2E-35"
+      ],
+      "evidence": [],
+      "acceptance": "every mandatory package\nhas its acceptance evidence and the final theorem applies to the bytes deployed.\nSubsequent upgrades reopen affected obligations automatically. The release can\nbe complete even though future programs, platforms and hardware require new work.",
+      "details": "docs/END-TO-END-PLAN.md"
+    }
+  ]
+}
