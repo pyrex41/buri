@@ -303,6 +303,37 @@ Proof.
    + pose proof (yields_ev _ _ _ _ _ A X) as Y. subst out. exfalso; apply (S av); reflexivity.
  - intro B. left. exists av, st, [], out. split; [apply A|]. split; [exact B|symmetry; apply after_nil].
 Qed.
+(* Pure leading arguments contribute their values and nothing else. *)
+Lemma evs_prefix : forall rho pre vpre, Forall2 (yields rho) pre vpre ->
+ forall rest K, (forall vs, monotone (fun n => K n vs)) -> forall st out,
+ evs rho (pre ++ rest) K st out <-> evs rho rest (fun n vs => K n (vpre ++ vs)) st out.
+Proof.
+ intros rho pre vpre Pre; induction Pre as [|x y xs ys Y Pre IH]; intros rest K MK st out; [reflexivity|].
+ cbn [app]. rewrite (evs_cons rho x (xs ++ rest) K st out MK). split.
+ - intros [[v [s1 [e1 [o2 [A [B E]]]]]]|[A S]].
+   + pose proof (yields_ev _ _ _ _ _ Y A) as X. inversion X; subst. rewrite after_nil.
+     exact (proj1 (IH rest (fun n vs => K n (y::vs)) (fun vs => MK (y::vs)) st o2) B).
+   + pose proof (yields_ev _ _ _ _ _ Y A) as X. subst out. exfalso; apply (S y); reflexivity.
+ - intro B. left. exists y, st, [], out. split; [apply Y|]. split; [|symmetry; apply after_nil].
+   exact (proj2 (IH rest (fun n vs => K n (y::vs)) (fun vs => MK (y::vs)) st out) B).
+Qed.
+Lemma evs_congruent : forall rho sigma es K st out,
+ (forall e, In e es -> forall n st, eval_with n p op rho e st = eval_with n p op sigma e st) ->
+ (evs rho es K st out <-> evs sigma es K st out).
+Proof.
+ intros rho sigma es K st out H. unfold evs. apply conv_ext. intros n s.
+ apply many_congruent. intros e E state. apply H; exact E.
+Qed.
+Lemma ev_let_congr : forall rho s a B B' st out,
+ (forall x st out, ev (Native.bind rho s x) B st out <-> ev (Native.bind rho s x) B' st out) ->
+ (ev rho (Let s a B) st out <-> ev rho (Let s a B') st out).
+Proof.
+ intros rho s a B B' st out H. rewrite !ev_let. split.
+ - intros [[v [s1 [e1 [o2 [A [X E]]]]]]|R]; [left|right; exact R].
+   exists v, s1, e1, o2. split; [exact A|]. split; [apply H; exact X|exact E].
+ - intros [[v [s1 [e1 [o2 [A [X E]]]]]]|R]; [left|right; exact R].
+   exists v, s1, e1, o2. split; [exact A|]. split; [apply H; exact X|exact E].
+Qed.
 (* A call whose arguments are pure except one, evaluated in its position. *)
 Lemma ev_call_focus : forall rho f pre a post vpre vpost st out,
  Forall2 (yields rho) pre vpre -> Forall2 (yields rho) post vpost ->

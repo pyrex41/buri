@@ -21,6 +21,7 @@ test:
 	./scripts/check-shen tests/stages.shen
 	./scripts/check-shen tests/equalityseal.shen
 	./scripts/check-shen tests/scheme-port-merge.shen
+	./scripts/check-shen tests/scheme-port-order.shen
 	./scripts/check-shen tests/cl-port-guard.shen
 	python3 tests/gates.py
 

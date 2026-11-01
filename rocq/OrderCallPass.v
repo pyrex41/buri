@@ -96,6 +96,12 @@ Proof.
  destruct (simple x) eqn:Sx; destruct (has_comp xs) eqn:Hx; cbn [negb orb]; body; Y.
 Qed.
 
+(* Ground derivation (one sample, not a universal claim): counts reach the tail. *)
+Example occurrences_sample :
+ evapp P (op gen) "kl:occurrences" [Symbol "a"; L [Symbol "b"; L [Symbol "a"]; Symbol "a"]] Nil
+  (Out (Returned (Integer 2)) Nil []).
+Proof. split; [apply returned_completed|exists 40; vm_compute; reflexivity]. Qed.
+
 Lemma occurrences_returns : forall name v,
  returns "kl:occurrences" [Symbol name; v] (Integer (Z.of_nat (O.occurrences name v))).
 Proof.
