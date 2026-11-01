@@ -1,4 +1,4 @@
-.PHONY: bootstrap test prove conformance check report demo check-cl-port manifest manifest-compare manifest-test
+.PHONY: bootstrap test prove conformance check report demo check-cl-port check-arm manifest manifest-compare manifest-test
 bootstrap:
 	./scripts/bootstrap
 	./scripts/bootstrap-rocq
@@ -56,3 +56,7 @@ demo:
 # Native source regeneration requires the separately pinned Shen-CL checkout.
 check-cl-port:
 	./scripts/check-cl-port.sh
+
+# Opt-in ARM model proof (E2E-20); needs SAIL_ARM_COQ and COQ_SAIL (docs/ARM-FOUNDATION.md section 10).
+check-arm:
+	./scripts/check-arm.sh

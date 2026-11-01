@@ -2,9 +2,14 @@
 
 Experiment date: 1 November 2026, on branch `wave-a/arm` from commit `8c94540`.
 This is a research report for package 20 of [END-TO-END-PLAN](END-TO-END-PLAN.md).
-It **proves no theorem**: the repository proof gate and audit count are
-unchanged. It records what ran, what failed, and the pins it recommends. Each
-result names its evidence kind:
+Sections 1-9 are the first (Wave A) experiment, which proved no theorem.
+**Section 10 is the Wave B update** (branch `wave-b/arm-proofs`): the first
+byte-level lemma checked against the sail-arm Armv9.4 Coq model, a working
+Coq 8.19.0 Islaris environment, and an Islaris proof of the Chez fixnum fast
+path. Both proofs live outside `scripts/prove` in separate toolchains, so the
+repository proof gate and audit count are still unchanged. Where section 10
+contradicts an earlier "not built"/"not proved" statement, section 10 is
+current. Each result names its evidence kind:
 
 * **emulated run**: qemu-user executed the native code. The result is a sample.
   It is not evidence about the ISA model.
@@ -17,6 +22,11 @@ result names its evidence kind:
   translation.
 * **Coq elaboration**: a Sail-generated Coq model elaborated by `coqc`. This
   shows the model can be loaded; it is not a theorem about any instruction.
+* **model theorem** (section 10): a Coq theorem about the sail-arm Armv9.4 Coq
+  model text itself, checked by `coqc` in the separate model toolchain.
+* **Islaris theorem** (section 10): an Iris/Islaris theorem checked by `coqc`
+  8.19.0 about isla-generated traces. It is relative to the traces; the step
+  "trace = architecture" is isla's, not Coq's.
 
 No toy ISA, handwritten model or disassembly-text agreement is used as
 evidence. Listings from objdump and from Chez's `$assembly-output` or SBCL's
@@ -316,3 +326,160 @@ computation.
    witness) or a verified isla.
 6. Choose and record the EL0/MMU-on configuration and the register constraints
    as explicit premises in the release charter.
+
+## 10. Wave B: first checked byte-level proofs (branch `wave-b/arm-proofs`)
+
+Two independent results, in two separate toolchains. Neither file is in
+`scripts/prove`; each has its own opt-in check. The repository's Coq 8.18.0
+pins (`scripts/rocq`, `rocq-packages.lock`) are untouched.
+
+### 10.1 Model theorem: ADDS X23, X0, X1 in the sail-arm Armv9.4 Coq model
+
+File `ports/arm/coq/BuriArmAdds.v`, checked by `scripts/check-arm.sh`. The
+toolchain is the Wave-A one: nixpkgs `885ba4d` Coq 8.18.0
+(`/nix/store/z93aiwvy...-coq-8.18.0`), stdpp 1.10.0, coq-sail tag `0.19`
+(commit `6918e8f3d63494d9a0c3b7e8d57fa689527cdfc7`, `src-stdpp`), and the
+sail-arm `7d058164` snapshot (`armv9.v` `5169ce7f4d10...`, `armv9_types.v`
+`3586eb0f632f...`, `arm_extras.v` `a82f366aadeb...`) compiled with
+`-R . SailArm`. The word is the captured Chez word at `kl:buri-arm-add+0x14`,
+bytes `17 00 01 ab`. The check script re-reads those bytes from
+`ports/arm/chez/chez1030-buri-arm-add.bin` (whose sha256 it checks against
+`ports/arm/SHA256SUMS`) and requires the theorem's `Definition` line to name
+exactly that word. It then checks the model file hashes, compiles the proof,
+audits `Print Assumptions`, and requires a one-bit mutant word (`0xab010018`,
+Rd = 24) to be rejected by the decode proof (`Unable to unify`).
+
+| Theorem | Statement | Evidence kind |
+|---|---|---|
+| `chez_0014_decode` | for every `pc`, `__DecodeA64 pc 0xab010017 = (read_reg SEE >>= fun see => if see <? 15 then write_reg SEE 15 >> execute_aarch64_instrs_integer_arithmetic_add_sub_shiftedreg 23 64 1 0 true 0 ShiftType_LSL false else throw (Error_Undefined tt))` | model theorem, universal over `pc`; an exact equation of `iMon` trees, so it fixes every behaviour of the decoder on this word |
+| `chez_0014_execute` | that execute call equals the explicit program `adds_x23_x0_x1` (read R0, R1; four read/write pairs on PSTATE setting N, Z, C, V from the model's `AddWithCarry`; write R23) | model theorem, closed equation |
+| `chez_0014_adds_trace` | for all `pc`, SEE value `see < 15`, X0, X1 and PSTATE `p`, `Interface.iTrace_match (__DecodeA64 pc 0xab010017)` accepts the trace "read SEE = see; write SEE := 15; read X0; read X1; read PSTATE = p; write PSTATE.N; ...; write PSTATE.V; write X23 := fst (AddWithCarry X0 X1 0)", each PSTATE re-read returning the last written value | model theorem (universal); `iTrace_match` is coq-sail's own "this trace is a behaviour" relation, used with sequential register reads |
+| `chez_0014_sum` | `uint (fst (AddWithCarry x0 x1 0)) = (uint x0 + uint x1) mod 2^64` | closed lemma |
+
+Premises, all explicit: `SEE < 15` (the ASL decode-retry register). This
+snapshot never resets SEE between instructions; `initialize_registers` sets
+it to an undefined integer, so the premise is a real one that a fetch/execute
+theorem must discharge. No feature or configuration register is read on this
+path: the equation shows the decode and execute of this word read only SEE,
+R0, R1 and PSTATE. `pc` is not used.
+
+How it was proved (the Wave-A blocker): `hnf` stops at the decoder's first
+`if`, and strong normalisation exceeds 8 GB. A guided tactic instead decides
+each closed Boolean guard with `vm_compute`, rewrites it to `true`/`false`, and
+reduces only `and_boolM`/`bind`/`returnM`/`iMon_bind`. Guards that do not
+match return `Ret false` without reading SEE, so the 73 guards of
+`__DecodeA64_DataProcReg` collapse to the single matching one. The decode
+proof takes about 8 s, the whole file 24 s at 1.06 GB maximum RSS, after
+the 14 s load of `armv9.vo`. `coqchk` of the file (which would recheck the
+59 MB model) was not run.
+
+Assumption audit: `chez_0014_execute` and `chez_0014_sum` are closed under
+the global context. Every statement that mentions `__DecodeA64` depends on
+`ClassicalDedekindReals.sig_not_dec`, `ClassicalDedekindReals.sig_forall_dec`
+and `FunctionalExtensionality.functional_extensionality_dep`, and
+`Print Assumptions __DecodeA64` lists exactly those three. They are Coq
+standard-library axioms of the Reals library, reached because the model's
+floating-point decoders use Coq `R` through coq-sail's `Real.v`; Buri adds no
+axiom. Any theorem about this model's decoder inherits them, so they are part
+of the trusted base of this result, together with the Sail-to-Coq
+translation, coq-sail 0.19 and the Coq 8.18.0/stdpp 1.10.0 kernel.
+
+Not shown: other words; the fetch/execute loop around `__DecodeA64`
+(`ExecuteA64`, `__SetThisInstrDetails`, PC update); memory, faults or
+branches in this model; `coqchk`; any relation between this model and the
+isla traces of section 10.3.
+
+### 10.2 Coq 8.19.0 Islaris environment: built
+
+`nix/arm/islaris.nix` (opt-in, `nix-build nix/arm/islaris.nix -A env`) builds
+everything on the nixpkgs `885ba4d` tarball. Coq is
+`coq_8_19.override { version = "8.19.0"; }`; its source came from the nixpkgs
+release table (hash `sha256-ixsYCvCX...`). The dev pins come by exact git commit
+through `builtins.fetchGit`. GitHub git reads are allowed through the proxy;
+GitHub archive downloads and the opam/MPI GitLab hosts are refused. Each
+commit was found in a GitHub mirror and matches the 8-hex suffix in Islaris's
+opam version strings, which are the only published identifiers for these dev
+packages; opam archive checksums could not be fetched to compare.
+
+| Package | Pin | Mirror |
+|---|---|---|
+| coq | 8.19.0 (tag commit `a360913f`) | nixpkgs fetch, built 6 min 12 s |
+| coq-stdpp (+bitvector, unstable) | `a1a12e00fba07f2e41ccd74a8b593b88e48fc2c3` = dev.2024-09-10.3.a1a12e00 | github `rocq-iris/stdpp` (also nixpkgs' mirror for released stdpp) |
+| coq-iris | `6f24ed4baa4d61967a95bac834eab2c66f3b76fa` = dev.2024-09-10.1.6f24ed4b | github `rocq-iris/iris` |
+| coq-lithium | `7945a29d1647970709a9b5ad2ffc53c757e130cc` = dev.2024-09-11.0.7945a29d ("update Iris", M. Sammler, 2024-09-11) | github `UIC-verif-group/refinedC` (refinedc tree; `dkxb/refinedc` stops at 2024-07) |
+| coq-record-update | tag v0.3.3 `50e45e9f4ed52840427c3bfddc9037a645d9bf19` | github `tchajed/coq-record-update` |
+| isla-lang | `bda86c9f0bd28bbaa2481f50ddc986ede342805a` (Islaris pin-depends) | github `rems-project/isla-lang` |
+| islaris | `c978e10f50db5c40f0fdf113f5f76a779782c6f9` | github `rems-project/islaris` |
+
+Store paths of the build: `coq-8.19.0` `nyvwdj1l...`, stdpp `66q2ls2d...`,
+iris `8wwxidam...`, lithium `24bfzrrm...`, record-update `lwq2x6l2...`,
+islaris `il53cd0n...`. Deviations from Islaris's opam file are recorded, not
+hidden. Dune is nixpkgs 3.23.1 (Islaris pins 3.9.1) and ott is 0.34. Lithium is
+built with `coq_makefile` from `theories/lithium/*.v`, not with refinedc's dune
+file. Islaris's opam-only `coqc` timing wrapper and its sail/pkvm/riscv example
+trees are dropped. `isla_lang.v` comes from the vendored isla-lang dune rule,
+not from `opam var`. As a sanity check, Islaris's own unmodified
+`examples/example.v` with its committed traces checks in this environment
+(`ports/arm/islaris/check-islaris-example.sh`, 27 s).
+
+Isla for Islaris: Islaris is tested against isla `b8e614bd` and the Armv8.5
+snapshot `aarch64.ir`. isla `b8e614bda4a20e42c37d8b216853653133d04322` was
+built here with the same nixpkgs rustc/cargo 1.99.0 and z3 5.1.0 (binary
+`dd996a77...`). isla-snapshots `d8b31014` still ships the Armv8.5 IR as
+`armv8p5.ir` (sha256 `4ece4410a43c...`), which contains Islaris's
+`isla_footprint_no_init`. The Wave-A isla `e9b5d945` also runs on it.
+
+### 10.3 Islaris theorem: the Chez fixnum fast path
+
+Files: `ports/arm/islaris/buri_chez_add.dump` (annotated dump of Chez
+`+0x00..+0x23`), the generated traces `ports/arm/islaris/instructions/buri_chez_add/`
+(isla `b8e614bd`) and `.../buri_chez_add-isla-e9b5d945/` (isla `e9b5d945`), and
+the proof `ports/arm/islaris/buri_chez_add.v`. `gen-traces.sh` first checks
+that the dump's opcode column equals the captured bytes `+0x00..+0x23`, then
+runs the Islaris frontend in dump mode. That mode is Islaris's own pipeline:
+`isla-footprint -f isla_footprint_no_init -C etc/aarch64_isla_coq.toml
+--simplify-registers --tree -s`, followed by Islaris's trace simplification and
+Coq printing. Regeneration gives identical `.v` traces. The raw `.isla` files
+differ only in struct-field order. The two isla versions give traces that
+differ in SMT expression shape (the N flag of `cmp`/`adds`/`tst`). The proof
+checks against both trace sets (`check-islaris.sh ENV DIR`, 33 s, 1.18 GB).
+
+`buri_chez_add_fast_path` (Islaris theorem, universal over a, b, fp, ra and
+the prior X10/X30): with the nine instructions at `0x7f8d409bcb50..+0x20`, and
+`instr _ None` at the two slow-path targets `+0x24` and `+0x84`, the
+precondition below gives `instr_body 0x7f8d409bcb50`. The precondition is
+`reg_col sys_regs`, `reg_col CNVZ_regs`, X23 = 2, X0 = a, X1 = b,
+`InGuardedPage = false`, X20 = fp with `fp ↦ₘ ra`, `fp < 2^52`, `fp mod 8 = 0`,
+`(a | b) & 7 = 0` and `-2^63 ≤ sa + sb < 2^63`. Under it, control reaches `ra`
+with X23 = a + b, X30 = a | b, X10 = ra, and X0, X1, X20 and the slot
+unchanged. The three slow-path branches are proved infeasible from the premises
+in the proof. `Print Assumptions` reports **Closed under the global context**.
+
+What this does and does not establish:
+
+* Islaris's adequacy relates `instr_body` to Islaris's operational semantics
+  **of the traces**. The traces are isla output over the Armv8.5 Sail IR, not
+  the Armv9.4 model of 10.1. They are produced under Islaris's register
+  constraints (EL2, `SCTLR_EL2 = 0x4000002`, MMU off, `HCR_EL2`, `SCR_EL3`,
+  `CFG_ID_AA64PFR0_EL1_*`, `TCR_EL2`, debug registers), which appear as
+  `AssumeReg` premises inside `sys_regs`. **The Chez code runs at EL0 under
+  Linux with the MMU on. This theorem is about EL2 with the MMU off.**
+  Relating the two is an E2E-27/E2E-31 obligation.
+* Isla and z3 path pruning are trusted, isla `b8e614bd` was built with rustc
+  1.99 and z3 5.1.0 (not its tested 4.12.6), and the IR snapshot's provenance
+  rests on the isla-snapshots README. The trace-to-model bridge (section 9
+  item 5) is still open. Section 10.1 shows that a direct model proof is
+  feasible per opcode, but no bridge theorem connects the two.
+* The base address is the captured instance's. The fragment is
+  position-independent, but the theorem is stated for that address.
+* `instr_pre ra Q` is the continuation hypothesis; the Chez return protocol
+  (what the caller at `ra` expects) is not modelled.
+
+### 10.4 What remains open for E2E-20
+
+The exit criterion needs byte-level proofs for a branch, call, load/store,
+fault, allocation stub and atomic against the selected ISA model. Section 10.3
+covers a branch, a load and an indirect branch only in Islaris over Armv8.5
+traces. Section 10.1 covers one data-processing word in the Armv9.4 model.
+No fault, call, allocation stub, atomic or memory-model result exists. The
+SBCL code is not yet covered. Package 20 stays in progress.

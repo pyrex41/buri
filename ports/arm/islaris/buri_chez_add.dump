@@ -1,0 +1,18 @@
+// Islaris annotated dump of the fixnum fast path of kl:buri-arm-add, Chez
+// Scheme 10.3.0 tarm64le (ports/arm/chez/chez1030-buri-arm-add.bin, bytes
+// 0x00-0x23).  Opcodes are the captured words; mnemonics are reading aids
+// only (Islaris and isla read the opcode column).  The base address is the
+// address of the captured instance (one qemu process; the fragment itself
+// is position independent).
+0000000000000000 <buri_arm_add>:
+//@base_address: 0x00007f8d409bcb50
+   0:	f1000aff 	cmp	x23, #0x2
+   4:	54000401 	b.ne	84
+   8:	aa01001e 	orr	x30, x0, x1
+   c:	f2400bdf 	tst	x30, #0x7
+  10:	540000a1 	b.ne	24
+  14:	ab010017 	adds	x23, x0, x1
+  18:	54000066 	b.vs	24
+//@constraint: = (bvand R20 0xfff0000000000007) 0x0000000000000000
+  1c:	f840028a 	ldur	x10, [x20]
+  20:	d61f0140 	br	x10

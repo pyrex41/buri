@@ -521,3 +521,40 @@ the captured kernel. See [EQ1](EQ1.md). The soundness theorem is therefore
 about the reference kernel, not yet about the captured one.
 
 Forty-seven additional statements join the assumption audit (404 total).
+
+## ARM byte-level proofs (E2E-20, Wave B, in progress)
+
+[ARM-FOUNDATION](ARM-FOUNDATION.md) section 10 records two checked proofs.
+Neither is in `scripts/prove`: each needs a separate toolchain and has its own
+opt-in check. The repository's proven boundary, its Coq 8.18.0 pins and the
+audited statement count (494 total) are therefore unchanged.
+
+* **Model theorem, sail-arm Armv9.4 Coq model** (`ports/arm/coq/BuriArmAdds.v`,
+  `scripts/check-arm.sh`; Coq 8.18.0, stdpp 1.10.0, coq-sail 0.19). For the
+  captured Chez word `0xab010017` (`ADDS X23, X0, X1`, `kl:buri-arm-add+0x14`),
+  it is an exact, universal-over-`pc` equation. The model's `__DecodeA64` is
+  "read SEE; if SEE < 15 then write SEE := 15 and run the ADDS execute, else
+  throw Error_Undefined". A second equation turns the execute into an explicit
+  read-R0/R1, write-NZCV, write-R23 program. A corollary states that, under
+  SEE < 15, coq-sail's `iTrace_match` admits the sequential trace with
+  X23 := (X0 + X1) mod 2^64. The `SEE` premise is explicit; this model never
+  resets SEE. Statements that mention the decoder inherit the model's three
+  Coq-stdlib Reals axioms. The execute and arithmetic lemmas are closed. The
+  check binds the word to the stored bytes and rejects a one-bit mutant. This
+  covers one word, not fetch/PC update, memory, faults or branches.
+* **Islaris theorem** (`ports/arm/islaris/buri_chez_add.v`). It runs in a
+  separate Coq 8.19.0 + Iris + Lithium + Islaris environment,
+  `nix/arm/islaris.nix`, whose dev pins come by exact commit from GitHub
+  mirrors. For all fixnum-tagged a, b with no signed overflow, X23 = 2 and an
+  aligned frame slot holding ra, the Chez fast path `+0x00..+0x23` (the
+  captured bytes) reaches ra with X23 = a + b. The three slow-path branches are
+  proved infeasible. The result is closed under the global context. It is
+  relative to Islaris's semantics of isla traces: isla `b8e614bd`, and also
+  `e9b5d945`, over the Armv8.5 IR under Islaris's EL2/MMU-off register
+  constraints. It is not about the Armv9.4 Coq model and not about EL0 Linux.
+  "Trace = architecture" is trusted to isla and z3.
+
+Open: no bridge theorem connects isla traces and the Coq model. Proofs for a
+call, store, fault, allocation stub and atomic are still missing, and so are
+the SBCL code, fetch/execute and PC update in the v9.4 model, and the
+EL0/MMU-on profile. E2E-20 is not complete.
