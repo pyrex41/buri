@@ -52,3 +52,21 @@ if override.decode().count(read_body) != override.decode().count('(define read-f
 expected = '(tc -)\n' + read_body + '\n'
 if Path('ports/io-read.shen').read_text() != expected:
     raise SystemExit('Extracted read wrapper differs from upstream')
+
+# Kernel list helpers used by the order pass: exact bodies from the pinned
+# Shen 43.1 sources/sys.shen; only defined names and self-references renamed.
+kernel = Path('ports/upstream/sys.shen').read_bytes()
+if hashlib.sha1(b'blob ' + str(len(kernel)).encode() + b'\0' + kernel).hexdigest() != '92aab80f04afe0b91a8f37eb835c245441b7ef09':
+    raise SystemExit('Pinned Shen kernel sys.shen blob mismatch')
+kt = kernel.decode()
+kernel_helpers = ['occurrences', 'reverse', 'reverse-help', 'not']
+kernel_forms = []
+for name in kernel_helpers:
+    if kt.count('(define ' + name + '\n') != 1:
+        raise SystemExit('Kernel helper is not uniquely defined: ' + name)
+    form = extract(kt, name)
+    form = re.sub(r'(?<=\()(' + '|'.join(re.escape(n) for n in kernel_helpers) + r')(?=[\s)])', r'buri.kernel.\1', form)
+    form = form.replace('(define ' + name + '\n', '(define buri.kernel.' + name + '\n', 1)
+    kernel_forms.append(form)
+if Path('ports/kernel-list.shen').read_text().split('(tc -)\n', 1)[1] != '\n\n'.join(kernel_forms) + '\n':
+    raise SystemExit('Extracted kernel list helpers differ beyond buri.kernel. renaming')

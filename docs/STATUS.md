@@ -467,3 +467,30 @@ Three altered stored captures (dropped guard, CL truthiness, swapped branches)
 join the default proof mutations (74 total); the opt-in gate also rejects an
 `EQ`-for-equality capture after fresh regeneration. Twenty-two additional
 statements join the assumption audit (379 total).
+
+## Shen-Scheme argument ordering and fresh names (E2E-15, in progress)
+
+[SCHEME-PORT](SCHEME-PORT.md) records the first E2E-15 item. Twenty-eight
+additional audited statements bring the inventory to 385 on this branch's
+baseline. The actual captured `order-call` pass is executed on the effect
+evaluator together with the actual captured Shen kernel 43.1 `occurrences`,
+`reverse` and `not` (new pinned `ports/upstream/sys.shen`, `kernel_list`
+capture, regenerated and diffed by the proof gate); these are no longer Rocq
+oracles. `gensym` is quantified as an arbitrary stateful generator.
+
+Universal theorems: every successful pass run follows the exact keep/lift
+structure with names whose captured occurrence count is zero
+(`order_call_success`, `fresh_success`); the reader only produces variables
+occurring in the syntax (`decode_vars`) and is budget-monotone
+(`decode_monotone`); and the produced syntax has exactly the same completed
+outcomes, error payloads, final state and event trace, and the same
+non-completion, as the input call, for arbitrary programs and operations
+(`order_call_preserves`, `order_call_noncompletion`). Admission: an
+application head, no `lambda` argument (no closures in the first-order
+model), and bound variable arguments. One ground sample and a twelve-check
+sampled Shen regression are separate evidence; four new mutants are rejected.
+
+Open: termination/progress with the real generator, the identity of the boot
+image's precompiled kernel with this recompilation, `kl:=`/assert-boolean
+primitive contracts, composition with the other compiler passes, and native
+Chez execution. E2E-15 is not complete.
