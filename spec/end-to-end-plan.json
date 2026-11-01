@@ -211,9 +211,24 @@
           "claim": "five weakened reference kernels/models are refused by Rocq"
         },
         {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionDrivers.v",
+          "claim": "every captured driver body (check-bundle guarded body, bundle-h, bundle-next, goal?, check-theorem, check-cases, check-case-bound, check-steps, check-step-result, after-rewrite, instantiate, substitution?, replace, replace-arg) and the nat? spelling chain computes its reference function for every input under its callees' contracts"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionRefinement.v",
+          "claim": "by fuel induction the captured drivers refine the reference kernel under the Native evaluator (partial correctness); captured bundle-h acceptance and captured check-bundle acceptance under the stated guard_model imply validity of every output theorem in the standard model"
+        },
+        {
+          "kind": "proof-mutation",
+          "artifact": "tests/mutate-eq1.py",
+          "claim": "five modified captured driver bodies (no conclusion check, swapped rewrite direction, no freshness, no theory check, accepting guard handler) are refused by Rocq"
+        },
+        {
           "kind": "open-obligation",
           "artifact": "docs/EQ1.md",
-          "claim": "EQ1-DRIVERS (captured drivers refine the reference kernel), EQ1-GUARD, EQ1-NUMERIC, EQ1-TERM remain open"
+          "claim": "EQ1-GUARD (guard_model is a stated contract), EQ1-TERM (termination), numeric kl:= contract and Chez-to-Native simulation remain open; EQ1-DRIVERS is closed under the Native evaluator"
         }
       ],
       "acceptance": "all acceptance routes imply the same soundness theorem; no alternate UI, cache,\nserializer or fast path bypasses it. Native checker execution is closed in 32.",

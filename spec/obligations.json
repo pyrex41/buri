@@ -653,7 +653,7 @@
    "scope": "universal",
    "owner": "E2E-09",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "shen/kernel.shen equational kernel",
    "identity": "shen/kernel.shen",
    "statement": "The Shen equational kernel (with EQ-1 induction) refines the Rocq checker.",
@@ -661,7 +661,23 @@
    "depends_on": [
     "OB-SHEN-EVALUATOR-REFINEMENT"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualityInductionRefinement.EqualityInductionRefinement.drivers",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualityInductionRefinement.EqualityInductionRefinement.captured_check_bundle_sound",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualityInductionRefinement.EqualityInductionRefinement.captured_bundle_sound",
+     "establishes": "implementation-correspondence"
+    }
+   ],
    "completion_evidence": "Source-bound refinement of shen/kernel.shen preserving rejection distinctions.",
    "sources": [
     "docs/TRUST.md",
@@ -673,6 +689,11 @@
      "source": "docs/SIX-STAGES.md",
      "recorded": "Original EQ-1 induction checker remains for stage 6.",
      "reconciliation": "Congruence-only core is OB-EQUALITY-CORE-IMPL; EQ-1 stays here."
+    },
+    {
+     "source": "docs/EQ1.md",
+     "recorded": "EQ1-DRIVERS closed for the decoded capture under the Native evaluator (partial correctness).",
+     "reconciliation": "Remaining: EQ1-GUARD (guard_model is a stated contract), EQ1-TERM, numeric kl:= contract, Chez-to-Native (OB-SHEN-EVALUATOR-REFINEMENT)."
     }
    ]
   },
