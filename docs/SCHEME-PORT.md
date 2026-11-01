@@ -122,3 +122,129 @@ gensym collision). `tests/mutate-order.py` adds four rejected mutants: a
 swapped keep order, a fresh loop accepting collisions, kernel occurrences
 dropping the tail (caught first by the ground `occurrences_sample`), and the
 composed theorem restated for reversed arguments.
+
+# Shen-Scheme: pass composition, bindings, conditionals, equality (E2E-15, Wave B)
+
+`rocq/SchemeBranches.v` and `rocq/SchemeCompose.v` extend the proofs about the
+**actual captured compiler** to the next branches of `compile-expression` and
+compose them with the ordering and merge passes. Nothing is re-implemented.
+
+## New captures
+
+- `ports/compiler-branches.shen`: the exact upstream `yields-boolean?`,
+  `force-boolean`, `emit-symbol`, `emit-let`, `emit-if`, `emit-cond`,
+  `emit-cond-clauses` and `emit-equality-check` (pinned `src/compiler.shen`,
+  blob `42ac753b…`), read **inside the exact upstream `(package _scm …)`
+  header**, so Shen's own reader performs every `_scm.` qualification; nothing
+  is renamed by hand. `scripts/check-upstream-pass.py` checks the bytes, and
+  also checks that `compile-expression`'s let clause is literally
+  `(merge-nested-lets (emit-let Var Value Body Scope))`.
+- `ports/kernel-element.shen`: the exact kernel 43.1 `element?` (renamed
+  `buri.kernel.element?` only), linked as `kl:element?`.
+- Both are compiled by the actual Shen-Scheme compiler through the existing
+  `observe-constructor` capture (`compiler_branches`, `kernel_element`
+  profiles), regenerated and diffed by `make prove`, and decoded completely
+  (`compiler_branches_exact`, `kernel_element_complete`).
+
+`unbound-symbol?` could not be captured: its body contains the symbol `,`,
+which the native capture codec has no encoding for. It stays an arbitrary
+operation; the equality theorem takes its (pure, boolean) answers as premises.
+
+## The compiler's own world
+
+The captured emitters run on the existing first-order effect evaluator,
+linked with the captured merge (first definition of the ordering capture) and
+the captured `element?`. Every recursive `compile-expression` call, the
+`order-call` call, and every other uncaptured compiler function
+(`native-mode`, `emit-static-application-fallback`, `shen.f-error`,
+`unbound-symbol?`) is an ARBITRARY stateful operation; every theorem holds for
+all of them. Primitive contracts (pinned `src/primitives.scm`): `kl:=` (eq?
+fast path, numbers by `=` — modelled for exact integers only, anything else
+numeric is unsupported, never guessed — pairs and strings structurally,
+identity otherwise), `assert-boolean` (identity on booleans, raises with the
+value otherwise), and the static globals `*yields-boolean1/2*` as symbol lists
+(the theorems quantify over the lists).
+
+## Theorems (universal unless marked)
+
+- `emit_let_exact`, `emit_if_exact`, `emit_cond_clauses_exact`,
+  `emit_cond_exact`, `emit_equality_exact` are **exact denotations**: for every
+  input, every completed outcome (value, raised error, unsupported), final
+  state and compile-time trace of the captured emitter equals a stated
+  sequencing of its sub-compilations. In particular: the let value is
+  compiled in the outer scope, then the body in the scope extended by the
+  variable; a literal `true`/`false` test compiles only the selected branch
+  (the other is never compiled); other tests are passed through
+  `force-boolean`, then test, then-branch, else-branch are compiled in order;
+  cond clauses are compiled in order with forced tests, malformed clauses
+  reach `shen.f-error`; equality selects `eq?` (unbound symbol or `[fail]`),
+  `eqv?` (a number), `equal?` (a string), `null?` (an empty list) or the static
+  fallback exactly as the source says, and hands `eq?/eqv?/equal?` calls to
+  `order-call`.
+- `yields_returns`, `force_returns`, `kernel_element_returns`: the captured
+  `yields-boolean?` decides exactly literal booleans, `(let _ _ E)`/`(do _ E)`
+  with boolean-yielding `E`, and two/three-element forms whose head is in the
+  static lists; `force-boolean` wraps everything else in `_scm.assert-boolean`.
+- **Composition** `order_then_merge_preserves`: for every generator and every
+  successful run of the captured `order-call` on an admitted call, the
+  captured `merge-nested-lets` applied to the let that `emit-let` builds
+  around that output returns syntax read as a target whose completed outcomes,
+  error payloads, final state and trace equal those of the unordered,
+  unmerged let, for arbitrary programs, operations, environments and states.
+  `let_clause_preserves` composes captured `emit-let`, ordering and merge: the
+  whole let clause as `compile-expression` invokes it. Its premises name the
+  two uncaptured `compile-expression` calls: the bound value is read as `a`,
+  and the body (a static application) is compiled by the captured
+  `order-call` (its `emit-static-application` route, not itself captured).
+- `strict_if` (Scheme level, any program/operations satisfying the
+  `assert-boolean` contract): a forced condition selects the then-branch on
+  `#t`, the else-branch on `#f`, and never selects a branch otherwise; only the
+  selected branch's effects occur. `world_assert_contract` shows the
+  compiler's own contract satisfies it.
+- `numeric_equality_preserves`: in the numeric branch, every successful run of
+  the captured `emit-equality-check`, through the captured `order-call`, gives
+  syntax with exactly the outcomes, state and trace of `(eqv? d1 d2)` on the
+  compiled operands. `eqv_exact_agrees`: `eqv?` and `kl:=` agree on exact
+  integers.
+
+## Confirmed port disagreements (counterexamples, not hidden)
+
+1. **cond with no true clause.** The KLambda profile raises `XCondFail`. The
+   compiler emits `(cond (#f 1))` with no else clause and Shen-Scheme v0.52
+   returns `#<void>` without raising (`tests/scheme-compose.shen`,
+   `cond-no-true-clause-falls-through`). `cond_without_true_unread` proves the
+   Scheme reader rejects every such emitted cond at every budget, so no
+   preservation theorem covers it. Ledger: `OB-SCHEME-COND-FALLTHROUGH`
+   (refuted) replaced by `OB-SCHEME-COND-ADMISSION` (open: admit only
+   exhaustive cond, or emit an error else clause).
+2. **`=` with a literal number.** The compiler emits `eqv?`. Scheme `eqv?` is
+   false for mixed exactness, while the same KLambda `=` through variables
+   calls `kl:=`, which compares numbers with `=`: `(= 1 (* 2 (/ 1 2)))` is
+   `false` but `(let Y 1 (let X (* 2 (/ 1 2)) (= Y X)))` is `true` on the same
+   compiled path (`eqv-literal-mixed-exactness-counterexample`). (Wave A's
+   `(= 1 1.0)` sample does not show it: the Shen reader reads `1.0` as exact
+   `1`.) `eqv_mixed_unmodelled`: the model claims nothing for mixed exactness.
+   Ledger: `OB-SCHEME-EQV-LITERAL` (refuted) replaced by
+   `OB-SCHEME-EQV-EXACT` (partial: exact integers proved; admission or a port
+   change needed for mixed exactness, dependent on `OB-NUMERIC-PROFILE`).
+
+## Evidence and boundary
+
+`tests/scheme-compose.shen` is a SAMPLED regression (eighteen checks of the
+running compiler and the loaded captured emitters) plus the two
+counterexamples. `tests/mutate-compose.py` adds six rejected mutants: a
+literal-true `if` compiling the else-branch, an unscoped let body, an
+unforced cond test, an `equal?`-lowered numeric `=`, and restatements of the
+composition (dropped binding) and strictness (swapped branches) theorems.
+
+Open (E2E-15 is not complete): the `compile-expression` dispatcher itself
+(uncapturable whole: it contains closures, `freeze` and `scm.` escapes outside
+the first-order reader) — so the dispatch from `[let …]`/`[if …]`/`[= …]` to
+these emitters, and from a forced test to a `kl:_scm.assert-boolean` call, is
+source text, not a theorem; the boolean-yielding-head premise of
+`yields-boolean?` (redefinition of `not`, `=` etc., OB-KL-GLOBAL-REBINDING);
+the relation of the KLambda profile to the decoded Scheme (OB-GENERATED-SCHEME-
+SEMANTICS); `unbound-symbol?`; termination of the ordering pass with the real
+counter-based `gensym` (not attempted in this wave; every theorem quantifies
+over all generators instead); boot-image kernel identity; native Chez
+execution.
