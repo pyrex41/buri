@@ -330,3 +330,25 @@ Ten additional statements join the assumption audit (357 total). Native tests,
 source capture and universal model proofs remain separate evidence. Neither port
 is fully verified, and Chez, SBCL, runtime and ARM execution refinement remain
 open. Coalton adds no theorem and is not used in the acceptance path.
+
+## ARM foundation research gate (E2E-20, first experiment)
+
+[ARM-FOUNDATION](ARM-FOUNDATION.md) records the first ARM experiment. It adds
+no Rocq module or theorem, so the proven boundary and the audited statement
+count (357 total) are unchanged. `(define buri-arm-add X Y -> (+ X Y))` was
+compiled through each port's real generated code: Shen-Scheme v0.52's form on
+Chez 10.3.0 tarm64le (the shen-scheme pin, cross-built here), and Shen-CL
+`4844072d` on aarch64 SBCL 2.6.8. Its exact machine-code bytes are stored in
+`ports/arm/` and were executed under qemu-aarch64; those runs are emulated
+samples, not model evidence. isla traced the exact opcode bytes against the
+Sail Armv9.4-A model. That is unchecked symbolic execution, trusting isla, z3
+and the Sail-to-IR step, so it is not a Rocq theorem. The sail-arm v9.4 Coq
+model elaborates under a separate Coq 8.18.0 with stdpp 1.10.0 and
+coq-sail-stdpp 0.19 (24 min, 6.4 GB). The first decode lemma is not yet
+proved, because the Sail decoder is monadic over the `SEE` register. Islaris
+was not built: it
+requires Coq 8.19.0 and lithium dev pins, and its package sources were
+unreachable. The runtime calls are inventoried: Chez library `+`, `event` and
+`doargerr`; SBCL `TWO-ARG-+`, `%DOUBLE-FLOAT`, `ALLOC-TRAMP` and the `brk`
+traps. Incompatibilities are listed there. Package 20 remains in progress: no
+instruction is yet checked against the ISA model in Rocq.

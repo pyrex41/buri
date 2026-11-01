@@ -304,14 +304,40 @@
       "id": "E2E-20",
       "title": "Establish the authoritative ARM proof foundation.",
       "lane": "arm-foundation",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-01",
         "E2E-03",
         "E2E-04"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "research-report",
+          "artifact": "docs/ARM-FOUNDATION.md",
+          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin. Proves no theorem: no byte-level theorem against the ISA model exists yet and Islaris was not built, so the exit criterion is unmet."
+        },
+        {
+          "kind": "byte-capture-and-emulated-run",
+          "artifact": "ports/arm/chez/chez1030-buri-arm-add.bin",
+          "claim": "Exact 152-byte tarm64le code object from plain Chez 10.3.0 for Shen-Scheme v0.52's generated form of (define buri-arm-add X Y -> (+ X Y)); one relocated instance; executed under qemu-aarch64 only."
+        },
+        {
+          "kind": "byte-capture-and-emulated-run",
+          "artifact": "ports/arm/sbcl/sbcl-buri-arm-add.bin",
+          "claim": "Exact 680-byte code component produced inside Shen-CL 4844072d on aarch64 SBCL 2.6.8; executed under qemu-aarch64 only."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/arm/chez/shen-scheme-ta6le-buri-arm-add.hex",
+          "claim": "x86_64 only: in-process Shen-Scheme v0.52 code equals plain Chez 10.3.0 code modulo three relocated addresses, for one function."
+        },
+        {
+          "kind": "isla-trace-unchecked",
+          "artifact": "ports/arm/isla/STATUS",
+          "claim": "isla e9b5d945 symbolic execution of the Sail Armv9.4-A IR on the exact opcode bytes; trusts isla, z3 and the Sail-to-IR translation; not checked by Rocq."
+        }
+      ],
       "acceptance": "exact\ninstructions are checked against the selected ISA model; no disassembly-text or\ntoy-ISA agreement is substituted. Tool compatibility and missing mechanisms are\nresearch deliverables, not assumed available integrations.",
       "details": "docs/END-TO-END-PLAN.md"
     },

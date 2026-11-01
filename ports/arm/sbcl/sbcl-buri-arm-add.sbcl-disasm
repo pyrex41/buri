@@ -1,0 +1,165 @@
+; Size: 664 bytes. Origin: #x1001D90200 (segment 1 of 2)      ; (XEP SHEN::|buri-arm-add|)
+; 200:       .ENTRY SHEN::|buri-arm-add|(V2264 V2265)
+; 210:       BE0700F9         STR LR, [CFP, #8]
+; 214:       FF1200F1         CMP NARGS, #4
+; 218:       E1110054         BNE L20
+; 21C:       BBE30091         ADD CSP, CFP, #56
+; 220:       ED030AAA         MOV R3, R0
+; 224:       EC030BAA         MOV R2, R1
+; 228:       ADB302A9         STP R3, R2, [CFP, #40]
+; Origin #x1001D9022C (segment 2 of 2)                        ; SHEN::|buri-arm-add|
+; 22C:       AA0A40F9         LDR R0, [THREAD, #16]           ; binding-stack-pointer
+; 230:       AA0F00F9         STR R0, [CFP, #24]
+; 234:       8D0E0036         TBZ WR3, #0, L17
+; 238: L0:   A10D4092         AND NL1, R3, #15
+; 23C:       3F3C00F1         CMP NL1, #15
+; 240:       81000054         BNE L1
+; 244:       A1115F38         LDRB WNL1, [R3, #-15]
+; 248:       3F7400F1         CMP NL1, #29
+; 24C:       400A0054         BEQ L14
+; 250: L1:   ED000036         TBZ WR3, #0, L2
+; 254:       A10D4092         AND NL1, R3, #15
+; 258:       3F3C00F1         CMP NL1, #15
+; 25C:       21060054         BNE L10
+; 260:       A1115F38         LDRB WNL1, [R3, #-15]
+; 264:       3F4400F1         CMP NL1, #17
+; 268:       C1050054         BNE L10
+; 26C: L2:   EE030DAA         MOV R4, R3
+; 270: L3:   EC000036         TBZ WR2, #0, L4
+; 274:       810D4092         AND NL1, R2, #15
+; 278:       3F3C00F1         CMP NL1, #15
+; 27C:       41010054         BNE L6
+; 280:       81115F38         LDRB WNL1, [R2, #-15]
+; 284:       3F4400F1         CMP NL1, #17
+; 288:       E1000054         BNE L6
+; 28C: L4:   EB030CAA         MOV R1, R2
+; 290: L5:   EA030EAA         MOV R0, R4
+; 294:       297E80D2         MOVZ TMP, #1009
+; 298:       5E6B69F8         LDR LR, [NULL, TMP]             ; SB-KERNEL:TWO-ARG-+
+; 29C:       DE130091         ADD LR, LR, #4
+; 2A0:       C0031FD6         BR LR
+; 2A4: L6:   810D4092         AND NL1, R2, #15
+; 2A8:       3F3C00F1         CMP NL1, #15
+; 2AC:       81000054         BNE L7
+; 2B0:       81115F38         LDRB WNL1, [R2, #-15]
+; 2B4:       3F7400F1         CMP NL1, #29
+; 2B8:       A0FEFF54         BEQ L4
+; 2BC: L7:   7D0300F9         STR CFP, [CSP]
+; 2C0:       EA030CAA         MOV R0, R2
+; 2C4:       AE1300F9         STR R4, [CFP, #32]
+; 2C8:       D6F8FF58         LDR LEXENV, #x1001D901E0        ; #<SB-KERNEL:FDEFN SB-KERNEL:%DOUBLE-FLOAT>
+; 2CC:       DE9240F8         LDR LR, [LEXENV, #9]
+; 2D0:       FD031BAA         MOV CFP, CSP
+; 2D4:       C0033FD6         BLR LR
+; 2D8:       ADB342A9         LDP R3, R2, [CFP, #40]
+; 2DC:       AE1340F9         LDR R4, [CFP, #32]
+; 2E0:       BA2A00B9         STR WNULL, [THREAD, #40]        ; pseudo-atomic-bits
+; 2E4:       A97A47A9         LDP TMP, LR, [THREAD, #112]     ; mixed-tlab.{free-pointer, end-addr}
+; 2E8:       2B410091         ADD R1, TMP, #16
+; 2EC:       7F011EEB         CMP R1, LR
+; 2F0:       480B0054         BHI L21
+; 2F4:       AB3A00F9         STR R1, [THREAD, #112]          ; mixed-tlab
+; 2F8: L8:   2B3D0091         ADD R1, TMP, #15
+; 2FC:       BE2380D2         MOVZ LR, #285
+; 300:       7E111FF8         STR LR, [R1, #-15]
+; 304:       60911FFC         STR D0, [R1, #-7]
+; 308:       BF3A03D5         DMB ISHST
+; 30C:       BF2A00B9         STR WZR, [THREAD, #40]          ; pseudo-atomic-bits
+; 310:       BE2E40B9         LDR WLR, [THREAD, #44]          ; pseudo-atomic-bits
+; 314:       5E0000B4         CBZ LR, L9
+; 318:       200120D4         BRK #9                          ; Pending interrupt trap
+; 31C: L9:   DDFFFF17         B L5
+; 320: L10:  A10D4092         AND NL1, R3, #15
+; 324:       3F3C00F1         CMP NL1, #15
+; 328:       81000054         BNE L11
+; 32C:       A1115F38         LDRB WNL1, [R3, #-15]
+; 330:       3F7400F1         CMP NL1, #29
+; 334:       C0F9FF54         BEQ L2
+; 338: L11:  7D0300F9         STR CFP, [CSP]
+; 33C:       EA030DAA         MOV R0, R3
+; 340:       16F5FF58         LDR LEXENV, #x1001D901E0        ; #<SB-KERNEL:FDEFN SB-KERNEL:%DOUBLE-FLOAT>
+; 344:       DE9240F8         LDR LR, [LEXENV, #9]
+; 348:       FD031BAA         MOV CFP, CSP
+; 34C:       C0033FD6         BLR LR
+; 350:       ADB342A9         LDP R3, R2, [CFP, #40]
+; 354:       BA2A00B9         STR WNULL, [THREAD, #40]        ; pseudo-atomic-bits
+; 358:       A97A47A9         LDP TMP, LR, [THREAD, #112]     ; mixed-tlab.{free-pointer, end-addr}
+; 35C:       2E410091         ADD R4, TMP, #16
+; 360:       DF011EEB         CMP R4, LR
+; 364:       28080054         BHI L22
+; 368:       AE3A00F9         STR R4, [THREAD, #112]          ; mixed-tlab
+; 36C: L12:  2E3D0091         ADD R4, TMP, #15
+; 370:       BE2380D2         MOVZ LR, #285
+; 374:       DE111FF8         STR LR, [R4, #-15]
+; 378:       C0911FFC         STR D0, [R4, #-7]
+; 37C:       BF3A03D5         DMB ISHST
+; 380:       BF2A00B9         STR WZR, [THREAD, #40]          ; pseudo-atomic-bits
+; 384:       BE2E40B9         LDR WLR, [THREAD, #44]          ; pseudo-atomic-bits
+; 388:       5E0000B4         CBZ LR, L13
+; 38C:       200120D4         BRK #9                          ; Pending interrupt trap
+; 390: L13:  B8FFFF17         B L3
+; 394: L14:  810D4092         AND NL1, R2, #15
+; 398:       3F3C00F1         CMP NL1, #15
+; 39C:       A1F5FF54         BNE L1
+; 3A0:       81115F38         LDRB WNL1, [R2, #-15]
+; 3A4:       3F7400F1         CMP NL1, #29
+; 3A8:       41F5FF54         BNE L1
+; 3AC:       A2915FFC         LDR D2, [R3, #-7]
+; 3B0:       81915FFC         LDR D1, [R2, #-7]
+; 3B4:       4128611E         FADD D1, D2, D1
+; 3B8:       BA2A00B9         STR WNULL, [THREAD, #40]        ; pseudo-atomic-bits
+; 3BC:       A97A47A9         LDP TMP, LR, [THREAD, #112]     ; mixed-tlab.{free-pointer, end-addr}
+; 3C0:       2A410091         ADD R0, TMP, #16
+; 3C4:       5F011EEB         CMP R0, LR
+; 3C8:       88050054         BHI L23
+; 3CC:       AA3A00F9         STR R0, [THREAD, #112]          ; mixed-tlab
+; 3D0: L15:  2A3D0091         ADD R0, TMP, #15
+; 3D4:       BE2380D2         MOVZ LR, #285
+; 3D8:       5E111FF8         STR LR, [R0, #-15]
+; 3DC:       41911FFC         STR D1, [R0, #-7]
+; 3E0:       BF3A03D5         DMB ISHST
+; 3E4:       BF2A00B9         STR WZR, [THREAD, #40]          ; pseudo-atomic-bits
+; 3E8:       BE2E40B9         LDR WLR, [THREAD, #44]          ; pseudo-atomic-bits
+; 3EC:       5E0000B4         CBZ LR, L16
+; 3F0:       200120D4         BRK #9                          ; Pending interrupt trap
+; 3F4: L16:  FB031DAA         MOV CSP, CFP
+; 3F8:       5F0300F1         CMP NULL, #0
+; 3FC:       BD7B40A9         LDP CFP, LR, [CFP]
+; 400:       C0035FD6         RET
+; 404: L17:  ACF10737         TBNZ WR2, #0, L0
+; 408:       A2FD4193         ASR NL2, R3, #1
+; 40C:       41048C8B         ADD NL1, NL2, R2, ASR #1
+; 410:       2A0001AB         ADDS R0, NL1, NL1
+; 414:       E7010054         BVC L19
+; 418:       BA2A00B9         STR WNULL, [THREAD, #40]        ; pseudo-atomic-bits
+; 41C:       A97A47A9         LDP TMP, LR, [THREAD, #112]     ; mixed-tlab.{free-pointer, end-addr}
+; 420:       2A410091         ADD R0, TMP, #16
+; 424:       5F011EEB         CMP R0, LR
+; 428:       08030054         BHI L24
+; 42C:       AA3A00F9         STR R0, [THREAD, #112]          ; mixed-tlab
+; 430: L18:  2A3D0091         ADD R0, TMP, #15
+; 434:       3E2280D2         MOVZ LR, #273
+; 438:       3E0500A9         STP LR, NL1, [TMP]
+; 43C:       BF3A03D5         DMB ISHST
+; 440:       BF2A00B9         STR WZR, [THREAD, #40]          ; pseudo-atomic-bits
+; 444:       BE2E40B9         LDR WLR, [THREAD, #44]          ; pseudo-atomic-bits
+; 448:       5E0000B4         CBZ LR, L19
+; 44C:       200120D4         BRK #9                          ; Pending interrupt trap
+; 450: L19:  E9FFFF17         B L16
+; 454: L20:  E00120D4         BRK #15                         ; Invalid argument count trap
+; 458: L21:  090280D2         MOVZ TMP, #16
+; 45C:       EBECFF58         LDR R1, #x1001D901F8            ; SB-VM::ALLOC-TRAMP
+; 460:       60013FD6         BLR R1
+; 464:       A5FFFF17         B L8
+; 468: L22:  090280D2         MOVZ TMP, #16
+; 46C:       6EECFF58         LDR R4, #x1001D901F8            ; SB-VM::ALLOC-TRAMP
+; 470:       C0013FD6         BLR R4
+; 474:       BEFFFF17         B L12
+; 478: L23:  090280D2         MOVZ TMP, #16
+; 47C:       EAEBFF58         LDR R0, #x1001D901F8            ; SB-VM::ALLOC-TRAMP
+; 480:       40013FD6         BLR R0
+; 484:       D3FFFF17         B L15
+; 488: L24:  090280D2         MOVZ TMP, #16
+; 48C:       6AEBFF58         LDR R0, #x1001D901F8            ; SB-VM::ALLOC-TRAMP
+; 490:       40013FD6         BLR R0
+; 494:       E7FFFF17         B L18

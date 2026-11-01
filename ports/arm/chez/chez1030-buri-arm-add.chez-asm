@@ -1,0 +1,95 @@
+output of np-generate-code (assembly):
+
+kl:buri-arm-add: 
+entry.5:
+0:       cmpi           %ac0, 2
+4:       bne            lf.2(124)
+dcl.6:
+8:       orr            %lr, %r0, %r1
+12:      tsti           %sp, %lr, 7
+16:      bne            Lfail.1(16)
+lt.7:
+20:      add            %ac0, %r0, %r1, #t
+24:      bvs            Lfail.1(8)
+lf.8:
+28:      lduri          %jmptmp, %sfp, 0
+32:      br             %jmptmp
+Lfail.1:
+36:      subi           %trap, %trap, 1, #t
+40:      bne            ej.0(68)
+lt.9:
+44:      stri           %r0, %sfp, 8
+48:      stri           %r1, %sfp, 16
+52:      addi           %sfp, %sfp, 24, #f
+docall.10:
+56:      adr            %lr, 44
+60:      stri           %lr, %sfp, 0
+64:      movzi          %jmptmp, 0, 0
+68:      movki          %jmptmp, 0, 1
+72:      movki          %jmptmp, 0, 2
+76:      movki          %jmptmp, 0, 3
+80:      br             %jmptmp
+84:      relocation:    (arm64-jump 65 (library-code #(libspec event 32817)))
+rpl.11:
+84:      code-top-link  
+92:      mrv pt:        (3 3 continue)
+mrvl.12:
+100:     subi           %sfp, %sfp, 24, #f
+104:     ldri           %r0, %sfp, 8
+108:     ldri           %r1, %sfp, 16
+ej.0:
+112:     movzi          %jmptmp, 0, 0
+116:     movki          %jmptmp, 0, 1
+120:     movki          %jmptmp, 0, 2
+124:     movki          %jmptmp, 0, 3
+128:     br             %jmptmp
+132:     relocation:    (arm64-jump 65 (library-code #(libspec + 34838)))
+lf.2:
+132:     movzi          %jmptmp, 0, 0
+136:     movki          %jmptmp, 0, 1
+140:     movki          %jmptmp, 0, 2
+144:     movki          %jmptmp, 0, 3
+148:     br             %jmptmp
+152:     relocation:    (arm64-jump 65 (library-code #(libspec doargerr 176)))
+152:     <end kl:buri-arm-add>
+
+dcl.13:
+0:       movzi          %r15, 0, 0
+4:       movki          %r15, 0, 1
+8:       movki          %r15, 0, 2
+12:      movki          %r15, 0, 3
+16:      relocation:    (arm64-abs 0 (object kl:buri-arm-add.*top*:kl:buri-arm-add))
+16:      addi           %r14, %r15, 5, #f
+20:      dmbishst       
+24:      movzi          %lr, 0, 0
+28:      movki          %lr, 0, 1
+32:      movki          %lr, 0, 2
+36:      movki          %lr, 0, 3
+40:      relocation:    (arm64-abs 0 (closure . #($c-func (...) #f (...) #f)))
+40:      stri           %lr, %r14, 0
+44:      ldri           %td, %tc, 160
+48:      cmp            %ap, %td
+52:      bcs            lf.4(44)
+ej.3:
+56:      subi           %td, %td, 8, #f
+60:      stri           %td, %tc, 160
+64:      stri           %r14, %td, 0
+68:      movzi          %lr, 0, 0
+72:      movki          %lr, 0, 1
+76:      movki          %lr, 0, 2
+80:      movki          %lr, 0, 3
+84:      relocation:    (arm64-abs 65 (library #(libspec nonprocedure-code 162)))
+84:      sturi          %lr, %r15, 13
+88:      movzi          %ac0, 46, 0
+92:      lduri          %jmptmp, %sfp, 0
+96:      br             %jmptmp
+lf.4:
+100:     movzi          %jmptmp, 0, 0
+104:     movki          %jmptmp, 0, 1
+108:     movki          %jmptmp, 0, 2
+112:     movki          %jmptmp, 0, 3
+116:     blr            %jmptmp
+120:     relocation:    (arm64-call 65 (library-code #(libspec scan-remembered-set 374)))
+120:     ldri           %td, %tc, 160
+124:     b              ej.3(-72)
+128:     <end>

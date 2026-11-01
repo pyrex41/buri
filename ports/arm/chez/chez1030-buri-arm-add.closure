@@ -1,0 +1,12 @@
+# Chez Scheme Version 10.3.0 tarm64le: code objects reachable from kl:buri-arm-add via relocations
+# count 4 total-instruction-bytes 1032
+# depth 0: 1 objects, 152 bytes
+# depth 1: 3 objects, 880 bytes
+#   relocs of "kl:buri-arm-add": ((code "doargerr") (code "+") (code "event"))
+#   relocs of "doargerr": ()
+#   relocs of "+": ()
+#   relocs of "event": ()
+0 "kl:buri-arm-add" 152
+1 "doargerr" 180
+1 "+" 348
+1 "event" 352
