@@ -1,0 +1,2695 @@
+{
+ "schema": "buri-obligation-graph-1",
+ "kind": "obligation-ledger-not-proof-evidence",
+ "charter_version": 1,
+ "charter": "spec/release-charter.json",
+ "plan": "spec/end-to-end-plan.json",
+ "audit": "rocq/Audit.v",
+ "rules": "docs/RELEASE-CHARTER.md",
+ "harvested_from": [
+  "docs/TRUST.md",
+  "docs/TRUST-AUDIT.md",
+  "docs/SIX-STAGES.md",
+  "spec/six-stages.json",
+  "docs/STATUS.md",
+  "docs/PORTS.md",
+  "docs/SCHEME-PORT.md",
+  "docs/CL-PORT.md",
+  "docs/END-TO-END-PLAN.md"
+ ],
+ "joint_invariants": [
+  {
+   "id": "JI-HEAP",
+   "owner": "E2E-25",
+   "status": "open",
+   "members": [
+    "OB-GC-CORRECTNESS",
+    "OB-HEAP-REPR-INVARIANT"
+   ],
+   "statement": "A single heap invariant preserved by both mutator steps and collector steps, proved jointly (never by assuming each side)."
+  },
+  {
+   "id": "JI-BOOTSTRAP",
+   "owner": "E2E-32",
+   "status": "open",
+   "members": [
+    "OB-SHEN-CHECKER-HOST",
+    "OB-HOST-OUTPUT-VALIDATION"
+   ],
+   "statement": "A well-founded bootstrap order in which the validator's own host code is validated from a smaller trusted root."
+  }
+ ],
+ "obligations": [
+  {
+   "id": "OB-FND-LOGIC",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-32",
+   "packages": [],
+   "status": "foundation",
+   "boundary": "Chosen logic and ultimate checking root",
+   "identity": "",
+   "statement": "The Rocq/Coq 8.18 logic (no custom axioms) and the ultimate checking root are accepted as the foundation.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "docs/TRUST.md",
+     "establishes": "model-proof",
+     "note": "coqchk replay; no custom axioms"
+    }
+   ],
+   "completion_evidence": "Named in the final trust base; independent replay/diversification under E2E-32 narrows only its execution, not the logic.",
+   "sources": [
+    "docs/TRUST.md",
+    "spec/end-to-end-plan.json"
+   ],
+   "history": [],
+   "foundation": "chosen logic and ultimate checking root"
+  },
+  {
+   "id": "OB-FND-SPEC-MEANING",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-36",
+   "packages": [],
+   "status": "foundation",
+   "boundary": "Specification meaning",
+   "identity": "",
+   "statement": "Formal specifications and semantics express the intended Shen behavior and stakeholder intent.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Independent semantic-fidelity review (E2E-36); counterexample-driven correction. Proof cannot establish intent.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "spec/end-to-end-plan.json"
+   ],
+   "history": [],
+   "foundation": "specification meaning"
+  },
+  {
+   "id": "OB-FND-ISA-DEVICE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-20",
+   "packages": [],
+   "status": "foundation",
+   "boundary": "Bottom ISA and device models",
+   "identity": "",
+   "statement": "The selected ISA/device model is the bottom of the semantic stack.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Selected and audited model revision recorded by E2E-20.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "spec/end-to-end-plan.json"
+   ],
+   "history": [],
+   "foundation": "bottom ISA and device models"
+  },
+  {
+   "id": "OB-FND-PHYSICAL",
+   "kind": "deployment-identity",
+   "scope": "universal",
+   "owner": "E2E-36",
+   "packages": [],
+   "status": "foundation",
+   "boundary": "Physical correspondence",
+   "identity": "",
+   "statement": "Physical hardware follows the bottom ISA/device model.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Explicitly listed foundation; hardware test matrix in E2E-36 is evidence, not proof.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "spec/end-to-end-plan.json"
+   ],
+   "history": [],
+   "foundation": "physical correspondence"
+  },
+  {
+   "id": "OB-MODEL-ARITH-COMPILER",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-34",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Reference arithmetic compiler (rocq/Arithmetic.v)",
+   "identity": "rocq/Arithmetic.v",
+   "statement": "The small reference arithmetic compiler preserves continuation semantics and never underflows at Halt.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "compiler_continuation",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "compiler_no_stack_fault",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "evaluation_sound",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems. This is a theorem about the reference compiler, not about Shen-Scheme or Shen-CL.",
+   "sources": [
+    "docs/STATUS.md"
+   ],
+   "history": [],
+   "note": "Carries no port obligation; listed so reports cannot relabel it as port evidence."
+  },
+  {
+   "id": "OB-MODEL-WIRE-CODEC",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-11",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Abstract wire codec (rocq/Wire.v)",
+   "identity": "rocq/Wire.v",
+   "statement": "Decoding inverts encoding exactly; encoding is injective; capture decoding is exact.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "Wire.decode_encode",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "Wire.encode_injective",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "Wire.capture_exact",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems over all finite supported datums.",
+   "sources": [
+    "docs/CAPTURE.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-TAG-PROTOCOL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-11",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Typed tagging transport protocol (rocq/CaptureTag.v)",
+   "identity": "rocq/CaptureTag.v",
+   "statement": "The canonical tagged representation is lossless: byte-string/tree recovery, injectivity and composition with the wire codec.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CaptureTag.tag_roundtrip",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CaptureTag.tag_injective",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CaptureTag.capture_root_exact",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems; canonical-tag premise explicit.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/TRUST.md"
+   ],
+   "history": [
+    {
+     "source": "docs/TRUST.md",
+     "recorded": "CaptureTag.v now proves the typed transport protocol lossless, but does not prove the native tagging adapter implements it.",
+     "reconciliation": "Model obligation discharged here; the adapter obligation is OB-TAG-ADAPTER-NATIVE."
+    }
+   ]
+  },
+  {
+   "id": "OB-CAPTURE-DECODE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Raw capture record decoding in Rocq (rocq/NativeValidation.v)",
+   "identity": "rocq/NativeValidation.v",
+   "statement": "Every supplied raw capture record is decoded and checked in order with complete coverage of the expected schemas.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeValidation.check_records_exact",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeValidation.check_capture_complete_record_coverage",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems; says nothing about where the supplied data came from (OB-CAPTURE-PROVENANCE).",
+   "sources": [
+    "docs/CAPTURE.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-EQUALITY-ADMISSION",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-09",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Typed congruence-certificate admission (rocq/EqualityAdmission.v)",
+   "identity": "rocq/EqualityAdmission.v",
+   "statement": "Raw admission is canonical and complete for its profile; an accepted axiom-free equation is valid in every interpretation.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualityAdmission.raw_acceptance_sound",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualityAdmission.admission_decision_complete",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems; host memory/time availability not covered.",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-MODEL-LET-LOWERING",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-06",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Lexical let lowering (rocq/Lambda.v)",
+   "identity": "rocq/Lambda.v",
+   "statement": "Let lowering to lambda application preserves outcomes in the de Bruijn lexical fragment.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "Lexical.let_lowering",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "Lexical.fuel_monotone",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorem about the Rocq fragment only.",
+   "sources": [
+    "docs/STATUS.md",
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-MODEL-REVERSE-CORE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-21",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Evaluator/instruction-machine equivalence for the private pure core (rocq/NativeReverse.v)",
+   "identity": "rocq/NativeReverse.v",
+   "statement": "Both directions between evaluator and instruction machine for every private first-order model program, including divergence equivalence.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeReverse.evaluator_machine_equivalence",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeReverse.divergence_equivalence",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems; not a native Chez execution relation (OB-NATIVE-REPR-CHEZ).",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-MODEL-EFFECT-CORE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-06",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "First-order effect evaluator laws (rocq/EffectContract.v)",
+   "identity": "rocq/EffectContract.v",
+   "statement": "Completed-fuel monotonicity, environment congruence and fresh-binding preservation for arbitrary first-order expressions and effects.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EffectContract.eval_completed_monotone",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "EffectContract.environment_congruence",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "EffectContract.fresh_binding_preserves_effects",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Audited Rocq theorems over the first-order fragment.",
+   "sources": [
+    "docs/SIX-STAGES.md",
+    "spec/six-stages.json"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-OBSERVATION-VOCABULARY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-04",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Observation and failure vocabulary",
+   "identity": "",
+   "statement": "A common LTS/observation definition distinguishes returned, raised, unsupported, rejected, budget-exhausted, resource-failed, diverged and IO events, in Rocq and Shen.",
+   "premises": [],
+   "depends_on": [
+    "OB-MODEL-EFFECT-CORE"
+   ],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/evaluator.shen",
+     "test": "bounded",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CallRefinement.fresh_let_noncompletion_equivalence",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Common definitions in Rocq and Shen used by every later pass; proof that no pass hides an error, failed write or internal loop.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/SIX-STAGES.md"
+   ],
+   "history": [
+    {
+     "source": "docs/TRUST.md",
+     "recorded": "Budget exhaustion means unknown, never divergence, unsafety, or a catchable language exception.",
+     "reconciliation": "Retained as a policy; the stateful noncompletion theorem (SIX-STAGES) shows absence of completion only."
+    }
+   ]
+  },
+  {
+   "id": "OB-KL-FULL-SEMANTICS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-06",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Complete KLambda semantics",
+   "identity": "",
+   "statement": "Every KLambda form and primitive (closures, computed calls, currying, freeze/thaw, cond, and/or, type, trap-error, globals, vectors, IO) has a small-step rule with heap and continuations.",
+   "premises": [],
+   "depends_on": [
+    "OB-OBSERVATION-VOCABULARY",
+    "OB-VECTOR-HEAP"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EffectContract.environment_congruence",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Rocq small-step semantics covering every charter language-construct feature, with determinism/well-formedness lemmas.",
+   "sources": [
+    "spec/six-stages.json",
+    "docs/SIX-STAGES.md"
+   ],
+   "history": [
+    {
+     "source": "spec/six-stages.json",
+     "recorded": "Stage 1 remaining: KLambda computed calls and closures; currying and dynamic mutation; vectors.",
+     "reconciliation": "Owned here; stage 1 stays partial."
+    }
+   ]
+  },
+  {
+   "id": "OB-VECTOR-HEAP",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-05",
+   "packages": [],
+   "status": "open",
+   "boundary": "Vector/heap aliasing and object identity",
+   "identity": "",
+   "statement": "Vectors, aliasing, object identity and cyclic host objects at boundaries have defined meaning.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Value/store definitions plus per-port representation obligation matrix.",
+   "sources": [
+    "spec/six-stages.json"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-NUMERIC-PROFILE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-05",
+   "packages": [],
+   "status": "open",
+   "boundary": "Numeric profile",
+   "identity": "",
+   "statement": "Floats, ratios, NaNs, infinities, rounding, signed zero, promotion and printing are specified for the release profile.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Numeric semantics with per-port representation obligations; differential agreement is not used as a specification.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/CORRECTNESS.md"
+   ],
+   "history": [
+    {
+     "source": "docs/TRUST.md",
+     "recorded": "Floats, ratios, NaNs, infinities, and closure equality are outside the profile.",
+     "reconciliation": "Charter v1 keeps them required; they are provisional exclusions with enforcement tests."
+    }
+   ]
+  },
+  {
+   "id": "OB-INT-REPRESENTATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-21",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Host arbitrary-precision integer representation",
+   "identity": "",
+   "statement": "Host exact integers implement mathematical integers with decimal printing.",
+   "premises": [],
+   "depends_on": [
+    "OB-NUMERIC-PROFILE"
+   ],
+   "evidence": [],
+   "completion_evidence": "Representation relation for Chez and SBCL bignums, plus printing proof.",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-KL-GLOBAL-REBINDING",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-19",
+   "packages": [],
+   "status": "open",
+   "boundary": "Global function rebinding",
+   "identity": "",
+   "statement": "Semantics covers dynamic function rebinding and global value mutation, not only an immutable definition table.",
+   "premises": [],
+   "depends_on": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "evidence": [],
+   "completion_evidence": "SEM-DYN rules and their preservation through both ports.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/BINDINGS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SHEN-EVALUATOR-REFINEMENT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-07",
+   "packages": [],
+   "status": "open",
+   "boundary": "shen/klambda.shen versus the formal semantics",
+   "identity": "shen/klambda.shen",
+   "statement": "The actual shen/klambda.shen and its dependencies refine SEM-KL, preserving rejected/unsupported/unknown verdicts.",
+   "premises": [],
+   "depends_on": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/evaluator.shen",
+     "test": "lexical",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Source-bound refinement theorem over the exact loaded source.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/TRUST.md",
+     "recorded": "rocq/Lambda.v ... Their correspondence to shen/klambda.shen is OPEN.",
+     "reconciliation": "Still open; Lambda.v is a different, smaller syntax (OB-MODEL-LET-LOWERING is about Lambda.v only)."
+    }
+   ]
+  },
+  {
+   "id": "OB-NORMALIZER",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-07",
+   "packages": [],
+   "status": "open",
+   "boundary": "Reference normalizer",
+   "identity": "shen/equations.shen",
+   "statement": "The reference normalizer implements the shared compiler/evaluator equations.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Refinement proof, or keep it outside acceptance as an untrusted candidate producer.",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-EQ-RULE-VALIDITY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Equality checker rule-validity hypothesis",
+   "identity": "",
+   "statement": "Each supplied rule is valid in the chosen interpretation (premise of check_sound_under_rules).",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "check_sound_under_rules",
+     "establishes": "model-proof",
+     "note": "conditional on the hypothesis"
+    }
+   ],
+   "completion_evidence": "Rule validity checked per rule against the defining model, or rules removed from the admitted profile.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-EQ-KERNEL-IMPL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-09",
+   "packages": [],
+   "status": "open",
+   "boundary": "shen/kernel.shen equational kernel",
+   "identity": "shen/kernel.shen",
+   "statement": "The Shen equational kernel (with EQ-1 induction) refines the Rocq checker.",
+   "premises": [],
+   "depends_on": [
+    "OB-SHEN-EVALUATOR-REFINEMENT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Source-bound refinement of shen/kernel.shen preserving rejection distinctions.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/TRUST-AUDIT.md",
+    "docs/SIX-STAGES.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SIX-STAGES.md",
+     "recorded": "Original EQ-1 induction checker remains for stage 6.",
+     "reconciliation": "Congruence-only core is OB-EQUALITY-CORE-IMPL; EQ-1 stays here."
+    }
+   ]
+  },
+  {
+   "id": "OB-EQUALITY-CORE-IMPL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-09",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Captured congruence deriver (shen/equality-core.shen)",
+   "identity": "shen/equality-core.shen",
+   "statement": "The actual compiled congruence deriver agrees with Equality.check [] for every typed certificate.",
+   "premises": [],
+   "depends_on": [
+    "OB-SEALED-ACTIVATION",
+    "OB-CAPTURE-PROVENANCE"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualityCoreCorrect.actual_checker_sound",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualitySealCorrect.sealed_checker_sound",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Captured-target proof plus native capture identity and Chez activation (OB-SEALED-ACTIVATION).",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-ADAPTER-CORRESPONDENCE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-09",
+   "packages": [],
+   "status": "open",
+   "boundary": "Inert CL guard admission adapter",
+   "identity": "shen/cl-port-guard.shen",
+   "statement": "shen/cl-port-guard.shen admission agrees with the Rocq CLPortCapture admission.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/cl-port-guard.shen",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Correspondence proof between the Shen adapter and the Rocq checker.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-LEDGER-CHECKER",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-35",
+   "packages": [
+    "E2E-02"
+   ],
+   "status": "open",
+   "boundary": "Release ledger coverage checker (shen/ledger.shen)",
+   "identity": "shen/ledger.shen",
+   "statement": "The ledger checker's verdict follows its documented rules; ledger-consistent is never proof acceptance.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/ledger.shen",
+     "test": "real-ledger-consistent",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refinement proof of shen/ledger.shen against a Rocq statement of the coverage rules; until then regression-tested only.",
+   "sources": [
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CHARTER-FREEZE",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-01",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Release charter v1",
+   "identity": "spec/release-charter.json",
+   "statement": "The release charter records exact pins, required features and property definitions; required features cannot be dropped without a version change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/ledger.shen",
+     "test": "real-ledger-consistent",
+     "establishes": "artifact-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/ledger.shen",
+     "test": "hostile-feature-silently-dropped",
+     "establishes": "artifact-correspondence"
+    }
+   ],
+   "completion_evidence": "All pins selected (E2E-03/E2E-20/E2E-31), every feature with a named semantics and owner, every exclusion enforced; reviewed.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-OBLIGATION-GRAPH",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-02",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Obligation graph",
+   "identity": "spec/obligations.json",
+   "statement": "Every current gap in TRUST, TRUST-AUDIT, SIX-STAGES, STATUS and port documents has a stable obligation with owner, kind and completion evidence.",
+   "premises": [],
+   "depends_on": [
+    "OB-CHARTER-FREEZE"
+   ],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/ledger.shen",
+     "test": "real-ledger-consistent",
+     "establishes": "artifact-correspondence"
+    }
+   ],
+   "completion_evidence": "Independent harvest review (E2E-36) confirming no prose gap is missing; checker refinement (OB-LEDGER-CHECKER).",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-TYPE-SEQUENT",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-10",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen T* sequent calculus",
+   "identity": "",
+   "statement": "The Shen type/sequent system and effect typing are sound for SEM-KL.",
+   "premises": [],
+   "depends_on": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Rocq soundness proof for the pinned T* rules.",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-PR117-SOUNDNESS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-10",
+   "packages": [],
+   "status": "open",
+   "boundary": "PR117 typechecker overlay",
+   "identity": "Shen-Language/shen-sources shen-43.1 + PR117 ec16a9fa sources/t-star.shen sha256 480e26c6",
+   "statement": "Loading PR117 establishes which checker code ran, not that the optimization is sound.",
+   "premises": [],
+   "depends_on": [
+    "OB-TYPE-SEQUENT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Implementation proof of the pinned t-star.shen against OB-TYPE-SEQUENT.",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-TC-MINUS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-10",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Buri checks run under tc -",
+   "identity": "",
+   "statement": "No Buri claim depends on Shen typechecking; Rocq supplies the logical assurance.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Either keep this explicit or discharge OB-PR117-SOUNDNESS and run checks under tc +.",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-TAG-ADAPTER-NATIVE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-11",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Native tagging adapter (buri.kl-node / buri.native-node)",
+   "identity": "",
+   "statement": "The native adapter produces the canonical tagged representation.",
+   "premises": [],
+   "depends_on": [
+    "OB-TAG-PROTOCOL",
+    "OB-NATIVE-REPR-CHEZ"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "AdapterCorrect.node_correct",
+     "establishes": "implementation-correspondence",
+     "note": "fixed helper-table model"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "BootstrapCorrect.node_correct",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Source-bound adapter proof plus native-value representation relation and compiled-body validation.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/CODEC-CORRESPONDENCE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-HALVING-UNRESTRICTED",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "refuted",
+   "boundary": "Unrestricted native halving",
+   "identity": "",
+   "statement": "Native (floor (/ N 2)) equals mathematical floor for all naturals.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "tests/trust.shen",
+     "test": "known-large-half-counterexample",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted on Shen-Scheme v0.52; replaced by the finite-domain obligation.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-BYTE-DOMAIN"
+  },
+  {
+   "id": "OB-BYTE-DOMAIN",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Byte recursion domain",
+   "identity": "",
+   "statement": "The string encoder calls the byte helper only on codes 0-255 with counts 0-8, and the native helper is correct there.",
+   "premises": [],
+   "depends_on": [
+    "OB-PRIM-CONTRACTS"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ByteDomain.string_byte_domain",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeHelpers.natural_halving",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "exhaustive-host-test",
+     "ref": "tests/trust.shen",
+     "establishes": "implementation-correspondence",
+     "note": "256 x 9 native pairs on a trusted host"
+    }
+   ],
+   "completion_evidence": "Native execution proof for the reachable domain (sealed lane exact division model proved; host execution open).",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-LARGE-INT-SPELLING",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-11",
+   "packages": [],
+   "status": "open",
+   "boundary": "Large integer spelling",
+   "identity": "",
+   "statement": "Large integers encoded by buri.wire are printed in canonical decimal and re-read exactly.",
+   "premises": [],
+   "depends_on": [
+    "OB-INT-REPRESENTATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Proof of the decimal printing/spelling contract on both ports.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-READER-CANONICALIZATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-11",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Shen reader numeric canonicalization",
+   "identity": "",
+   "statement": "The reader's canonicalization of integral spellings (1.0 -> 1) is specified and implemented.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/evaluator.shen",
+     "test": "reader-normalizes-integral-literal",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Reader proof under SEM-ENC.",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-FRONTEND-GENERAL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-12",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Shen reader and frontend",
+   "identity": "",
+   "statement": "Actual reader/compiler output for every admitted Shen program preserves SEM-FRONTEND meaning, including macros and factorization.",
+   "premises": [],
+   "depends_on": [
+    "OB-KL-FULL-SEMANTICS",
+    "OB-TYPE-SEQUENT"
+   ],
+   "evidence": [
+    {
+     "kind": "instance-validation",
+     "ref": "EncoderFrontend.accepted_execution",
+     "establishes": "implementation-correspondence",
+     "note": "three registered encoder bodies"
+    }
+   ],
+   "completion_evidence": "General frontend proof or per-instance validation linked to captured inputs.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/FRONTEND.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-LIBRARY-SURFACE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-13",
+   "packages": [],
+   "status": "open",
+   "boundary": "Pinned Shen 43.1 kernel library surface",
+   "identity": "Shen-Language/shen-sources shen-43.1 + PR117 ec16a9fa",
+   "statement": "Prolog, yacc, printing, dict, property lists and streams in the pinned kernel implement SEM-LIB, as compiled by each port.",
+   "premises": [],
+   "depends_on": [
+    "OB-FRONTEND-GENERAL"
+   ],
+   "evidence": [],
+   "completion_evidence": "Library semantics plus per-module implementation proofs or validated instances.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-BACKEND-GENERAL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Shen-Scheme kl->scheme backend",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen 42ac753b",
+   "statement": "Emitted Scheme simulates KLambda evaluation for every admitted program (forward and the claim-required reverse direction).",
+   "premises": [],
+   "depends_on": [
+    "OB-SCHEME-ORDER-CALL",
+    "OB-SCHEME-EMIT-APPLICATION",
+    "OB-SCHEME-EMIT-IF",
+    "OB-SCHEME-TRAP-ERROR",
+    "OB-SCHEME-MERGE-LETS",
+    "OB-GENERATED-SCHEME-SEMANTICS"
+   ],
+   "evidence": [
+    {
+     "kind": "instance-validation",
+     "ref": "native_schema_0",
+     "establishes": "implementation-correspondence",
+     "note": "12 arithmetic schemas"
+    },
+    {
+     "kind": "instance-validation",
+     "ref": "observed_encoder_execution",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Composition of per-pass proofs over the actual compiler source.",
+   "sources": [
+    "docs/PORTS.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-GENERATED-SCHEME-SEMANTICS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-14",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Generated Scheme semantics",
+   "identity": "",
+   "statement": "The Scheme subset emitted by Shen-Scheme has a semantics covering sequential lets, conditionals, calls, strings, pairs, arithmetic and errors.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EncoderScheme.exec_deterministic",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Complete SEM-SCHEME definition with decoding admission premises discharged.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/SCHEME-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-ORDER-CALL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "partial",
+   "boundary": "order-call-inputs / order-call",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen",
+   "statement": "Every branch of the actual ordering pass retains left-to-right effects and exceptions with fresh names.",
+   "premises": [],
+   "depends_on": [
+    "OB-FRESH-OCCURRENCE"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CallRefinement.fresh_let_observational_equivalence",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "OrderCallCorrect.captured_two_computations_preserve",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Composition through every order-call-inputs branch plus occurrence/gensym correspondence.",
+   "sources": [
+    "docs/PORTS.md",
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-FRESH-OCCURRENCE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Occurrence counting / gensym contract",
+   "identity": "",
+   "statement": "Occurrence counting and gensym behave as specified by the FreshSupply contracts.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "FreshSupply.finite_supply_finds_first_absent",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Implementation proof of the captured occurrence and gensym code.",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-MERGE-LETS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "partial",
+   "boundary": "merge-nested-lets",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen merge-nested-lets",
+   "statement": "The actual captured pass preserves meaning for arbitrary decoded binding tails.",
+   "premises": [],
+   "depends_on": [
+    "OB-GENERATED-SCHEME-SEMANTICS"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemePortMerge.SchemePortMerge.captured_arbitrary_tail_preservation",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CompilerBindings.merge_many_preserves_effects",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Discharge decoding premises and model-to-Chez correspondence (OB-GENERATED-SCHEME-SEMANTICS, OB-CHEZ-COMPILATION).",
+   "sources": [
+    "docs/SCHEME-PORT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/STATUS.md",
+     "recorded": "CompilerPassCorrect covered preservation for two bindings.",
+     "reconciliation": "Superseded in scope by CompilerBindings and SchemePortMerge arbitrary-tail theorems; decoding premises remain."
+    }
+   ]
+  },
+  {
+   "id": "OB-SCHEME-EMIT-APPLICATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "open",
+   "boundary": "emit-application / emit-dynamic-application / nest-call",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen",
+   "statement": "Direct/computed calls and partial application preserve meaning.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Per-pass proofs over the actual source.",
+   "sources": [
+    "docs/PORTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-EMIT-IF",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "open",
+   "boundary": "emit-if / emit-cond / force-boolean",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen",
+   "statement": "Branch laziness and condition domain retained.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Per-pass proofs over the actual source.",
+   "sources": [
+    "docs/PORTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-TRAP-ERROR",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "open",
+   "boundary": "emit-trap-error / emit-trap-error-optimize",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen",
+   "statement": "Error scope and handler behavior retained.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Per-pass proofs over the actual source.",
+   "sources": [
+    "docs/PORTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-EQUALITY",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "open",
+   "boundary": "emit-equality-check and kl:=",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/primitives.scm 92b8875a",
+   "statement": "Equality implements the admitted value relation including closures and vectors.",
+   "premises": [],
+   "depends_on": [
+    "OB-VECTOR-HEAP"
+   ],
+   "evidence": [],
+   "completion_evidence": "Primitive refinement against SEM-VALUE equality.",
+   "sources": [
+    "docs/PORTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-STOCK-DIVISION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Stock division wrapper non-rational-/",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/primitives.scm",
+   "statement": "The actual division wrapper's behavior for every input value and primitive response is specified, and its precision loss is either permitted by the numeric profile or fixed.",
+   "premises": [],
+   "depends_on": [
+    "OB-NUMERIC-PROFILE",
+    "OB-PRIM-CONTRACTS"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "StockDivisionGeneral.all_value_wrapper_contract",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "StockDivisionGeneral.negative_denominator_normalized",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Numeric profile decision (OB-NUMERIC-PROFILE) plus underlying primitive contracts.",
+   "sources": [
+    "docs/CORRECTNESS.md",
+    "docs/SIX-STAGES.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/STATUS.md",
+     "recorded": "Negative denominators remain outside the formal ratio profile, despite passing native numeric tests.",
+     "reconciliation": "Reconciled: SIX-STAGES/StockDivisionGeneral later proved signed exact denominator normalization; the older sentence is kept as history."
+    }
+   ]
+  },
+  {
+   "id": "OB-PRIM-CONTRACTS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "27 primitive-root contracts plus cons/list/string?",
+   "identity": "",
+   "statement": "Each named Chez primitive used by the sealed lane implements its mathematical contract on the reachable domain.",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-CHEZ"
+   ],
+   "evidence": [],
+   "completion_evidence": "Primitive-by-primitive refinement on reachable types/ranges against SEM-PRIM and native representations.",
+   "sources": [
+    "docs/SEALED.md",
+    "docs/TRUST-AUDIT.md",
+    "docs/CODEC-CORRESPONDENCE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-GUARD-MODEL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Shen-CL strict boolean guard",
+   "identity": "Shen-CL@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp",
+   "statement": "The captured shen-cl.true? definition is strict boolean in the restricted CL model.",
+   "premises": [],
+   "depends_on": [
+    "OB-CL-READER-ENV"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLPortGuard.CLPortGuard.actual_guard_refinement",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLPortCapture.captured_guard_correct",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "CL reader/package/extraction correspondence (OB-CL-READER-ENV) and SBCL execution (OB-SBCL-COMPILATION).",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-IF-LOWERING",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen-CL emit-if / optimise-boolean-check",
+   "identity": "Shen-CL@4844072dde0208c3e4b99dcbfea58e4fdfd812e8",
+   "statement": "Captured CL conditional lowering preserves evaluation order and error behavior with the strict guard.",
+   "premises": [],
+   "depends_on": [
+    "OB-CL-GUARD-MODEL"
+   ],
+   "evidence": [],
+   "completion_evidence": "Proof over the actual captured lowering.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-READER-ENV",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "CL reader, extraction harness and package environment",
+   "identity": "ports/shen-cl-capture.lisp",
+   "statement": "The CL reader and capture harness faithfully represent the pinned source.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Reader/package model proof or independent capture.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-FORMAT-PRINTER",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "open",
+   "boundary": "CL FORMAT ~A printer effects",
+   "identity": "",
+   "statement": "Error formatting cannot invoke unaccounted printer effects, allocation failure or nontermination.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Whole-runtime refinement of the error continuation.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-BACKEND-GENERAL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen-CL compiler",
+   "identity": "Shen-CL@4844072dde0208c3e4b99dcbfea58e4fdfd812e8",
+   "statement": "Emitted CL simulates KLambda for every admitted program.",
+   "premises": [],
+   "depends_on": [
+    "OB-CL-IF-LOWERING",
+    "OB-GENERATED-CL-SEMANTICS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Composition of per-pass proofs over the actual Shen-CL source.",
+   "sources": [
+    "docs/CL-PORT.md",
+    "docs/PORTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-GENERATED-CL-SEMANTICS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-14",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Generated CL semantics",
+   "identity": "",
+   "statement": "The CL subset emitted by Shen-CL has a semantics; Other n currently abstracts every nonboolean value.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLPortGuard.CLPortGuard.conditional_refinement",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Complete SEM-CL definition.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CAPTURE-PROVENANCE",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "open",
+   "boundary": "Capture origin and freshness",
+   "identity": "",
+   "statement": "Captured data describes exactly the code compiled/installed at the actual boundary.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/gates.py",
+     "establishes": "artifact-correspondence",
+     "note": "stale-input removal regressions"
+    }
+   ],
+   "completion_evidence": "Capture at the compilation/execution boundary binding source, compiler inputs/outputs and loaded artifact in one checked manifest.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-PS-METADATA-HISTORICAL",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "refuted",
+   "boundary": "ps metadata identifies installed code",
+   "identity": "",
+   "statement": "Registered ps source metadata identifies the executable function.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "tests/trust.shen",
+     "test": "ps-does-not-identify-executable",
+     "establishes": "artifact-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted by the mutable-metadata counterexample; replaced by installed-code capture.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-INSTALLED-CODE-CAPTURE"
+  },
+  {
+   "id": "OB-INSTALLED-CODE-CAPTURE",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Installed KLambda/Scheme pair capture",
+   "identity": "",
+   "statement": "The KLambda submitted to eval-kl and the Scheme submitted to eval are captured on the load path and validated as a pair.",
+   "premises": [],
+   "depends_on": [
+    "OB-CAPTURE-PROVENANCE",
+    "OB-OBSERVER-FIDELITY"
+   ],
+   "evidence": [
+    {
+     "kind": "instance-validation",
+     "ref": "ObservedEncoder.paired_execution",
+     "establishes": "artifact-correspondence"
+    }
+   ],
+   "completion_evidence": "Load-path capture for every installed definition, binding transitive helper and primitive identities.",
+   "sources": [
+    "docs/OBSERVED.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-OBSERVER-FIDELITY",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Observer, reader and Chez fidelity in the observed loader",
+   "identity": "",
+   "statement": "The native observer truthfully reports what it compiled and installed.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Refinement of the observer entry with native IO/activation provenance.",
+   "sources": [
+    "docs/OBSERVED.md",
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-OBSERVER-ENTRY-FULL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Complete higher-order observer entry",
+   "identity": "",
+   "statement": "Parsing, encoding and writes together, native IO/activation provenance and resource cleanup.",
+   "premises": [],
+   "depends_on": [
+    "OB-OBSERVER-FIDELITY",
+    "OB-IO-TRUTHFUL-READ"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ObserverTotal.captured_loader_all_outcomes",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ObserverIO.all_entry_writes_checked",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Composed proof of the full entry.",
+   "sources": [
+    "docs/SIX-STAGES.md",
+    "spec/six-stages.json"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-LOADER-ROLLBACK",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-04",
+   "packages": [],
+   "status": "open",
+   "boundary": "Loader failure prefixes and cleanup",
+   "identity": "",
+   "statement": "Failure prefixes, retained installations and cleanup are part of the observation contract (no rollback is claimed).",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ObserverPipeline.captured_third_compile_failure",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Explicit cleanup/rollback semantics or a release rule that forbids reliance on partial loads.",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-EXPORTER-FIDELITY",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-18",
+   "packages": [],
+   "status": "open",
+   "boundary": "Equation bridge exporter",
+   "identity": "shen/export-rocq.shen",
+   "statement": "The exported equation term faithfully represents the loaded Shen source.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "instance-validation",
+     "ref": "exported_compiler_continuation",
+     "establishes": "artifact-correspondence",
+     "note": "true exported goals only"
+    }
+   ],
+   "completion_evidence": "Original-source correspondence proof for the exporter.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-DYNAMIC-LOADING",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-19",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Dynamic loading and rebinding",
+   "identity": "",
+   "statement": "eval-kl, load, redefinition, REPL/FFI callbacks and mutable code objects are covered.",
+   "premises": [],
+   "depends_on": [
+    "OB-KL-GLOBAL-REBINDING",
+    "OB-SEALED-ACTIVATION"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "Sealed.no_dynamic_authority",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeSimulation.eval_concurrent",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "SEM-DYN plus both ports; a sealed-only milestone is not full dynamic coverage.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/SEALED.md",
+    "docs/BINDINGS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-LEGACY-GUARD",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-19",
+   "packages": [],
+   "status": "open",
+   "boundary": "Legacy live procedure-identity guard",
+   "identity": "",
+   "statement": "The legacy guard rejects every rebinding of its inventory.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "BindingVersions.changed_rejected",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Native guard refinement; or retire it from every release path.",
+   "sources": [
+    "docs/BINDINGS.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SEALED-ACTIVATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Chez activation of the sealed capsule",
+   "identity": "",
+   "statement": "Native Chez activation executes exactly the constructed private program in the restricted environment.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Chez lexical/library execution refinement.",
+   "sources": [
+    "docs/SEALED.md",
+    "docs/SIX-STAGES.md",
+    "docs/NATIVE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SEALED-CONSTRUCTION-CONTEXT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-09",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Sealed construction context stability",
+   "identity": "",
+   "statement": "Construction context, capture identity and immutable input data are stable during checking.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Proved construction-time isolation or enforced admission.",
+   "sources": [
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-HOST-EXTENSION-ADMISSION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-09",
+   "packages": [],
+   "status": "open",
+   "boundary": "Admission of host extensions",
+   "identity": "",
+   "statement": "Excluded host extensions (scm./lisp. FFI, StLib) are rejected on every admission path, not only inside the sealed capsule.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Enforcement tests on every admission path, then proof (E2E-35 fail-closed).",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-EXCEPTIONS-NATIVE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-04",
+   "packages": [],
+   "status": "open",
+   "boundary": "Native exceptions",
+   "identity": "",
+   "statement": "Native exceptions and termination outcomes relate explicitly to SEM-OBS.",
+   "premises": [],
+   "depends_on": [
+    "OB-OBSERVATION-VOCABULARY"
+   ],
+   "evidence": [],
+   "completion_evidence": "Relation proofs on both ports.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-RESOURCE-ADEQUACY",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-30",
+   "packages": [],
+   "status": "open",
+   "boundary": "Resource adequacy",
+   "identity": "",
+   "statement": "Budgets cap rewrite counts or tree depth, not allocation, input size, time or machine stack; resource adequacy must be proved or bounded separately.",
+   "premises": [],
+   "depends_on": [
+    "OB-GC-CORRECTNESS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Separate resource theorems under the deployment profile.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-IO-TRUTHFUL-READ",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-27",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Truthful native reads",
+   "identity": "",
+   "statement": "Native reads return the file world's content; checked writes rely on this.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CheckedFileIO.successful_write_is_observed",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "IOReadCorrect.captured_read_forwards_exactly",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "OS/IO boundary proof.",
+   "sources": [
+    "docs/CHECKED-IO.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-IO-DURABILITY",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-27",
+   "packages": [],
+   "status": "open",
+   "boundary": "Atomicity and durability",
+   "identity": "",
+   "statement": "File writes have specified atomicity, durability and concurrent-mutation behavior.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "OS/storage model and proof.",
+   "sources": [
+    "docs/CHECKED-IO.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-OS-ABI-IO",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-27",
+   "packages": [],
+   "status": "open",
+   "boundary": "OS/ABI and IO boundary",
+   "identity": "",
+   "statement": "Syscall wrappers, ABI calls, signals, time and exit status implement SEM-OS.",
+   "premises": [],
+   "depends_on": [
+    "OB-ARM-FOUNDATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Proofs against the pinned OS profile.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-ARM-FOUNDATION",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-20",
+   "packages": [],
+   "status": "open",
+   "boundary": "Authoritative ARM proof foundation",
+   "identity": "",
+   "statement": "An exact AArch64 ISA model revision, ABI and CPU feature set is selected and integrated with Rocq.",
+   "premises": [],
+   "depends_on": [
+    "OB-FND-ISA-DEVICE"
+   ],
+   "evidence": [],
+   "completion_evidence": "Pinned model + integration; no proof-compatible ARM platform pin exists today.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-NATIVE-REPR-CHEZ",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-21",
+   "packages": [],
+   "status": "open",
+   "boundary": "Chez native representation relation",
+   "identity": "",
+   "statement": "Chez values, heap and continuations relate to SEM-VALUE.",
+   "premises": [],
+   "depends_on": [
+    "OB-ARM-FOUNDATION",
+    "OB-VECTOR-HEAP"
+   ],
+   "evidence": [],
+   "completion_evidence": "Representation relation proofs.",
+   "sources": [
+    "docs/SIX-STAGES.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-NATIVE-REPR-SBCL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-21",
+   "packages": [],
+   "status": "open",
+   "boundary": "SBCL native representation relation",
+   "identity": "",
+   "statement": "SBCL values, heap and continuations relate to SEM-VALUE.",
+   "premises": [],
+   "depends_on": [
+    "OB-ARM-FOUNDATION",
+    "OB-VECTOR-HEAP"
+   ],
+   "evidence": [],
+   "completion_evidence": "Representation relation proofs.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CHEZ-COMPILATION",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Chez compilation to ARM",
+   "identity": "Chez inside shen-scheme v0.52 (version unrecorded)",
+   "statement": "Chez lowering of generated Scheme to AArch64 preserves meaning (per-output validation or verified backend).",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-CHEZ",
+    "OB-GENERATED-SCHEME-SEMANTICS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Machine-code validation against SEM-ARM.",
+   "sources": [
+    "docs/PORTS.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SBCL-COMPILATION",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-23",
+   "packages": [],
+   "status": "open",
+   "boundary": "SBCL compilation to ARM",
+   "identity": "SBCL (unpinned)",
+   "statement": "SBCL compilation of generated CL to AArch64 preserves meaning.",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-SBCL",
+    "OB-GENERATED-CL-SEMANTICS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Machine-code validation against SEM-ARM.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-NATIVE-RUNTIME",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-24",
+   "packages": [],
+   "status": "open",
+   "boundary": "Native runtime and support libraries",
+   "identity": "",
+   "statement": "Chez/SBCL runtime code and support libraries reached by the release implement their contracts.",
+   "premises": [],
+   "depends_on": [
+    "OB-PRIM-CONTRACTS",
+    "OB-ARM-FOUNDATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Runtime proofs against SEM-RUNTIME.",
+   "sources": [
+    "docs/PORTS.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-GC-CORRECTNESS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-25",
+   "packages": [],
+   "status": "open",
+   "boundary": "Allocation and garbage collection",
+   "identity": "",
+   "statement": "Allocation and collection preserve the mutator's heap under the representation invariant.",
+   "premises": [],
+   "depends_on": [
+    "OB-HEAP-REPR-INVARIANT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Joint invariant proof JI-HEAP with OB-HEAP-REPR-INVARIANT.",
+   "sources": [
+    "docs/PORTS.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": [],
+   "joint_invariant": "JI-HEAP"
+  },
+  {
+   "id": "OB-HEAP-REPR-INVARIANT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-25",
+   "packages": [],
+   "status": "open",
+   "boundary": "Mutator heap representation invariant",
+   "identity": "",
+   "statement": "Compiled mutator code maintains the heap invariant the collector requires, assuming the collector preserves it.",
+   "premises": [],
+   "depends_on": [
+    "OB-GC-CORRECTNESS",
+    "OB-NATIVE-RUNTIME"
+   ],
+   "evidence": [],
+   "completion_evidence": "Joint invariant proof JI-HEAP.",
+   "sources": [
+    "docs/PORTS.md"
+   ],
+   "history": [],
+   "joint_invariant": "JI-HEAP"
+  },
+  {
+   "id": "OB-LOADED-BYTES",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-26",
+   "packages": [],
+   "status": "open",
+   "boundary": "Executable lifecycle and exact loaded bytes",
+   "identity": "",
+   "statement": "The bytes loaded into the process are the proved deployment bytes B, including initialization and shutdown.",
+   "premises": [],
+   "depends_on": [
+    "OB-CHEZ-COMPILATION",
+    "OB-SBCL-COMPILATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Loader/lifecycle proof binding B.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CONCURRENT-MUTATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-28",
+   "packages": [],
+   "status": "open",
+   "boundary": "Concurrent rebinding and input mutation",
+   "identity": "",
+   "statement": "Concurrent rebinding and concurrent mutation of input objects cannot change checker results under the ARM memory model.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "NativeRuntime.every_world_schedule_preserves_trace",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/sealed.shen",
+     "test": "sealed-concurrent-global-rebinding",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Concurrency proof under SEM-CONC.",
+   "sources": [
+    "docs/SEALED.md",
+    "docs/STATUS.md",
+    "docs/BINDINGS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-TEMPORAL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-29",
+   "packages": [],
+   "status": "open",
+   "boundary": "TLA+ and distributed behavior",
+   "identity": "",
+   "statement": "Temporal specifications refine to SEM-OBS traces of both ports.",
+   "premises": [],
+   "depends_on": [
+    "OB-OBSERVATION-VOCABULARY"
+   ],
+   "evidence": [],
+   "completion_evidence": "Checked refinement link.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SECURITY-CLAIMS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-30",
+   "packages": [],
+   "status": "open",
+   "boundary": "Security properties",
+   "identity": "",
+   "statement": "Memory safety, confinement and confidentiality are each proved separately from functional correctness.",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-CHEZ",
+    "OB-NATIVE-REPR-SBCL"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "EqualitySealCorrect.no_io_or_eval_authority",
+     "establishes": "model-proof",
+     "note": "confinement of the sealed checker model only"
+    }
+   ],
+   "completion_evidence": "Separate theorems per charter property kind.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-DEPLOY-BELOW-PROCESS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-31",
+   "packages": [],
+   "status": "open",
+   "boundary": "Deployment software below the process",
+   "identity": "",
+   "statement": "Required supervisor/OS services and initialization implement SEM-DEPLOY.",
+   "premises": [],
+   "depends_on": [
+    "OB-OS-ABI-IO"
+   ],
+   "evidence": [],
+   "completion_evidence": "Proofs or verified components for the pinned OS profile.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-HOST-OS-HARDWARE",
+   "kind": "deployment-identity",
+   "scope": "universal",
+   "owner": "E2E-31",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "OS, files, CPU and hardware for every gate run",
+   "identity": "",
+   "statement": "Every execution, hash, read and write is performed by a trusted OS and machine.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Explicit deployment trust base, integrity controls and independent replay.",
+   "sources": [
+    "docs/TRUST-AUDIT.md",
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CHECKER-EXECUTION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-32",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Rocq checker execution",
+   "identity": "",
+   "statement": "coqc/coqchk binaries, OCaml toolchain and standard library execute the logic faithfully.",
+   "premises": [],
+   "depends_on": [
+    "OB-FND-LOGIC"
+   ],
+   "evidence": [],
+   "completion_evidence": "Independent replay/diversification or a verified checker; its machine still needs a trust root.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SHEN-CHECKER-HOST",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-32",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Shen checkers run on the Shen-Scheme/Chez host",
+   "identity": "",
+   "statement": "Shen acceptance code (kernel, sealed checker, ledger) executes faithfully on the host that is itself under verification.",
+   "premises": [],
+   "depends_on": [
+    "OB-HOST-OUTPUT-VALIDATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Joint well-founded bootstrap JI-BOOTSTRAP with OB-HOST-OUTPUT-VALIDATION.",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": [],
+   "joint_invariant": "JI-BOOTSTRAP"
+  },
+  {
+   "id": "OB-HOST-OUTPUT-VALIDATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-32",
+   "packages": [],
+   "status": "open",
+   "boundary": "Validation of host compiler output",
+   "identity": "",
+   "statement": "Per-output validators for Chez/SBCL code run on, and are compiled by, the hosts they validate.",
+   "premises": [],
+   "depends_on": [
+    "OB-SHEN-CHECKER-HOST",
+    "OB-CHEZ-COMPILATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Joint well-founded bootstrap JI-BOOTSTRAP.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": [],
+   "joint_invariant": "JI-BOOTSTRAP"
+  },
+  {
+   "id": "OB-HOST-BUILT-FROM-SOURCE",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-03",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Host binary built from reviewed source",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74",
+   "statement": "The pinned Shen-Scheme archive was built from the reviewed source revision.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "identity-hash",
+     "ref": "toolchain.lock.json",
+     "establishes": "deployment-identity",
+     "note": "archive hash only; not a build relation"
+    }
+   ],
+   "completion_evidence": "Reproducible independent build matching archive bytes; reproducibility is identity evidence only.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/PORTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-BUILD-REPRODUCIBLE",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-03",
+   "packages": [],
+   "status": "open",
+   "boundary": "Pinned, reproducible build",
+   "identity": "",
+   "statement": "Every source tree, patch, boot image, flag and link input for both ports on the ARM profile is pinned and rebuilt hermetically.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Nix/Earthbuild recipes and byte manifests.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md",
+    "docs/RELEASE-CHARTER.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPORT-BINDING",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-35",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Report binding and fail-closed gates",
+   "identity": "",
+   "statement": "Reports bind exact source and host hashes; missing markers, stale files or failed children never yield a report.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/gates.py",
+     "establishes": "deployment-identity",
+     "note": "orchestration regressions only"
+    }
+   ],
+   "completion_evidence": "Release verifier binding every claim to immutable source, artifact, proof and checker identities.",
+   "sources": [
+    "docs/TRUST.md",
+    "docs/STATUS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-FORGEABLE-LABELS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-35",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Forgeable accepted labels",
+   "identity": "",
+   "statement": "No mutable label or success token authorizes execution; acceptance always reruns the checker on exact evidence.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/ledger.shen",
+     "test": "hostile-forged-discharged-label",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Deploy-time admission protocol (E2E-35).",
+   "sources": [
+    "docs/TRUST.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-APPLICATION-EXAMPLES",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-33",
+   "packages": [],
+   "status": "open",
+   "boundary": "Complete application examples on both ports",
+   "identity": "",
+   "statement": "At least one complete application is proved end to end on each port.",
+   "premises": [],
+   "depends_on": [
+    "OB-SCHEME-BACKEND-GENERAL",
+    "OB-CL-BACKEND-GENERAL"
+   ],
+   "evidence": [],
+   "completion_evidence": "Application bundles with all premises closed.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-COMPOSITION",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-34",
+   "packages": [],
+   "status": "open",
+   "boundary": "Final composition theorem",
+   "identity": "",
+   "statement": "Loading exactly B under the modeled environment refines P, and P satisfies C, on both ports.",
+   "premises": [],
+   "depends_on": [
+    "OB-APPLICATION-EXAMPLES",
+    "OB-LOADED-BYTES",
+    "OB-SECURITY-CLAIMS",
+    "OB-TEMPORAL",
+    "OB-DEPLOY-BELOW-PROCESS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Composition theorem with every premise discharged.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-INDEPENDENT-REVIEW",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-36",
+   "packages": [],
+   "status": "open",
+   "boundary": "Independent closure review",
+   "identity": "",
+   "statement": "A distinct reviewer confirms theorem meaning against code and that every historical gap is closed or enforced-excluded.",
+   "premises": [],
+   "depends_on": [
+    "OB-COMPOSITION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Review record; theorem counts and green tests do not constitute it.",
+   "sources": [
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SPEC-FIDELITY-REVIEW",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-36",
+   "packages": [],
+   "status": "open",
+   "boundary": "Theorem/specification fidelity review",
+   "identity": "",
+   "statement": "Admitted semantics and explicit hypotheses are reviewed against language and port behavior.",
+   "premises": [],
+   "depends_on": [
+    "OB-FND-SPEC-MEANING"
+   ],
+   "evidence": [],
+   "completion_evidence": "Counterexample-driven review of each semantics target.",
+   "sources": [
+    "docs/TRUST-AUDIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SIX-STAGE-LEDGER",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-02",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Six-stage ledger reconciliation",
+   "identity": "",
+   "statement": "All six stages remain partial; each remaining item maps to an obligation here.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spec/six-stages.json",
+     "establishes": "artifact-correspondence",
+     "note": "stage remaining-lists harvested into OB-KL-FULL-SEMANTICS, OB-STOCK-DIVISION, OB-SCHEME-ORDER-CALL, OB-NATIVE-REPR-CHEZ, OB-OBSERVER-ENTRY-FULL, OB-EQ-KERNEL-IMPL, OB-TYPE-SEQUENT, OB-FRONTEND-GENERAL, OB-DYNAMIC-LOADING"
+    }
+   ],
+   "completion_evidence": "Every spec/six-stages.json remaining item closed via its mapped obligation.",
+   "sources": [
+    "spec/six-stages.json",
+    "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  }
+ ],
+ "legacy_inventory_map": [
+  {
+   "legacy": "arith-compiler-preservation",
+   "legacy_kind": "generic-equation",
+   "legacy_status": "proof-available",
+   "obligation": "OB-MODEL-ARITH-COMPILER",
+   "note": "Reference compiler only."
+  },
+  {
+   "legacy": "arith-equation-interpretation",
+   "legacy_kind": "equation-bridge",
+   "legacy_status": "proof-available",
+   "obligation": "OB-EXPORTER-FIDELITY",
+   "note": "Equations are proved; exporter fidelity stays open."
+  },
+  {
+   "legacy": "lexical-let-lowering",
+   "legacy_kind": "generic-equation",
+   "legacy_status": "proof-available",
+   "obligation": "OB-MODEL-LET-LOWERING",
+   "note": "Rocq fragment only."
+  },
+  {
+   "legacy": "canonical-wire-roundtrip",
+   "legacy_kind": "generic-equation",
+   "legacy_status": "proof-available",
+   "obligation": "OB-MODEL-WIRE-CODEC",
+   "note": ""
+  },
+  {
+   "legacy": "named-resolution-preservation",
+   "legacy_kind": "generic-equation",
+   "legacy_status": "proof-available",
+   "obligation": "OB-CAPTURE-DECODE",
+   "note": ""
+  },
+  {
+   "legacy": "raw-native-capture-validation",
+   "legacy_kind": "generic-equation",
+   "legacy_status": "proof-available",
+   "obligation": "OB-CAPTURE-DECODE",
+   "note": "Provenance is OB-CAPTURE-PROVENANCE."
+  },
+  {
+   "legacy": "shen-wire-encoder-program",
+   "legacy_kind": "source-linked-fragment",
+   "legacy_status": "proof-available",
+   "obligation": "OB-FRONTEND-GENERAL",
+   "note": "Admitted first-order semantics only."
+  },
+  {
+   "legacy": "encoder-registered-kl-preservation",
+   "legacy_kind": "instance-translation-validation",
+   "legacy_status": "proof-available",
+   "obligation": "OB-FRONTEND-GENERAL",
+   "note": "Instance validation, not general frontend."
+  },
+  {
+   "legacy": "shen-wire-encoder-native-execution",
+   "legacy_kind": "implementation-refinement",
+   "legacy_status": "open",
+   "obligation": "OB-SEALED-ACTIVATION",
+   "note": "Model execution proved; native activation assumed."
+  },
+  {
+   "legacy": "shen-equational-kernel-soundness",
+   "legacy_kind": "implementation-refinement",
+   "legacy_status": "open",
+   "obligation": "OB-EQ-KERNEL-IMPL",
+   "note": ""
+  },
+  {
+   "legacy": "kl-pure-evaluator-adequacy",
+   "legacy_kind": "implementation-refinement",
+   "legacy_status": "open",
+   "obligation": "OB-SHEN-EVALUATOR-REFINEMENT",
+   "note": ""
+  },
+  {
+   "legacy": "shen-to-klambda",
+   "legacy_kind": "semantic-preservation",
+   "legacy_status": "open",
+   "obligation": "OB-FRONTEND-GENERAL",
+   "note": ""
+  },
+  {
+   "legacy": "shen-scheme-backend",
+   "legacy_kind": "semantic-preservation",
+   "legacy_status": "open",
+   "obligation": "OB-SCHEME-BACKEND-GENERAL",
+   "note": ""
+  },
+  {
+   "legacy": "shen-scheme-primitives",
+   "legacy_kind": "representation-invariant",
+   "legacy_status": "open",
+   "obligation": "OB-PRIM-CONTRACTS",
+   "note": ""
+  },
+  {
+   "legacy": "chez-compilation",
+   "legacy_kind": "semantic-preservation",
+   "legacy_status": "assumed",
+   "obligation": "OB-CHEZ-COMPILATION",
+   "note": ""
+  },
+  {
+   "legacy": "gc-and-memory",
+   "legacy_kind": "runtime-safety",
+   "legacy_status": "assumed",
+   "obligation": "OB-GC-CORRECTNESS",
+   "note": ""
+  },
+  {
+   "legacy": "binary-artifact-binding",
+   "legacy_kind": "deployment-correspondence",
+   "legacy_status": "open",
+   "obligation": "OB-LOADED-BYTES",
+   "note": ""
+  },
+  {
+   "legacy": "system-s-and-pr117",
+   "legacy_kind": "soundness-preservation",
+   "legacy_status": "open",
+   "obligation": "OB-PR117-SOUNDNESS",
+   "note": ""
+  }
+ ]
+}

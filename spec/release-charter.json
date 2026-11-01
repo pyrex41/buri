@@ -1,0 +1,1618 @@
+{
+ "schema": "buri-release-charter-1",
+ "kind": "release-charter-not-proof-evidence",
+ "charter_id": "buri-shen-to-arm-closed-deployment",
+ "charter_version": 1,
+ "frozen_on": "2026-11-01",
+ "baseline_commit": "8c945403",
+ "required_feature_fingerprint": "lh61:95:414996911908889189",
+ "fingerprint_algorithm": "shen/ledger.shen buri.ledger-fingerprint: order-independent sum mod 2^61-1 of polynomial byte hashes over feature:, property: and pin: ids; tamper evidence only, not cryptographic",
+ "endpoints": [
+  {
+   "id": "language-port",
+   "meaning": "Shen through generated Scheme or CL under explicit host contracts",
+   "not": "Native or ARM verification"
+  },
+  {
+   "id": "hosted-arm-process",
+   "meaning": "Exact executable and runtime through AArch64 under a specified OS/device environment",
+   "not": "Verification of Linux or the whole machine"
+  },
+  {
+   "id": "closed-deployment",
+   "meaning": "Both execution paths plus required supervisor/OS services and initialization down to the declared hardware interface",
+   "not": "All hardware, all operating systems, or arbitrary third-party libraries"
+  }
+ ],
+ "target_endpoint": "closed-deployment",
+ "minimal_experiment": {
+  "description": "Little-endian AArch64 Linux, one mutator thread, Shen 43.1 + PR117, first-order KLambda fragment, one small Chez-generated and one SBCL-generated function including a runtime call, checked against the selected ISA model.",
+  "is_final_coverage": false,
+  "blocked_on": [
+   "arm-architecture",
+   "arm-abi",
+   "arm-cpu-features",
+   "os-profile",
+   "linux-aarch64-host-archive",
+   "sbcl"
+  ]
+ },
+ "threat_model": {
+  "adversary_controls": [
+   "certificate and evidence payloads",
+   "ledger and report files",
+   "captured artifacts presented for admission",
+   "program inputs"
+  ],
+  "trusted_until_closed": [
+   "build machine and toolchain binaries (E2E-03, E2E-32)",
+   "host OS and hardware (E2E-27, E2E-31)",
+   "Rocq kernel execution (E2E-32)"
+  ],
+  "out_of_scope": [
+   "physical attacks beyond the declared hardware interface",
+   "stakeholder intent of specifications"
+  ]
+ },
+ "ultimate_foundations_ref": "spec/end-to-end-plan.json ultimate_foundations",
+ "semantics_targets": [
+  {
+   "id": "SEM-OBS",
+   "owner": "E2E-04",
+   "status": "planned",
+   "description": "Common labeled transition system and observation vocabulary: returns, structured errors, divergence, resource failure, IO, exit, signals, time.",
+   "existing_artifacts": [
+    "rocq/EffectContract.v"
+   ]
+  },
+  {
+   "id": "SEM-VALUE",
+   "owner": "E2E-05",
+   "status": "planned",
+   "description": "Language value/store model: numbers, symbols, booleans, strings, pairs, vectors, closures, streams, mutable globals, identity and aliasing.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-NUM",
+   "owner": "E2E-05",
+   "status": "planned",
+   "description": "Numeric profile: exact integers, floats, promotion, rounding, signed zero, infinities/NaN admission, comparison and printing.",
+   "existing_artifacts": [
+    "rocq/StockDivisionGeneral.v",
+    "rocq/NativeHelpers.v"
+   ]
+  },
+  {
+   "id": "SEM-KL",
+   "owner": "E2E-06",
+   "status": "partial",
+   "description": "Complete small-step KLambda semantics with heap and continuations; the current Rocq first-order effect evaluator is a fragment.",
+   "existing_artifacts": [
+    "rocq/EffectContract.v",
+    "rocq/Lambda.v",
+    "shen/klambda.shen"
+   ]
+  },
+  {
+   "id": "SEM-SHEN-EXEC",
+   "owner": "E2E-07",
+   "status": "planned",
+   "description": "Refinement relation between shen/klambda.shen (and its dependencies) and SEM-KL.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-CONTRACT",
+   "owner": "E2E-08",
+   "status": "planned",
+   "description": "Application contract logic (pre/post, invariants, temporal hooks) over SEM-OBS.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-CERT",
+   "owner": "E2E-09",
+   "status": "partial",
+   "description": "Certificate admission and checker semantics, rejecting/unsupported/exhausted distinctions.",
+   "existing_artifacts": [
+    "rocq/EqualityAdmission.v",
+    "rocq/Equality.v"
+   ]
+  },
+  {
+   "id": "SEM-TYPE",
+   "owner": "E2E-10",
+   "status": "planned",
+   "description": "Shen T* sequent/type system including the PR117 overlay, and effect typing.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-ENC",
+   "owner": "E2E-11",
+   "status": "partial",
+   "description": "Byte/character encoding, reader, codec and tagging semantics.",
+   "existing_artifacts": [
+    "rocq/Wire.v",
+    "rocq/CaptureTag.v"
+   ]
+  },
+  {
+   "id": "SEM-FRONTEND",
+   "owner": "E2E-12",
+   "status": "planned",
+   "description": "Shen reader, macroexpansion, pattern compilation and factorization to KLambda.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-LIB",
+   "owner": "E2E-13",
+   "status": "planned",
+   "description": "Semantics of the pinned Shen 43.1 kernel library surface (prolog, yacc, printing, dict, streams).",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-SCHEME",
+   "owner": "E2E-14",
+   "status": "partial",
+   "description": "Semantics of the generated Scheme subset emitted by Shen-Scheme.",
+   "existing_artifacts": [
+    "rocq/EncoderScheme.v",
+    "rocq/CompilerBindings.v"
+   ]
+  },
+  {
+   "id": "SEM-CL",
+   "owner": "E2E-14",
+   "status": "partial",
+   "description": "Semantics of the generated Common Lisp subset emitted by Shen-CL.",
+   "existing_artifacts": [
+    "rocq/CLPortGuard.v"
+   ]
+  },
+  {
+   "id": "SEM-PRIM",
+   "owner": "E2E-17",
+   "status": "partial",
+   "description": "Per-primitive contracts for the KLambda primitive set and port helper wrappers.",
+   "existing_artifacts": [
+    "rocq/NativeHelpers.v",
+    "rocq/StockDivisionGeneral.v"
+   ]
+  },
+  {
+   "id": "SEM-DYN",
+   "owner": "E2E-19",
+   "status": "planned",
+   "description": "Dynamic eval-kl, load, redefinition and mutable code objects.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-ARM",
+   "owner": "E2E-20",
+   "status": "planned",
+   "description": "Selected authoritative AArch64 ISA model (candidate: Sail Arm); not yet selected or pinned.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-REP-CHEZ",
+   "owner": "E2E-21",
+   "status": "planned",
+   "description": "Chez native value/heap representation relation.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-REP-SBCL",
+   "owner": "E2E-21",
+   "status": "planned",
+   "description": "SBCL native value/heap representation relation.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-RUNTIME",
+   "owner": "E2E-24",
+   "status": "planned",
+   "description": "Native runtime/support library semantics, including allocation and GC (E2E-25).",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-LIFECYCLE",
+   "owner": "E2E-26",
+   "status": "planned",
+   "description": "Executable loading, initialization, exact loaded bytes and shutdown.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-OS",
+   "owner": "E2E-27",
+   "status": "planned",
+   "description": "OS/ABI and IO boundary model: syscalls, files, exit status, signals, time.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-CONC",
+   "owner": "E2E-28",
+   "status": "planned",
+   "description": "Threads, scheduling and the ARM weak-memory model.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-TEMPORAL",
+   "owner": "E2E-29",
+   "status": "planned",
+   "description": "TLA+ temporal specifications and their refinement link to SEM-OBS traces.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-SECURITY",
+   "owner": "E2E-30",
+   "status": "planned",
+   "description": "Memory safety, confinement, information flow and resource semantics, each stated separately.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-DEPLOY",
+   "owner": "E2E-31",
+   "status": "planned",
+   "description": "Deployment software below the process: supervisor/OS services, boot and initialization.",
+   "existing_artifacts": []
+  },
+  {
+   "id": "SEM-CHECKER",
+   "owner": "E2E-32",
+   "status": "planned",
+   "description": "Execution of the proof checker and bootstrap chain.",
+   "existing_artifacts": []
+  }
+ ],
+ "properties": [
+  {
+   "id": "functional-correctness",
+   "definition": "Every maximal behavior of the deployed bytes, under the modeled environment, is related by the stated value/store/error/observation relation to a behavior of the source program P, and P satisfies its application contract C. Partial correctness unless a separate termination claim is made.",
+   "not_implied_by": "Not implied by agreement on a test corpus, by successful return of sampled runs, or by a theorem about a reference model rather than the executable implementation.",
+   "owner": "E2E-34",
+   "semantics_target": "SEM-CONTRACT"
+  },
+  {
+   "id": "memory-safety",
+   "definition": "No execution of the deployed program reads or writes memory outside objects it owns under the native representation relation; no use-after-free, out-of-bounds or type-confused access, including during allocation and collection.",
+   "not_implied_by": "Not implied by functional correctness of results, since an unsafe access may not change a sampled result.",
+   "owner": "E2E-30",
+   "semantics_target": "SEM-SECURITY"
+  },
+  {
+   "id": "confinement",
+   "definition": "The program and the certificate checker can invoke only the capabilities granted by the admission profile (for the sealed checker: the seventeen listed bindings); no eval, load, FFI or file authority is reachable unless granted.",
+   "not_implied_by": "Not implied by memory safety or by functional correctness for admitted inputs.",
+   "owner": "E2E-30",
+   "semantics_target": "SEM-SECURITY"
+  },
+  {
+   "id": "termination",
+   "definition": "Every behavior from admitted inputs is finite under explicit scheduling and input-availability premises. Fuel-bounded evaluation returning unknown is never evidence of termination or divergence.",
+   "not_implied_by": "Not implied by partial correctness, fuel monotonicity or finite trace inclusion.",
+   "owner": "E2E-30",
+   "semantics_target": "SEM-OBS"
+  },
+  {
+   "id": "liveness",
+   "definition": "Under stated fairness/eventual-delivery premises, required observable events eventually occur (temporal properties in SEM-TEMPORAL).",
+   "not_implied_by": "Not implied by termination of individual calls nor by safety trace inclusion.",
+   "owner": "E2E-29",
+   "semantics_target": "SEM-TEMPORAL"
+  },
+  {
+   "id": "confidentiality",
+   "definition": "Information-flow property: observations available to a declared low observer are independent of declared secret inputs, including timing/resource channels only where explicitly claimed.",
+   "not_implied_by": "Not implied by confinement or memory safety; a confined program may still leak through allowed outputs.",
+   "owner": "E2E-30",
+   "semantics_target": "SEM-SECURITY"
+  },
+  {
+   "id": "resource-adequacy",
+   "definition": "The deployment profile provides enough heap, stack, file descriptors and time for the claimed behaviors; modeled resource failure is reported distinctly.",
+   "not_implied_by": "Not implied by functional correctness, which treats resource failure as a separate observation.",
+   "owner": "E2E-30",
+   "semantics_target": "SEM-OBS"
+  }
+ ],
+ "features": [
+  {
+   "id": "kl-defun",
+   "category": "language-construct",
+   "required": true,
+   "description": "KLambda defun: global function definition with fixed arity.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": [
+    "OB-KL-FULL-SEMANTICS"
+   ]
+  },
+  {
+   "id": "kl-zero-arity",
+   "category": "language-construct",
+   "required": true,
+   "description": "Zero-arity global functions.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-06",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Reference evaluator only models positive arity.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "zero-arity-unsupported"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-lambda",
+   "category": "language-construct",
+   "required": true,
+   "description": "Single-parameter lambda closures with lexical capture.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "kl-let",
+   "category": "language-construct",
+   "required": true,
+   "description": "let binding with lexical scope and shadowing.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "kl-if",
+   "category": "language-construct",
+   "required": true,
+   "description": "if with lazy branches and strict boolean condition domain.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "kl-and-or",
+   "category": "language-construct",
+   "required": true,
+   "description": "Short-circuit and/or special forms.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-06",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Not in the reference syntax; Scheme and/or decoding semantics were separately corrected.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-and-form"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-cond",
+   "category": "language-construct",
+   "required": true,
+   "description": "cond special form with ordered clauses.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-06",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Not in the reference syntax.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-cond-form"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-freeze-thaw",
+   "category": "language-construct",
+   "required": true,
+   "description": "freeze/thaw suspended computations.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "kl-trap-error",
+   "category": "language-construct",
+   "required": true,
+   "description": "trap-error handlers, error scope and handler laziness.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "kl-type-form",
+   "category": "language-construct",
+   "required": true,
+   "description": "KLambda type annotation form (erased at runtime).",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-06",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Not in the reference syntax.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-type-form"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-application",
+   "category": "language-construct",
+   "required": true,
+   "description": "Direct and computed application, left-to-right argument evaluation.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": [
+    "OB-SCHEME-ORDER-CALL"
+   ]
+  },
+  {
+   "id": "kl-currying",
+   "category": "language-construct",
+   "required": true,
+   "description": "Partial application, currying and overapplication.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": [
+    "OB-SCHEME-EMIT-APPLICATION"
+   ]
+  },
+  {
+   "id": "kl-recursion-tail",
+   "category": "language-construct",
+   "required": true,
+   "description": "Recursion and tail-position behavior (bounded stack proved later).",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "kl-closure-literals",
+   "category": "language-construct",
+   "required": true,
+   "description": "Closures as first-class values passed through data.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-FULL-SEMANTICS"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-06",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Closure literals are not admitted data.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "no-closure-literal"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-global-namespace",
+   "category": "language-construct",
+   "required": true,
+   "description": "Separate function and symbol-value namespaces; global set/value.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-GLOBAL-REBINDING"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-19",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Immutable global table only.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "no-mutation"
+     },
+     {
+      "file": "tests/sealed.shen",
+      "test": "sealed-no-mutation"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-redefinition",
+   "category": "language-construct",
+   "required": true,
+   "description": "Function redefinition at runtime.",
+   "owner": "E2E-19",
+   "semantics_target": "SEM-DYN",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-KL-GLOBAL-REBINDING",
+    "OB-DYNAMIC-LOADING"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-19",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Duplicate global names are rejected.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "duplicate-globals"
+     }
+    ]
+   }
+  },
+  {
+   "id": "kl-eval-kl",
+   "category": "language-construct",
+   "required": true,
+   "description": "eval-kl dynamic evaluation.",
+   "owner": "E2E-19",
+   "semantics_target": "SEM-DYN",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-DYNAMIC-LOADING"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-19",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Dynamic evaluation is outside the admitted profile.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "no-eval"
+     },
+     {
+      "file": "tests/sealed.shen",
+      "test": "sealed-no-eval"
+     }
+    ]
+   }
+  },
+  {
+   "id": "shen-define-patterns",
+   "category": "language-construct",
+   "required": true,
+   "description": "define with pattern matching, guards (where) and backtracking (<-).",
+   "owner": "E2E-12",
+   "semantics_target": "SEM-FRONTEND",
+   "status": "in-scope",
+   "obligations": [
+    "OB-FRONTEND-GENERAL"
+   ]
+  },
+  {
+   "id": "shen-lambda-let",
+   "category": "language-construct",
+   "required": true,
+   "description": "Shen /. lambda, let and multi-argument lambda desugaring.",
+   "owner": "E2E-12",
+   "semantics_target": "SEM-FRONTEND",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "shen-macros",
+   "category": "language-construct",
+   "required": true,
+   "description": "defmacro and macroexpansion order.",
+   "owner": "E2E-12",
+   "semantics_target": "SEM-FRONTEND",
+   "status": "in-scope",
+   "obligations": [
+    "OB-FRONTEND-GENERAL"
+   ]
+  },
+  {
+   "id": "shen-packages",
+   "category": "language-construct",
+   "required": true,
+   "description": "package forms and external symbol lists.",
+   "owner": "E2E-12",
+   "semantics_target": "SEM-FRONTEND",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "shen-datatype",
+   "category": "language-construct",
+   "required": true,
+   "description": "datatype declarations and sequent rules.",
+   "owner": "E2E-10",
+   "semantics_target": "SEM-TYPE",
+   "status": "in-scope",
+   "obligations": [
+    "OB-TYPE-SEQUENT"
+   ]
+  },
+  {
+   "id": "shen-type-declarations",
+   "category": "language-construct",
+   "required": true,
+   "description": "Type signatures {...}, tc +/- and type-checked definitions.",
+   "owner": "E2E-10",
+   "semantics_target": "SEM-TYPE",
+   "status": "in-scope",
+   "obligations": [
+    "OB-TYPE-SEQUENT",
+    "OB-PR117-SOUNDNESS"
+   ]
+  },
+  {
+   "id": "shen-prolog",
+   "category": "language-construct",
+   "required": true,
+   "description": "defprolog and the embedded Prolog engine.",
+   "owner": "E2E-13",
+   "semantics_target": "SEM-LIB",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "shen-yacc",
+   "category": "language-construct",
+   "required": true,
+   "description": "defcc compiler-compiler.",
+   "owner": "E2E-13",
+   "semantics_target": "SEM-LIB",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "shen-tuples-vectors-syntax",
+   "category": "language-construct",
+   "required": true,
+   "description": "@p, @s, @v, <> pattern and constructor syntax.",
+   "owner": "E2E-12",
+   "semantics_target": "SEM-FRONTEND",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "prim-equality",
+   "category": "primitive-family",
+   "required": true,
+   "description": "= structural equality including closures/vectors as admitted.",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "in-scope",
+   "obligations": [
+    "OB-SCHEME-EQUALITY"
+   ]
+  },
+  {
+   "id": "prim-closure-equality",
+   "category": "primitive-family",
+   "required": true,
+   "description": "Equality on closures (host-defined behavior must be specified).",
+   "owner": "E2E-05",
+   "semantics_target": "SEM-VALUE",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-SCHEME-EQUALITY"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-05",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Returns unsupported closure-equality rather than a value.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "closure-equality"
+     }
+    ]
+   }
+  },
+  {
+   "id": "prim-arith-int",
+   "category": "primitive-family",
+   "required": true,
+   "description": "+ - * on exact integers; < > <= >= comparison.",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "prim-division",
+   "category": "primitive-family",
+   "required": true,
+   "description": "/ division with port-specific exactness behavior.",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-NUM",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-STOCK-DIVISION",
+    "OB-NUMERIC-PROFILE"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-17",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Division is outside the reference profile; stock port delegates fractional results to inexact.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "unsupported"
+     }
+    ]
+   }
+  },
+  {
+   "id": "prim-number-classification",
+   "category": "primitive-family",
+   "required": true,
+   "description": "number? integer? and related classification.",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "prim-strings",
+   "category": "primitive-family",
+   "required": true,
+   "description": "pos tlstr cn str string? n->string string->n.",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "in-scope",
+   "obligations": [
+    "OB-PRIM-CONTRACTS"
+   ]
+  },
+  {
+   "id": "prim-symbols",
+   "category": "primitive-family",
+   "required": true,
+   "description": "intern and symbol classification (language-level symbol?).",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-PRIM-CONTRACTS"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-17",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "intern is not an admitted primitive.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-intern"
+     }
+    ]
+   }
+  },
+  {
+   "id": "prim-lists",
+   "category": "primitive-family",
+   "required": true,
+   "description": "cons hd tl cons? including improper pairs.",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "prim-vectors",
+   "category": "primitive-family",
+   "required": true,
+   "description": "absvector address-> <-address absvector? with aliasing.",
+   "owner": "E2E-05",
+   "semantics_target": "SEM-VALUE",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-VECTOR-HEAP"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-05",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Vectors and heap aliasing are not modeled.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-absvector"
+     }
+    ]
+   }
+  },
+  {
+   "id": "prim-errors",
+   "category": "primitive-family",
+   "required": true,
+   "description": "simple-error, error-to-string and structured error payloads.",
+   "owner": "E2E-04",
+   "semantics_target": "SEM-OBS",
+   "status": "in-scope",
+   "obligations": [
+    "OB-EXCEPTIONS-NATIVE"
+   ]
+  },
+  {
+   "id": "prim-streams",
+   "category": "primitive-family",
+   "required": true,
+   "description": "open close read-byte write-byte stream primitives.",
+   "owner": "E2E-27",
+   "semantics_target": "SEM-OS",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-IO-TRUTHFUL-READ"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-27",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Stream IO is not in the reference profile; controlled observers use checked IO.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-write-byte"
+     }
+    ]
+   }
+  },
+  {
+   "id": "prim-time",
+   "category": "primitive-family",
+   "required": true,
+   "description": "get-time.",
+   "owner": "E2E-27",
+   "semantics_target": "SEM-OS",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-OS-ABI-IO"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-27",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Time is not modeled.",
+    "enforcement_tests": [
+     {
+      "file": "tests/ledger.shen",
+      "test": "enforce-no-get-time"
+     }
+    ]
+   }
+  },
+  {
+   "id": "prim-port-helpers",
+   "category": "primitive-family",
+   "required": true,
+   "description": "Port helper wrappers (kl:= kl:str non-rational-/ shen-cl.true? etc.).",
+   "owner": "E2E-17",
+   "semantics_target": "SEM-PRIM",
+   "status": "in-scope",
+   "obligations": [
+    "OB-PRIM-CONTRACTS",
+    "OB-CL-GUARD-MODEL"
+   ]
+  },
+  {
+   "id": "lib-reader",
+   "category": "library-module",
+   "required": true,
+   "description": "Kernel reader (reader.shen), including numeric spelling canonicalization.",
+   "owner": "E2E-11",
+   "semantics_target": "SEM-ENC",
+   "status": "in-scope",
+   "obligations": [
+    "OB-READER-CANONICALIZATION"
+   ]
+  },
+  {
+   "id": "lib-compiler",
+   "category": "library-module",
+   "required": true,
+   "description": "Kernel Shen->KLambda compiler (core.shen, factorise).",
+   "owner": "E2E-12",
+   "semantics_target": "SEM-FRONTEND",
+   "status": "in-scope",
+   "obligations": [
+    "OB-FRONTEND-GENERAL"
+   ]
+  },
+  {
+   "id": "lib-typechecker",
+   "category": "library-module",
+   "required": true,
+   "description": "T* typechecker with PR117 overlay (t-star.shen).",
+   "owner": "E2E-10",
+   "semantics_target": "SEM-TYPE",
+   "status": "in-scope",
+   "obligations": [
+    "OB-PR117-SOUNDNESS"
+   ]
+  },
+  {
+   "id": "lib-printer",
+   "category": "library-module",
+   "required": true,
+   "description": "Printing/format (~A ~S ~R) and str of numbers.",
+   "owner": "E2E-13",
+   "semantics_target": "SEM-LIB",
+   "status": "in-scope",
+   "obligations": [
+    "OB-LARGE-INT-SPELLING"
+   ]
+  },
+  {
+   "id": "lib-sys",
+   "category": "library-module",
+   "required": true,
+   "description": "sys.shen definitions (ps, symbol?, arity, put/get property lists).",
+   "owner": "E2E-13",
+   "semantics_target": "SEM-LIB",
+   "status": "in-scope",
+   "obligations": [
+    "OB-PS-METADATA-HISTORICAL"
+   ]
+  },
+  {
+   "id": "lib-load",
+   "category": "library-module",
+   "required": true,
+   "description": "load and toplevel evaluation of source files.",
+   "owner": "E2E-19",
+   "semantics_target": "SEM-DYN",
+   "status": "in-scope",
+   "obligations": [
+    "OB-DYNAMIC-LOADING"
+   ]
+  },
+  {
+   "id": "lib-dict",
+   "category": "library-module",
+   "required": true,
+   "description": "Kernel dictionary implementation.",
+   "owner": "E2E-13",
+   "semantics_target": "SEM-LIB",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "eff-file-io",
+   "category": "effect",
+   "required": true,
+   "description": "File reads/writes with explicit failure, partial writes and durability policy.",
+   "owner": "E2E-27",
+   "semantics_target": "SEM-OS",
+   "status": "in-scope",
+   "obligations": [
+    "OB-IO-TRUTHFUL-READ",
+    "OB-IO-DURABILITY"
+   ]
+  },
+  {
+   "id": "eff-console-io",
+   "category": "effect",
+   "required": true,
+   "description": "Standard input/output streams.",
+   "owner": "E2E-27",
+   "semantics_target": "SEM-OS",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "eff-exceptions",
+   "category": "effect",
+   "required": true,
+   "description": "Language exceptions and their propagation across ports.",
+   "owner": "E2E-04",
+   "semantics_target": "SEM-OBS",
+   "status": "in-scope",
+   "obligations": [
+    "OB-EXCEPTIONS-NATIVE"
+   ]
+  },
+  {
+   "id": "eff-divergence",
+   "category": "effect",
+   "required": true,
+   "description": "Divergence as a maximal behavior distinct from budget exhaustion.",
+   "owner": "E2E-04",
+   "semantics_target": "SEM-OBS",
+   "status": "in-scope",
+   "obligations": [
+    "OB-OBSERVATION-VOCABULARY"
+   ]
+  },
+  {
+   "id": "eff-resource-failure",
+   "category": "effect",
+   "required": true,
+   "description": "Heap/stack exhaustion as modeled resource failure, distinct from proof-search budget.",
+   "owner": "E2E-04",
+   "semantics_target": "SEM-OBS",
+   "status": "in-scope",
+   "obligations": [
+    "OB-RESOURCE-ADEQUACY"
+   ]
+  },
+  {
+   "id": "eff-exit-status",
+   "category": "effect",
+   "required": true,
+   "description": "Process exit status and shutdown.",
+   "owner": "E2E-26",
+   "semantics_target": "SEM-LIFECYCLE",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "eff-signals-cancellation",
+   "category": "effect",
+   "required": true,
+   "description": "Signals, cancellation and asynchronous interrupts.",
+   "owner": "E2E-27",
+   "semantics_target": "SEM-OS",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "eff-global-mutation",
+   "category": "effect",
+   "required": true,
+   "description": "Mutation of global values and property lists.",
+   "owner": "E2E-06",
+   "semantics_target": "SEM-KL",
+   "status": "in-scope",
+   "obligations": [
+    "OB-KL-GLOBAL-REBINDING"
+   ]
+  },
+  {
+   "id": "eff-vector-mutation",
+   "category": "effect",
+   "required": true,
+   "description": "Vector element mutation and aliasing.",
+   "owner": "E2E-05",
+   "semantics_target": "SEM-VALUE",
+   "status": "in-scope",
+   "obligations": [
+    "OB-VECTOR-HEAP"
+   ]
+  },
+  {
+   "id": "eff-randomness",
+   "category": "effect",
+   "required": true,
+   "description": "Randomness sources if exposed by the release profile (none in the KLambda primitive set).",
+   "owner": "E2E-04",
+   "semantics_target": "SEM-OBS",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "num-exact-integers",
+   "category": "numeric-policy",
+   "required": true,
+   "description": "Arbitrary-precision exact integers with decimal printing.",
+   "owner": "E2E-05",
+   "semantics_target": "SEM-NUM",
+   "status": "in-scope",
+   "obligations": [
+    "OB-INT-REPRESENTATION"
+   ]
+  },
+  {
+   "id": "num-floats",
+   "category": "numeric-policy",
+   "required": true,
+   "description": "Inexact floating-point numbers, rounding, signed zero, infinities and NaN admission policy.",
+   "owner": "E2E-05",
+   "semantics_target": "SEM-NUM",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-NUMERIC-PROFILE"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-05",
+    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
+    "reason": "Floats are outside the admitted profile.",
+    "enforcement_tests": [
+     {
+      "file": "tests/evaluator.shen",
+      "test": "fractional-literal"
+     },
+     {
+      "file": "tests/sealed.shen",
+      "test": "sealed-reject-float"
+     }
+    ]
+   }
+  },
+  {
+   "id": "num-division-exactness",
+   "category": "numeric-policy",
+   "required": true,
+   "description": "Whether integer division yields exact rationals, floats or errors on each port.",
+   "owner": "E2E-05",
+   "semantics_target": "SEM-NUM",
+   "status": "in-scope",
+   "obligations": [
+    "OB-STOCK-DIVISION",
+    "OB-NUMERIC-PROFILE"
+   ]
+  },
+  {
+   "id": "num-integral-spelling",
+   "category": "numeric-policy",
+   "required": true,
+   "description": "Reader canonicalization of integral spellings such as 1.0.",
+   "owner": "E2E-11",
+   "semantics_target": "SEM-ENC",
+   "status": "in-scope",
+   "obligations": [
+    "OB-READER-CANONICALIZATION"
+   ]
+  },
+  {
+   "id": "enc-strings-bytes",
+   "category": "encoding-policy",
+   "required": true,
+   "description": "String code points versus bytes; n->string/string->n range.",
+   "owner": "E2E-11",
+   "semantics_target": "SEM-ENC",
+   "status": "in-scope",
+   "obligations": [
+    "OB-BYTE-DOMAIN"
+   ]
+  },
+  {
+   "id": "enc-file-bytes",
+   "category": "encoding-policy",
+   "required": true,
+   "description": "File byte IO encoding and read-file-as-bytelist/string agreement.",
+   "owner": "E2E-11",
+   "semantics_target": "SEM-ENC",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "enc-symbol-spelling",
+   "category": "encoding-policy",
+   "required": true,
+   "description": "Symbol spelling, packages and case.",
+   "owner": "E2E-11",
+   "semantics_target": "SEM-ENC",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "enc-wire-tagging",
+   "category": "encoding-policy",
+   "required": true,
+   "description": "Wire codec and typed tagging protocol for captures.",
+   "owner": "E2E-11",
+   "semantics_target": "SEM-ENC",
+   "status": "in-scope",
+   "obligations": [
+    "OB-TAG-PROTOCOL",
+    "OB-TAG-ADAPTER-NATIVE"
+   ]
+  },
+  {
+   "id": "conc-single-mutator",
+   "category": "concurrency-mode",
+   "required": true,
+   "description": "Single mutator thread (initial experiment).",
+   "owner": "E2E-28",
+   "semantics_target": "SEM-CONC",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "conc-host-threads",
+   "category": "concurrency-mode",
+   "required": true,
+   "description": "Multiple host threads (Chez threads / SBCL threads).",
+   "owner": "E2E-28",
+   "semantics_target": "SEM-CONC",
+   "status": "provisional-exclusion",
+   "obligations": [
+    "OB-CONCURRENT-MUTATION"
+   ],
+   "exclusion": {
+    "closure_package": "E2E-28",
+    "enforced_at": "shen/sealed-encoder.shen sealed lane environment (seventeen-binding private capsule only)",
+    "reason": "Thread creation is unavailable inside the sealed capsule; the stock lane does not enforce this.",
+    "enforcement_tests": [
+     {
+      "file": "tests/sealed.shen",
+      "test": "sealed-no-thread"
+     }
+    ]
+   }
+  },
+  {
+   "id": "conc-gc-interaction",
+   "category": "concurrency-mode",
+   "required": true,
+   "description": "Collector/mutator interaction and safepoints.",
+   "owner": "E2E-25",
+   "semantics_target": "SEM-RUNTIME",
+   "status": "in-scope",
+   "obligations": [
+    "OB-GC-CORRECTNESS"
+   ]
+  },
+  {
+   "id": "conc-weak-memory",
+   "category": "concurrency-mode",
+   "required": true,
+   "description": "ARM weak-memory ordering for any shared state.",
+   "owner": "E2E-28",
+   "semantics_target": "SEM-CONC",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "mode-chez-optimize",
+   "category": "compiler-mode",
+   "required": true,
+   "description": "Chez optimize-level and safe/unsafe mode used by Shen-Scheme builds.",
+   "owner": "E2E-22",
+   "semantics_target": "SEM-SCHEME",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "mode-sbcl-policy",
+   "category": "compiler-mode",
+   "required": true,
+   "description": "SBCL safety/speed/debug declamations used by Shen-CL builds.",
+   "owner": "E2E-23",
+   "semantics_target": "SEM-CL",
+   "status": "in-scope",
+   "obligations": []
+  },
+  {
+   "id": "mode-shen-tc",
+   "category": "compiler-mode",
+   "required": true,
+   "description": "Shen typechecking mode (tc +/-); current Buri checks run under tc -.",
+   "owner": "E2E-10",
+   "semantics_target": "SEM-TYPE",
+   "status": "in-scope",
+   "obligations": [
+    "OB-TC-MINUS"
+   ]
+  },
+  {
+   "id": "plat-aarch64-le",
+   "category": "platform",
+   "required": true,
+   "description": "Little-endian AArch64 instruction execution.",
+   "owner": "E2E-20",
+   "semantics_target": "SEM-ARM",
+   "status": "in-scope",
+   "obligations": [
+    "OB-ARM-FOUNDATION"
+   ]
+  },
+  {
+   "id": "plat-linux-process",
+   "category": "platform",
+   "required": true,
+   "description": "Hosted Linux process environment (syscalls, loader, signals).",
+   "owner": "E2E-27",
+   "semantics_target": "SEM-OS",
+   "status": "in-scope",
+   "obligations": [
+    "OB-OS-ABI-IO"
+   ]
+  },
+  {
+   "id": "plat-boot-deploy",
+   "category": "platform",
+   "required": true,
+   "description": "Boot, supervisor and deployment services below the process.",
+   "owner": "E2E-31",
+   "semantics_target": "SEM-DEPLOY",
+   "status": "in-scope",
+   "obligations": [
+    "OB-DEPLOY-BELOW-PROCESS"
+   ]
+  }
+ ],
+ "pins": [
+  {
+   "id": "shen-kernel",
+   "component": "Shen kernel version",
+   "status": "identity-only",
+   "value": "43.1 (shen-43.1 base tag; checked via *version* string)",
+   "source": "scripts/shen",
+   "closure_package": "E2E-03",
+   "note": "The kernel is embedded in the pinned Shen-Scheme archive; the kernel source tree hash for the embedded build is not recorded."
+  },
+  {
+   "id": "pr117-overlay",
+   "component": "PR117 T* typechecker overlay",
+   "status": "pinned",
+   "value": "Shen-Language/shen-sources@ec16a9fa4fc2e87e2aa336fb1ae30e8ac2266394 sources/t-star.shen sha256 480e26c610b593b66f87118ea2fbeacaf34201e42f2279a09decfb9481879168",
+   "source": "toolchain.lock.json",
+   "closure_package": "E2E-03",
+   "note": "Hash checked on every scripts/shen launch."
+  },
+  {
+   "id": "shen-scheme-release",
+   "component": "Shen-Scheme binary release",
+   "status": "pinned",
+   "value": "v0.52 linux-x64 sha256 aa711f576ea0ec96d86b0120eeba875153317a9af9e6a69f9c6ef4c00a4ad8c9; macOS-arm64 sha256 44e980d192d156859d06374e554813e1dc1e81210b95e9b1e23eb5e85276106b",
+   "source": "toolchain.lock.json",
+   "closure_package": "E2E-03",
+   "note": "Archive identity only; source-to-binary correspondence is unproved."
+  },
+  {
+   "id": "shen-scheme-source",
+   "component": "Shen-Scheme reviewed source",
+   "status": "pinned",
+   "value": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 (compiler.shen 42ac753b, primitives.scm 92b8875a, overrides.shen 3f20b5f1)",
+   "source": "toolchain.lock.json",
+   "closure_package": "E2E-03",
+   "note": "Review targets; not proof that the release binary was built from them."
+  },
+  {
+   "id": "chez-scheme",
+   "component": "Chez Scheme inside Shen-Scheme v0.52",
+   "status": "identity-only",
+   "value": "bytes fixed by the shen-scheme-release archive hash",
+   "source": "toolchain.lock.json",
+   "closure_package": "E2E-03",
+   "note": "unpinned: Chez source revision/version is not recorded; must be selected by E2E-03/E2E-22."
+  },
+  {
+   "id": "shen-cl-source",
+   "component": "Shen-CL source",
+   "status": "pinned",
+   "value": "Shen-CL@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 (src/primitives.lsp capture only)",
+   "source": "scripts/check-cl-port.sh",
+   "closure_package": "E2E-03",
+   "note": "Pinned only for the guard capture gate; not in toolchain.lock.json and no Shen-CL binary/boot image is pinned."
+  },
+  {
+   "id": "sbcl",
+   "component": "SBCL version and build",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-03",
+   "note": "unpinned: must be selected by E2E-03/E2E-23; check-cl-port.sh uses whatever SBCL is on PATH."
+  },
+  {
+   "id": "rocq",
+   "component": "Rocq/Coq checker",
+   "status": "pinned",
+   "value": "Coq 8.18.0, OCaml 4.14.1, packages per rocq-packages.lock, coqchk replay",
+   "source": "toolchain.lock.json",
+   "closure_package": "E2E-32",
+   "note": "Checker execution and OCaml/OS remain trusted (E2E-32)."
+  },
+  {
+   "id": "arm-architecture",
+   "component": "ARM architecture revision",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-20",
+   "note": "unpinned: must be selected by E2E-20 (no proof-compatible ARM platform pin exists)."
+  },
+  {
+   "id": "arm-abi",
+   "component": "ARM ABI",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-20",
+   "note": "unpinned: must be selected by E2E-20 (AAPCS64 variant, ELF/loader conventions)."
+  },
+  {
+   "id": "arm-cpu-features",
+   "component": "ARM CPU feature set",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-20",
+   "note": "unpinned: must be selected by E2E-20 (FEAT_* set, page size, memory model options)."
+  },
+  {
+   "id": "os-profile",
+   "component": "OS/runtime profile",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-31",
+   "note": "unpinned: must be selected by E2E-20/E2E-31 (kernel version, libc, loader, configuration)."
+  },
+  {
+   "id": "linux-aarch64-host-archive",
+   "component": "Shen-Scheme Linux AArch64 host",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-03",
+   "note": "unpinned: no Linux AArch64 archive is pinned; scripts/bootstrap supports only Linux x86_64 and macOS arm64. The macOS-arm64 archive is not the target profile."
+  },
+  {
+   "id": "compiler-modes",
+   "component": "Chez/SBCL/Shen compiler flags",
+   "status": "unpinned",
+   "value": null,
+   "source": null,
+   "closure_package": "E2E-03",
+   "note": "unpinned: optimize levels, safety policies and boot-image build flags must be recorded by E2E-03."
+  }
+ ],
+ "excluded_extensions": [
+  {
+   "id": "ext-scheme-ffi",
+   "owner": "E2E-19",
+   "description": "Shen-Scheme scm. host FFI and direct Scheme code.",
+   "reason": "Host extension, not part of the frozen Shen 43.1 language definition.",
+   "enforcement_tests": [
+    {
+     "file": "tests/sealed.shen",
+     "test": "sealed-no-unknown"
+    }
+   ],
+   "enforcement_gap": "OB-HOST-EXTENSION-ADMISSION",
+   "note": "Rejected only inside the sealed capsule; the stock lane executes host code (TRUST.md)."
+  },
+  {
+   "id": "ext-cl-ffi",
+   "owner": "E2E-19",
+   "description": "Shen-CL lisp. host FFI.",
+   "reason": "Host extension, not part of the frozen Shen 43.1 language definition.",
+   "enforcement_tests": [],
+   "enforcement_gap": "OB-HOST-EXTENSION-ADMISSION",
+   "note": "No admission path rejects it today."
+  },
+  {
+   "id": "ext-stlib",
+   "owner": "E2E-13",
+   "description": "Shen standard library (StLib) beyond the kernel.",
+   "reason": "Not part of the pinned kernel sources; a later charter version may require it.",
+   "enforcement_tests": [],
+   "enforcement_gap": "OB-HOST-EXTENSION-ADMISSION",
+   "note": "Not loaded by any Buri gate; no admission rejection exists."
+  }
+ ],
+ "history": [
+  {
+   "version": 1,
+   "date": "2026-11-01",
+   "reason": "Initial freeze of the completion contract (E2E-01).",
+   "removed": [],
+   "required": [
+    "feature:kl-defun",
+    "feature:kl-zero-arity",
+    "feature:kl-lambda",
+    "feature:kl-let",
+    "feature:kl-if",
+    "feature:kl-and-or",
+    "feature:kl-cond",
+    "feature:kl-freeze-thaw",
+    "feature:kl-trap-error",
+    "feature:kl-type-form",
+    "feature:kl-application",
+    "feature:kl-currying",
+    "feature:kl-recursion-tail",
+    "feature:kl-closure-literals",
+    "feature:kl-global-namespace",
+    "feature:kl-redefinition",
+    "feature:kl-eval-kl",
+    "feature:shen-define-patterns",
+    "feature:shen-lambda-let",
+    "feature:shen-macros",
+    "feature:shen-packages",
+    "feature:shen-datatype",
+    "feature:shen-type-declarations",
+    "feature:shen-prolog",
+    "feature:shen-yacc",
+    "feature:shen-tuples-vectors-syntax",
+    "feature:prim-equality",
+    "feature:prim-closure-equality",
+    "feature:prim-arith-int",
+    "feature:prim-division",
+    "feature:prim-number-classification",
+    "feature:prim-strings",
+    "feature:prim-symbols",
+    "feature:prim-lists",
+    "feature:prim-vectors",
+    "feature:prim-errors",
+    "feature:prim-streams",
+    "feature:prim-time",
+    "feature:prim-port-helpers",
+    "feature:lib-reader",
+    "feature:lib-compiler",
+    "feature:lib-typechecker",
+    "feature:lib-printer",
+    "feature:lib-sys",
+    "feature:lib-load",
+    "feature:lib-dict",
+    "feature:eff-file-io",
+    "feature:eff-console-io",
+    "feature:eff-exceptions",
+    "feature:eff-divergence",
+    "feature:eff-resource-failure",
+    "feature:eff-exit-status",
+    "feature:eff-signals-cancellation",
+    "feature:eff-global-mutation",
+    "feature:eff-vector-mutation",
+    "feature:eff-randomness",
+    "feature:num-exact-integers",
+    "feature:num-floats",
+    "feature:num-division-exactness",
+    "feature:num-integral-spelling",
+    "feature:enc-strings-bytes",
+    "feature:enc-file-bytes",
+    "feature:enc-symbol-spelling",
+    "feature:enc-wire-tagging",
+    "feature:conc-single-mutator",
+    "feature:conc-host-threads",
+    "feature:conc-gc-interaction",
+    "feature:conc-weak-memory",
+    "feature:mode-chez-optimize",
+    "feature:mode-sbcl-policy",
+    "feature:mode-shen-tc",
+    "feature:plat-aarch64-le",
+    "feature:plat-linux-process",
+    "feature:plat-boot-deploy",
+    "property:functional-correctness",
+    "property:memory-safety",
+    "property:confinement",
+    "property:termination",
+    "property:liveness",
+    "property:confidentiality",
+    "property:resource-adequacy",
+    "pin:shen-kernel",
+    "pin:pr117-overlay",
+    "pin:shen-scheme-release",
+    "pin:shen-scheme-source",
+    "pin:chez-scheme",
+    "pin:shen-cl-source",
+    "pin:sbcl",
+    "pin:rocq",
+    "pin:arm-architecture",
+    "pin:arm-abi",
+    "pin:arm-cpu-features",
+    "pin:os-profile",
+    "pin:linux-aarch64-host-archive",
+    "pin:compiler-modes"
+   ]
+  }
+ ]
+}

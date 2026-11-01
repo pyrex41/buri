@@ -15,10 +15,15 @@
       "id": "E2E-01",
       "title": "Freeze the completion contract.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [],
-      "evidence": [],
+      "evidence": [
+        "spec/release-charter.json",
+        "docs/RELEASE-CHARTER.md",
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
       "acceptance": "each\nrequired feature and claim has a named semantics and an owning work package;\neach provisional exclusion has an enforcement test and a scheduled closure step.\nRemoving a required feature changes the release charter rather than completing it.",
       "details": "docs/END-TO-END-PLAN.md"
     },
@@ -26,12 +31,17 @@
       "id": "E2E-02",
       "title": "Replace prose-only gaps with an obligation graph.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-01"
       ],
-      "evidence": [],
+      "evidence": [
+        "spec/obligations.json",
+        "docs/RELEASE-CHARTER.md",
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
       "acceptance": "every current gap\nmaps to a package below; no dependency cycles are discharged by assuming each\nother. Joint invariants or well-founded constructions must close such cycles.",
       "details": "docs/END-TO-END-PLAN.md"
     },
@@ -590,14 +600,17 @@
       "id": "E2E-35",
       "title": "Make closure enforceable in CI and deployment.",
       "lane": "release-engineering",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-02",
         "E2E-03",
         "E2E-34"
       ],
-      "evidence": [],
+      "evidence": [
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
       "acceptance": "modifying\nany correctness-relevant input invalidates the old proof bundle, and no mutable\nlabel or forgeable success token authorizes execution. Nix/Earthbuild repeatability\nand signed provenance support this process but do not replace semantic checks.",
       "details": "docs/END-TO-END-PLAN.md"
     },
