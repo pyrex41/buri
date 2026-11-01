@@ -194,7 +194,17 @@
 (define buri.lpkg-id P -> (buri.lfs "id" P))
 (define buri.lpkg-deps P -> (buri.lstrs (buri.lf "depends_on" P)))
 (define buri.lpkg-status P -> (buri.lfs "status" P))
-(define buri.lpkg-evidence P -> (buri.lstrs (buri.lopt "evidence" [arr []] P)))
+\\ Package evidence items are either a path string or a typed object
+\\ {kind, artifact, claim}; both resolve to the artifact path that must exist.
+\\ The kind and claim are retained for reports but never grant completion.
+(define buri.lpkg-evidence P -> (map (/. E (buri.lpkg-ev-artifact E)) (buri.la (buri.lopt "evidence" [arr []] P))))
+(define buri.lpkg-ev-artifact [str S] -> S
+  [obj Pairs] -> (let Kind (buri.lfs "kind" [obj Pairs])
+                      Claim (buri.lfs "claim" [obj Pairs])
+                   (if (or (= Kind "") (= Claim ""))
+                       (buri.lfail "typed evidence needs nonempty kind and claim")
+                       (buri.lfs "artifact" [obj Pairs])))
+  _ -> (buri.lfail "evidence item must be a path or typed object"))
 (define buri.lplan-packages Plan -> (buri.la (buri.lf "work_packages" Plan)))
 (define buri.lplan-ids Plan -> (map (/. P (buri.lpkg-id P)) (buri.lplan-packages Plan)))
 

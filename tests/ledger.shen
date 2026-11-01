@@ -216,4 +216,13 @@
 (buri.test missing-ledger-file-is-not-rejection
  (hd (buri.ledger-check-files "spec/no-such-charter.json" "spec/end-to-end-plan.json" "spec/obligations.json" "rocq/Audit.v"))
  unknown)
+(buri.test hostile-typed-evidence-missing-artifact
+ (buri.lt-has? [missing-package-evidence "E2E-20 ports/arm/no-such.bin"]
+  (buri.lt-plan-verdict (buri.lt-edit-in "work_packages" "E2E-20" (/. P (buri.lt-put "evidence" [arr [[obj [["kind" [str "byte-capture"]] ["artifact" [str "ports/arm/no-such.bin"]] ["claim" [str "forged"]]]]]] P)) (value buri.lt-plan)))) true)
+(buri.test hostile-typed-evidence-without-kind
+ (buri.lt-plan-verdict (buri.lt-edit-in "work_packages" "E2E-20" (/. P (buri.lt-put "evidence" [arr [[obj [["kind" [str ""]] ["artifact" [str "docs/ARM-FOUNDATION.md"]] ["claim" [str "x"]]]]]] P)) (value buri.lt-plan)))
+ [malformed "ledger: shape: typed evidence needs nonempty kind and claim"])
+(buri.test hostile-evidence-number
+ (buri.lt-plan-verdict (buri.lt-edit-in "work_packages" "E2E-20" (/. P (buri.lt-put "evidence" [arr [[int 1]]] P)) (value buri.lt-plan)))
+ [malformed "ledger: shape: evidence item must be a path or typed object"])
 (buri.done)

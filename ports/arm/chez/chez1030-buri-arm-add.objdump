@@ -1,0 +1,45 @@
+
+chez1030-buri-arm-add.bin:     file format binary
+
+
+Disassembly of section .data:
+
+00007f8d409bcb50 <.data>:
+    7f8d409bcb50:	f1000aff 	cmp	x23, #0x2
+    7f8d409bcb54:	54000401 	b.ne	0x7f8d409bcbd4  // b.any
+    7f8d409bcb58:	aa01001e 	orr	x30, x0, x1
+    7f8d409bcb5c:	f2400bdf 	tst	x30, #0x7
+    7f8d409bcb60:	540000a1 	b.ne	0x7f8d409bcb74  // b.any
+    7f8d409bcb64:	ab010017 	adds	x23, x0, x1
+    7f8d409bcb68:	54000066 	b.vs	0x7f8d409bcb74
+    7f8d409bcb6c:	f840028a 	ldur	x10, [x20]
+    7f8d409bcb70:	d61f0140 	br	x10
+    7f8d409bcb74:	f10006d6 	subs	x22, x22, #0x1
+    7f8d409bcb78:	54000241 	b.ne	0x7f8d409bcbc0  // b.any
+    7f8d409bcb7c:	f9000680 	str	x0, [x20, #8]
+    7f8d409bcb80:	f9000a81 	str	x1, [x20, #16]
+    7f8d409bcb84:	91006294 	add	x20, x20, #0x18
+    7f8d409bcb88:	1000017e 	adr	x30, 0x7f8d409bcbb4
+    7f8d409bcb8c:	f900029e 	str	x30, [x20]
+    7f8d409bcb90:	d29e400a 	mov	x10, #0xf200                	// #61952
+    7f8d409bcb94:	f2a8146a 	movk	x10, #0x40a3, lsl #16
+    7f8d409bcb98:	f2cff1aa 	movk	x10, #0x7f8d, lsl #32
+    7f8d409bcb9c:	f2e0000a 	movk	x10, #0x0, lsl #48
+    7f8d409bcba0:	d61f0140 	br	x10
+    7f8d409bcba4:	00000095 	udf	#149
+    7f8d409bcba8:	00000000 	udf	#0
+    7f8d409bcbac:	0000018d 	udf	#397
+    7f8d409bcbb0:	00000000 	udf	#0
+    7f8d409bcbb4:	d1006294 	sub	x20, x20, #0x18
+    7f8d409bcbb8:	f9400680 	ldr	x0, [x20, #8]
+    7f8d409bcbbc:	f9400a81 	ldr	x1, [x20, #16]
+    7f8d409bcbc0:	d29aa20a 	mov	x10, #0xd510                	// #54544
+    7f8d409bcbc4:	f2a8146a 	movk	x10, #0x40a3, lsl #16
+    7f8d409bcbc8:	f2cff1aa 	movk	x10, #0x7f8d, lsl #32
+    7f8d409bcbcc:	f2e0000a 	movk	x10, #0x0, lsl #48
+    7f8d409bcbd0:	d61f0140 	br	x10
+    7f8d409bcbd4:	d28cba0a 	mov	x10, #0x65d0                	// #26064
+    7f8d409bcbd8:	f2a8148a 	movk	x10, #0x40a4, lsl #16
+    7f8d409bcbdc:	f2cff1aa 	movk	x10, #0x7f8d, lsl #32
+    7f8d409bcbe0:	f2e0000a 	movk	x10, #0x0, lsl #48
+    7f8d409bcbe4:	d61f0140 	br	x10

@@ -1,0 +1,21 @@
+# sbcl 2.6.8 ARM64: code components reachable from SHEN::|buri-arm-add| via boxed constants
+# extra seeds (from disassembly notes): (SB-KERNEL:TWO-ARG-+)
+# count 26 total-text-bytes 65740
+# depth 0: 1 components, 680 bytes
+# depth 1: 2 components, 5772 bytes
+# depth 2: 10 components, 38320 bytes
+# depth 3: 8 components, 18424 bytes
+# depth 4: 5 components, 2544 bytes
+0 SHEN::|buri-arm-add| 680
+1 SB-KERNEL:TWO-ARG-+ 5512
+1 SB-KERNEL:%DOUBLE-FLOAT 260
+2 SB-KERNEL:TWO-ARG-GCD 644
+2 SB-KERNEL::TRUNCATE1 4080
+2 REALPART 280
+2 IMAGPART 304
+2 COMPLEX 1292
+2 SB-KERNEL::DOUBLE-FLOAT-RATIO 2364
+2 SB-KERNEL::SINGLE-FLOAT-RATIO 2364
+2 SB-BIGNUM:BIGNUM-TRUNCATE-SINGLE-DIGIT 25252
+2 SB-KERNEL:%SINGLE-FLOAT 260
+2 SB-BIGNUM::LAST-BIGNUM-PART=>FIXNUM 1480

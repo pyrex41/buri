@@ -1,0 +1,16 @@
+#!/bin/sh
+# isla-footprint on the Sail Armv9.4-A IR snapshot, as used for E2E-20.
+#   ISLA_ROOT  checkout of rems-project/isla e9b5d945394277656593a0d429466d7fa0a2b4b3
+#              built with `cargo build --release --bin isla-footprint`
+#   ISLA_IR    gunzipped isla-snapshots d8b31014 armv9p4.ir
+#              (sha256 02918f8141ca06d78aff955c3c15c9f2d1c04df24e00176d7e4b6132cd8c75ec)
+#   XBIN       directory with aarch64-linux-gnu-{as,ld,objdump,nm} (the config
+#              requires them on PATH even with -x; nix/arm/tools.nix aarch64-binutils)
+# usage: isla94 <opcode-bytes-hex-in-memory-order> [extra isla args]
+# `-x` with the default little endianness takes the bytes in memory order, so
+# word 0xab010017 is passed as 170001ab.  This is a symbolic-execution trace,
+# not a Rocq-checked theorem.
+op=$1; shift
+export PATH="${XBIN:?}:$PATH"
+exec "${ISLA_ROOT:?}/target/release/isla-footprint" -A "${ISLA_IR:?}" \
+  -C "$ISLA_ROOT/configs/armv9p4.toml" -x -i "$op" "$@"
