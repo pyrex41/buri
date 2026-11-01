@@ -51,7 +51,7 @@
         src = self;
         filter = path: type:
           let base = baseNameOf path; in
-          !(base == ".tools" || base == "_build" || base == ".git"
+          !(base == ".tools" || base == "_build" || base == ".git" || base == "ci-extra-ca.crt"
             || lib.hasPrefix "result" base);
       };
 

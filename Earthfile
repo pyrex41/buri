@@ -20,6 +20,13 @@ FROM nixos/nix:2.24.14@sha256:4411619b45575be9fb47063c0878e2d9ef86988678b23c01bf
 WORKDIR /buri
 
 nix-env:
+    # Optional extra CA for TLS-intercepting egress proxies. Normal CI has no
+    # such file; the image's bundle is then used unchanged.
+    COPY --if-exists ci-extra-ca.crt /etc/ssl/certs/ci-extra-ca.crt
+    RUN cat /nix/var/nix/profiles/default/etc/ssl/certs/ca-bundle.crt > /etc/ssl/certs/buri-ca.crt && \
+        if [ -f /etc/ssl/certs/ci-extra-ca.crt ]; then cat /etc/ssl/certs/ci-extra-ca.crt >> /etc/ssl/certs/buri-ca.crt; fi
+    ENV NIX_SSL_CERT_FILE=/etc/ssl/certs/buri-ca.crt
+    ENV SSL_CERT_FILE=/etc/ssl/certs/buri-ca.crt
     RUN printf 'experimental-features = nix-command flakes\nsandbox = true\nsandbox-fallback = false\n' >> /etc/nix/nix.conf
 
 tools:

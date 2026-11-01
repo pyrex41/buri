@@ -28,6 +28,8 @@ import sys
 root = pathlib.Path(__file__).resolve().parent.parent
 SCHEMA = 'buri-build-manifest-1'
 EXCLUDED_DIRS = {'.git', '.tools', '_build', '__pycache__', '.claude'}
+# Local-only CA file the Earthfile may copy into a container (never a source).
+EXCLUDED_FILES = {'ci-extra-ca.crt'}
 EXCLUDED_SUFFIXES = ('.vo', '.vos', '.vok', '.glob', '.aux', '.lia.cache')
 ENVIRONMENT = ['SHEN_SCHEME_HOME', 'SHEN_SCHEME_RUNTIME', 'SHEN_SCHEME_BOOT',
                'OCAMLFIND_CONF', 'OCAMLPATH', 'OCAMLRUNPARAM', 'OCAMLLIB',
@@ -83,7 +85,7 @@ def sources():
             relative = path.relative_to(root)
             if name.endswith(EXCLUDED_SUFFIXES) or (here == root and name.startswith('result')):
                 continue
-            if name == '.tools' or (here == root and name in EXCLUDED_DIRS):
+            if name == '.tools' or (here == root and (name in EXCLUDED_DIRS or name in EXCLUDED_FILES)):
                 continue
             out[str(relative)] = entry(path)
     return dict(sorted(out.items()))

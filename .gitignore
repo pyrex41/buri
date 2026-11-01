@@ -10,3 +10,4 @@ __pycache__/
 .lia.cache
 /result
 /result-*
+ci-extra-ca.crt
