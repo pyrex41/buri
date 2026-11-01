@@ -705,3 +705,46 @@ Print Assumptions CLPortGuard.CLPortGuard.conditional_refinement.
 Print Assumptions CLPortGuard.CLPortGuard.other_values_rejected.
 Print Assumptions CLPortCapture.captured_guard_admitted.
 Print Assumptions CLPortCapture.captured_guard_correct.
+
+(* E2E-04/05/06: observations, KLambda values/store and small-step semantics. *)
+From Buri Require Import Observation KLSyntax KLValue KLSemantics KLMetatheory KLWellFormed KLTail KLBridge KLExamples.
+Print Assumptions Observation.Observation.refinement_preserves_errors.
+Print Assumptions Observation.Observation.refinement_preserves_errors_res.
+Print Assumptions Observation.Observation.refinement_preserves_events.
+Print Assumptions Observation.Observation.refinement_preserves_failed_writes.
+Print Assumptions Observation.Observation.divergence_not_hidden.
+Print Assumptions Observation.Observation.diverging_target_needs_diverging_source.
+Print Assumptions Observation.Observation.terminating_source_forbids_divergence.
+Print Assumptions Observation.Observation.strict_refinement_preserves_resource_failure.
+Print Assumptions Observation.Observation.exhaustion_claims_only_prefix.
+Print Assumptions Observation.Observation.terminates_excludes_divergence.
+Print Assumptions Observation.Observation.wrong_excludes_divergence.
+Print Assumptions Observation.Observation.terminates_unique.
+Print Assumptions KLSyntax.KLSyntax.all_prims_complete.
+Print Assumptions KLSyntax.KLSyntax.all_specials_complete.
+Print Assumptions KLSyntax.KLSyntax.canonical_kl_surface.
+Print Assumptions KLValue.KLValue.vok_mono.
+Print Assumptions KLMetatheory.KLMetatheory.final_iff.
+Print Assumptions KLMetatheory.KLMetatheory.progress.
+Print Assumptions KLMetatheory.KLMetatheory.wrong_iff.
+Print Assumptions KLMetatheory.KLMetatheory.stuck_iff_wrong.
+Print Assumptions KLMetatheory.KLMetatheory.step_deterministic.
+Print Assumptions KLMetatheory.KLMetatheory.closed_deterministic.
+Print Assumptions KLMetatheory.KLMetatheory.closed_terminates_excludes_divergence.
+Print Assumptions KLMetatheory.KLMetatheory.closed_terminates_unique.
+Print Assumptions KLMetatheory.KLMetatheory.run_sound.
+Print Assumptions KLMetatheory.KLMetatheory.run_monotone.
+Print Assumptions KLMetatheory.KLMetatheory.divergence_exhausts_every_fuel.
+Print Assumptions KLMetatheory.KLMetatheory.run_complete.
+Print Assumptions KLWellFormed.KLWellFormed.rule_ok.
+Print Assumptions KLWellFormed.KLWellFormed.next_preserves_wf.
+Print Assumptions KLWellFormed.KLWellFormed.step_preserves_wf.
+Print Assumptions KLTail.KLTail.tail_named_call.
+Print Assumptions KLTail.KLTail.stack_bound_enforced.
+Print Assumptions KLTail.KLTail.loop_silent_forever.
+Print Assumptions KLTail.KLTail.loop_diverges.
+Print Assumptions KLBridge.KLBridge.embed.
+Print Assumptions KLBridge.KLBridge.embed_final.
+Print Assumptions KLExamples.KLExamples.factorial.
+Print Assumptions KLExamples.KLExamples.write_failure.
+Print Assumptions KLExamples.KLExamples.exhaustion_does_not_imply_divergence.
