@@ -1,4 +1,4 @@
-.tools/
+.tools
 _build/
 __pycache__/
 *.vo
@@ -8,3 +8,6 @@ __pycache__/
 .*.aux
 
 .lia.cache
+/result
+/result-*
+ci-extra-ca.crt

@@ -422,3 +422,25 @@ unreachable. The runtime calls are inventoried: Chez library `+`, `event` and
 `doargerr`; SBCL `TWO-ARG-+`, `%DOUBLE-FLOAT`, `ALLOC-TRAMP` and the `brk`
 traps. Incompatibilities are listed there. Package 20 remains in progress: no
 instruction is yet checked against the ISA model in Rocq.
+
+## Pinned and reproducible build (E2E-03, in progress)
+
+See [BUILD](BUILD.md). `flake.nix` pins nixpkgs (nixos-24.11 revision
+`50ab793786d9de88ee30ec4e4c24fb4236fc2674`, narHash in `flake.lock`), the
+Shen-Scheme v0.52 release archive, the PR 117 overlay and the six Coq/OCaml
+Ubuntu snapshot debs. Each is pinned by the same sha256 as `scripts/bootstrap`
+or `rocq-packages.lock`. `nix build .#gates` runs `make test` and `make prove`
+in the Nix sandbox with no network. `make manifest` and `make manifest-compare`
+record and compare build identity: sources, tool payloads, the loaded runtime
+libraries, commands, flags, environment, and `.vo`/`.glob`/capture outputs.
+
+A host bootstrap build and a sandboxed Nix build of the same commit produced
+byte-identical `.vo` files (228), `.glob` files, generated proof inputs,
+captures and Rocq logs. The differences that remain are explained: coqc `.aux`
+files (absolute path and timings), Shen `run time` log lines, the launcher and
+glibc on each route, and recorded environment variables. Earthly `+test` was
+executed and matched the host Nix test manifest. Earthly `+gates`, `+host` and
+`+compare` are written but not executed. This is identity evidence only. It adds no theorem and does not change the audited count (357).
+Shen-Scheme is a prebuilt binary trusted by hash. Rebuilding Shen-Scheme and Chez
+from source, rebuilding Coq from source, pinning `/bin/sh`, and producing ARM
+artifacts all remain open. aarch64-linux is declared in the flake but not built.
