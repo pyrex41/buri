@@ -26,6 +26,7 @@ test:
 	./scripts/check-shen tests/observation.shen
 	./scripts/check-shen tests/ledger.shen
 	./scripts/check-shen tests/cl-lowering-capture.shen
+	./scripts/check-shen tests/primitives.shen
 	python3 tests/gates.py
 
 prove:

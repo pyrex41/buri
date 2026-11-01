@@ -847,3 +847,35 @@ Print Assumptions EqualityInductionSamples.EqualityInductionSamples.sample_injec
 Print Assumptions EqualityInductionSamples.EqualityInductionSamples.sample_forged_label.
 Print Assumptions EqualityInductionSamples.EqualityInductionSamples.sample_ill_sorted.
 Print Assumptions EqualityInductionSamples.EqualityInductionSamples.samples_agree.
+
+(* E2E-17 primitive wrappers: captured Shen-Scheme kl:=/assert-boolean and
+   Shen-CL Boolean, equality and integer arithmetic wrappers (docs/PRIMITIVES.md). *)
+From Buri Require PortReader PrimitiveSources SchemeWrappers CLWrappers.
+Print Assumptions SchemeWrappers.SchemeWrappers.scheme_wrappers_admitted.
+Print Assumptions SchemeWrappers.SchemeWrappers.assert_boolean_body.
+Print Assumptions SchemeWrappers.SchemeWrappers.guarded_if.
+Print Assumptions SchemeWrappers.SchemeWrappers.kl_eq_data.
+Print Assumptions SchemeWrappers.SchemeWrappers.stock_equality_refines_rule.
+Print Assumptions SchemeWrappers.SchemeWrappers.stock_matches_replacement.
+Print Assumptions SchemeWrappers.SchemeWrappers.stock_mixed_exactness.
+Print Assumptions SchemeWrappers.SchemeWrappers.model_ops_satisfiable.
+Print Assumptions CLWrappers.CLWrappers.cl_wrappers_admitted.
+Print Assumptions CLWrappers.CLWrappers.cons_wrapper.
+Print Assumptions CLWrappers.CLWrappers.string_wrapper.
+Print Assumptions CLWrappers.CLWrappers.number_wrapper.
+Print Assumptions CLWrappers.CLWrappers.equal_wrapper.
+Print Assumptions CLWrappers.CLWrappers.comparison_wrappers.
+Print Assumptions CLWrappers.CLWrappers.absequal_data.
+Print Assumptions CLWrappers.CLWrappers.equal_data.
+Print Assumptions CLWrappers.CLWrappers.eq_rewrite_safe.
+Print Assumptions CLWrappers.CLWrappers.model_equality_ops.
+Print Assumptions CLWrappers.CLWrappers.eq_rewrite_unsafe.
+Print Assumptions CLWrappers.CLWrappers.dp_int.
+Print Assumptions CLWrappers.CLWrappers.additive_int.
+Print Assumptions CLWrappers.CLWrappers.add_int.
+Print Assumptions CLWrappers.CLWrappers.subtract_int.
+Print Assumptions CLWrappers.CLWrappers.multiply_int.
+Print Assumptions CLWrappers.CLWrappers.multiply_zero_absorbs_symbol.
+Print Assumptions CLWrappers.CLWrappers.divide_int.
+Print Assumptions CLWrappers.CLWrappers.arith_refines_rules.
+Print Assumptions CLWrappers.CLWrappers.model_arith_ops.

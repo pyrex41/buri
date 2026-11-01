@@ -445,7 +445,7 @@
       "id": "E2E-17",
       "title": "Discharge every primitive and helper wrapper.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-05",
@@ -454,7 +454,76 @@
         "E2E-15",
         "E2E-16"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "review",
+          "artifact": "spec/primitives.json",
+          "claim": "Generated per-port matrix: every KLSyntax primitive and every registered Shen-Scheme/Shen-CL port primitive with its pinned implementation (definition byte span or inlining compiler clause), computed dependency closure down to individually named host operations with owning packages E2E-21..27, reviewed evidence label, and every named primitive contract in the repository. Bookkeeping, not proof."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeWrappers.v",
+          "names": [
+            "SchemeWrappers.SchemeWrappers.kl_eq_data",
+            "SchemeWrappers.SchemeWrappers.stock_equality_refines_rule",
+            "SchemeWrappers.SchemeWrappers.assert_boolean_body",
+            "SchemeWrappers.SchemeWrappers.guarded_if",
+            "SchemeWrappers.SchemeWrappers.stock_matches_replacement",
+            "SchemeWrappers.SchemeWrappers.stock_mixed_exactness",
+            "SchemeWrappers.SchemeWrappers.model_ops_satisfiable"
+          ],
+          "premises": [
+            "chez_equality_ops / chez_assert_ops: individually named Chez operation contracts (E2E-21/24)",
+            "first-order data domain: exact integers, ASCII symbols and strings, Booleans, (), pairs"
+          ],
+          "claim": "For every Chez operation table satisfying the named contracts, the actual pinned kl:= body returns rule_equal's answer on represented first-order data, and kl:_scm.assert-boolean makes (if (kl:_scm.assert-boolean T) A B) the KLambda if rule."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLWrappers.v",
+          "names": [
+            "CLWrappers.CLWrappers.cons_wrapper",
+            "CLWrappers.CLWrappers.string_wrapper",
+            "CLWrappers.CLWrappers.number_wrapper",
+            "CLWrappers.CLWrappers.equal_wrapper",
+            "CLWrappers.CLWrappers.comparison_wrappers",
+            "CLWrappers.CLWrappers.absequal_data",
+            "CLWrappers.CLWrappers.eq_rewrite_safe",
+            "CLWrappers.CLWrappers.eq_rewrite_unsafe",
+            "CLWrappers.CLWrappers.arith_refines_rules",
+            "CLWrappers.CLWrappers.multiply_zero_absorbs_symbol"
+          ],
+          "premises": [
+            "sbcl_equality_ops / sbcl_arith_ops: individually named SBCL operation contracts (E2E-21/24)",
+            "Boolean wrappers at the arity the optimizer emits; first-order data for absequal"
+          ],
+          "claim": "The actual pinned Shen-CL Boolean wrappers discharge CLLowering.primitive_contracts pc_cons/pc_string/pc_number/pc_greater*/pc_less*/pc_absequal at use arity; absequal is structural equality on data; the optimizer EQ rewrite is exact iff the quoted comparand is a symbol or NIL; the arithmetic wrappers are exact on all integers, divide never lets a ratio escape, and (* 0 non-number) answers 0 (a divergence)."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/PrimitiveSources.v",
+          "names": [
+            "SchemeWrappers.SchemeWrappers.scheme_wrappers_admitted",
+            "CLWrappers.CLWrappers.cl_wrappers_admitted"
+          ],
+          "claim": "Exact definition bytes of the pinned primitives.scm/chez-prelude.scm and primitives.lsp (blob-checked, byte spans recorded) are read by an independent Rocq reader and admitted by computed equality with the reviewed AST; make prove regenerates and diffs the package."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "tests/primitives.shen",
+          "claim": "Shen-Scheme host samples: the compiled literal = path (eqv?) answers false for the inexact 1.0 against 1 while the generic kl:= path answers true; (* 0 true) raises on Shen-Scheme. Sampled, not proof."
+        },
+        {
+          "kind": "native-sample",
+          "artifact": "ports/shen-cl-primitive-samples.lisp",
+          "claim": "Opt-in SBCL 2.6.8 samples of the selected pinned primitives.lsp definitions: exact bignum arithmetic, divide-by-zero, no ratio escape, (* 0 true) = 0, EQ versus absequal on lists, strings and mixed numbers."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-primitives.py",
+          "claim": "Seven altered copies of the pinned wrapper bytes (eqv? for numbers, wrong assert predicate, dropped tail comparison, swapped Boolean, EQ for numbers, ratio escape, wrong zero product) are refused by Rocq admission in make prove."
+        }
+      ],
       "acceptance": "no root is\nhidden behind an aggregate \u201cruntime behaves correctly\u201d assumption.",
       "details": "docs/END-TO-END-PLAN.md"
     },

@@ -67,3 +67,12 @@ echo "CL lowering: sampled agreement checked by Rocq ($(grep -c '^Example' "$tmp
 
 # 4. Native SBCL samples of the named primitive contracts and Shen macros.
 "$SBCL" --script ports/shen-cl-contracts.lisp "$SHEN_CL_SOURCE/src/primitives.lsp"
+
+# 5. E2E-17: the vendored primitives.lsp is the pinned checkout file, and SBCL
+#    samples of the proved wrappers (exact arithmetic, no ratio escape, the
+#    zero-absorbs-non-number divergence, EQ versus absequal).
+cmp "$SHEN_CL_SOURCE/src/primitives.lsp" ports/upstream/shen-cl/primitives.lsp
+cmp "$SHEN_CL_SOURCE/src/compiler.shen" ports/upstream/shen-cl/compiler.shen
+cmp "$SHEN_CL_SOURCE/src/overwrite.lsp" ports/upstream/shen-cl/overwrite.lsp
+"$SBCL" --script ports/shen-cl-primitive-samples.lisp ports/upstream/shen-cl/primitives.lsp | grep -qx BURI_CL_PRIMITIVE_SAMPLES_OK
+echo "CL primitive wrappers: native SBCL samples passed."

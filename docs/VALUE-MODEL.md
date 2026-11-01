@@ -63,8 +63,11 @@ by every step and every environment response (`step_preserves_wf`).
   samples `(= 1 1.0)` as `true` through `eval-kl`. The Scheme compiler emits
   `eqv?` when a literal number occurs in `=`; for mixed exactness `eqv?` is false
   in Scheme, so compiled and evaluated code may disagree. This is recorded as a
-  **candidate actual disagreement**; it has not been confirmed natively for the
-  compiled path and must be resolved by E2E-15/E2E-17.
+  **actual disagreement**, now confirmed natively (E2E-17, docs/PRIMITIVES.md):
+  `(= X 1)` with X the inexact 1.0 is false on the compiled and eval-kl literal
+  path and true through `kl:=` (sampled, `tests/primitives.shen`;
+  `OB-SCHEME-EQ-LITERAL`). The literal lowering is safe exactly when the other
+  operand is not inexact.
 
 ## Per-port representation obligation matrix
 
@@ -79,8 +82,8 @@ or on Common Lisp language facts and are **not** sampled here.
 | Empty list | `VNil`, not false | `'()` | `NIL`, which is also CL false and a symbol | CL must never let `NIL` act as false or symbol at Shen level (E2E-16/21) |
 | Integers | unbounded `Z` | exact integers | integers | Representation is direct; overflow-free bignum contracts (E2E-17, 24) |
 | Inexact | binary64, profile slots | flonums | default float format must be double | Pin slots to IEEE semantics; CL reader float format (E2E-05, 17) |
-| Integer division | exact or `int_div_inexact` | `non-rational-/` (proved in StockDivision.v for exact inputs) | ratio-producing `/` must be converted | No ratio escapes (E2E-17) |
-| Mixed `=` | `inexact_cmp PEqual` | `eqv?` lowering vs `=` (candidate disagreement) | `=`/`eql` choice | Resolve, then prove (E2E-15/16/17) |
+| Integer division | exact or `int_div_inexact` | `non-rational-/` (proved in StockDivision.v for exact inputs) | `shen-cl.divide` proved: exact quotient, DIVISION-BY-ZERO, or host double, never a ratio (`CLWrappers.divide_int`) | Pin `int_div_inexact` per port (E2E-17, OB-NUMERIC-PROFILE) |
+| Mixed `=` | `inexact_cmp PEqual` | `eqv?` literal lowering vs `kl:=`: confirmed disagreement (sampled) | `absequal` uses `=` (1 = 1.0); the EQ rewrite is exact only for symbolic literals (`CLWrappers.eq_rewrite_safe`) | Fix or exclude the Scheme literal lowering (E2E-15/17) |
 | Strings | code-point sequences | Unicode strings; sampled `(string->n (n->string 955))` = 955 | Unicode character strings | Encoding at IO boundary is bytes; file/stream decoding contract (E2E-11, 27) |
 | `str` of a string | profile slot `str_other` | sampled: quoted, `(str "a")` = `"\"a\""`; `(str [])` = `"()"` | unsampled | Pin printing (E2E-17) |
 | Symbols | code-point names | Chez symbols (package prefix conventions) | CL symbols in `SHEN` package | Name/package identity (E2E-11, 21) |

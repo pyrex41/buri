@@ -189,7 +189,12 @@ Premises, all explicit in the statements:
 ## Next composition
 
 Cover `emit-cond-clauses` (which also calls the optimizer), discharge the named
-contracts from captured `primitives.lsp` bodies (E2E-17), relate
+contracts from captured `primitives.lsp` bodies (E2E-17 has started:
+`rocq/CLWrappers.v` proves `pc_cons`, `pc_string`, `pc_number`, the four
+comparison fields and `pc_absequal` at the arity the optimizer emits, and that
+`qsafe` is exactly the safe domain of the `EQ` rewrite; see
+[PRIMITIVES](PRIMITIVES.md). The record's all-arity form is stronger than the
+bodies justify and should be narrowed), relate
 `compile-expression` and `bind-accessor-chains` to the KLambda semantics, and
 share a language-level Boolean contract with the Scheme port while retaining
 separate host syntax and semantics. Coalton is neither a prerequisite nor proof

@@ -102,7 +102,12 @@ are each refused by Rocq.
   (the handler syntax is fixed; its semantics is not modelled by Native).
 * **EQ1-NUMERIC**: `kl:=` numeric equality and `buri.nat?` digit-spelling are
   stated contracts (the reference kernel takes any non-negative integer
-  budget).
+  budget). The `kl:=` half is narrowed by E2E-17:
+  `SchemeWrappers.stock_matches_replacement` proves that the stock pinned
+  `kl:=` equals the `equal?` replacement used here on first-order data, under
+  named Chez contracts ([PRIMITIVES](PRIMITIVES.md)). The two differ on mixed
+  exactness, which lies outside the proved data fragment; that EQ-1 inputs
+  stay inside the fragment is not yet proved. The digit-spelling half remains.
 * **EQ1-TERM**: termination of the captured kernel on finite certificates is
   not proved (the reference kernel is total by construction).
 * Chez-to-Native simulation, as for every Native result (E2E-32).

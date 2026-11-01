@@ -70,3 +70,13 @@ for name in kernel_helpers:
     kernel_forms.append(form)
 if Path('ports/kernel-list.shen').read_text().split('(tc -)\n', 1)[1] != '\n\n'.join(kernel_forms) + '\n':
     raise SystemExit('Extracted kernel list helpers differ beyond buri.kernel. renaming')
+
+# E2E-17: vendored pinned port sources read by the primitive inventory.
+for path, expected in [
+    ('ports/upstream/chez-prelude.scm', '18d1ce9a8dc7073ec2be69fd9c53b9fb70d77ef3'),
+    ('ports/upstream/shen-cl/primitives.lsp', 'f9b11c8a0b57c8492e66094d5e236a8711983e7a'),
+    ('ports/upstream/shen-cl/overwrite.lsp', '8108c9d4a70c61fb2e9d5ab6a59df08a9c9c5096'),
+    ('ports/upstream/shen-cl/compiler.shen', '2d624377c02030f9513769f7bad11e84330b8c5a')]:
+    data = Path(path).read_bytes()
+    if hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest() != expected:
+        raise SystemExit('Pinned vendored source blob mismatch: ' + path)
