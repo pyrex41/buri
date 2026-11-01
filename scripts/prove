@@ -6,7 +6,7 @@ mkdir -p _build/rocq
 rm -f _build/EquationBridge.v _build/NativeOutput.v _build/compiler-output.sexp \
  _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v _build/EncoderSource.v \
  _build/encoder-kl.bits _build/encoder-kl.sexp _build/EncoderKLambda.v \
- _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v _build/StockDivisionInput.v _build/OrderCallInput.v _build/ObserverFormsInput.v _build/IOReadInput.v _build/io-read.bits _build/io-read.bits.source _build/io-read.bits.sexp _build/order-call.bits _build/order-call.bits.source _build/order-call.bits.sexp _build/EqualityCoreInput.v _build/EqualitySealInput.v _build/equality-core.bits _build/equality-core.bits.source _build/equality-core.bits.sexp _build/equality-core-for-seal.bits _build/equality-core-for-seal.bits.source _build/equality-core-for-seal.bits.sexp _build/equality-seal.bits _build/equality-seal.bits.source _build/equality-seal.bits.sexp
+ _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v _build/StockDivisionInput.v _build/OrderCallInput.v _build/ObserverFormsInput.v _build/IOReadInput.v _build/io-read.bits _build/io-read.bits.source _build/io-read.bits.sexp _build/order-call.bits _build/order-call.bits.source _build/order-call.bits.sexp _build/KernelListInput.v _build/kernel-list.bits _build/kernel-list.bits.source _build/kernel-list.bits.sexp _build/EqualityCoreInput.v _build/EqualitySealInput.v _build/equality-core.bits _build/equality-core.bits.source _build/equality-core.bits.sexp _build/equality-core-for-seal.bits _build/equality-core-for-seal.bits.source _build/equality-core-for-seal.bits.sexp _build/equality-seal.bits _build/equality-seal.bits.source _build/equality-seal.bits.sexp
 scripts/rocq coqc --version > _build/rocq-version.log
 grep -q 'version 8.18.0' _build/rocq-version.log || { cat _build/rocq-version.log; exit 1; }
 # Require a fresh image and regenerate the bridge from actual loaded equations.
@@ -75,12 +75,13 @@ python3 scripts/package-adapter.py _build/adapter.bits _build/AdapterInput.v
 python3 scripts/check-adapter-package.py _build/adapter.bits _build/AdapterInput.v
 diff -u rocq/AdapterInput.v _build/AdapterInput.v
 python3 scripts/check-upstream-pass.py
-for profile in bootstrap observer compiler_pass order_call io_read equality_core equality_seal; do
+for profile in bootstrap observer compiler_pass order_call kernel_list io_read equality_core equality_seal; do
  case "$profile" in
   bootstrap) source=shen/observe-constructor.shen; capture=bootstrap; module=BootstrapInput ;;
   observer) source=shen/observe-encoder.shen; capture=observer; module=ObserverInput ;;
   compiler_pass) source=ports/compiler-merge.shen; capture=compiler-pass; module=CompilerPassInput ;;
   order_call) source=ports/compiler-order.shen; capture=order-call; module=OrderCallInput ;;
+  kernel_list) source=ports/kernel-list.shen; capture=kernel-list; module=KernelListInput ;;
   io_read) source=ports/io-read.shen; capture=io-read; module=IOReadInput ;;
   equality_core) source=shen/equality-core.shen; capture=equality-core; module=EqualityCoreInput ;;
   equality_seal) source=shen/sealed-equality.shen; capture=equality-seal; module=EqualitySealInput ;;
