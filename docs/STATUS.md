@@ -357,3 +357,46 @@ formal semantics only: `shen/klambda.shen` is not yet related to it (E2E-07),
 no port is related to it, inexact numerics are unpinned, and native probes
 recorded in VALUE-MODEL.md (including a Shen-Scheme `cond` fall-through that
 returns a host void value) are sampled observations, not proofs.
+
+## Release charter and obligation ledger (E2E-01/02, seeding E2E-35)
+
+[RELEASE-CHARTER](RELEASE-CHARTER.md) adds a versioned charter
+(`spec/release-charter.json`, v1), an obligation graph (`spec/obligations.json`),
+and a Shen coverage checker (`shen/ledger.shen`). Both data files are planning
+and bookkeeping data, not proof evidence. The charter records the existing pins
+(PR117 overlay hash, Shen-Scheme v0.52 archives and source, Shen-CL `4844072d`
+capture source, Coq 8.18). It also marks what is **not** pinned: SBCL, the Chez
+version inside the host archive (identity only), the kernel source tree, the
+ARM architecture/ABI/CPU features, the OS profile, a Linux AArch64 host archive
+and compiler modes. It names 74 required features (16 provisional exclusions
+with registered enforcement tests) and seven separately defined property kinds,
+each with a semantics target and an owning package.
+
+The graph harvests TRUST, TRUST-AUDIT, SIX-STAGES, STATUS and the port documents
+into 97 obligations. The status counts are 8 discharged, 24 partial, 46 open,
+13 assumed, 2 refuted and 4 foundation. Each obligation has one of four kinds:
+model proof, implementation correspondence, artifact correspondence or
+deployment identity. Every discharged obligation is a dependency-free model
+proof. No implementation, artifact or deployment obligation is discharged.
+Two genuine cycles (heap/GC and checker bootstrap) are tagged joint invariants
+and can never be counted as discharged. The older `buri.obligations` inventory
+maps entry-by-entry into the graph, and superseded or refuted statements are
+retained as history.
+
+The checker reads ledger bytes through an inert JSON reader. It enforces:
+
+- owner and dependency coverage;
+- an acyclic package plan;
+- justified obligation cycles;
+- evidence-kind rules: sampled, exhaustive-host and ground evidence cannot
+  discharge universal obligations, and cited theorems must be in the
+  `rocq/Audit.v` inventory;
+- closure over open premises;
+- honest package completion;
+- a frozen required-feature fingerprint, so features cannot be silently dropped.
+
+`tests/ledger.shen` adds 56 regressions to `make test`: 7 exclusion-enforcement
+tests, 6 inert-reader cases, and real-ledger and hostile variants. These are
+bookkeeping checks. They add no theorem and leave the 357-statement audit
+unchanged. The checker itself is unproved, and theorem-to-obligation fit is
+checked by name only. E2E-01, E2E-02 and E2E-35 are in progress, not complete.

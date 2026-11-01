@@ -37,7 +37,7 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK ([\w-]+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 20 and set(suite_counts) == {'observation', 'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance', 'scheme-port-merge', 'cl-port-guard'}, 'Incomplete suite gates'
+assert len(rows) == 21 and set(suite_counts) == {'observation', 'ledger', 'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance', 'scheme-port-merge', 'cl-port-guard'}, 'Incomplete suite gates'
 assert 'BURI_ROCQ_OK 397 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
 assert checks.count('Rejected proof mutation:') == 71
 assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['22']

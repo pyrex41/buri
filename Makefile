@@ -23,6 +23,7 @@ test:
 	./scripts/check-shen tests/scheme-port-merge.shen
 	./scripts/check-shen tests/cl-port-guard.shen
 	./scripts/check-shen tests/observation.shen
+	./scripts/check-shen tests/ledger.shen
 	python3 tests/gates.py
 
 prove:

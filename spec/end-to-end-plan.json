@@ -15,10 +15,15 @@
       "id": "E2E-01",
       "title": "Freeze the completion contract.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [],
-      "evidence": [],
+      "evidence": [
+        "spec/release-charter.json",
+        "docs/RELEASE-CHARTER.md",
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
       "acceptance": "each\nrequired feature and claim has a named semantics and an owning work package;\neach provisional exclusion has an enforcement test and a scheduled closure step.\nRemoving a required feature changes the release charter rather than completing it.",
       "details": "docs/END-TO-END-PLAN.md"
     },
@@ -26,12 +31,17 @@
       "id": "E2E-02",
       "title": "Replace prose-only gaps with an obligation graph.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-01"
       ],
-      "evidence": [],
+      "evidence": [
+        "spec/obligations.json",
+        "docs/RELEASE-CHARTER.md",
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
       "acceptance": "every current gap\nmaps to a package below; no dependency cycles are discharged by assuming each\nother. Joint invariants or well-founded constructions must close such cycles.",
       "details": "docs/END-TO-END-PLAN.md"
     },
@@ -59,8 +69,9 @@
         "E2E-01"
       ],
       "evidence": [
-        "rocq/Observation.v: refinement_preserves_errors(_res), refinement_preserves_events, refinement_preserves_failed_writes, divergence_not_hidden, diverging_target_needs_diverging_source, terminating_source_forbids_divergence, strict_refinement_preserves_resource_failure, exhaustion_claims_only_prefix, terminates_excludes_divergence, wrong_excludes_divergence, terminates_unique (universal)",
-        "shen/observation.shen + tests/observation.shen (ground checks; no proved correspondence to Observation.v)",
+        "rocq/Observation.v",
+        "shen/observation.shen",
+        "tests/observation.shen",
         "docs/KLAMBDA-SEMANTICS.md"
       ],
       "acceptance": "no later pass can hide an error, failed write or infinite internal loop by\nchoosing a weaker observation vocabulary.",
@@ -76,9 +87,9 @@
         "E2E-04"
       ],
       "evidence": [
-        "rocq/KLValue.v: values, exceptions, store, semantic profile, kl_eq, vok_mono (universal)",
-        "rocq/KLWellFormed.v: step_preserves_wf (universal)",
-        "docs/VALUE-MODEL.md: numeric profile (inexact slots unpinned) and per-port obligation matrix with sampled Shen-Scheme probes"
+        "rocq/KLValue.v",
+        "rocq/KLWellFormed.v",
+        "docs/VALUE-MODEL.md"
       ],
       "acceptance": "each primitive domain and every accepted boundary value has defined meaning.",
       "details": "docs/END-TO-END-PLAN.md"
@@ -94,11 +105,12 @@
         "E2E-05"
       ],
       "evidence": [
-        "rocq/KLSyntax.v canonical_kl_surface; rocq/KLSemantics.v rule table for 10 special forms and 36 primitives",
-        "rocq/KLMetatheory.v: progress, stuck_iff_wrong, step_deterministic, closed_deterministic, run_sound, run_monotone, run_complete, divergence_exhausts_every_fuel (universal)",
-        "rocq/KLTail.v: tail rules, stack_bound_enforced, loop_diverges (universal)",
-        "rocq/KLBridge.v: embed of Lambda.v (universal, terminating runs)",
-        "rocq/KLExamples.v (ground derivations)"
+        "rocq/KLSyntax.v",
+        "rocq/KLSemantics.v",
+        "rocq/KLMetatheory.v",
+        "rocq/KLTail.v",
+        "rocq/KLBridge.v",
+        "rocq/KLExamples.v"
       ],
       "acceptance": "every\nrequired KLambda form and primitive has a semantic rule; no full-language claim\nis made from the existing first-order fragment alone.",
       "details": "docs/END-TO-END-PLAN.md"
@@ -604,14 +616,17 @@
       "id": "E2E-35",
       "title": "Make closure enforceable in CI and deployment.",
       "lane": "release-engineering",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-02",
         "E2E-03",
         "E2E-34"
       ],
-      "evidence": [],
+      "evidence": [
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
       "acceptance": "modifying\nany correctness-relevant input invalidates the old proof bundle, and no mutable\nlabel or forgeable success token authorizes execution. Nix/Earthbuild repeatability\nand signed provenance support this process but do not replace semantic checks.",
       "details": "docs/END-TO-END-PLAN.md"
     },
