@@ -1174,6 +1174,16 @@
      "kind": "universal-theorem",
      "ref": "OrderCallCorrect.captured_two_computations_preserve",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "OrderCallPreserve.OrderCallPreserve.order_call_preserves",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.order_then_merge_preserves",
+     "establishes": "implementation-correspondence"
     }
    ],
    "completion_evidence": "Composition through every order-call-inputs branch plus occurrence/gensym correspondence.",
@@ -1232,6 +1242,16 @@
      "kind": "universal-theorem",
      "ref": "CompilerBindings.merge_many_preserves_effects",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.order_then_merge_preserves",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.let_clause_preserves",
+     "establishes": "implementation-correspondence"
     }
    ],
    "completion_evidence": "Discharge decoding premises and model-to-Chez correspondence (OB-GENERATED-SCHEME-SEMANTICS, OB-CHEZ-COMPILATION).",
@@ -1271,16 +1291,43 @@
    "scope": "universal",
    "owner": "E2E-15",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "emit-if / emit-cond / force-boolean",
    "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen",
    "statement": "Branch laziness and condition domain retained.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
-   "completion_evidence": "Per-pass proofs over the actual source.",
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeBranches.SchemeBranches.emit_if_exact",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeBranches.SchemeBranches.emit_cond_exact",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeBranches.SchemeBranches.emit_cond_clauses_exact",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeBranches.SchemeBranches.force_returns",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.strict_if",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Per-pass proofs over the actual source (captured emit-if/emit-cond/force-boolean denotations and strict_if are proved); remaining: the compile-expression dispatch that wraps the forced test into a kl:_scm.assert-boolean call, the boolean-yielding-head premise of yields-boolean?, and the cond fall-through defect (OB-SCHEME-COND-ADMISSION).",
    "sources": [
-    "docs/PORTS.md"
+    "docs/PORTS.md",
+    "docs/SCHEME-PORT.md"
    ],
    "history": []
   },
@@ -1315,7 +1362,8 @@
    "statement": "Equality implements the admitted value relation including closures and vectors.",
    "premises": [],
    "depends_on": [
-    "OB-VECTOR-HEAP"
+    "OB-VECTOR-HEAP",
+    "OB-SCHEME-EQV-EXACT"
    ],
    "evidence": [
     {
@@ -1332,12 +1380,28 @@
      "kind": "universal-theorem",
      "ref": "SchemeWrappers.SchemeWrappers.scheme_wrappers_admitted",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeBranches.SchemeBranches.emit_equality_exact",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.numeric_equality_preserves",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.eqv_exact_agrees",
+     "establishes": "implementation-correspondence"
     }
    ],
    "completion_evidence": "Primitive refinement against SEM-VALUE equality.",
    "sources": [
     "docs/PORTS.md",
-    "docs/PRIMITIVES.md"
+    "docs/PRIMITIVES.md",
+    "docs/SCHEME-PORT.md"
    ],
    "history": [
     {
@@ -1456,7 +1520,13 @@
     "docs/PRIMITIVES.md",
     "docs/VALUE-MODEL.md"
    ],
-   "history": [],
+   "history": [
+    {
+     "source": "docs/VALUE-MODEL.md",
+     "recorded": "E2E-15 (Wave B) independently refuted the same eqv? literal lowering as OB-SCHEME-EQV-LITERAL.",
+     "reconciliation": "Same defect, two independent counterexamples; both remain refuted until the port lowering is changed and proved."
+    }
+   ],
    "replaced_by": "OB-SCHEME-EQUALITY"
   },
   {
@@ -2703,6 +2773,140 @@
    "sources": [
     "spec/six-stages.json",
     "docs/SIX-STAGES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-COND-FALLTHROUGH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "refuted",
+   "boundary": "emit-cond with no true clause",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen emit-cond",
+   "statement": "The Scheme cond emitted for a KLambda cond raises the profile error XCondFail when no clause test is true.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "tests/scheme-compose.shen",
+     "test": "cond-no-true-clause-falls-through",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.cond_without_true_unread",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Refuted on Shen-Scheme v0.52: (eval-kl [cond [false 1]]) returns #<void> without raising; the emitted (cond (#f 1)) has no else clause. Replaced by the admission/fix obligation.",
+   "sources": [
+    "docs/SCHEME-PORT.md",
+    "docs/VALUE-MODEL.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-SCHEME-COND-ADMISSION"
+  },
+  {
+   "id": "OB-SCHEME-COND-ADMISSION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "open",
+   "boundary": "cond admission or emitted error clause",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen emit-cond",
+   "statement": "Either every admitted KLambda cond ends with a literal true clause, or the port emits an else clause raising XCondFail; the reader admits only emitted conds with a literal #t test.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.cond_without_true_unread",
+     "establishes": "model-proof"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeBranches.SchemeBranches.emit_cond_exact",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "An admission checker for KLambda input proved to reject non-exhaustive cond, or a port change emitting an error else clause with a preservation proof.",
+   "sources": [
+    "docs/SCHEME-PORT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-EQV-LITERAL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "refuted",
+   "boundary": "eqv? lowering of = with a literal number",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen emit-equality-check",
+   "statement": "Lowering KLambda = to eqv? whenever a literal number occurs agrees with KLambda = (and with the kl:= path) on all numbers.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "tests/scheme-compose.shen",
+     "test": "eqv-literal-mixed-exactness-counterexample",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted on Shen-Scheme v0.52: (= 1 (* 2 (/ 1 2))) is false through the eqv? lowering while the same comparison through variables (kl:=) is true. Replaced by the exact-operand obligation.",
+   "sources": [
+    "docs/SCHEME-PORT.md",
+    "docs/VALUE-MODEL.md"
+   ],
+   "history": [
+    {
+     "source": "docs/VALUE-MODEL.md",
+     "recorded": "E2E-17 (Wave B) independently refuted the same eqv? literal lowering as OB-SCHEME-EQ-LITERAL.",
+     "reconciliation": "Same defect, two independent counterexamples; both remain refuted until the port lowering is changed and proved."
+    }
+   ],
+   "replaced_by": "OB-SCHEME-EQV-EXACT"
+  },
+  {
+   "id": "OB-SCHEME-EQV-EXACT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "partial",
+   "boundary": "eqv? lowering restricted to exact operands",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen emit-equality-check",
+   "statement": "The eqv? lowering preserves KLambda = when both operand values are exact integers; mixed exactness is excluded by admission or the port emits numeric =.",
+   "premises": [],
+   "depends_on": [
+    "OB-NUMERIC-PROFILE"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.eqv_exact_agrees",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.numeric_equality_preserves",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeCompose.SchemeCompose.eqv_mixed_unmodelled",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "An operand-exactness admission (or a port change to = for mixed exactness) with a proof relating the compiled comparison to the numeric profile.",
+   "sources": [
+    "docs/SCHEME-PORT.md"
    ],
    "history": []
   }

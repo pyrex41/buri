@@ -879,3 +879,33 @@ Print Assumptions CLWrappers.CLWrappers.multiply_zero_absorbs_symbol.
 Print Assumptions CLWrappers.CLWrappers.divide_int.
 Print Assumptions CLWrappers.CLWrappers.arith_refines_rules.
 Print Assumptions CLWrappers.CLWrappers.model_arith_ops.
+(* E2E-15 Wave B: compiler branches, pass composition, cond/eqv relation. *)
+From Buri Require Import CompilerBranchesInput KernelElementInput SchemeBranches SchemeCompose.
+Print Assumptions CompilerBranchesInput.compiler_branches_exact.
+Print Assumptions CompilerBranchesInput.compiler_branches_names.
+Print Assumptions CompilerBranchesInput.compiler_branches_complete.
+Print Assumptions KernelElementInput.kernel_element_exact.
+Print Assumptions KernelElementInput.kernel_element_names.
+Print Assumptions KernelElementInput.kernel_element_complete.
+Print Assumptions SchemeBranches.SchemeBranches.conv_seq.
+Print Assumptions SchemeBranches.SchemeBranches.denotes_call.
+Print Assumptions SchemeBranches.SchemeBranches.kernel_element_returns.
+Print Assumptions SchemeBranches.SchemeBranches.yields_returns.
+Print Assumptions SchemeBranches.SchemeBranches.force_returns.
+Print Assumptions SchemeBranches.SchemeBranches.emit_let_exact.
+Print Assumptions SchemeBranches.SchemeBranches.emit_if_exact.
+Print Assumptions SchemeBranches.SchemeBranches.emit_cond_clauses_exact.
+Print Assumptions SchemeBranches.SchemeBranches.emit_cond_exact.
+Print Assumptions SchemeBranches.SchemeBranches.emit_equality_exact.
+Print Assumptions SchemeBranches.SchemeBranches.merge_shaped.
+Print Assumptions SchemeCompose.SchemeCompose.order_target.
+Print Assumptions SchemeCompose.SchemeCompose.order_then_merge_preserves.
+Print Assumptions SchemeCompose.SchemeCompose.emit_let_success.
+Print Assumptions SchemeCompose.SchemeCompose.let_clause_preserves.
+Print Assumptions SchemeCompose.SchemeCompose.world_assert_contract.
+Print Assumptions SchemeCompose.SchemeCompose.strict_if.
+Print Assumptions SchemeCompose.SchemeCompose.dcases_no_true.
+Print Assumptions SchemeCompose.SchemeCompose.cond_without_true_unread.
+Print Assumptions SchemeCompose.SchemeCompose.eqv_exact_agrees.
+Print Assumptions SchemeCompose.SchemeCompose.eqv_mixed_unmodelled.
+Print Assumptions SchemeCompose.SchemeCompose.numeric_equality_preserves.

@@ -563,4 +563,43 @@ bodies justify.
 Seven altered byte copies are refused (proof mutations 90). Open: vectors,
 closures, floats, `numeric-equal`, 9 assumed `primitive_contracts` fields,
 every `none` entry, and all host operations. E2E-17 is not complete.
+
+## Shen-Scheme pass composition and the let/if/cond/equality branches (E2E-15, in progress)
+
+The exact upstream `yields-boolean?`, `force-boolean`, `emit-symbol`,
+`emit-let`, `emit-if`, `emit-cond`, `emit-cond-clauses` and
+`emit-equality-check`, read inside the exact upstream package header, and the
+kernel `element?` are new captures (`compiler_branches`, `kernel_element`),
+regenerated and diffed by `make prove`. `SchemeBranches` proves exact
+denotations of every captured emitter for ARBITRARY `compile-expression`,
+`order-call` and other uncaptured operations: every completed outcome, final
+state and compile-time trace equals a stated sequencing of sub-compilations
+(literal tests compile only the selected branch; other tests are forced
+boolean; equality selects eq?/eqv?/equal?/null?/fallback as the source says).
+`SchemeCompose` composes the proved passes on the captured code:
+`order_then_merge_preserves` (captured merge on the let around any successful
+captured order-call output preserves outcomes, error payloads, state and trace
+of the unordered let) and `let_clause_preserves` (captured emit-let, ordering
+and merge: the let clause as `compile-expression` invokes it, with the two
+uncaptured `compile-expression` calls as named premises); `strict_if` (forced
+conditions keep the boolean domain and branch laziness);
+`numeric_equality_preserves` (eqv? lowering through the captured order-call).
+
+Two **confirmed port disagreements** are recorded as refuted obligations with
+sampled counterexamples, not hidden: a cond with no true clause returns
+`#<void>` on Shen-Scheme (profile: `XCondFail`; `cond_without_true_unread`
+proves such emitted conds are outside the reader), and `=` with a literal
+number lowers to `eqv?`, which disagrees with the `kl:=` path on mixed
+exactness (`(= 1 (* 2 (/ 1 2)))` is false; through variables it is true).
+Successors `OB-SCHEME-COND-ADMISSION` (open) and `OB-SCHEME-EQV-EXACT`
+(partial, exact integers proved) carry the fix. Twenty sampled Shen checks
+(two of them the counterexamples) and six new rejected mutants are separate
+evidence.
+
+Open: the `compile-expression` dispatcher (closures and `scm.` escapes keep
+it outside the first-order reader), `unbound-symbol?` (its `,` symbol is
+outside the capture codec), the boolean-yielding-head premise, the KLambda
+profile to decoded Scheme relation, termination with the real `gensym`, boot
+image kernel identity and native Chez execution. E2E-15 is not complete.
+
 Twenty-eight additional statements join the assumption audit (522 total).

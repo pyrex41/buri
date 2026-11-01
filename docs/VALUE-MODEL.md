@@ -68,6 +68,9 @@ by every step and every environment response (`step_preserves_wf`).
   path and true through `kl:=` (sampled, `tests/primitives.shen`;
   `OB-SCHEME-EQ-LITERAL`). The literal lowering is safe exactly when the other
   operand is not inexact.
+  Independently (E2E-15 Wave B, docs/SCHEME-PORT.md): the `(= 1 1.0)` reader
+  sample is exact 1, but `(= 1 (* 2 (/ 1 2)))` is `false` on the compiled path and
+  `true` through `kl:=` (OB-SCHEME-EQV-LITERAL, OB-SCHEME-EQV-EXACT).
 
 ## Per-port representation obligation matrix
 
@@ -83,7 +86,7 @@ or on Common Lisp language facts and are **not** sampled here.
 | Integers | unbounded `Z` | exact integers | integers | Representation is direct; overflow-free bignum contracts (E2E-17, 24) |
 | Inexact | binary64, profile slots | flonums | default float format must be double | Pin slots to IEEE semantics; CL reader float format (E2E-05, 17) |
 | Integer division | exact or `int_div_inexact` | `non-rational-/` (proved in StockDivision.v for exact inputs) | `shen-cl.divide` proved: exact quotient, DIVISION-BY-ZERO, or host double, never a ratio (`CLWrappers.divide_int`) | Pin `int_div_inexact` per port (E2E-17, OB-NUMERIC-PROFILE) |
-| Mixed `=` | `inexact_cmp PEqual` | `eqv?` literal lowering vs `kl:=`: confirmed disagreement (sampled) | `absequal` uses `=` (1 = 1.0); the EQ rewrite is exact only for symbolic literals (`CLWrappers.eq_rewrite_safe`) | Fix or exclude the Scheme literal lowering (E2E-15/17) |
+| Mixed `=` | `inexact_cmp PEqual` | `eqv?` literal lowering vs `kl:=`: confirmed disagreement (sampled; OB-SCHEME-EQ-LITERAL and OB-SCHEME-EQV-LITERAL record the same defect from E2E-17 and E2E-15) | `absequal` uses `=` (1 = 1.0); the EQ rewrite is exact only for symbolic literals (`CLWrappers.eq_rewrite_safe`) | Fix or exclude the Scheme literal lowering (E2E-15/17) |
 | Strings | code-point sequences | Unicode strings; sampled `(string->n (n->string 955))` = 955 | Unicode character strings | Encoding at IO boundary is bytes; file/stream decoding contract (E2E-11, 27) |
 | `str` of a string | profile slot `str_other` | sampled: quoted, `(str "a")` = `"\"a\""`; `(str [])` = `"()"` | unsampled | Pin printing (E2E-17) |
 | Symbols | code-point names | Chez symbols (package prefix conventions) | CL symbols in `SHEN` package | Name/package identity (E2E-11, 21) |
