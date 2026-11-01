@@ -173,6 +173,7 @@
               runHook preBuild
               ln -s ${dotTools} .tools
               ${lib.concatMapStringsSep "\n" (t: "make ${t}") targets}
+              make manifest-test
               python3 scripts/build-manifest.py write _build/manifest.json
               runHook postBuild
             '';

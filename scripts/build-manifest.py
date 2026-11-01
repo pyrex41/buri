@@ -10,12 +10,17 @@ theorem validity; Coq/coqchk under `make prove` does that.
 
 usage: build-manifest.py write OUT.json
        build-manifest.py compare A.json B.json
+
+compare exit status: 0 identical (route differences explained), 1 identity
+difference, 2 unusable manifest, 3 identical bytes but different recorded
+environment variables.
 """
 import hashlib
 import json
 import os
 import pathlib
 import platform
+import re
 import resource
 import subprocess
 import sys
@@ -85,8 +90,10 @@ def sources():
 
 
 def run(command, **kwargs):
+    # A nested `make manifest` must not leak MAKEFLAGS/MAKELEVEL into probes.
+    env = {k: v for k, v in os.environ.items() if k not in ('MAKEFLAGS', 'MAKELEVEL', 'MFLAGS')}
     try:
-        result = subprocess.run(command, cwd=root, capture_output=True, text=True, **kwargs)
+        result = subprocess.run(command, cwd=root, capture_output=True, text=True, env=env, **kwargs)
     except OSError as error:
         return {'command': command, 'error': str(error)}
     return {'command': command, 'returncode': result.returncode,
@@ -197,7 +204,7 @@ def commands():
     prove = (root / 'scripts/prove').read_text().splitlines()
     rocq = (root / 'scripts/rocq').read_text().splitlines()
     return {
-        'make_dry_run': run(['make', '-n', 'test', 'prove']).get('stdout', '').splitlines(),
+        'make_dry_run': run(['make', '--no-print-directory', '-n', 'test', 'prove']).get('stdout', '').splitlines(),
         'coq_invocations': [line.strip() for line in prove if 'scripts/rocq' in line],
         'coq_launcher': [line.strip() for line in rocq if line.strip().startswith(('ulimit', 'export', 'exec'))],
         'shen_launcher': [line.strip() for line in (root / 'scripts/shen').read_text().splitlines()
@@ -205,11 +212,16 @@ def commands():
     }
 
 
+# Wall-clock lines Shen-Scheme prints after each top-level form in test/export logs.
+VOLATILE_LOG_LINE = re.compile(rb'^run time: [0-9.e-]+ secs$', re.M)
+
+
 def outputs():
     build = root / '_build'
-    groups = {'proof_objects': {}, 'glob': {}, 'proof_sources': {}, 'generated': {}, 'logs': {}}
+    groups = {'proof_objects': {}, 'glob': {}, 'proof_sources': {}, 'generated': {},
+              'logs_normalized': {}, '_volatile': {'logs_raw': {}, 'coq_aux': {}}}
     for path in sorted(build.rglob('*')):
-        if not path.is_file() or path.name == 'manifest.json':
+        if not path.is_file() or path.name == 'manifest.json' or 'earthly' in path.parts:
             continue
         name = str(path.relative_to(build))
         if path.suffix in ('.vo', '.vos', '.vok'):
@@ -219,7 +231,14 @@ def outputs():
         elif path.suffix == '.v':
             groups['proof_sources'][name] = digest(path)
         elif path.suffix == '.log':
-            groups['logs'][name] = digest(path)
+            data = path.read_bytes()
+            groups['_volatile']['logs_raw'][name] = hashlib.sha256(data).hexdigest()
+            groups['logs_normalized'][name] = hashlib.sha256(
+                VOLATILE_LOG_LINE.sub(b'run time: <masked> secs', data)).hexdigest()
+        elif path.suffix == '.aux':
+            # coqc .aux files hold the absolute source path and proof timings;
+            # coqchk and the gates never read them.
+            groups['_volatile']['coq_aux'][name] = digest(path)
         else:
             groups['generated'][name] = digest(path)
     return groups
@@ -274,6 +293,9 @@ EXPLANATIONS = {
     '_orchestration': 'orchestration tools (/bin/sh, python, make) are not pinned on the host route',
     '_git': 'nix builds see no .git directory; git identity is informational',
     '_informational': 'PATH/TMPDIR/HOME/SHELL contain build-local paths',
+    '_volatile': 'raw logs contain Shen wall-clock "run time" lines (compared after masking in '
+                 'outputs/logs_normalized); coqc .aux files contain the absolute source path and '
+                 'proof timings and are read by no gate',
     '_stack_limit_of_manifest_process': 'stack limit of the manifest process, not of coqc '
                '(scripts/rocq always sets ulimit -s 65536)',
 }
@@ -294,17 +316,24 @@ def compare(a_path, b_path):
         print('BURI_MANIFEST_SCHEMA_MISMATCH')
         return 2
     fa, fb = dict(flatten(a)), dict(flatten(b))
-    identity, explained = [], []
+    identity, explained, environment = [], [], []
     for key in sorted(set(fa) | set(fb), key=lambda k: tuple(map(str, k))):
         left, right = fa.get(key, '<absent>'), fb.get(key, '<absent>')
         if left == right:
             continue
         reason = next((EXPLANATIONS[k] for k in key if k in EXPLANATIONS), None)
-        (explained if reason else identity).append((key, left, right, reason))
+        if reason:
+            explained.append((key, left, right, reason))
+        elif key[:2] == ('environment', 'variables'):
+            environment.append((key, left, right, None))
+        else:
+            identity.append((key, left, right, None))
 
     def show(value):
         text = json.dumps(value)
         return text if len(text) <= 160 else text[:157] + '...'
+    for key, left, right, _ in environment:
+        print('ENVIRONMENT-DIFF %s\n  A: %s\n  B: %s' % ('/'.join(key), show(left), show(right)))
     for key, left, right, _ in identity:
         print('IDENTITY-DIFF %s\n  A: %s\n  B: %s' % ('/'.join(key), show(left), show(right)))
     reasons = {}
@@ -315,8 +344,16 @@ def compare(a_path, b_path):
         print('EXPLANATION (%d keys): %s' % (len(keys), reason))
     count = sum(1 for k in fa if not any(part.startswith('_') for part in k))
     if identity:
-        print('BURI_MANIFEST_DIFFERENT %d identity differences, %d explained' % (len(identity), len(explained)))
+        print('BURI_MANIFEST_DIFFERENT %d identity differences, %d environment, %d explained' % (
+            len(identity), len(environment), len(explained)))
         return 1
+    if environment:
+        # Distinct outcome: every compared byte agrees, but the recorded
+        # environments were not the same, so the builds are not the same build.
+        print('BURI_MANIFEST_SAME_BYTES_DIFFERENT_ENVIRONMENT %d identity entries equal; '
+              '%d environment differences; %d explained route differences' % (
+                  count, len(environment), len(explained)))
+        return 3
     print('BURI_MANIFEST_IDENTICAL %d identity entries equal; %d explained route differences' % (count, len(explained)))
     return 0
 

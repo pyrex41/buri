@@ -39,13 +39,34 @@
       "id": "E2E-03",
       "title": "Pin and reproduce the entire build.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-01",
         "E2E-02"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "build-recipe",
+          "artifact": "flake.nix",
+          "statement": "nixpkgs, Shen-Scheme v0.52 archive, PR 117 overlay and Coq debs pinned by hash; nix build .#gates runs make test and make prove in the no-network sandbox"
+        },
+        {
+          "kind": "build-recipe",
+          "artifact": "Earthfile",
+          "statement": "orchestrates the Nix and host routes; docs/BUILD.md records which targets were executed"
+        },
+        {
+          "kind": "identity-evidence",
+          "artifact": "scripts/build-manifest.py",
+          "statement": "manifest of sources, tool payloads, runtime libraries, commands, environment and outputs, plus a comparer that explains differences; identity evidence, not semantic evidence"
+        },
+        {
+          "kind": "identity-evidence",
+          "artifact": "docs/BUILD.md",
+          "statement": "host bootstrap and Nix sandbox builds of one commit gave byte-identical .vo/.glob/captures; .aux paths and timings and Shen run-time log lines are explained nondeterminism"
+        }
+      ],
       "acceptance": "the\nrelease can be rebuilt and its differences explained. Reproducibility establishes\nidentity evidence, never semantic preservation; steps 20\u201332 discharge that gap.",
       "details": "docs/END-TO-END-PLAN.md"
     },
@@ -597,7 +618,13 @@
         "E2E-03",
         "E2E-34"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "seed",
+          "artifact": "scripts/build-manifest.py",
+          "statement": "build manifests bind source, tool-payload, runtime-library, flag and proof-object hashes; not yet a signed bundle or deploy-time admission protocol"
+        }
+      ],
       "acceptance": "modifying\nany correctness-relevant input invalidates the old proof bundle, and no mutable\nlabel or forgeable success token authorizes execution. Nix/Earthbuild repeatability\nand signed provenance support this process but do not replace semantic checks.",
       "details": "docs/END-TO-END-PLAN.md"
     },
