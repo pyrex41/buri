@@ -330,3 +330,26 @@ Ten additional statements join the assumption audit (357 total). Native tests,
 source capture and universal model proofs remain separate evidence. Neither port
 is fully verified, and Chez, SBCL, runtime and ARM execution refinement remain
 open. Coalton adds no theorem and is not used in the acceptance path.
+
+## Shen-CL actual conditional lowering (E2E-16, in progress)
+
+`CLLowering.v` admits an inert byte-level capture of Shen-CL
+`4844072dde0208c3e4b99dcbfea58e4fdfd812e8` `src/compiler.shen` (`emit-if`,
+`optimise-boolean-check`, `optimise-boolean-sequence`, `emit-boolean` and the
+package header) and interprets the admitted clauses; the lowering is not
+re-implemented. Universal theorems (`optimise_sound`, `emit_if_refines`) show,
+for every input, every CL world and every `compile-expression` function, that
+each emitted `IF` evaluates its condition once and selects branches with Shen
+Boolean semantics, preserving results, raised conditions, Boolean errors and
+state. They assume the named `primitive_contracts` (owned by E2E-17, shown
+satisfiable by `model_contracts`) and `qsafe`, which excludes quoted non-symbol
+comparands: for those the optimizer's `EQ` rewrite disagrees with Shen equality.
+Boolean-error diagnostic text is quotiented. `compile-expression`,
+`bind-accessor-chains`, `emit-cond-clauses`, SBCL execution, the CL reader and
+printer, and the package system remain contracts. The 34 Rocq-checked agreements
+with the actual compiler run on the Shen host are sampled evidence, and the SBCL
+contract samples in the opt-in gate are native samples; neither is a theorem.
+Three altered stored captures (dropped guard, CL truthiness, swapped branches)
+join the default proof mutations (74 total); the opt-in gate also rejects an
+`EQ`-for-equality capture after fresh regeneration. Twenty-two additional
+statements join the assumption audit (379 total).

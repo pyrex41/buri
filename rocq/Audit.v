@@ -705,3 +705,27 @@ Print Assumptions CLPortGuard.CLPortGuard.conditional_refinement.
 Print Assumptions CLPortGuard.CLPortGuard.other_values_rejected.
 Print Assumptions CLPortCapture.captured_guard_admitted.
 Print Assumptions CLPortCapture.captured_guard_correct.
+
+From Buri Require CLLowering CLLoweringCapture.
+Print Assumptions CLLowering.lowering_admission_exact.
+Print Assumptions CLLowering.admitted_defs.
+Print Assumptions CLLowering.apply_clauses_sound.
+Print Assumptions CLLowering.match_pat_fill.
+Print Assumptions CLLowering.sem_true.
+Print Assumptions CLLowering.sem_if_tf.
+Print Assumptions CLLowering.sem_and.
+Print Assumptions CLLowering.sem_or.
+Print Assumptions CLLowering.sem_not.
+Print Assumptions CLLowering.sem_swap_lit.
+Print Assumptions CLLowering.optimise_sound.
+Print Assumptions CLLowering.emit_boolean_shape.
+Print Assumptions CLLowering.emit_boolean_test.
+Print Assumptions CLLowering.generated_if.
+Print Assumptions CLLowering.emit_if_refines.
+Print Assumptions CLLowering.guard_rule_is_captured_guard.
+Print Assumptions CLLowering.model_contracts.
+Print Assumptions CLLowering.admitted_optimise_sound.
+Print Assumptions CLLowering.admitted_emit_if_refines.
+Print Assumptions CLLoweringCapture.captured_lowering_admitted.
+Print Assumptions CLLoweringCapture.captured_optimise_sound.
+Print Assumptions CLLoweringCapture.captured_emit_if_refines.

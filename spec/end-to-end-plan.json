@@ -232,13 +232,74 @@
       "id": "E2E-16",
       "title": "Finish the actual Shen-CL compiler.",
       "lane": "cl-port",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-12",
         "E2E-14"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLLowering.v",
+          "names": [
+            "CLLowering.optimise_sound",
+            "CLLowering.emit_if_refines",
+            "CLLowering.admitted_emit_if_refines",
+            "CLLowering.emit_boolean_shape",
+            "CLLowering.generated_if"
+          ],
+          "statement": "For every input datum, every CL world (state type, primitive and opaque-form relations) and every compile-expression function, interpreting the admitted Shen-CL 4844072 emit-if/optimise-boolean-check/optimise-boolean-sequence/emit-boolean sources yields a CL IF whose condition is evaluated once and whose branch selection, results, errors and state traces match Shen boolean semantics.",
+          "premises": [
+            "primitive_contracts (named, owned by E2E-17)",
+            "qsafe: no quoted non-symbol comparand of shen-cl.equal?",
+            "Boolean-error diagnostic text quotiented",
+            "compile-expression opaque",
+            "CL evaluation model, reader, printer and SBCL execution are contracts"
+          ]
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLLowering.v",
+          "names": [
+            "CLLowering.guard_rule_is_captured_guard"
+          ],
+          "statement": "The evaluator's shen-cl.true? rule equals running the captured primitives.lsp guard (CLPortCapture) in CLPortGuard's model."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLLowering.v",
+          "names": [
+            "CLLowering.model_contracts"
+          ],
+          "statement": "The primitive_contracts hypotheses are jointly satisfiable by a concrete world (anti-vacuity; not a model of SBCL)."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/CLLoweringCapture.v",
+          "names": [
+            "CLLoweringCapture.captured_lowering_admitted",
+            "CLLoweringCapture.captured_optimise_sound",
+            "CLLoweringCapture.captured_emit_if_refines"
+          ],
+          "statement": "Inert reader-level capture of src/compiler.shen (blob 2d624377c02030f9513769f7bad11e84330b8c5a, with byte spans) admitted by computed equality against the reviewed expected AST; corollaries instantiate the universal theorems."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "rocq/CLLoweringSamples.v",
+          "statement": "34 outputs of the actual compiler.shen, executed on the Buri Shen host (not SBCL), equal the Rocq interpretation of the admitted capture."
+        },
+        {
+          "kind": "native-sample",
+          "artifact": "ports/shen-cl-contracts.lisp",
+          "statement": "Opt-in SBCL 2.6.8 samples of every named primitive contract and of the |and|/|or| macros, plus a sample showing the qsafe premise is necessary."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "scripts/check-cl-port.sh",
+          "statement": "Opt-in gate: fresh regeneration must be byte-identical; dropped-guard, cl-truthiness, swapped-branches and eq-for-equal captures are rejected by Rocq admission."
+        }
+      ],
       "acceptance": "the same Shen\ncontract can be transported through either port, with explicit port-specific\nrepresentation and platform premises and no missing compiler branch.",
       "details": "docs/END-TO-END-PLAN.md"
     },
