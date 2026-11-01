@@ -40,7 +40,7 @@ suite_counts = {name: int(n) for name, n in rows}
 assert len(rows) == 23 and set(suite_counts) == {'scheme-port-order', 'observation', 'ledger', 'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance', 'scheme-port-merge', 'cl-port-guard', 'cl-lowering-capture'}, 'Incomplete suite gates'
 assert 'BURI_ROCQ_OK 494 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
 assert checks.count('Rejected proof mutation:') == 83
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['22']
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['26']
 ledger = json.loads((root / 'spec/six-stages.json').read_text())
 assert [stage['id'] for stage in ledger['stages']] == list(range(1,7))
 assert not ledger['full_plan_complete'] and all(stage['status'] == 'partial' for stage in ledger['stages'])
