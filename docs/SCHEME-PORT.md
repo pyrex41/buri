@@ -75,6 +75,10 @@ the decoded captured bodies.
 - Remaining primitive contracts (from pinned `src/primitives.scm`):
   `kl:=` with a symbol on the left (eq? on interned symbols),
   `kl:_scm.assert-boolean` on booleans, and the list primitives of `Native.v`.
+  E2E-17 now proves the captured `kl:=` body (first-order data) and
+  `kl:_scm.assert-boolean` under individually named Chez contracts
+  (`rocq/SchemeWrappers.v`, [PRIMITIVES](PRIMITIVES.md)); the `Native.v`
+  operations are named matrix contracts, still assumed.
 
 ## Theorems (universal unless marked)
 

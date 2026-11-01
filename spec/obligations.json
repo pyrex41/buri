@@ -1309,7 +1309,7 @@
    "scope": "universal",
    "owner": "E2E-17",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "emit-equality-check and kl:=",
    "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/primitives.scm 92b8875a",
    "statement": "Equality implements the admitted value relation including closures and vectors.",
@@ -1317,12 +1317,35 @@
    "depends_on": [
     "OB-VECTOR-HEAP"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeWrappers.SchemeWrappers.kl_eq_data",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeWrappers.SchemeWrappers.stock_equality_refines_rule",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeWrappers.SchemeWrappers.scheme_wrappers_admitted",
+     "establishes": "implementation-correspondence"
+    }
+   ],
    "completion_evidence": "Primitive refinement against SEM-VALUE equality.",
    "sources": [
-    "docs/PORTS.md"
+    "docs/PORTS.md",
+    "docs/PRIMITIVES.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/PRIMITIVES.md",
+     "recorded": "Captured kl:= proved against rule_equal on first-order data; vectors, closures and inexact numbers remain open; the compiled eqv? literal path is refuted on mixed exactness (OB-SCHEME-EQ-LITERAL).",
+     "reconciliation": "Narrowed from open to partial by E2E-17 Wave B."
+    }
+   ]
   },
   {
    "id": "OB-STOCK-DIVISION",
@@ -1379,14 +1402,134 @@
    "depends_on": [
     "OB-NATIVE-REPR-CHEZ"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spec/primitives.json",
+     "establishes": "implementation-correspondence"
+    }
+   ],
    "completion_evidence": "Primitive-by-primitive refinement on reachable types/ranges against SEM-PRIM and native representations.",
    "sources": [
     "docs/SEALED.md",
     "docs/TRUST-AUDIT.md",
-    "docs/CODEC-CORRESPONDENCE.md"
+    "docs/CODEC-CORRESPONDENCE.md",
+    "docs/PRIMITIVES.md"
+   ],
+   "history": [
+    {
+     "source": "docs/PRIMITIVES.md",
+     "recorded": "Every Native.primitive operation is now a named contract entry (Native.primitive.<op>) with an owning package in spec/primitives.json; none is discharged.",
+     "reconciliation": "Named, still assumed."
+    }
+   ]
+  },
+  {
+   "id": "OB-SCHEME-EQ-LITERAL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-15"
+   ],
+   "status": "refuted",
+   "boundary": "Shen-Scheme compiled = against a numeric literal",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen emit-equality-check",
+   "statement": "The eqv? lowering that emit-equality-check emits when either operand is a numeric literal agrees with kl:= for every number.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "tests/primitives.shen",
+     "test": "sample-literal-path-eqv",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeWrappers.SchemeWrappers.stock_mixed_exactness",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted on Shen-Scheme v0.52: (= X 1) with X the inexact 1.0 is false on the literal path and true through kl:=; equality is narrowed to OB-SCHEME-EQUALITY.",
+   "sources": [
+    "docs/PRIMITIVES.md",
+    "docs/VALUE-MODEL.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-SCHEME-EQUALITY"
+  },
+  {
+   "id": "OB-CL-ARITH-WRAPPERS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-16"
+   ],
+   "status": "partial",
+   "boundary": "Shen-CL integer arithmetic wrappers",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp f9b11c8a",
+   "statement": "The captured shen-cl.add/subtract/multiply/divide refine KLambda + - * / for every exact integer pair, with no ratio escaping, under named SBCL operation contracts.",
+   "premises": [],
+   "depends_on": [
+    "OB-NUMERIC-PROFILE"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLWrappers.CLWrappers.arith_refines_rules",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLWrappers.CLWrappers.divide_int",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLWrappers.CLWrappers.model_arith_ops",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Floats, shen-cl.increment/decrement, the int_div_inexact pin, and the SBCL operation contracts (E2E-24).",
+   "sources": [
+    "docs/PRIMITIVES.md"
    ],
    "history": []
+  },
+  {
+   "id": "OB-CL-MULTIPLY-DOMAIN",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-16"
+   ],
+   "status": "refuted",
+   "boundary": "Shen-CL * on a non-number operand",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp shen-cl.multiply",
+   "statement": "shen-cl.multiply signals an error whenever an operand is not a number, as the KLambda * rule (XPrim PMul) requires.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "ports/shen-cl-primitive-samples.lisp",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLWrappers.CLWrappers.multiply_zero_absorbs_symbol",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted: (* 0 true) answers 0 (proved for every host satisfying the named contracts; observed on SBCL 2.6.8). Admission must exclude it or the port must be fixed.",
+   "sources": [
+    "docs/PRIMITIVES.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-CL-ARITH-WRAPPERS"
   },
   {
    "id": "OB-CL-GUARD-MODEL",
