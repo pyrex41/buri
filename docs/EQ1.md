@@ -87,6 +87,62 @@ conclusion check, without freshness, without the theory check, a model with an
 injected false definition rule, and induction hypotheses for `nat` arguments
 are each refused by Rocq.
 
+## Captured drivers refine the reference kernel (EQ1-DRIVERS, closed)
+
+Universal theorems, axiom-free, about the bodies decoded from
+`ports/eq1-kernel.bits` (`EqualityInductionDrivers`, `EqualityInductionRefinement`):
+
+* Technique. Each captured body is evaluated once, symbolically, under an
+  abstract call oracle `o` constrained only by the partial-correctness
+  contracts of its callees (section hypotheses). Branch positions are wrapped
+  in an identity marker `hide` so that strong reduction only expands the
+  current evaluation frontier; tests split on their boolean outcome and learn a
+  variable's shape only when the test succeeds; name comparisons stay folded
+  (`simpl nomatch`) and a successful comparison with a literal substitutes the
+  literal. `step_agree` replaces the program's name table by a three-character
+  test equal to it on every called name (vm-checked per body). Leaf goals
+  split only on variables and literal name comparisons, so a false leaf fails
+  quickly. Proof terms stay small: the whole module (20 bodies) checks in
+  about three minutes on one core, the largest body (`replace`) in under a
+  minute including `Qed`; `EqualityInductionRefinement` checks in seconds.
+* `body_cb` (guarded body of `check-bundle`), `body_bundle`, `body_next`,
+  `body_goal`, `body_theorem`, `body_cases`, `body_bound`, `body_steps`,
+  `body_csr`, `body_after`, `body_inst`, `body_substn`, `body_replace`,
+  `body_rarg`: for every input, if the body returns a value, it is the
+  reference value (`r_check_bundle`, `r_bundle`, `r_goal`, `r_theorem`,
+  `r_cases`, `r_steps`, `r_inst`, `r_substitution`, `r_replace`, `r_rarg`, or a
+  one-step fragment `next1`/`bound1`/`csr1`/`after1` of those functions).
+* EQ1-NUMERIC for `buri.nat?`: `body_str`, `body_digits`, `body_unsigned`,
+  `body_ispell`, `body_exact`, `body_nat` and `spelling_ok` prove that the
+  captured `nat?` (through `exact-integer?`, `integer-spelling?`, `digits?`
+  and the pinned `kl:str` template) returns exactly `0 <= z` on an integer and
+  `false` on non-numbers; on non-integer numbers it never returns.
+* `EqualityInductionRefinement.drivers`: by induction on oracle fuel, all of
+  the above hold for the oracle of the actual program at every fuel. The
+  `native_*` corollaries restate them for `Native.run`
+  (`native_bundle`, `native_steps`, `native_theorem`, `native_cases`,
+  `native_instantiate`, `native_substitution`, `native_replace`, `native_goal`,
+  `native_nat`).
+* `captured_bundle_sound`: if the captured `bundle-h`, run by the Native
+  evaluator on `[B;[];Integer z]`, returns `[accepted generic-equations out]`,
+  every entry of `out` is valid in the standard model.
+* `check_bundle_captured` pins the captured `check-bundle` body to
+  `guard [handler; g_cb]` with the literal handler `[rejected malformed-evidence]`.
+  `guard_model` is the stated contract for that guard (a raised error becomes
+  the handler value, anything else passes through). Under it,
+  `captured_check_bundle_refines` (the result is the reference verdict or the
+  handler's rejection), `captured_check_bundle_sound` (acceptance implies the
+  loaded theory and validity of every output theorem) and
+  `captured_false_lemma_never_accepted`.
+
+These are partial-correctness statements: they constrain every value the
+Native evaluator returns; they do not say a value is returned.
+
+Driver mutants (`tests/mutate-eq1.py`): a captured `check-steps` without the
+conclusion check, `check-step-result` with swapped rewrite directions,
+`check-cases` without the freshness test, `check-bundle` without the theory test, and a
+`check-bundle` guard whose handler accepts are each refused by Rocq.
+
 ## Open obligations
 
 * **EQ1-DRIVERS**: prove that the captured recursive drivers (`check-steps`,
@@ -108,9 +164,18 @@ are each refused by Rocq.
   named Chez contracts ([PRIMITIVES](PRIMITIVES.md)). The two differ on mixed
   exactness, which lies outside the proved data fragment; that EQ-1 inputs
   stay inside the fragment is not yet proved. The digit-spelling half remains.
+
+* **EQ1-GUARD**: the Chez `guard` produced by `trap-error` is modelled only by
+  the stated contract `guard_model`; Native has no guard. That Chez's guard
+  behaves this way is not proved.
+* **EQ1-NUMERIC** (remaining): `kl:=` is modelled by `equal?`; the runtime's
+  numeric `=` also identifies `1` and `1.0`. Well-sorted terms contain no
+  numbers, but this is a stated contract difference. (`nat?` is now proved.)
 * **EQ1-TERM**: termination of the captured kernel on finite certificates is
-  not proved (the reference kernel is total by construction).
-* Chez-to-Native simulation, as for every Native result (E2E-32).
+  not proved; the refinement theorems are partial correctness.
+* Chez-to-Native simulation, as for every Native result (E2E-32). A theorem
+  about the Native evaluation of the decoded capture is not a theorem about
+  Chez executing it.
 
 Thornet/Vör proof search is outside acceptance: nothing in the captured
 call graph reaches search (`acceptance_excludes_search`), and search output

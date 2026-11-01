@@ -634,3 +634,32 @@ in [E2E-07](E2E-07.md). This is a theorem about the reference evaluator, not
 about Shen-Scheme.
 
 Thirty-three additional statements join the assumption audit (527 total).
+
+## EQ-1 captured drivers refine the reference kernel (E2E-09, EQ1-DRIVERS)
+
+Every captured KLambda driver of `shen/kernel.shen`, read from the decoded
+capture `ports/eq1-kernel.bits` (not restated), computes the reference kernel
+for every input: the guarded body of `check-bundle`, `bundle-h`,
+`bundle-next`, `goal?`, `check-theorem`, `check-cases`, `check-case-bound`,
+`check-steps`, `check-step-result`, `after-rewrite`, `instantiate`,
+`substitution?`, `replace` and `replace-arg` (`EqualityInductionDrivers`). The
+`buri.nat?` decimal-spelling chain is proved to decide exactly `0 <= z` on
+integers (part of EQ1-NUMERIC). `EqualityInductionRefinement.drivers` composes
+the bodies by induction on oracle fuel; `native_*` restate them for the
+actual Native evaluator. `captured_bundle_sound`: whatever the captured
+`bundle-h` accepts is valid in the standard model. `check-bundle` is a Chez
+`guard`; its literal handler is pinned (`check_bundle_captured`) and its
+meaning is the stated contract `guard_model`, under which
+`captured_check_bundle_sound` and `captured_false_lemma_never_accepted` hold
+for the captured code. All are universal partial-correctness theorems; the
+technique is a directed symbolic evaluation with lazily exposed branches, so
+proof terms stay small (the drivers module checks in about three minutes).
+Five modified captured driver bodies are refused by Rocq.
+
+Not proved: Chez `guard` semantics (EQ1-GUARD; `guard_model` is a contract),
+termination (EQ1-TERM), numeric `kl:=` versus `equal?`, and Chez-to-Native
+simulation. A theorem about the Native evaluation of the decoded capture is
+not a theorem about Chez executing it. See [EQ1](EQ1.md).
+
+Twenty-three additional statements join the assumption audit (517 total);
+five driver mutants join the proof mutations (88 total).
