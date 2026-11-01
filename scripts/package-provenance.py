@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 kind, source, destination = sys.argv[1:]
-if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal', 'kernel_list', 'eq1_base', 'eq1_equations', 'eq1_theory', 'eq1_kernel', 'compiler_branches', 'kernel_element'):
+if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal', 'kernel_list', 'eq1_base', 'eq1_equations', 'eq1_theory', 'eq1_kernel', 'compiler_branches', 'kernel_element', 'e2e07_klambda'):
     raise SystemExit('Unknown packaging profile')
 bits = Path(source).read_bytes()
 if not bits or any(b not in b'01' for b in bits):
@@ -26,6 +26,8 @@ count, names = {'bootstrap': (2, ['kl:buri.native-bytes', 'kl:buri.native-node']
                 'eq1_base': (17, ['kl:buri.member?','kl:buri.unique?','kl:buri.append','kl:buri.rev','kl:buri.rev-h','kl:buri.get','kl:buri.keys','kl:buri.remove','kl:buri.nat?','kl:buri.index','kl:buri.every-list?','kl:buri.all-symbols?','kl:buri.check','kl:buri.exact-integer?','kl:buri.integer-spelling?','kl:buri.unsigned-spelling?','kl:buri.digits?']),
                 'eq1_equations': (23, ['kl:buri.sig','kl:buri.sort','kl:buri.sort-app','kl:buri.args?','kl:buri.context?','kl:buri.context-h?','kl:buri.subst','kl:buri.subst-var','kl:buri.substs','kl:buri.substitution?','kl:buri.rule','kl:buri.match','kl:buri.bind','kl:buri.bind-h','kl:buri.matches','kl:buri.reduce','kl:buri.reduce-match','kl:buri.normalize','kl:buri.norm','kl:buri.norm-list','kl:buri.norm-list-h','kl:buri.norm-args-result','kl:buri.norm-reduced']),
                 'eq1_theory': (4, ['kl:buri.signature','kl:buri.constructors','kl:buri.rules','kl:buri.theory']),
+                # E2E-07: every definition of the KL-PURE-1 reference evaluator, in source order.
+                'e2e07_klambda': (26, ['kl:buri.literal?','kl:buri.expression?','kl:buri.expressions?','kl:buri.definitions?','kl:buri.definitions-h?','kl:buri.definition-names','kl:buri.definition','kl:buri.evaluate','kl:buri.eval','kl:buri.lookup-value','kl:buri.eval-let','kl:buri.eval-if','kl:buri.eval-function','kl:buri.eval-argument','kl:buri.apply-value','kl:buri.apply-global','kl:buri.apply-bound','kl:buri.eval-args','kl:buri.eval-args-first','kl:buri.eval-args-rest','kl:buri.eval-primitive','kl:buri.primitive','kl:buri.eval-raise','kl:buri.eval-trap','kl:buri.eval-handler','kl:buri.eval-thaw']),
                 'eq1_kernel': (22, ['kl:buri.check-bundle','kl:buri.bundle-h','kl:buri.bundle-next','kl:buri.goal?','kl:buri.check-theorem','kl:buri.check-cases','kl:buri.fresh?','kl:buri.zip','kl:buri.zip-h','kl:buri.variables','kl:buri.check-case-bound','kl:buri.induction-hyps','kl:buri.check-steps','kl:buri.resolve','kl:buri.instantiate','kl:buri.check-step-result','kl:buri.after-rewrite','kl:buri.replace','kl:buri.replace-arg','kl:buri.replace-head','kl:buri.replace-tail','kl:buri.replace-app'])}[kind]
 text = '''From Coq Require Import List String.
 From Buri Require Import Wire Native.
@@ -50,12 +52,12 @@ Global Opaque CAP_text CAP_nodes CAP_decode.
 text = text.replace('CAP', kind).replace('BITS', bits.decode('ascii')).replace('COUNT', str(count))
 text = text.replace('OFFSET', '3' if kind == 'checked_io' else '0')
 text = text.replace('NAMES', '[' + ';'.join('"' + n + '"' for n in names) + ']')
-if kind in ('equality_core','equality_seal','kernel_list','compiler_branches','kernel_element') or kind.startswith('eq1_'):
+if kind in ('equality_core','equality_seal','kernel_list','compiler_branches','kernel_element','eq1_','e2e07_klambda') or kind.startswith('eq1_'):
     complete = ('Theorem '+kind+'_complete : match '+kind+'_nodes with\n'
                 ' | Some xs => List.length xs = '+str(count)+' | None => False end.\n'
                 'Proof. vm_compute; reflexivity. Qed.\n')
     text = text.replace('Global Opaque', complete+'Global Opaque')
-if kind.startswith('eq1_'):
+if kind.startswith('eq1_') or kind == 'e2e07_klambda':
     # Large captures overflow Coq's parser as one literal: emit ordered chunks
     # whose concatenation is the capture (checked literally by the checker).
     raw = bits.decode('ascii')

@@ -140,12 +140,43 @@
       "id": "E2E-07",
       "title": "Verify the executable Shen semantics.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-06"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "capture",
+          "artifact": "ports/e2e07-klambda.bits",
+          "claim": "shen/klambda.shen as compiled and installed by the pinned image (all 26 definitions, profile e2e07_klambda); regenerated and diffed by make prove; decoded by rocq/KLambdaEvaluatorInput.v"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorRefinement.v",
+          "claim": "klambda_refines: for every program in the KL-PURE-1 subset (literal, var, lambda, apply, let, if, saturated + - * < = cons hd tl cons? number? string?, raise, trap), every definition table, budget and Native fuel, a value returned by the captured buri.eval is an evaluator verdict; [returned v] and [raised m] are found by KLMetatheory.run on the translated program (value tr_rv v, exception of the class of m) under every pinned profile; budget and unsupported verdicts make no claim"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorRefinement.v",
+          "claim": "klambda_decided_terminates: a decided verdict is a terminating KLambda behavior and excludes divergence; evaluate_shape/evaluate_body_refines: [unknown host-error] comes only from the guard handler, the admitted guard body is sound"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorEquations.v",
+          "claim": "one equation per captured evaluator body and input shape (eval, lookup-value, eval-let/-if/-function/-argument, apply-value, eval-args/-first/-rest, eval-primitive, eval-raise/-trap/-handler), proved by VM reduction of the decoded capture"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/KLambdaEvaluatorSamples.v",
+          "claim": "actual Native run of the captured evaluator on let, trap, non-Boolean if, application, budget exhaustion and closure equality; universal theorem instantiated; independent KLambda computation agrees on the let sample"
+        },
+        {
+          "kind": "open-obligation",
+          "artifact": "docs/E2E-07.md",
+          "claim": "E2E07-COMPLETE (converse), E2E07-GLOBAL, E2E07-THAW, E2E07-PRIM-ARITY, E2E07-EQ-CLOSURE, E2E07-GUARD, E2E07-NATIVE remain open"
+        }
+      ],
       "acceptance": "every accepted\nexecution result has a formal witness, with the promised converse/completeness\nwithin the stated evaluator profile and sufficient resources.",
       "details": "docs/END-TO-END-PLAN.md"
     },
