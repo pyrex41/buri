@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py', 'mutate-stages.py', 'mutate-cl-lowering.py', 'mutate-order.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py', 'mutate-stages.py', 'mutate-cl-lowering.py', 'mutate-order.py', 'mutate-eq1.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
     for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py', 'package-constructor.py', 'package-adapter.py', 'package-provenance.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
@@ -151,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='buri-adapter-gate-') as directory:
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
-for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read','equality_core','equality_seal']:
+for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read','equality_core','equality_seal','eq1_base','eq1_equations','eq1_theory','eq1_kernel']:
     with tempfile.TemporaryDirectory(prefix='buri-provenance-gate-') as directory:
         capture, module = Path(directory)/'capture.bits', Path(directory)/'Capture.v'
         capture.write_bytes(b'00')
