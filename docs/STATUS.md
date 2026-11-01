@@ -346,8 +346,9 @@ A host bootstrap build and a sandboxed Nix build of the same commit produced
 byte-identical `.vo` files (228), `.glob` files, generated proof inputs,
 captures and Rocq logs. The differences that remain are explained: coqc `.aux`
 files (absolute path and timings), Shen `run time` log lines, the launcher and
-glibc on each route, and recorded environment variables. This is identity
-evidence only. It adds no theorem and does not change the audited count (357).
+glibc on each route, and recorded environment variables. Earthly `+test` was
+executed and matched the host Nix test manifest. Earthly `+gates`, `+host` and
+`+compare` are written but not executed. This is identity evidence only. It adds no theorem and does not change the audited count (357).
 Shen-Scheme is a prebuilt binary trusted by hash. Rebuilding Shen-Scheme and Chez
 from source, rebuilding Coq from source, pinning `/bin/sh`, and producing ARM
 artifacts all remain open. aarch64-linux is declared in the flake but not built.

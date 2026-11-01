@@ -14,7 +14,7 @@ close the semantic gap.
 |---|---|---|---|
 | Bootstrap (canonical, host) | `make bootstrap test prove manifest` | `scripts/bootstrap`, `scripts/bootstrap-rocq` download and check the pinned archives into `.tools/` | No. Uses the host's `/lib64` loader, glibc, libgmp, `/bin/sh`, python3 and make |
 | Nix | `nix build .#gates` (also `nix flake check`) | `flake.nix` with nixpkgs pinned in `flake.lock` | Yes. Non-fixed-output steps run in the Nix sandbox with no network, no `/usr`, no `/lib64` and no `/home` (probe result below) |
-| Earthly | `earthly -P +gates`, `+test`, `+host`, `+compare` | `Earthfile`, base images pinned by digest | `+gates` and `+test` call the Nix route. `+host` runs the bootstrap route on Ubuntu 24.04 and needs network |
+| Earthly | `earthly -P +gates`, `+test`, `+host`, `+compare` | `Earthfile`, base images pinned by digest | `+gates` and `+test` call the Nix route. `+host` runs the bootstrap route on Ubuntu 24.04 and needs network. Only `+test` has been executed (see Results) |
 
 `nix develop` gives a shell with the same pinned tools and links `.tools` to the
 Nix tool tree. It does this only when `.tools` is missing or is already a link,
@@ -169,8 +169,39 @@ different glibc builds, and the host and sandbox environments. **This is
 identity evidence.** It shows the same Coq binary produced the same proof
 objects from the same sources. It says nothing about whether Coq is correct.
 
-Run 2 (final commit, see STATUS.md) repeats this comparison with the fixed
-manifest tooling.
+**Run 2: commit `4495d2f`, with the fixed manifest tooling.** The same two
+routes were run again. Both gates passed with 71 rejected mutations each. The Nix
+build took 43 minutes under load. `make manifest-compare` returned
+`BURI_MANIFEST_SAME_BYTES_DIFFERENT_ENVIRONMENT 4754 identity entries equal; 4
+environment differences; 217 explained route differences` (exit 3). There were
+zero identity differences. The four environment differences are `LC_ALL`, `TZ`,
+`SOURCE_DATE_EPOCH` and `PYTHONHASHSEED`, as described above. Digests that both
+builds share:
+
+* source tree `eb5e2183…aeba8` (238 files)
+* proof objects `dde51250e0db874ef1bdaeb7010ee3b4b777ccb43c20ddbf42aeadefc26e2fc8`
+  (228 `.vo`). This is unchanged from run 1 because no Rocq input changed.
+* generated captures `7804576a…cfbe`
+* Coq payload tree `a00171bc…` (3581 files); Shen payload tree `2bc53d74…`
+
+**Earthly (executed for `+test` only).** No Docker daemon was running at first.
+`dockerd` was started locally, and `earthly` v0.8.15 came from the pinned nixpkgs
+(`nix run --inputs-from . nixpkgs#earthly`). The buildkitd container did not
+trust this environment's TLS-intercepting proxy. That was worked around by
+running a local buildkitd image with the proxy CA appended
+(`--buildkit-image`), and by placing the proxy CA at `ci-extra-ca.crt`
+(git-ignored and excluded from the hashed sources) for the Earthfile's optional
+CA hook. With those, `earthly -P +test` on commit `f91af6b` succeeded. The Nix
+sandbox ran inside the container with `sandbox-fallback = false`. The test
+manifest it exported compared `BURI_MANIFEST_IDENTICAL 3956 identity entries
+equal; 19 explained route differences` against `nix build .#test` on the host.
+The derivation output paths differ (`4sjx…-buri-test` in the container's Nix
+2.24.14, `mc6dyf…-buri-test` on the host's Nix 2.34.6). Host Nix gives the same
+`.drv` for `git+file:` and `path:` evaluation of that tree, so the version
+difference is the likely cause, but this has not been isolated. `+gates`,
+`+host` and `+compare` are written but were **not executed**: each repeats the
+>40-minute prove run on this shared machine. `+host` also needs network for
+`make bootstrap` and has an untested `apt-get --snapshot` step.
 
 ## Target systems
 
