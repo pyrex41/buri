@@ -330,3 +330,30 @@ Ten additional statements join the assumption audit (357 total). Native tests,
 source capture and universal model proofs remain separate evidence. Neither port
 is fully verified, and Chez, SBCL, runtime and ARM execution refinement remain
 open. Coalton adds no theorem and is not used in the acceptance path.
+
+## Wave A: shared KLambda semantics and observations (E2E-04, 05, 06 in progress)
+
+[KLAMBDA-SEMANTICS](KLAMBDA-SEMANTICS.md) and [VALUE-MODEL](VALUE-MODEL.md)
+describe nine new Rocq modules. `Observation.v` defines the common observation
+vocabulary (IO request/response events including partial and failed reads and
+writes, signals and cancellation, outcomes with structured errors and modeled
+resource failure, coinductive divergence and reaction, and evaluator verdicts
+as a separate type). Its refinement relations provably cannot hide errors,
+failed writes or silent loops. `KLSyntax.v`/`KLValue.v`/`KLSemantics.v` give a
+small-step semantics with heap, global value/function namespaces and explicit
+continuations for all 10 canonical special forms and all 36 primitives; each
+primitive has a named rule, and inexact arithmetic, printing and system error
+text are explicit profile slots quantified over by every theorem.
+`KLMetatheory.v`, `KLWellFormed.v` and `KLTail.v` prove progress, the exact
+stuck states, determinism (with a functional environment oracle), well-formed
+state preservation, a fuel evaluator that is sound, monotone and complete for
+terminating behaviors, that divergence exhausts every fuel bound while
+exhaustion does not imply divergence, and bounded-continuation divergence of
+tail-recursive loops. `KLBridge.v` embeds the `Lambda.v` lexical fragment.
+
+Forty additional statements join the assumption audit (397 total), including
+three ground derivations from `KLExamples.v`. These are theorems about the
+formal semantics only: `shen/klambda.shen` is not yet related to it (E2E-07),
+no port is related to it, inexact numerics are unpinned, and native probes
+recorded in VALUE-MODEL.md (including a Shen-Scheme `cond` fall-through that
+returns a host void value) are sampled observations, not proofs.
