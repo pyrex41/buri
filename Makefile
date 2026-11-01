@@ -1,4 +1,4 @@
-.PHONY: bootstrap test prove conformance check report demo check-cl-port
+.PHONY: bootstrap test prove conformance check report demo check-cl-port manifest manifest-compare
 bootstrap:
 	./scripts/bootstrap
 	./scripts/bootstrap-rocq
@@ -35,6 +35,13 @@ check: test prove conformance
 
 report:
 	./scripts/report
+
+# Build identity manifest of the last gate run (identity evidence only, not proof).
+manifest:
+	python3 scripts/build-manifest.py write _build/manifest.json
+
+manifest-compare:
+	python3 scripts/build-manifest.py compare $(A) $(B)
 
 demo:
 	./scripts/shen -l buri.shen -l proofs/compiler.shen -e '(buri.prove)' -e '(buri.normalize [run [compile [add [lit [succ [zero]]] [lit [succ [succ [zero]]]]] [halt]] [nil]] 100)'
