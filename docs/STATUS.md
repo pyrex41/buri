@@ -330,3 +330,30 @@ Ten additional statements join the assumption audit (357 total). Native tests,
 source capture and universal model proofs remain separate evidence. Neither port
 is fully verified, and Chez, SBCL, runtime and ARM execution refinement remain
 open. Coalton adds no theorem and is not used in the acceptance path.
+
+## EQ-1 induction-checker correspondence (E2E-09, in progress)
+
+The original EQ-1 kernel (`shen/kernel.shen`) and every helper it calls are
+captured from the pinned image, one provenance profile per source file
+(`eq1_base`, `eq1_equations`, `eq1_theory`, `eq1_kernel`), regenerated and
+diffed by `make prove`, and decoded completely in Rocq. `EqualityInductionOracle`
+proves that every value the Native evaluator returns is the value of a
+fuel-free oracle semantics of the same bodies. Universally, the captured
+helpers (sorting, contexts, substitution, rule lookup, zip, induction
+hypotheses, resolution, replacement assembly, theory data) compute their
+reference functions over arbitrary raw input. `EqualityInductionKernel`
+defines a reference kernel that mirrors `kernel.shen` and proves it sound for
+the standard model of BURI/ARITH-1, including structural induction over
+`expr`; stale theories are rejected and no accepted output contains a false
+equation. Ground derivations on the captured program show that acceptance
+cannot reach search, normalisation or `eval`, and that injected rules,
+forged `accepted` labels and ill-sorted theorems are rejected; agreement with
+the reference kernel on those samples is sampled evidence only.
+
+Not proved: that the captured recursive drivers and `substitution?`,
+`instantiate`, `replace`, `goal?` refine the reference kernel (EQ1-DRIVERS);
+`guard` semantics; numeric `=` and budget-spelling contracts; termination of
+the captured kernel. See [EQ1](EQ1.md). The soundness theorem is therefore
+about the reference kernel, not yet about the captured one.
+
+Forty-seven additional statements join the assumption audit (404 total).

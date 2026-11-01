@@ -121,13 +121,54 @@
       "id": "E2E-09",
       "title": "Close every certificate checker and admission path.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-07",
         "E2E-08"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "capture",
+          "artifact": "ports/eq1-kernel.bits",
+          "claim": "shen/kernel.shen as compiled and activated by the pinned image; base/equations/theory captured alongside; regenerated and diffed by make prove"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionOracle.v",
+          "claim": "every value returned by the Native evaluator is the value of the oracle semantics of the same decoded program (eval_oracle)"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionSpecs.v",
+          "claim": "captured base/equations/theory helpers compute their reference functions on arbitrary raw input"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionHelpers.v",
+          "claim": "captured subst, context?, rule and kernel leaf helpers compute their reference functions; Native.run bridges"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionKernel.v",
+          "claim": "reference EQ-1 kernel is sound for the standard model including expr induction; stale theory rejected; no accepted false lemma"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/EqualityInductionSamples.v",
+          "claim": "captured acceptance call graph excludes search/eval; captured bundle-h rejects rule injection, forged accepted label and ill-sorted theorem; sampled agreement with the reference kernel"
+        },
+        {
+          "kind": "proof-mutation",
+          "artifact": "tests/mutate-eq1.py",
+          "claim": "five weakened reference kernels/models are refused by Rocq"
+        },
+        {
+          "kind": "open-obligation",
+          "artifact": "docs/EQ1.md",
+          "claim": "EQ1-DRIVERS (captured drivers refine the reference kernel), EQ1-GUARD, EQ1-NUMERIC, EQ1-TERM remain open"
+        }
+      ],
       "acceptance": "all acceptance routes imply the same soundness theorem; no alternate UI, cache,\nserializer or fast path bypasses it. Native checker execution is closed in 32.",
       "details": "docs/END-TO-END-PLAN.md"
     },

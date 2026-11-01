@@ -63,3 +63,11 @@ for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput Corrupt
   grep -Eq 'Unable to unify|Not convertible|while it is expected to have type' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# BURI/EQ-1 reference-kernel and model mutants: each must be refused by Rocq.
+for name in $(python3 tests/mutate-eq1.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done

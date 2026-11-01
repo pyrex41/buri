@@ -71,4 +71,14 @@ EqualityAdmission.v
 EqualitySealInput.v
 EqualitySealCorrect.v
 StageTests.v
+EqualityInductionBaseInput.v
+EqualityInductionEquationsInput.v
+EqualityInductionTheoryInput.v
+EqualityInductionKernelInput.v
+EqualityInductionOracle.v
+EqualityInductionModel.v
+EqualityInductionSpecs.v
+EqualityInductionHelpers.v
+EqualityInductionKernel.v
+EqualityInductionSamples.v
 Audit.v
