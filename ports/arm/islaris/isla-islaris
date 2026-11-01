@@ -1,0 +1,17 @@
+#!/bin/sh
+# isla-footprint invoked exactly as Islaris c978e10f's frontend does
+# (frontend/decomp.ml): footprint function isla_footprint_no_init, Islaris's
+# own register-constraint config etc/aarch64_isla_coq.toml, and
+# --simplify-registers --tree -s.  Islaris's snapshot file is the Armv8.5
+# aarch64.ir; isla-snapshots d8b31014 ships it as armv8p5.ir.
+#   ISLA_ROOT    rems-project/isla e9b5d945 (cargo build --release --bin isla-footprint)
+#   ISLA_IR85    isla-snapshots d8b31014 armv8p5.ir
+#   ISLARIS_SRC  rems-project/islaris c978e10f
+#   XBIN         aarch64-linux-gnu-{as,ld,objdump,nm} (nix/arm/tools.nix aarch64-binutils)
+# usage: isla-islaris <opcode-bytes-hex-in-memory-order> [extra isla args]
+# Output is an isla trace: untrusted input to Islaris, not evidence by itself.
+op=$1; shift
+export PATH="${XBIN:?}:$PATH"
+exec "${ISLA_ROOT:?}/target/release/isla-footprint" -A "${ISLA_IR85:?}" \
+  -f isla_footprint_no_init -C "${ISLARIS_SRC:?}/etc/aarch64_isla_coq.toml" \
+  --simplify-registers --tree -s -x -i "$op" "$@"
