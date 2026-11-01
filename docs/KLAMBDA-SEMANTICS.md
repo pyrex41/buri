@@ -126,6 +126,10 @@ relating them is a port obligation (E2E-14/15), not done here.
 
 ## Obligations for E2E-07 (`shen/klambda.shen`, profile KL-PURE-1)
 
+Progress: [E2E-07](E2E-07.md) proves the refinement for the captured
+evaluator on a construct subset and records how each obligation below was
+discharged, narrowed or left open.
+
 The executable evaluator is a different, smaller language; the refinement
 statement must translate both syntax and verdicts:
 

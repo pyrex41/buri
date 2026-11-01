@@ -521,3 +521,34 @@ the captured kernel. See [EQ1](EQ1.md). The soundness theorem is therefore
 about the reference kernel, not yet about the captured one.
 
 Forty-seven additional statements join the assumption audit (404 total).
+
+## Executable Shen evaluator refines KLambda (E2E-07, in progress)
+
+The actual `shen/klambda.shen` (BURI/KL-PURE-1), as compiled and installed by
+the pinned image, is captured (profile `e2e07_klambda`, all 26 definitions),
+regenerated and diffed by `make prove`, and executed by the Native model with
+the captured `base.shen`/`kernel.shen` helpers and the pinned runtime helper
+templates. Universally (`klambda_refines`, `klambda_decided_terminates`): for
+every program of the proved subset (literals, variables, `lambda`, one-argument
+`apply`, `let`, `if`, saturated `+ - * < = cons hd tl cons? number? string?`,
+`raise`, `trap`), every definition table, budget and Native fuel, a value
+returned by the captured `buri.eval` is an evaluator verdict, and under every
+pinned profile (no stack bound; system-error messages equal to the evaluator's
+texts) `[returned v]` and `[raised m]` are terminating KLambda behaviors of the
+translated program with the translated value or an exception of the stated
+class, found by `KLMetatheory.run` and excluding divergence.
+`[unknown evaluation-budget]` and `[unsupported closure-equality]` make no
+claim; `[unknown host-error]` comes only from the guard handler of
+`buri.evaluate` (`evaluate_shape`). Per-construct equations about the captured
+bodies are proved by VM reduction with the callee oracle abstracted, which
+keeps proof checking fast. Ground runs of the captured evaluator are separate,
+ground evidence.
+
+Not proved: the converse (E2E07-COMPLETE; false for closure-vs-data `=`),
+`[global]`/function values (uncaptured `kl:length`), `freeze`/`thaw`,
+unsaturated primitives, the Chez `guard`, and Chez-to-Native simulation. No
+change to `shen/klambda.shen` was needed; the profile differences are listed
+in [E2E-07](E2E-07.md). This is a theorem about the reference evaluator, not
+about Shen-Scheme.
+
+Thirty-three additional statements join the assumption audit (527 total).
