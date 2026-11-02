@@ -134,6 +134,11 @@ diff -u rocq/StockDivisionInput.v _build/StockDivisionInput.v
 python3 scripts/package-primitives.py _build/PrimitiveSources.v
 python3 scripts/check-primitives-package.py _build/PrimitiveSources.v
 diff -u rocq/PrimitiveSources.v _build/PrimitiveSources.v
+# E2E-21: pinned Chez/SBCL layout constants (packaging only; Rocq checks agreement).
+rm -rf _build/repr; mkdir -p _build/repr
+python3 -I scripts/package-repr-layout.py _build/repr
+diff -u rocq/ChezLayout.v _build/repr/ChezLayout.v
+diff -u rocq/SbclLayout.v _build/repr/SbclLayout.v
 # Module registration: each lane owns a file in rocq/modules.d (concatenated in
 # C-locale name order), and every audit module rocq/Audit*.v owns an explicit
 # expected count in rocq/audit.d/<module>.count. Every rocq/*.v must be

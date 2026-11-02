@@ -74,6 +74,12 @@ by every step and every environment response (`step_preserves_wf`).
 
 ## Per-port representation obligation matrix
 
+The Chez tarm64le object representation, a Rocq relation `ChezRepr.rv` from
+these values to machine words, and the SBCL arm64 layout table are in
+[REPRESENTATION](REPRESENTATION.md) (E2E-21). There, `intern` of names such as
+`"12"` is a sampled disagreement on Shen-Scheme: it returns the integer 12, not
+`VSym`.
+
 "Sampled" means a native Shen-Scheme 0.52 / Shen 43.1 probe in this wave (ground
 observation, not proof). CL entries rest on the captured guard (docs/CL-PORT.md)
 or on Common Lisp language facts and are **not** sampled here.

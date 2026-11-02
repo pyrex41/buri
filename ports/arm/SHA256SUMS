@@ -1,4 +1,4 @@
-731890617876995ed70b112240d97278e1d297e6d781053c5c64fee85133ecac  ./README.md
+707ad91e2c4b593f83ab6c29d70e41c8beb09bd277e70f18deeae354d119d2ff  ./README.md
 110ea86236e72852038303f2ecf192fb7b3bd3cfce4a7d8f9638ab430510fcc5  ./chez/chez1030-buri-arm-add.bin
 54578c54f74a57c2dcf6f636930ccebc549a2f7a8b563a85aa10ecb4dd7176e6  ./chez/chez1030-buri-arm-add.chez-asm
 931188882bd5b93880e3eae5a929c3b71c5fa74ae3a0f9335e309b72cfb2ff41  ./chez/chez1030-buri-arm-add.closure
@@ -23,7 +23,9 @@ f8db85e51ac80fbefc7d4dbafd4c59a406dd5829c1ff4ae613bf202aa0685a00  ./isla/chez-00
 85a769ebaf38d83d8cf6162224a564d03d1d0f9fa1421bb7a9c9b1614c4f29b8  ./isla/sbcl.list
 b30845ecc43ca029898acd03a40251f6bbe31999d6b1a02df884dc5d99551792  ./islaris/buri_chez_add.dump
 17a63dac2327eed8137122b662d680c8797b73f83913300315b8a10bf4c75117  ./islaris/buri_chez_add.v
+7ce6c4be1b718bc2b2a9206c86a310b086bbf421874e8a4a79edff3499fdd2a5  ./islaris/buri_chez_add_shen.v
 a87510f718c00af7d9caa19d6b8e906529a7a27a2ee6ac4c58ad57bddd3f2fb2  ./islaris/check-islaris-example.sh
+d07d6bc1495d9a9cf38244efdd0529523a9ad3e22b0314838cd9ed258f6b95cf  ./islaris/check-islaris-shen.sh
 4dc687a777ec24c06d2806e76435f4e37992d105106c5df9a56b2309b83026b9  ./islaris/check-islaris.sh
 b58805cf4afafd2c8f47cfdbb1c13a1d49a381c3722f3e3b83d93cf1e6e10f39  ./islaris/gen-traces.sh
 3c64d8320119963481e3913d30c706958a5d2cd88f3303e89a1250a45db9c328  ./islaris/instructions/buri_chez_add-isla-e9b5d945/a0.isla
