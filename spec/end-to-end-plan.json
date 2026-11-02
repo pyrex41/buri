@@ -693,7 +693,7 @@
         {
           "kind": "research-report",
           "artifact": "docs/ARM-FOUNDATION.md",
-          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin. Proves no theorem: no byte-level theorem against the ISA model exists yet and Islaris was not built, so the exit criterion is unmet."
+          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin (sections 1-9, Wave A); section 10 records the Wave B proofs below and what they trust. The exit criterion (branch, call, load/store, fault, allocation stub and atomic checked against the selected model) is unmet."
         },
         {
           "kind": "byte-capture-and-emulated-run",
@@ -714,6 +714,21 @@
           "kind": "isla-trace-unchecked",
           "artifact": "ports/arm/isla/STATUS",
           "claim": "isla e9b5d945 symbolic execution of the Sail Armv9.4-A IR on the exact opcode bytes; trusts isla, z3 and the Sail-to-IR translation; not checked by Rocq."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmAdds.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh (Coq 8.18.0, stdpp 1.10.0, coq-sail 0.19, sail-arm 7d058164 Armv9.4 Coq model; not in scripts/prove). Universal over pc: the model's __DecodeA64 on the captured Chez word 0xab010017 (+0x14) equals read SEE; if SEE < 15 then write SEE 15 and execute ADDS X23,X0,X1 else throw Error_Undefined; that execute equals an explicit register-transfer program; under SEE < 15 the decoder admits the sequential trace writing PSTATE.NZCV and X23 := (X0+X1) mod 2^64. Decoder statements inherit the model's three Coq-stdlib Reals axioms; execute and sum lemmas are closed. One data-processing word only."
+        },
+        {
+          "kind": "toolchain-build",
+          "artifact": "nix/arm/islaris.nix",
+          "claim": "Separate Coq 8.19.0 environment with stdpp a1a12e00, Iris 6f24ed4b, Lithium 7945a29d, record-update 0.3.3, isla-lang bda86c9f and Islaris c978e10f, fetched by exact git commit from GitHub mirrors; built here, and Islaris's own examples/example.v checks in it. Deviations: dune 3.23.1, ott 0.34."
+        },
+        {
+          "kind": "islaris-theorem-over-isla-traces",
+          "artifact": "ports/arm/islaris/buri_chez_add.v",
+          "claim": "Checked by ports/arm/islaris/check-islaris.sh in the Coq 8.19.0 environment; closed under the global context. For all fixnum-tagged a, b without signed overflow, with X23 = 2 and an aligned frame slot holding ra, the Chez fast path +0x00..+0x23 (captured bytes) reaches ra with X23 = a+b, X30 = a|b, X10 = ra; slow paths proved infeasible. Relative to Islaris's semantics of isla b8e614bd (and e9b5d945) traces of the Armv8.5 IR under Islaris's EL2/MMU-off constraints, not the Armv9.4 Coq model and not EL0 Linux; trace = architecture is trusted to isla and z3."
         }
       ],
       "acceptance": "exact\ninstructions are checked against the selected ISA model; no disassembly-text or\ntoy-ISA agreement is substituted. Tool compatibility and missing mechanisms are\nresearch deliverables, not assumed available integrations.",
