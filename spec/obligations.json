@@ -593,6 +593,12 @@
      "ref": "tests/evaluator.shen",
      "test": "lexical",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "KLambdaEvaluatorRefinement.KLambdaEvaluatorRefinement.klambda_refines",
+     "establishes": "implementation-correspondence",
+     "note": "KL-PURE-1 subset only; klambda_refines_ext (globals, function values, freeze/thaw) and the converse klambda_complete are audited in rocq/Audit_E2e07b.v; the Chez guard (E2E07-GUARD), Chez-to-Native simulation (E2E07-NATIVE) and admission correspondence remain open, so the obligation stays open"
     }
    ],
    "completion_evidence": "Source-bound refinement theorem over the exact loaded source.",
@@ -3926,6 +3932,7 @@
  ],
  "lane_audits": [
   "rocq/Audit_Clcontracts.v",
+  "rocq/Audit_E2e07b.v",
   "rocq/Audit_Nanopass.v",
   "rocq/Audit_Portfix.v",
   "rocq/Audit_Repr.v",

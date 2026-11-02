@@ -149,7 +149,7 @@
         {
           "kind": "capture",
           "artifact": "ports/e2e07-klambda.bits",
-          "claim": "shen/klambda.shen as compiled and installed by the pinned image (all 26 definitions, profile e2e07_klambda); regenerated and diffed by make prove; decoded by rocq/KLambdaEvaluatorInput.v"
+          "claim": "shen/klambda.shen as compiled and installed by the pinned image (all 33 definitions, profile e2e07_klambda); regenerated and diffed by make prove; decoded by rocq/KLambdaEvaluatorInput.v"
         },
         {
           "kind": "universal-theorem",
@@ -172,9 +172,34 @@
           "claim": "actual Native run of the captured evaluator on let, trap, non-Boolean if, application, budget exhaustion and closure equality; universal theorem instantiated; independent KLambda computation agrees on the let sample"
         },
         {
+          "kind": "implementation-change",
+          "artifact": "shen/klambda.shen",
+          "claim": "buri.equal implements KLValue.kl_eq (function values unequal to data, undefined between functions); thaw of a closure and application of a thunk raise arity, thaw of a partial application returns it; buri.fewer? replaces the uncaptured kl:length; [primitive Op Args] admitted only saturated. make conformance passes (sampled agreement with Shen-Scheme, including the new equality cases)"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorExtended.v",
+          "claim": "klambda_refines_ext: for every well-formed definition table (positive arity, subset bodies) and every term of the extended KL-PURE-1 subset (adds [global X], [function ...] values with currying, freeze, thaw), a value returned by the captured buri.eval is a verdict; [returned v]/[raised m] are found by KLMetatheory.run on the translated program under every pinned profile and every store holding the primitives and the translated definitions; [unsupported closure-equality] is the KLambda machine going wrong (equality of two function values undefined); budget makes no claim"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorComplete.v",
+          "claim": "klambda_complete (converse): if the KLambda run of tr e terminates silently within m steps with outcome o, then for every budget z > m the actual Native run of the captured buri.eval returns, for all large enough fuel, [returned v] with o = Normal (tr_rv v) or [raised msg] with o = Error x of the class of msg; never exhaustion or unsupported"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorGlobal.v",
+          "claim": "per-body equations for [global X], [freeze E], [thaw E], buri.apply-global, buri.definition, buri.zip, buri.append, buri.fewer?; KLambdaEvaluatorForward: forward (termination) equations for the captured helpers"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/KLambdaEvaluatorSamples.v",
+          "claim": "sample_closure_data_eq: (= (lambda x x) 1) is [returned [bool false]] on the actual captured evaluator"
+        },
+        {
           "kind": "open-obligation",
           "artifact": "docs/E2E-07.md",
-          "claim": "E2E07-COMPLETE (converse), E2E07-GLOBAL, E2E07-THAW, E2E07-PRIM-ARITY, E2E07-EQ-CLOSURE, E2E07-GUARD, E2E07-NATIVE remain open"
+          "claim": "E2E07-GUARD (Chez guard contract of buri.evaluate), E2E07-NATIVE (Chez-to-Native simulation) and E2E07-ADMISSION (buri.expression?/buri.definitions? not related to the subset predicates) remain open; E2E07-PRIM-ARITY is a recorded profile difference (charter kl-currying prim-partial-application), not a theorem"
         }
       ],
       "acceptance": "every accepted\nexecution result has a formal witness, with the promised converse/completeness\nwithin the stated evaluator profile and sufficient resources.",

@@ -4,8 +4,9 @@
    primitives (+ - * < = cons hd tl cons? number? string?), raise and trap.
    The thing proved is the captured Native program of KLambdaEvaluatorCapture;
    this module only states the translation into TLambda syntax/values and the
-   machine-side composition. [global], [freeze], [thaw] and every program that
-   reaches kl:length or kl:shen.f-error are outside, as named obligations. *)
+   machine-side composition. [global], [freeze], [thaw] and function values
+   are covered by KLambdaEvaluatorExtended; a run that reaches
+   kl:shen.f-error has no Native value and is outside every theorem. *)
 From Coq Require Import List String ZArith NArith Bool Lia Ascii.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLMetatheory Native
  KLambdaEvaluatorCapture KLambdaEvaluatorEquations KLambdaEvaluatorPrimitives.
@@ -448,6 +449,32 @@ Proof.
    rewrite (IHa1 b1 Da1 Db1), (IHa2 b2 Da2 Db2).
    destruct (Native.Native.same (enc a1) (enc b1)); cbn; rewrite ?andb_true_r; reflexivity.
 Qed.
+(* KLambda equality of translated values is the evaluator's eqv, for every
+   value: closures, [function ...] and thunks are the function values of
+   kl_eq, and pairs compare left to right. *)
+Lemma kl_eq_tr : forall a b h, kl_eq P h (tr_rv a) (tr_rv b) = Pr.eqv a b.
+Proof.
+ intros a b h. unfold kl_eq. generalize (List.length h) as n. intro n.
+ revert b; induction a as [z|bb|st|sy| |a1 IHa1 a2 IHa2|x e env|f args|e env]; intro b0;
+ destruct b0 as [z0|bb0|st0|sy0| |b1 b2|x0 e0 env0|f0 args0|e0 env0];
+ first [cbn [tr_rv]; rewrite eq_depth_cons; cbn -[of_string eq_depth tr_rv tr] | cbn -[of_string tr]];
+ try reflexivity; rewrite ?text_eqb_of_string, ?andb_true_r; try reflexivity.
+ rewrite IHa1. destruct (Pr.eqv a1 b1) as [[|]|]; [apply IHa2|reflexivity|reflexivity].
+Qed.
+Lemma kl_prim_equal_tr : forall a b k,
+ match Pr.eqv a b with
+ | Some x => exists c, call_named P (of_string "=") (map tr_rv [a; b]) k s = MTau c /\
+     reaches P c (WRet (RBool x)) k s
+ | None => next P (Cfg (Ret (tr_rv b)) (KCallArgs (of_string "=") [tr_rv a] [] (tr_env []) :: k) s) =
+     MTau (Cfg (Wrong (kw "equality-undefined")) k s) end.
+Proof.
+ intros a b k. pose proof (call_prim "=" PEqual (map tr_rv [a; b]) k) as C.
+ cbn [map] in C |- *. cbn [rev List.app next ctl kont mem ret_move].
+ rewrite C by (cbn; first [tauto|reflexivity]). clear C.
+ pose proof (kl_eq_tr a b (heap s)) as KE.
+ unfold prim_move; cbn [prim_rule]. unfold rule_equal. rewrite KE.
+ destruct (Pr.eqv a b) as [x|]; [eexists; split; [reflexivity|constructor]|reflexivity].
+Qed.
 Lemma kl_prim_equal : forall a b k, Pr.data a -> Pr.data b ->
  exists c, call_named P (of_string "=") (map tr_rv [a; b]) k s = MTau c /\
    reaches P c (WRet (RBool (Native.Native.same (enc a) (enc b)))) k s.
@@ -588,12 +615,13 @@ Proof.
           intros P s HP Hs. eapply (m_prim_vals P s HP Hs); [exact NE|apply G1; assumption|].
           intro k. apply (kl_prim P s HP Hs op p [v1] k); [cbn in I1 |- *; tauto|exact Op|rewrite A1; reflexivity].
        -- destruct vs as [|v1 [|v2 [|]]]; cbn in L1; try (rewrite <- Ar in L1; discriminate L1).
-          cbn [map] in H. apply Pr.ask_prim_equal in H.
-          destruct H as [->|(D1 & D2 & ->)].
-          ++ exists WUnsupported; repeat split; intros ? ? ? ? ?; exact I.
+          cbn [map] in H. apply Pr.ask_prim_equal in H. subst r. unfold Pr.eq_spec.
+          pose proof (fun P s HP Hs k => kl_prim_equal_tr P s HP Hs v1 v2 k) as KE.
+          destruct (Pr.eqv v1 v2) as [x|].
           ++ eexists; split; [reflexivity|split; [exact I|]].
              intros P s HP Hs. eapply (m_prim_vals P s HP Hs); [exact NE|apply G1; assumption|].
-             intro k. apply (kl_prim_equal P s HP Hs v1 v2 k D1 D2).
+             intro k. apply (KE P s HP Hs k).
+          ++ exists WUnsupported; repeat split; intros ? ? ? ? ?; exact I.
      * ret H. split; [destruct w1; cbn in O1 |- *; tauto|].
        intros P s HP Hs. destruct w1 as [v|m| |]; cbn in O1; try contradiction; try (intros k; exact I).
        apply (m_prim_fail P s HP Hs); [exact NE|apply G1; assumption].
@@ -624,7 +652,7 @@ Proof.
      * ret H. split; [exact I|]. intros P s HP Hs; apply (m_trap_other P s HP Hs); auto.
  - (* buri.apply-value on a closure or a non-callable value *)
    intros D f a z r Of Oa H.
-   rewrite Q.apply_value_eq in H; [|intros g args E; subst f; exact Of].
+   rewrite Q.apply_value_eq in H; [|intros g args E; subst f; exact Of|intros e0 env0 E; subst f; exact Of].
    gate_case H. destruct f as [z0|b0|st|sy| |a1 a2|x e env|g args|e env]; cbn in Of; try contradiction;
      try (ret H; split; [exact I|]; intros P s HP Hs; apply (ap_noncallable P s HP Hs); intros; discriminate).
    destruct Of as [Se Oe]. apply okenv_fold in Oe.
@@ -766,23 +794,23 @@ Qed.
    stated contract (when the body returns a value, guard returns it); the
    theorem below is about the body, and [unknown host-error] has no KLambda
    counterpart: it can only come from the handler. *)
-Definition guard_handler := Native.Native.Call "Z5985" [Native.Native.Call "else" [Native.Native.Call "list"
+Definition guard_handler := Native.Native.Call "Z5997" [Native.Native.Call "else" [Native.Native.Call "list"
  [Native.Native.Lit (Native.Native.Symbol "unknown"); Native.Native.Lit (Native.Native.Symbol "host-error")]]].
 Definition rejected := Native.Native.L [Native.Native.Symbol "rejected"; Native.Native.Symbol "unsupported-or-malformed-program"].
 Theorem evaluate_shape : exists admit,
- Native.Native.params d_evaluate = ["V5982"; "V5983"; "V5984"] /\
+ Native.Native.params d_evaluate = ["V5994"; "V5995"; "V5996"] /\
  Native.Native.body d_evaluate = Native.Native.Call "guard" [guard_handler;
    Native.Native.If admit
-     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V5982"; Native.Native.Var "V5983";
-        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V5984"])
+     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V5994"; Native.Native.Var "V5995";
+        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V5996"])
      (Native.Native.Call "list" [Native.Native.Lit (Native.Native.Symbol "rejected");
         Native.Native.Lit (Native.Native.Symbol "unsupported-or-malformed-program")])].
 Proof. eexists; split; vm_compute; reflexivity. Qed.
 Theorem evaluate_body_refines : forall k admit D e z r, sub e ->
- O.step defined (ask k) (Native.Native.arguments ["V5982"; "V5983"; "V5984"] [D; enc_term e; Native.Native.Integer z])
+ O.step defined (ask k) (Native.Native.arguments ["V5994"; "V5995"; "V5996"] [D; enc_term e; Native.Native.Integer z])
    (Native.Native.If admit
-     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V5982"; Native.Native.Var "V5983";
-        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V5984"])
+     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V5994"; Native.Native.Var "V5995";
+        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V5996"])
      (Native.Native.Call "list" [Native.Native.Lit (Native.Native.Symbol "rejected");
         Native.Native.Lit (Native.Native.Symbol "unsupported-or-malformed-program")])) = Some r ->
  r = rejected \/ exists w, r = enc_verdict w /\ ok_verdict w /\

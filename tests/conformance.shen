@@ -35,6 +35,9 @@
 (buri.port-test cons-recognizer [primitive cons? [[literal nil]]])
 (buri.port-test number-recognizer [primitive number? [[literal [int 1]]]])
 (buri.port-test string-recognizer [primitive string? [[literal [str "x"]]]])
+(buri.port-test closure-data-inequality [primitive = [[lambda x [var x]] [literal [int 1]]]])
+(buri.port-test data-thunk-inequality [primitive = [[literal nil] [freeze [literal [int 1]]]]])
+(buri.port-test pair-equality-left-first [primitive = [[primitive cons [[literal [int 1]] [lambda x [var x]]]] [primitive cons [[literal [int 2]] [lambda x [var x]]]]]])
 (define buri.port-pairs Xs Ys ->
  (map (/. X (map (/. Y
    (do (buri.port-test generated-add [primitive + [[literal [int X]] [literal [int Y]]]])

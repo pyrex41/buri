@@ -156,6 +156,33 @@ Lemma d_assert_lk : lookup program "kl:_scm.assert-boolean" = Some d_assert. Pro
 Definition d_evaluate := Eval vm_compute in def_of "kl:buri.evaluate".
 Lemma d_evaluate_lk : lookup program "kl:buri.evaluate" = Some d_evaluate. Proof. vm_compute; reflexivity. Qed.
 
+Definition d_fnv := Eval vm_compute in def_of "kl:buri.function-value?".
+Lemma d_fnv_lk : lookup program "kl:buri.function-value?" = Some d_fnv. Proof. vm_compute; reflexivity. Qed.
+Definition d_equal_fn := Eval vm_compute in def_of "kl:buri.equal".
+Lemma d_equal_fn_lk : lookup program "kl:buri.equal" = Some d_equal_fn. Proof. vm_compute; reflexivity. Qed.
+Definition d_equal_pair := Eval vm_compute in def_of "kl:buri.equal-pair".
+Lemma d_equal_pair_lk : lookup program "kl:buri.equal-pair" = Some d_equal_pair. Proof. vm_compute; reflexivity. Qed.
+Definition d_equal_leaf := Eval vm_compute in def_of "kl:buri.equal-leaf".
+Lemma d_equal_leaf_lk : lookup program "kl:buri.equal-leaf" = Some d_equal_leaf. Proof. vm_compute; reflexivity. Qed.
+Definition d_eq_verdict := Eval vm_compute in def_of "kl:buri.equality-verdict".
+Lemma d_eq_verdict_lk : lookup program "kl:buri.equality-verdict" = Some d_eq_verdict. Proof. vm_compute; reflexivity. Qed.
+Definition d_fewer := Eval vm_compute in def_of "kl:buri.fewer?".
+Lemma d_fewer_lk : lookup program "kl:buri.fewer?" = Some d_fewer. Proof. vm_compute; reflexivity. Qed.
+Definition d_apply_global := Eval vm_compute in def_of "kl:buri.apply-global".
+Lemma d_apply_global_lk : lookup program "kl:buri.apply-global" = Some d_apply_global. Proof. vm_compute; reflexivity. Qed.
+Definition d_apply_bound := Eval vm_compute in def_of "kl:buri.apply-bound".
+Lemma d_apply_bound_lk : lookup program "kl:buri.apply-bound" = Some d_apply_bound. Proof. vm_compute; reflexivity. Qed.
+Definition d_eval_thaw := Eval vm_compute in def_of "kl:buri.eval-thaw".
+Lemma d_eval_thaw_lk : lookup program "kl:buri.eval-thaw" = Some d_eval_thaw. Proof. vm_compute; reflexivity. Qed.
+Definition d_definition := Eval vm_compute in def_of "kl:buri.definition".
+Lemma d_definition_lk : lookup program "kl:buri.definition" = Some d_definition. Proof. vm_compute; reflexivity. Qed.
+Definition d_zip := Eval vm_compute in def_of "kl:buri.zip".
+Lemma d_zip_lk : lookup program "kl:buri.zip" = Some d_zip. Proof. vm_compute; reflexivity. Qed.
+Definition d_zip_h := Eval vm_compute in def_of "kl:buri.zip-h".
+Lemma d_zip_h_lk : lookup program "kl:buri.zip-h" = Some d_zip_h. Proof. vm_compute; reflexivity. Qed.
+Definition d_append := Eval vm_compute in def_of "kl:buri.append".
+Lemma d_append_lk : lookup program "kl:buri.append" = Some d_append. Proof. vm_compute; reflexivity. Qed.
+
 (* ---------- runtime helpers and base.shen ---------- *)
 Lemma ask_equal : forall k a b r, ask k "kl:=" [a; b] = Some r -> r = Boolean (same a b).
 Proof. intros [|k] a b r H; [discriminate|]. rewrite (ask_unfold _ _ _ _ d_equal_lk) in H. cbn in H. congruence. Qed.
