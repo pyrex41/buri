@@ -483,3 +483,15 @@ covers a branch, a load and an indirect branch only in Islaris over Armv8.5
 traces. Section 10.1 covers one data-processing word in the Armv9.4 model.
 No fault, call, allocation stub, atomic or memory-model result exists. The
 SBCL code is not yet covered. Package 20 stays in progress.
+
+### 10.5 Wave C: the fast-path premises as Shen-value facts (E2E-21)
+
+`ports/arm/islaris/buri_chez_add_shen.v` (Islaris theorem, same Coq 8.19
+toolchain, `check-islaris-shen.sh`) restates 10.3 for X0/X1 holding Chez
+fixnum words of Shen integers x, y. The premise `(a|b)&7 = 0` follows. The
+no-overflow premise holds exactly when x + y is a fixnum, so it is a real Shen
+premise, not a consequence of x and y being integers. The fixnum encoding and
+the register numbers come from constants extracted from the pinned Chez
+sources and build output. Everything else listed in 10.3 stays assumed: EL2
+with the MMU off, the Armv8.5 traces, the base address and the continuation.
+See [REPRESENTATION](REPRESENTATION.md) section 4.

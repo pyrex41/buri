@@ -535,14 +535,21 @@
    "statement": "Host exact integers implement mathematical integers with decimal printing.",
    "premises": [],
    "depends_on": [
-    "OB-NUMERIC-PROFILE"
+    "OB-NUMERIC-PROFILE",
+    "OB-REPR-CHEZ-BIGNUM-NORMAL"
    ],
    "evidence": [],
    "completion_evidence": "Representation relation for Chez and SBCL bignums, plus printing proof.",
    "sources": [
     "docs/TRUST.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/REPRESENTATION.md",
+     "recorded": "Chez fixnum words and bignum layout are related to Z (ChezWord, ChezRepr.RFix/RBig); Chez arithmetic is not yet shown to produce canonical results.",
+     "reconciliation": "Remains assumed; bignum normalisation is OB-REPR-CHEZ-BIGNUM-NORMAL."
+    }
+   ]
   },
   {
    "id": "OB-KL-GLOBAL-REBINDING",
@@ -2319,23 +2326,47 @@
    "kind": "model-proof",
    "scope": "universal",
    "owner": "E2E-21",
-   "packages": [],
-   "status": "open",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "partial",
    "boundary": "Chez native representation relation",
-   "identity": "",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
    "statement": "Chez values, heap and continuations relate to SEM-VALUE.",
    "premises": [],
    "depends_on": [
     "OB-ARM-FOUNDATION",
+    "OB-REPR-CHEZ-BIGNUM-NORMAL",
+    "OB-REPR-CHEZ-CLOSURES",
+    "OB-REPR-CHEZ-CONDITIONS",
+    "OB-REPR-CHEZ-FLONUM-PROFILE",
+    "OB-REPR-CHEZ-FRAMES",
+    "OB-REPR-CHEZ-PORTS",
+    "OB-REPR-CHEZ-SYMBOLS",
+    "OB-REPR-FFI",
+    "OB-REPR-STRING-SCALARS",
     "OB-VECTOR-HEAP"
    ],
-   "evidence": [],
-   "completion_evidence": "Representation relation proofs.",
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/repr/chez/chez-10.3.0-tarm64le-sample.capture",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Representation relation proofs. Wave C: rocq/ChezRepr.v defines rv over one memory snapshot with universal tag-decoding, disjointness, functionality and accessor theorems (rocq/Audit_Repr.v, not read by the ledger, which reads rocq/Audit.v only); the dependencies list what remains.",
    "sources": [
+    "docs/REPRESENTATION.md",
     "docs/SIX-STAGES.md",
     "docs/TRUST-AUDIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/REPRESENTATION.md",
+     "recorded": "E2E-21 Wave C: Chez tarm64le representation specified from pinned sources; relation rv and its basic properties proved universally in ChezRepr.v/ChezWord.v (45 closed statements in rocq/Audit_Repr.v).",
+     "reconciliation": "Partial: closures, frames, symbols/globals, bignum normalisation, flonum meaning, ports, conditions, GC, asynchronous ownership, FFI and string scalars are separate open obligations."
+    }
+   ]
   },
   {
    "id": "OB-NATIVE-REPR-SBCL",
@@ -2345,19 +2376,27 @@
    "packages": [],
    "status": "open",
    "boundary": "SBCL native representation relation",
-   "identity": "",
+   "identity": "SBCL 2.6.8 arm64 (source sha256 ad5126df..., image sbcl.core 44fce5d1...); ports/repr/SHA256SUMS",
    "statement": "SBCL values, heap and continuations relate to SEM-VALUE.",
    "premises": [],
    "depends_on": [
     "OB-ARM-FOUNDATION",
+    "OB-REPR-SBCL-CHARS",
     "OB-VECTOR-HEAP"
    ],
    "evidence": [],
    "completion_evidence": "Representation relation proofs.",
    "sources": [
-    "docs/CL-PORT.md"
+    "docs/CL-PORT.md",
+    "docs/REPRESENTATION.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/REPRESENTATION.md",
+     "recorded": "E2E-21 Wave C: SBCL 2.6.8 arm64 lowtag/widetag/slot/register table from pinned sources checked against the image capture (SbclRepr ground derivations).",
+     "reconciliation": "Still open: no CL representation relation is defined."
+    }
+   ]
   },
   {
    "id": "OB-CHEZ-COMPILATION",
@@ -3037,6 +3076,361 @@
     "docs/SCHEME-PORT.md"
    ],
    "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-CLOSURES",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Meaning of Chez closure words (ChezRepr parameter proc)",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "A closure word (tag 101, entry = code object + code_data_disp, free variables from disp 11) produced by Shen-Scheme compiled code represents the VLam/VFrozen/VPartial value it was compiled from, including captured environment and late-bound partial application.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A compiler-correspondence theorem instantiating ChezRepr.rv's proc parameter.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-FRAMES",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Chez stack frames, return points, multiple values and continuations",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "The %sfp (x20) frame protocol (return address at frame slot 0, return-point live mask and frame size at return_address_*_disp), multiple-value returns and call/cc continuations relate to the abstract continuation; this discharges the X20 frame-slot premises of the Islaris fast path.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A frame/continuation relation and its preservation by the calling convention.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-SYMBOLS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-24",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Chez symbol interning and global namespaces",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Interned Chez symbols are unique per name with a string name field, Shen symbol names map to Chez symbol names without change, and Shen-Scheme's storage of global values and functions relates to store.gvals/gfuns.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Proof about the oblist/intern routine and the global-binding representation.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-BIGNUM-NORMAL",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-24",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Canonical Chez integers",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Every Chez integer result reachable from Shen is normalised: integers in the fixnum range are fixnums and bignums have a nonzero leading bigit (S_normalize_bignum), as ChezRepr.RBig requires.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Proof for the Chez integer library routines reachable from Shen.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-FLONUM-PROFILE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Meaning of Chez flonum bits",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "The binary64 bits that ChezRepr.RFlo relates to NFloat obey the pinned numeric profile slots (arithmetic, comparison, printing).",
+   "premises": [],
+   "depends_on": [
+    "OB-NUMERIC-PROFILE"
+   ],
+   "evidence": [],
+   "completion_evidence": "Pinned IEEE profile plus correspondence for the flonum routines.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-PORTS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-27",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Meaning of Chez port words (ChezRepr parameter port)",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Port objects (type word 0xDE) used as Shen streams relate to the environment's stream handles and IO events.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "IO boundary relation instantiating ChezRepr.rv's port parameter.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-CONDITIONS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Meaning of Chez condition records (ChezRepr parameter cond)",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Records raised by Shen-Scheme for Shen errors relate to the exn classes of KLValue, and trap-error handlers receive the related value.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Contract for the condition-raising primitives instantiating ChezRepr.rv's cond parameter.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-CHEZ-GC",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-25",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Representation relation across allocation and moving GC",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Allocation, vector mutation (with card marking/write barriers) and moving collection preserve heap_rel and rv up to a consistent update of the location map and of every live word.",
+   "premises": [],
+   "depends_on": [
+    "OB-GC-CORRECTNESS",
+    "OB-HEAP-REPR-INVARIANT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Preservation theorem connecting ChezRepr.heap_rel to the collector proof.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-OWNERSHIP-ASYNC",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-28",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Object ownership across asynchronous events",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Signals, the %trap event counter, timer/keyboard interrupts and other pthreads cannot change a related object between the reads a proof relies on.",
+   "premises": [],
+   "depends_on": [
+    "OB-CONCURRENT-MUTATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Ownership discipline proved under the selected ARM memory model.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-FFI",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-24",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Foreign and runtime-boundary values",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Values crossing foreign-call stubs and C runtime routines (bytevectors, foreign pointers, strings passed to the OS) keep their representation, and foreign pointers never reach Shen values.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Contracts for each reachable stub with representation pre/postconditions.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-STRING-SCALARS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-27",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Chez strings reaching Shen hold Unicode scalar values",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Every string-char of a string that reaches Shen is code << 8 | 0x16 with code a Unicode scalar value, including strings decoded from files and streams.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Proof for the string constructors and decoders reachable from Shen.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-SHEN-SCHEME-PRESERVES",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Shen-Scheme code stays inside the representation relation",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "Compiled Shen-Scheme code and its runtime only produce words related by ChezRepr.rv to KLambda values; in particular no #!void escapes (ChezRepr.non_values_unrepresented shows it has no meaning, and VALUE-MODEL samples a cond returning it).",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-CHEZ"
+   ],
+   "evidence": [],
+   "completion_evidence": "Per-pass and runtime preservation of rv.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-ISLARIS-CONTEXT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-20",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "Islaris fast-path result in the deployed execution context",
+   "identity": "cisco/ChezScheme@adfaf9e6 (v10.3.0) tarm64le; ports/repr/SHA256SUMS",
+   "statement": "The Islaris theorems buri_chez_add_fast_path/buri_chez_add_shen (EL2, MMU off, Armv8.5 isla traces, captured base address) carry over to EL0 Linux with the MMU on under the selected ISA model, at any load address.",
+   "premises": [],
+   "depends_on": [
+    "OB-ARM-FOUNDATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Trace-to-model bridge and EL0/MMU profile theorem.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-REPR-SBCL-CHARS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-21",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "SBCL characters versus Shen code points",
+   "identity": "SBCL 2.6.8 arm64; ports/repr/sbcl/sbcl-2.6.8-arm64-image.capture",
+   "statement": "Shen-CL strings reaching Shen contain only Unicode scalar values although SBCL characters range over 0..#x10FFFF including surrogates (char-code-limit 1114112), or the profile admits surrogates.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Admission or profile change plus proof for the CL string primitives.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-INTERN-ADMISSION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "open",
+   "boundary": "intern of names that start with a digit",
+   "identity": "tizoc/shen-scheme@fa0717374d907545c997ba0e38526f02b720a2ab src/primitives.scm kl:intern",
+   "statement": "Shen-Scheme intern agrees with rule_intern on the admitted names: either names of length > 1 starting with a digit are excluded by admission, or the profile defines intern of such names.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Admission rule or profile slot plus proof for kl:intern.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-INTERN-NUMERIC",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "refuted",
+   "boundary": "Unrestricted Shen-Scheme intern",
+   "identity": "tizoc/shen-scheme@fa0717374d907545c997ba0e38526f02b720a2ab src/primitives.scm kl:intern",
+   "statement": "Shen-Scheme kl:intern returns VSym t for every name t other than \"true\"/\"false\", as rule_intern prescribes.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "tests/representation.shen",
+     "test": "intern-numeric-is-integer",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted on Shen-Scheme v0.52: (intern \"12\") is the integer 12; replaced by the admission obligation.",
+   "sources": [
+    "docs/REPRESENTATION.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-SCHEME-INTERN-ADMISSION"
   }
  ],
  "legacy_inventory_map": [

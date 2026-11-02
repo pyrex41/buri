@@ -74,6 +74,16 @@ for name in $(python3 tests/mutate-eq1.py); do
   grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# E2E-21 representation mutants: a changed layout capture or a weakened
+# fixnum premise must be refused by Rocq with the named error.
+python3 tests/mutate-repr.py > _build/mutations/repr-names
+while read -r name pattern; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q "$(printf '%s' "$pattern" | tr _ ' ')" "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done < _build/mutations/repr-names
 # E2E-17 primitive wrapper mutants: each changed pinned definition must fail
 # Rocq admission (computed equality with the reviewed AST).
 for name in $(python3 tests/mutate-primitives.py); do

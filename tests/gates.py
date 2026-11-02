@@ -172,6 +172,30 @@ with tempfile.TemporaryDirectory(prefix='buri-source-literal-') as directory:
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
+with tempfile.TemporaryDirectory(prefix='buri-repr-pins-') as directory:
+    # E2E-21: the layout extractor refuses a changed pinned input, both when
+    # SHA256SUMS is left stale and when it is updated to match the change.
+    import hashlib
+    tree = Path(directory)
+    (tree / 'scripts').mkdir()
+    (tree / 'out').mkdir()
+    shutil.copy(root / 'scripts/package-repr-layout.py', tree / 'scripts/package-repr-layout.py')
+    shutil.copytree(root / 'ports/repr', tree / 'ports/repr')
+    equates = tree / 'ports/repr/chez/tarm64le-equates.h'
+    equates.write_text(equates.read_text().replace('#define fixnum_offset 0x3\n', '#define fixnum_offset 0x2\n'))
+    run = lambda: subprocess.run(['python3', '-I', str(tree / 'scripts/package-repr-layout.py'), str(tree / 'out')],
+                                 capture_output=True, text=True)
+    result = run()
+    assert result.returncode != 0 and 'pinned' in result.stderr and not (tree / 'out/ChezLayout.v').exists()
+    sums = tree / 'ports/repr/SHA256SUMS'
+    digest = hashlib.sha256(equates.read_bytes()).hexdigest()
+    sums.write_text('\n'.join(digest + '  ./chez/tarm64le-equates.h' if l.endswith('./chez/tarm64le-equates.h') else l
+                              for l in sums.read_text().splitlines()) + '\n')
+    result = run()
+    assert result.returncode != 0 and 'differs from the upstream pin' in result.stderr
+    assert not (tree / 'out/ChezLayout.v').exists()
+    count += 1
+
 with tempfile.TemporaryDirectory(prefix='buri-report-log-') as directory:
     import os
     tree = Path(directory)

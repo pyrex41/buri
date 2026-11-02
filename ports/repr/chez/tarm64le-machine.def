@@ -1,0 +1,7 @@
+;; This template is turned into a machine-specific ".def" file
+;; by the `machine.def` script
+
+(define-constant machine-type (constant machine-type-tarm64le))
+(features iconv expeditor pthreads)
+(include "arm64.def")
+(include "default.def")

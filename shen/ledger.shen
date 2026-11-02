@@ -566,7 +566,7 @@
 \\ Audit modules: AuditPath (rocq/Audit.v) plus each lane's rocq/Audit_<lane>.v,
 \\ registered with a count in rocq/audit.d. Shen has no directory listing, so
 \\ the lane files are named here; a missing file contributes no names.
-(define buri.laudit-lane-files -> ["rocq/Audit_Clcontracts.v"])
+(define buri.laudit-lane-files -> ["rocq/Audit_Clcontracts.v" "rocq/Audit_Repr.v"])
 (define buri.laudit-all AuditPath ->
   (buri.lconcat (map (/. P (buri.laudit-names (read-file-as-bytelist P)))
                      [AuditPath | (buri.lfilter (/. P (buri.lexists? P)) (buri.laudit-lane-files))])))

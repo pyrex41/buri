@@ -744,3 +744,81 @@ about SBCL.
 Twenty-four statements join the assumption audit (`rocq/Audit_Clcontracts.v`,
 630 total). Two admission mutants and three restated-claim mutants join the
 proof mutations (106 total). The matrix names 123 contracts.
+
+## Native representation relations (E2E-21, Wave C, in progress)
+
+[REPRESENTATION](REPRESENTATION.md) is the source-bound specification of the
+Chez Scheme 10.3.0 tarm64le object representation. It covers fixnums,
+immediates, characters, pairs, symbols, strings, vectors, flonums, bignums,
+closures and code objects, records, ports, and the TC/frame/argument
+registers.
+
+The constants come from pinned inputs in `ports/repr/`:
+
+* the upstream `cmacros.ss`, `arm64.ss`, `arm64.def` and `types.h`;
+* the build-time `equates.h` and `machine.def` from the ARM lane's tarm64le
+  build.
+
+The inert `scripts/package-repr-layout.py` extracts them into the generated
+`rocq/ChezLayout.v` and `rocq/SbclLayout.v`, which `scripts/prove`
+regenerates and diffs.
+
+New modules: `ChezLayout`, `SbclLayout`, `ChezWord`, `ChezRepr`, `SbclRepr`
+(`rocq/modules.d/50-repr.list`). There are 45 audited statements
+(`rocq/Audit_Repr.v`), all closed. Their kinds:
+
+* **Universal theorems:**
+  * fixnum encode/decode round trip, injectivity and surjectivity on tag-0
+    words;
+  * tagged addition `(fx x + fx y) mod 2^64 = fx (x+y)`, and no signed
+    overflow iff `x + y` is a fixnum;
+  * the representation relation `ChezRepr.rv` between KLambda values and
+    words over a byte memory. It comes with a total tag decoder (`rv_classify`),
+    kind uniqueness, pointer/immediate/fixnum disjointness, and a proof that
+    void, unbound, eof, bwp and the GC markers represent no Shen value;
+  * a word represents at most one first-order value (`rv_functional`);
+  * pointer-field alignment, and car/cdr, string-ref/length and
+    vector-ref/length reading the abstract components;
+  * `shen_int_add_fast_path`: for words representing Shen integers, the
+    fast path's tag test holds iff both are fixnums, and its overflow test
+    holds iff the sum is.
+* **Ground derivations:** the cmacros/equates/types.h/arm64.def agreement,
+  the register layout, the SBCL source-versus-image agreement and the SBCL
+  layout facts.
+* **Sampled agreement:** one qemu tarm64le process (`chez_sample_agrees`).
+
+The relation is about one memory snapshot. Closures, ports and conditions
+enter through meaning parameters owed by E2E-22, E2E-27 and E2E-17.
+
+**Islaris (separate Coq 8.19 toolchain, not in `scripts/prove`).**
+`ports/arm/islaris/buri_chez_add_shen.v` derives the E2E-20 fast-path
+theorem for X0/X1 holding fixnum words of Shen integers x, y with x, y and
+x + y fixnums. It discharges the `(a|b)&7 = 0` and no-overflow premises. Its
+result is that X23 holds the fixnum word of x + y. It is closed under the
+global context. The EL2/MMU-off constraints, the Armv8.5 isla traces, the base
+address, the X20 frame-slot premises and the continuation remain assumed.
+
+**SBCL 2.6.8 arm64:** a specification table only (lowtags, widetags, slots,
+registers, features); no relation yet.
+
+**Found (sampled):** on Shen-Scheme v0.52, `(intern "12")` is the integer 12,
+not a symbol, against the model's `rule_intern` (`tests/representation.shen`;
+OB-SCHEME-INTERN-NUMERIC, refuted).
+
+Four proof mutations join (105 total). They include the naive "two fixnums
+never overflow" premise, which Rocq refuses. One gate test joins (27): the
+extractor refuses a changed pinned input. One Shen suite joins (26).
+
+Open, with owners recorded in `spec/obligations.json`:
+
+* frames, closures, continuations and multiple values (E2E-22);
+* symbols, globals, bignum normalisation and FFI (E2E-24);
+* allocation and moving GC (E2E-25);
+* ports (E2E-27);
+* asynchronous ownership (E2E-28);
+* flonum meaning and conditions (E2E-17);
+* the EL0 profile of the Islaris result (E2E-20);
+* that Shen-Scheme stays inside the relation (E2E-15);
+* the whole CL relation (E2E-21).
+
+E2E-21 is not complete.

@@ -147,3 +147,14 @@ toolchain and outside `scripts/prove` (see ARM-FOUNDATION section 10):
 | isla (Islaris-tested) | `b8e614bda4a20e42c37d8b216853653133d04322`; binary `dd996a770a5caaa62a672b41527d86b9ca40a7462d8a024f0ff117d93dff7e67` (rustc 1.99.0, z3 5.1.0) |
 | Armv8.5 IR | isla-snapshots `d8b31014` `armv8p5.ir`, sha256 `4ece4410a43c32b58737957d55920b485ade5171bb53deddebb9c7d61df77075` (Islaris's `aarch64.ir`) |
 | Coq 8.19 env | `nix/arm/islaris.nix`; pins and store paths in ARM-FOUNDATION 10.2 |
+
+## Wave C (E2E-21): the fast path about Shen integers
+
+* `islaris/buri_chez_add_shen.v` restates `buri_chez_add_fast_path` for
+  X0/X1 holding the Chez fixnum words `fx_enc x`/`fx_enc y` of Shen integers.
+  It discharges the tag and no-overflow premises from "x, y and x + y are
+  fixnums" (see [REPRESENTATION](../../docs/REPRESENTATION.md) section 4).
+  It is checked by `islaris/check-islaris-shen.sh ISLARIS_ENV TRACES_DIR`,
+  which also compiles `rocq/ChezLayout.v` and `rocq/ChezWord.v` (logical path
+  `Buri`) in the Coq 8.19 environment. It is an Islaris theorem, not a
+  `scripts/prove` module.
