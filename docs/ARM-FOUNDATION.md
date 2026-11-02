@@ -552,7 +552,7 @@ term. It decides each closed Boolean with `vm_compute` and steps with
 substitution lemmas (`guard_skip`, `guard_take`, `if_skip`, `if_take`), so
 proof terms share the remainder. Every guard is decided and none is assumed.
 The whole file checks in 605 s at 4.0 GB. Each LoadStore word takes about
-200 s and the others 5-25 s. The ten decode theorems carry the model
+200 s and the others 5-25 s. The twelve decode theorems carry the model
 decoder's three Reals axioms (10.1). `sbcl_0264_execute`,
 `HaveBTIExt_reads_FeatureImpl` and `DecodeShift_LSL` are closed.
 
@@ -668,7 +668,7 @@ None is Buri's. The six model primitives are its abstract memory interface,
 so any execute-side theorem about `ldur` or `str` will depend on them, and
 `Print Assumptions` must report that. `check-arm.sh` Part B also runs
 `coqchk` over `BuriArmDecode` and `BuriArmBridge` (re-checking the model) and
-rejects any other context axiom.
+rejects any other context axiom except the two `Parameter`s in Lithium's test module `li_test` (`check_wp` and `get_tuple`), which the Islaris automation loads. No Buri statement uses them.
 
 ### 11.6 Reproducibility
 

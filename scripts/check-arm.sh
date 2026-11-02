@@ -172,15 +172,19 @@ model = {'SailArm.armv9.' + n for n in ['__SleepRequest', 'read_mem_', 'read_mem
 std = {'Coq.Logic.FunctionalExtensionality.functional_extensionality_dep',
        'Coq.Reals.ClassicalDedekindReals.sig_not_dec', 'Coq.Reals.ClassicalDedekindReals.sig_forall_dec',
        'Coq.Logic.Classical_Prop.classic', 'Coq.Logic.Eqdep.Eq_rect_eq.eq_rect_eq'}
-extra = ax - model - std
+# Lithium (loaded by Islaris automation) declares two Parameters inside the
+# section of its own test module li_test (lithium/syntax.v).  They are in the
+# loaded context, not in any Buri statement (see the audit above).
+lith = {'lithium.syntax.li_test.check_wp', 'lithium.syntax.li_test.get_tuple'}
+extra = ax - model - std - lith
 if extra or 'BuriArm' in ''.join(ax):
     print('coqchk: unexpected axioms in the global context:', sorted(extra), file=sys.stderr); sys.exit(1)
 for k in ['type-in-type', 'unsafe (co)fixpoints', 'positivity is assumed']:
     seg = t.split(k)[1].split('*')[0]
     if '<none>' not in seg:
         print('coqchk: unsafe flag', k, file=sys.stderr); sys.exit(1)
-print('  coqchk: libraries re-checked; context axioms are the model\'s 6 external memory/sleep')
-print('  primitives and 5 Coq-stdlib axioms (none from Buri); per-theorem dependence is the audit above')
+print('  coqchk: libraries re-checked; context axioms: the model\'s 6 external memory/sleep primitives,')
+print('  5 Coq-stdlib axioms, 2 Lithium test-module parameters (none from Buri); per-theorem dependence is the audit above')
 EOF
   # Mutants: a different word must break the decode equation, and a changed
   # trace must break the bridge.
