@@ -700,3 +700,44 @@ Open: no bridge theorem connects isla traces and the Coq model. Proofs for a
 call, store, fault, allocation stub and atomic are still missing, and so are
 the SBCL code, fetch/execute and PC update in the v9.4 model, and the
 EL0/MMU-on profile. E2E-20 is not complete.
+
+## Chez nanopass translation validation (E2E-22, Wave C, in progress)
+
+[CHEZ-NANOPASS](CHEZ-NANOPASS.md) starts package 22 for Chez Scheme 10.3.0
+tarm64le, the shen-scheme v0.52 pin, under Shen-Scheme's eval parameters. The
+compiler stays untrusted. Twenty statements join the assumption audit in
+`rocq/Audit_Nanopass.v`, and all are closed. Three proof mutants join the
+mutation gate (104 total).
+
+* **Inventory.** `spec/chez-passes.json` lists the pipeline that actually
+  runs: the front end (expand, cpvalid, cp0/cptypes/cpletrec twice, cpcheck,
+  cpcommonize), 40 nanopass passes, and 13 register-allocator sub-passes per
+  lambda. It records languages, line ranges and conditions.
+  `trace_pass_order` is a ground derivation of the traced order.
+* **Grammars.** Rocq reads the pinned `np-languages.ss` and resolves every
+  `extends`. It obtains exactly the grammars behind the generated inductive
+  syntax for all 28 languages, including L15a-L16 (`np_languages_resolved`,
+  ground derivation).
+* **Captures.** Every traced pass output of real tarm64le Chez for
+  `kl:buri-arm-add` is captured and reproducible byte for byte. The x86_64
+  trace is a sampled agreement with it: identical up to
+  `$np-expand-primitives`.
+* **np-recognize-mrvs.** `check_recognize_mrvs_sound` is a universal theorem
+  over a core semantics. It is parametric in primitive semantics and in the
+  argument-evaluation order. Applied to the capture it gives a ground
+  derivation.
+* **Bytes.** `check_code_object_sound` is a universal theorem.
+  `codegen_buri_arm_add_instance` is a ground derivation: the 152 captured
+  bytes are exactly `np-generate-code`'s template with its three relocation
+  windows rewritten by `arm64_set_abs`.
+
+Ten same-language passes print identically. This covers the printed form only.
+
+Open:
+
+* 38 nanopass passes, the front end and register allocation are unvalidated.
+* Only one function has been captured.
+* The printed IR omits info fields (`OB-CHEZ-NP-PRINTER`, assumed).
+* There is no aarch64 Shen-Scheme process.
+
+`OB-CHEZ-COMPILATION` is partial and is not discharged.

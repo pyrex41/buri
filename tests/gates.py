@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py', 'mutate-stages.py', 'mutate-cl-lowering.py', 'mutate-order.py', 'mutate-compose.py', 'mutate-eq1.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py', 'mutate-stages.py', 'mutate-cl-lowering.py', 'mutate-order.py', 'mutate-compose.py', 'mutate-eq1.py', 'mutate-chez-np.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
     for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py', 'package-constructor.py', 'package-adapter.py', 'package-provenance.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
