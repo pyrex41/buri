@@ -178,7 +178,9 @@ Four proof mutations (`tests/mutate-repr.py`) must be refused:
 `ports/arm/islaris/check-islaris-shen.sh ENV TRACES`. It is an
 **Islaris theorem**: Coq 8.19.0 in `nix/arm/islaris.nix`, outside
 `scripts/prove`. It compiles the same `rocq/ChezLayout.v` and
-`rocq/ChezWord.v` as `scripts/prove`, under the logical path `Buri`.
+`rocq/ChezWord.v` as `scripts/prove`, under the logical path `Buri`. It
+passes against both stored trace sets, `instructions/buri_chez_add` (isla
+`b8e614bd`) and `instructions/buri_chez_add-isla-e9b5d945`.
 
 `buri_chez_add_shen` uses the nine captured instructions and the two
 `instr _ None` slow-path targets. Under these premises:
