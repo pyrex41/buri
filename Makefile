@@ -31,7 +31,10 @@ test:
 	python3 tests/gates.py
 
 prove:
-	./scripts/prove
+	@mkdir -p _build
+	./scripts/prove > _build/prove.log 2>&1 || { cat _build/prove.log; exit 1; }
+	@cat _build/prove.log
+	@grep -q '^BURI_ROCQ_OK [0-9][0-9]* audited theorems; ' _build/prove.log || { echo 'make prove: scripts/prove exited 0 without BURI_ROCQ_OK' >&2; exit 1; }
 	./scripts/proof-mutations
 
 conformance:

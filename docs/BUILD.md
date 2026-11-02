@@ -228,3 +228,31 @@ ARM work is kept separately under `nix/arm/`.
    (`make check-cl-port`) is not part of these routes.
 5. E2E-35 binding: the manifest is not yet a signed release bundle, and no
    admission protocol consumes it.
+
+## Registering Rocq modules and audit counts
+
+`scripts/prove` no longer carries hard-coded module lists or a theorem total.
+
+- Ordinary modules are listed one per line in `rocq/modules.d/*.list`. Files are
+  concatenated in C-locale name order, so a lane whose modules import another
+  lane's must use a file name that sorts after it. `00-base.list` holds every
+  module merged through Wave B, in its original order.
+- Audit modules are `rocq/Audit.v` or `rocq/Audit_<lane>.v`. Each has an explicit
+  expected count of `Closed under the global context` lines in
+  `rocq/audit.d/<module>.count`. Audit modules compile after all listed modules.
+  Each audit log must contain no `Axioms:` line and exactly its expected count.
+- The gate fails closed when:
+  - a `rocq/*.v` file is unregistered;
+  - a module is registered twice;
+  - a listed module has no source;
+  - an audit count has no module;
+  - an audit module is listed in `modules.d`;
+  - a count file is malformed.
+- The printed total and the report's `audited_theorems` are the sum of the count
+  files. Every count stays explicit, so deleting an audited theorem still fails.
+- `make prove` also requires the `BURI_ROCQ_OK` line before running mutations,
+  so a zero exit without the success line is a failure.
+
+A new lane adds its own `.list` file, its own `Audit_<lane>.v` and its own
+`.count` file. It does not edit `scripts/prove`, `rocq/Audit.v` or the report's
+theorem total.
