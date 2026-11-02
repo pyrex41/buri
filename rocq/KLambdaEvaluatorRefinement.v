@@ -794,23 +794,23 @@ Qed.
    stated contract (when the body returns a value, guard returns it); the
    theorem below is about the body, and [unknown host-error] has no KLambda
    counterpart: it can only come from the handler. *)
-Definition guard_handler := Native.Native.Call "Z6107" [Native.Native.Call "else" [Native.Native.Call "list"
+Definition guard_handler := Native.Native.Call "Z5997" [Native.Native.Call "else" [Native.Native.Call "list"
  [Native.Native.Lit (Native.Native.Symbol "unknown"); Native.Native.Lit (Native.Native.Symbol "host-error")]]].
 Definition rejected := Native.Native.L [Native.Native.Symbol "rejected"; Native.Native.Symbol "unsupported-or-malformed-program"].
 Theorem evaluate_shape : exists admit,
- Native.Native.params d_evaluate = ["V6104"; "V6105"; "V6106"] /\
+ Native.Native.params d_evaluate = ["V5994"; "V5995"; "V5996"] /\
  Native.Native.body d_evaluate = Native.Native.Call "guard" [guard_handler;
    Native.Native.If admit
-     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V6104"; Native.Native.Var "V6105";
-        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V6106"])
+     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V5994"; Native.Native.Var "V5995";
+        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V5996"])
      (Native.Native.Call "list" [Native.Native.Lit (Native.Native.Symbol "rejected");
         Native.Native.Lit (Native.Native.Symbol "unsupported-or-malformed-program")])].
 Proof. eexists; split; vm_compute; reflexivity. Qed.
 Theorem evaluate_body_refines : forall k admit D e z r, sub e ->
- O.step defined (ask k) (Native.Native.arguments ["V6104"; "V6105"; "V6106"] [D; enc_term e; Native.Native.Integer z])
+ O.step defined (ask k) (Native.Native.arguments ["V5994"; "V5995"; "V5996"] [D; enc_term e; Native.Native.Integer z])
    (Native.Native.If admit
-     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V6104"; Native.Native.Var "V6105";
-        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V6106"])
+     (Native.Native.Call "kl:buri.eval" [Native.Native.Var "V5994"; Native.Native.Var "V5995";
+        Native.Native.Lit Native.Native.Nil; Native.Native.Var "V5996"])
      (Native.Native.Call "list" [Native.Native.Lit (Native.Native.Symbol "rejected");
         Native.Native.Lit (Native.Native.Symbol "unsupported-or-malformed-program")])) = Some r ->
  r = rejected \/ exists w, r = enc_verdict w /\ ok_verdict w /\
