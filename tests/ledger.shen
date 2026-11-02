@@ -70,6 +70,20 @@
 (buri.test hostile-feature-missing-owner
  (buri.lt-has? [missing-owner "feature kl-let"]
   (buri.lt-charter-verdict (buri.lt-edit-in "features" "kl-let" (/. F (buri.lt-del "owner" F)) (value buri.lt-charter)))) true)
+\\ A profile difference needs an owning package and registered enforcement tests.
+(define buri.lt-difference F -> (buri.lt-edit-in "features" "kl-currying" F (value buri.lt-charter)))
+(define buri.lt-diff-edit G -> (buri.lt-difference (/. F (buri.lt-put "profile_differences"
+  [arr (map G (buri.la (buri.lf "profile_differences" F)))] F))))
+(buri.test hostile-difference-unknown-owner
+ (buri.lt-has? [difference-without-owner "kl-currying prim-partial-application"]
+  (buri.lt-charter-verdict (buri.lt-diff-edit (/. X (buri.lt-put "owner" [str "E2E-77"] X))))) true)
+(buri.test hostile-difference-untested
+ (buri.lt-has? [difference-without-enforcement-test "kl-currying prim-partial-application"]
+  (buri.lt-charter-verdict (buri.lt-diff-edit (/. X (buri.lt-put "enforcement_tests" [arr []] X))))) true)
+(buri.test hostile-difference-unregistered-test
+ (buri.lt-has? [unregistered-enforcement-test "kl-currying prim-partial-application no-such-test"]
+  (buri.lt-charter-verdict (buri.lt-diff-edit (/. X (buri.lt-put "enforcement_tests"
+    [arr [[obj [["file" [str "tests/evaluator.shen"]] ["test" [str "no-such-test"]]]]]] X))))) true)
 
 \\ Dangling dependencies.
 (buri.test hostile-dangling-dependency

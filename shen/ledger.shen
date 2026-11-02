@@ -423,7 +423,19 @@
       (buri.lwhen (not (buri.member? Status ["in-scope" "provisional-exclusion"])) [unknown-feature-status Id])
       (map (/. O [dangling-feature-obligation (cn Id (cn " " O))])
            (buri.lfilter (/. O (not (buri.member? O Obligations))) (buri.lstrs (buri.lopt "obligations" [arr []] F))))
-      (if (= Status "provisional-exclusion") (buri.lcheck-provisional Id (buri.lf "exclusion" F) Packages Env) [])])))
+      (if (= Status "provisional-exclusion") (buri.lcheck-provisional Id (buri.lf "exclusion" F) Packages Env) [])
+      (buri.lconcat (map (/. X (buri.lcheck-difference Id X Packages Env)) (buri.lfa-opt "profile_differences" F)))])))
+
+\\ A deliberate reference-profile difference inside an in-scope feature: an
+\\ owning package and at least one registered enforcement test.
+(define buri.lcheck-difference Id X Packages Env ->
+  (let Did (cn Id (cn " " (buri.lfs "id" X)))
+       Tests (buri.lfa-opt "enforcement_tests" X)
+    (buri.lconcat
+     [(buri.lwhen (not (buri.member? (buri.lfs-opt "owner" X) Packages)) [difference-without-owner Did])
+      (buri.lwhen (= Tests []) [difference-without-enforcement-test Did])
+      (map (/. T [unregistered-enforcement-test (cn Did (cn " " (buri.lfs "test" T)))])
+           (buri.lfilter (/. T (not (buri.ltest-registered? (buri.lfs "file" T) (buri.lfs "test" T) Env))) Tests))])))
 
 (define buri.lcheck-provisional Id X Packages Env ->
   (let Closure (buri.lfs-opt "closure_package" X)
@@ -550,10 +562,14 @@
                            (buri.lfilter (/. F (= (buri.lfs "status" F) "provisional-exclusion"))
                                          (buri.la (buri.lf "features" Charter))))))
    (buri.append
+    (map (/. T (buri.lfs "file" T))
+         (buri.lconcat (map (/. F (buri.lconcat (map (/. X (buri.lfa-opt "enforcement_tests" X)) (buri.lfa-opt "profile_differences" F))))
+                            (buri.la (buri.lf "features" Charter)))))
+   (buri.append
     (map (/. T (buri.lfs "file" T)) (buri.lconcat (map (/. X (buri.lfa-opt "enforcement_tests" X)) (buri.lfa-opt "excluded_extensions" Charter))))
     (map (/. E (buri.lpath (buri.lev-ref E)))
          (buri.lfilter (/. E (not (= (buri.lfs-opt "test" E) "")))
-                       (buri.lconcat (map (/. O (buri.lob-evidence O)) (buri.la (buri.lf "obligations" Graph)))))))))
+                       (buri.lconcat (map (/. O (buri.lob-evidence O)) (buri.la (buri.lf "obligations" Graph))))))))))
 (define buri.lreferenced-files Charter Plan Graph ->
   (map (/. P (buri.lpath P))
    (buri.lconcat

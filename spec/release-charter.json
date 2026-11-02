@@ -490,6 +490,28 @@
    "status": "in-scope",
    "obligations": [
     "OB-SCHEME-EMIT-APPLICATION"
+   ],
+   "profile_differences": [
+    {
+     "id": "prim-partial-application",
+     "owner": "E2E-07",
+     "enforced_at": "shen/klambda.shen buri.saturated? via buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this difference)",
+     "difference": "KLambda curries an under-saturated primitive call and over-applies the result of an over-saturated one; BURI/KL-PURE-1 [primitive Op Args] syntax is a saturated direct call, other arities are rejected at admission ([rejected ...]); buri.eval itself raises primitive-domain-or-arity for them and its refinement theorems cover only saturated calls. Currying of user functions ([global F], [function ...] values) is supported and proved (KLambdaEvaluatorExtended.klambda_refines_ext).",
+     "enforcement_tests": [
+      {
+       "file": "tests/evaluator.shen",
+       "test": "primitive-partial-rejected"
+      },
+      {
+       "file": "tests/evaluator.shen",
+       "test": "primitive-nullary-rejected"
+      },
+      {
+       "file": "tests/evaluator.shen",
+       "test": "primitive-overapplied-rejected"
+      }
+     ]
+    }
    ]
   },
   {
@@ -727,12 +749,20 @@
    ],
    "exclusion": {
     "closure_package": "E2E-05",
-    "enforced_at": "shen/klambda.shen buri.expression? (BURI/KL-PURE-1 reference admission only; native ports do not enforce this exclusion)",
-    "reason": "Returns unsupported closure-equality rather than a value.",
+    "enforced_at": "shen/klambda.shen buri.equal (BURI/KL-PURE-1 reference evaluator only; native ports do not enforce this exclusion)",
+    "reason": "Equality of two function values (closure, partial application, thunk) is undefined in the agreed profile (KLValue.kl_eq None; the KLambda machine goes wrong); the reference evaluator answers unsupported closure-equality exactly there (KLambdaEvaluatorExtended.reaches2). A function value against non-function data is false, as in KLValue.kl_eq.",
     "enforcement_tests": [
      {
       "file": "tests/evaluator.shen",
       "test": "closure-equality"
+     },
+     {
+      "file": "tests/evaluator.shen",
+      "test": "pair-closure-equality-undefined"
+     },
+     {
+      "file": "tests/evaluator.shen",
+      "test": "closure-data-inequality"
      }
     ]
    }
