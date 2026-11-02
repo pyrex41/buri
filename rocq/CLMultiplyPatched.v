@@ -60,8 +60,8 @@ Record sbcl_nonnumber_ops (h : string -> list sv -> W.cres) : Prop := {
  nn_coerce : forall v, W.cdata v -> W.is_num v = false -> exists e, h "COERCE" [v; VSym "DOUBLE-FLOAT"] = W.CRaise e }.
 
 Ltac plain_rw P := let Q := fresh in pose proof (W.plain_split _ P) as Q;
- destruct Q as [Q1 [Q2 [Q3 [Q4 [Q5 [Q6 Q7]]]]]];
- cbn [W.ceval R.to_list W.SL fold_right option_map W.Sy]; rewrite Q1, Q2, Q3, Q4, Q5, Q6, Q7.
+ destruct Q as [Q1 [Q2 [Q3 [Q4 [Q5 [Q6 [Q8 Q7]]]]]]];
+ cbn [W.ceval R.to_list W.SL fold_right option_map W.Sy]; rewrite Q1, Q2, Q3, Q4, Q5, Q6, Q8, Q7.
 Ltac host := first [eapply W.ce_host2; [reflexivity|reflexivity| | | ] | eapply W.ce_host1; [reflexivity|reflexivity| | ]].
 Ltac cvar := apply W.ce_var; reflexivity.
 

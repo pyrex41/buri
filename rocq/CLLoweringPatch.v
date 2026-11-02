@@ -305,8 +305,9 @@ Ltac opt_finish IHo IHs :=
  | apply (sem_null_left St prim other C)
  | apply (sem_fail_left St prim other C)
  | apply (sem_fail_right St prim other C)
- | apply sem_pred; [fn_side|fn_side|fn_side|fn_side|first [apply (pc_cons St prim C)|apply (pc_string St prim C)
-     |apply (pc_number St prim C)|apply (pc_empty St prim C)|apply (pc_greater St prim C)|apply (pc_greater_eq St prim C)
+ | apply sem_pred1; [fn_side|fn_side|fn_side|fn_side|first [apply (pc_cons St prim C)|apply (pc_string St prim C)
+     |apply (pc_number St prim C)|apply (pc_empty St prim C)]]
+ | apply sem_pred2; [fn_side|fn_side|fn_side|fn_side|first [apply (pc_greater St prim C)|apply (pc_greater_eq St prim C)
      |apply (pc_less St prim C)|apply (pc_less_eq St prim C)|apply (pc_absequal St prim C)]]
  | eapply sem_same2_lit_left; [fn_side|fn_side|fn_side|fn_side|apply pure_str|intros; apply (proj1 (pc_string_equal St prim C _ _))]
  | eapply sem_same2_lit_right; [fn_side|fn_side|fn_side|fn_side|apply pure_str|intros; apply (proj2 (pc_string_equal St prim C _ _))]
