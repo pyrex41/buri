@@ -3,6 +3,10 @@
 Experiment date: 1 November 2026, on branch `wave-a/arm` from commit `8c94540`.
 This is a research report for package 20 of [END-TO-END-PLAN](END-TO-END-PLAN.md).
 Sections 1-9 are the first (Wave A) experiment, which proved no theorem.
+**Section 11 is the Wave C update** (branch `wave-c/armbridge`). It covers
+the model rebuilt in the Islaris Coq 8.19.0, twelve more exact decode
+equations, the first checked trace-to-model bridge (one word), an
+EL0/MMU-on trace attempt and `coqchk` of the model.
 **Section 10 is the Wave B update** (branch `wave-b/arm-proofs`): the first
 byte-level lemma checked against the sail-arm Armv9.4 Coq model, a working
 Coq 8.19.0 Islaris environment, and an Islaris proof of the Chez fixnum fast
@@ -495,3 +499,208 @@ the register numbers come from constants extracted from the pinned Chez
 sources and build output. Everything else listed in 10.3 stays assumed: EL2
 with the MMU off, the Armv8.5 traces, the base address and the continuation.
 See [REPRESENTATION](REPRESENTATION.md) section 4.
+
+## 11. Wave C: one Coq for traces and model, decode coverage, EL0, coqchk
+
+Branch `wave-c/armbridge` from `c56db16`. Every result below is checked by the
+opt-in `scripts/check-arm.sh` Part B and none is in `scripts/prove`, so the
+repository audit count does not change. Heavy jobs were run one at a time,
+each under a 7 GiB address-space cap. The final checks also ran under a
+host-wide `flock /tmp/buri-heavy.lock`. An out-of-memory kill is recorded as
+resource exhaustion, not as a proof result.
+
+### 11.1 The model in the Islaris Coq 8.19.0
+
+Wave B's two results lived in different Coq versions, so no single theorem
+could mention both an Islaris trace and the sail-arm model. coq-sail 0.19
+`src-stdpp` builds unchanged against Islaris's stdpp `a1a12e00` and Coq 8.19.0
+(28 s). The sail-arm `7d058164` arm-v9.4-a snapshot (same three file hashes
+as 10.1) then compiles with `-R . SailArm`: `armv9_types.v` 58 s / 1.4 GB,
+`armv9.v` **7 min 7 s at 6.39 GB** peak RSS (versus 24 min in the Coq 8.18
+build). `BuriArmAdds.v` checks unchanged in 8.19.0 (32 s, 1.13 GB), with the
+same assumption audit. `nix/arm/sail-model.nix` builds coq-sail by commit and
+the model from the three snapshot files fetched by sha256 (`-A env` gives one
+environment with Islaris, SailStdpp and SailArm). It was built here:
+coq-sail `/nix/store/a4pim7nl...-coq-sail-stdpp-0.19`, model
+`/nix/store/n0zzzc71...-sail-arm-v9.4-coq-7d058164`, env
+`/nix/store/5wm4k21q...-islaris-sail-env`, all on the Wave B Coq
+`nyvwdj1l...-coq-8.19.0` and Islaris `il53cd0n...`. The nix-built `armv9.vo`
+is bit-identical to a separate hand build (sha256 `8899bcc04cc5...`).
+
+### 11.2 Decode equations for twelve more captured words (model theorems)
+
+`ports/arm/coq/BuriArmDecode.v`. Each theorem is universal over `pc` and is an
+exact equation of iMon trees: which encoding the decoder selects, its SEE
+guard number, every register read the decoder performs, and the exact
+arguments of the execute function it calls. It says nothing about what that
+execute function then does.
+
+| Word | Where | Decoder result (execute call) |
+|---|---|---|
+| `f1000aff` | Chez +0x00 `cmp x23,#2` | SEE 21; `add_sub_immediate 31 64 #2 23 setflags sub` |
+| `54000401` | Chez +0x04 `b.ne` | SEE 69; `branch_conditional_cond 0b0001 #0x80` |
+| `aa01001e` | Chez +0x08 `orr` | SEE 55; `DecodeShift 0b00 >>= logical_shiftedreg 30 64 false 1 0 ORR false 0` |
+| `f2400bdf` | Chez +0x0c `tst x30,#7` | SEE 41; `DecodeBitMasks 1 000010 000000 >>= logical_immediate 31 64 imm 30 AND true` |
+| `540000a1` | Chez +0x10 `b.ne` | SEE 69; offset #0x14 |
+| `54000066` | Chez +0x18 `b.vs` | SEE 69; cond 0b0110, offset #0xc |
+| `f840028a` | Chez +0x1c `ldur x10,[x20]` (load) | SEE 680; `..._signed_offset_normal 64 LOAD n=20 #0 t=10 tagchecked` |
+| `d61f0140` | Chez +0x20 `br x10` | SEE 92; `branch_unconditional_register INDIR 0 10 false false true` |
+| `f9000680` | Chez +0x2c `str x0,[x20,#8]` (**store**) | SEE 648; `..._signed_post_idx 64 STORE n=20 #8 postindex=false t=0 wback=false` |
+| `d65f03c0` | SBCL +0x210 `ret` (**return**) | SEE 94; `branch_unconditional_register RET 0 30 ...` |
+| `d63f0140` | SBCL +0x2a0 `blr x10`, the call into ALLOC-TRAMP (**call**) | SEE 90; `branch_unconditional_register INDCALL 0 10 ...` |
+| `d42001e0` | SBCL +0x264 `brk #15`, invalid-arg-count trap (**fault path**) | SEE 96; reads FeatureImpl (FEAT_BTI), maybe `SetBTypeCompatible true`, then `AArch64_SoftwareBreakpoint 0x000f` (closed equation `sbcl_0264_execute`) |
+
+The equations surface two facts. The model routes STR (unsigned offset) to
+the shared post-index execute function with `postindex = wback = false`. BRK
+is the first decode here that reads a configuration register: it reads
+`FeatureImpl` (`HaveBTIExt_reads_FeatureImpl`). SBCL code offsets map to its
+disassembly listing by +0x1f0.
+
+The Wave B tactic, which rewrote every closed guard, ran out of memory on the
+325-guard LoadStore group (killed at 8.3 GB): each rewrite copies the whole
+decoder into the proof term. Plain `cbv` with the decode functions opaque also
+ran out of memory. The new `chain` tactic removes guards from the head of the
+term. It decides each closed Boolean with `vm_compute` and steps with
+substitution lemmas (`guard_skip`, `guard_take`, `if_skip`, `if_take`), so
+proof terms share the remainder. Every guard is decided and none is assumed.
+The whole file checks in 605 s at 4.0 GB. Each LoadStore word takes about
+200 s and the others 5-25 s. The twelve decode theorems carry the model
+decoder's three Reals axioms (10.1). `sbcl_0264_execute`,
+`HaveBTIExt_reads_FeatureImpl` and `DecodeShift_LSL` are closed.
+
+Not covered: the execute side of the load, store, call, return and fault
+(memory access through `AArch64_MemSingle`, `BranchTo` with its BTI/GCS and
+branch-record hooks, and the exception entry of `AArch64_SoftwareBreakpoint`).
+Neither the allocation stub nor any atomic instruction is covered.
+
+### 11.3 Trace-to-model bridge: ADDS (`BuriArmBridge.v`)
+
+The bridge file loads Islaris's `isla.opsem` and the sail-arm model in one Coq
+8.19.0. Its trace is `ports/arm/islaris/instructions/buri_chez_add/a14.v`,
+the exact file the Islaris theorem uses, and `check-arm.sh` checks that file
+against `SHA256SUMS`.
+
+* `run_to_end t regs r` is defined from Islaris's own `seq_step`: a complete,
+  never-blocking run (`seq_nb_state = false` at every step) of trace `t` from
+  register map `regs` to `tnil` with map `r`. The instruction table and the
+  memory are empty.
+* `a14_run` is closed under the global context. For every isla map holding
+  X0 = x0, X1 = x1, _PC = pc, some R23, and a PSTATE struct whose first four
+  fields are N, Z, C, V, the trace runs to its end at `isla_regs_after`. That
+  map holds R23 := **`adds_sum x0 x1`** (the model's AddWithCarry result),
+  PSTATE.{N,Z,C,V} := **the fields of the model's `ps_NZCV`**, and
+  _PC := pc + 4. The final values are the model's own terms. The proof shows
+  that the isla evaluator's SMT expressions equal them, using the closed
+  lemmas `isla_sum_model`, `isla_N`, `isla_Z`, `isla_C` and `isla_V` in
+  `BuriArmBridgeValues.v`.
+* `chez_0014_bridge` carries the model decoder's three Reals axioms. For
+  every pc, SEE < 15, x0, x1, ProcState p, prior PC/R23 and PSTATE tail, the
+  model's `__DecodeA64 pc 0xab010017` admits `adds_events` in `iTrace_match`
+  **and** `a14` runs to `isla_regs_after`. `chez_0014_decode` and
+  `chez_0014_execute` show that this event list is the model's only register
+  behaviour on this word.
+
+Evidence kind: a universal model theorem relating two artifacts, the Armv9.4
+Coq model and the Armv8.5-IR isla trace. Version pairing: the trace is isla
+`b8e614bd` on isla-snapshots `d8b31014` `armv8p5.ir` under Islaris's config,
+and the model is sail-arm `7d058164` arm-v9.4-a. The bridge does not need
+traces regenerated from the v9.4 IR, because the trace is data and the
+theorem checks it against the v9.4 model directly.
+
+What the bridge does and does not replace:
+* Direction. Every model behaviour on this word is a complete trace run with
+  the same register effect. That is the direction needed to carry Islaris's
+  all-trace-runs conclusion over to the model for this step. The converse,
+  that the trace has no other complete run, is not proved.
+* The PC step. The trace's `_PC := _PC + 4` comes from the IR's
+  `isla_footprint_no_init` wrapper (`if not __PC_changed then _PC += 4`). In
+  the v9.4 model the PC advance sits at the end of `__InstructionExecute`,
+  with fetch, debug, PMU, SPE, BTYPE and single-step logic. **That part is not
+  bridged.** For SEE, isla's wrapper sets SEE := -1; here SEE < 15 is a
+  premise.
+* The register-name map (Sail `R0` ↔ isla `"R0"`, PSTATE as an isla struct
+  with N, Z, C, V first) is part of the statement.
+* Coverage. Only +0x14 is bridged, so the Islaris fast-path theorem still
+  trusts isla for the other eight words. `cmp`, `orr` and `tst` each need an
+  execute equation (like `chez_0014_execute`) plus the same kind of value
+  lemmas. The branches need the v9.4 `BranchTo` path. `ldur` needs the v9.4
+  memory path (`AArch64_MemSingle`, translation) evaluated under the register
+  constraints that isla uses to prune.
+* Mutation check: replacing the trace's `bvadd` by `bvxor` makes the bridge
+  proof fail.
+
+### 11.4 EL0 / MMU-on profile: traces for 8 of 9 words, `ldur` exhausted
+
+`ports/arm/islaris/etc/mk-el0-config.sh` checks the sha256 of Islaris's
+config and derives `aarch64_isla_coq_el0_linux.toml` from it:
+* PSTATE.EL = 0 and SP = 0.
+* SCTLR_EL1 = `0x2034f4d91d`: the Linux `INIT_SCTLR_EL1_MMU_ON` bits that
+  exist in v8.5, including M = 1.
+* TCR_EL1 = `0x35b5103510`: 4K granule, 48-bit VA, TBI0 = 1.
+* HCR_EL2 unchanged (non-VHE, so EL0 runs in the EL1&0 regime). TTBR0, MAIR
+  and the descriptors are unconstrained.
+
+Results with the same isla `b8e614bd` and IR (`ports/arm/islaris/el0/STATUS`):
+* `cmp`, `orr`, `tst` and `adds` give traces byte-identical to EL2.
+* `b.ne`, `b.vs` and `br x10` differ (`el0/*.el2-to-el0.diff`). They read
+  TCR_EL1, and the taken branch splits on target bit 55. With TBI0 = 1 and
+  bit 55 = 0, the PC is written as `0x00:target[55:0]`. **This is a real EL0
+  difference that the EL2 theorem cannot see.** At EL0, `br x10` does not set
+  PC := X10 when X10 has a nonzero top byte.
+* `ldur x10,[x20]` is **resource-exhausted: no trace.** The uncapped run was
+  killed after 167 s (the lane coordinator reported an isla-footprint
+  OOM-killed at 9.8 GB RSS). The run under the 7 GiB cap was killed after
+  103 s. With the stage-1 MMU on and unconstrained tables, the load walks
+  translation tables over symbolic memory. Under the shared-machine policy it
+  was not retried.
+
+So no Islaris EL0 proof of the fast path exists. Three pieces are missing:
+1. A bounded footprint for the load: concrete or constrained TTBR0 and
+   descriptors (isla's `--armv8-page-tables` litmus mode, or Islaris-side
+   page-table assertions), so the walk does not branch over symbolic
+   descriptors.
+2. An Islaris treatment of translation and permission faults. Islaris's
+   `seq_step` memory is a flat `mem_map` with no translation.
+3. Handling of the TBI case split in the branch proofs. That needs either a
+   premise that the return address has a zero top byte, or a TBI-aware
+   postcondition.
+
+### 11.5 coqchk of the model
+
+`coqchk -silent -o SailArm.armv9` on the Coq 8.19.0 build, all dependencies
+included, **passes in 3 min 18 s at 0.997 GB** peak RSS. Its global context
+lists 11 axioms:
+* Six are the model's own external primitives: `SailArm.armv9.__SleepRequest`,
+  `read_mem_`, `read_mem_ifetch_`, `read_mem_exclusive_`, `write_mem_` and
+  `write_mem_exclusive_`.
+* Five come from the Coq stdlib: the three of 10.1, `Classical_Prop.classic`
+  and `Eqdep.Eq_rect_eq.eq_rect_eq`.
+
+None is Buri's. The six model primitives are its abstract memory interface,
+so any execute-side theorem about `ldur` or `str` will depend on them, and
+`Print Assumptions` must report that. `check-arm.sh` Part B also runs
+`coqchk` over `BuriArmDecode` and `BuriArmBridge` (re-checking the model) and
+rejects any other context axiom except the two `Parameter`s in Lithium's test module `li_test` (`check_wp` and `get_tuple`), which the Islaris automation loads. No Buri statement uses them.
+
+### 11.6 Reproducibility
+
+`nix/arm/` now has a recipe for every Coq-side input:
+* `islaris.nix`: Coq 8.19.0, Iris and Islaris.
+* `sail-model.nix`: coq-sail 0.19 and the v9.4 model on that Coq, plus `env`.
+* `tools.nix`: qemu, SBCL and binutils.
+* `build-chez-10.3.0-aarch64.sh`: Chez 10.3.0.
+
+Isla is still built by hand from source (two commits, sections 4 and 10.2;
+nixpkgs rustc 1.99.0, z3 5.1.0). Its cargo dependency set has no vendored lock
+here; the binary hashes are recorded. Build outputs stay out of git.
+
+### 11.7 What remains open for E2E-20
+
+The exit criterion is still unmet. Done in the selected model: exact decode
+equations for a branch, a conditional branch, a call, a return, a load, a
+store and a fault-path trap; one bridge word; `coqchk`. Still missing:
+* execute-side theorems for the memory, branch and trap instructions;
+* an allocation stub and an atomic;
+* the other eight bridge words and the `__InstructionExecute` PC step;
+* any EL0/MMU-on proof;
+* the SBCL fast path in Islaris (not started).

@@ -947,3 +947,48 @@ Three proof mutations join the gate (104 total): a non-decreasing `member?`
 recursion fails the inductive termination step (its unmutated control is
 accepted), dropping the integer-budget condition is refused, and a gensym
 counter that does not advance is refused.
+
+## ARM decode coverage and the first trace-to-model bridge (E2E-20, Wave C, in progress)
+
+[ARM-FOUNDATION](ARM-FOUNDATION.md) section 11 has the details. Nothing here
+is in `scripts/prove`. The opt-in check is `scripts/check-arm.sh`, Part B. The
+repository's proven boundary, its Coq 8.18.0 pins and the audit count are
+unchanged.
+
+* **One Coq for traces and model.** coq-sail 0.19 and the sail-arm
+  `7d058164` Armv9.4 Coq model compile in the Islaris Coq 8.19.0
+  environment: `armv9.v` takes 7 min at 6.4 GB. The recipe is
+  `nix/arm/sail-model.nix`.
+* **Decode equations (model theorems, universal over `pc`)** in
+  `ports/arm/coq/BuriArmDecode.v`. They cover twelve more captured words: the
+  rest of the Chez fast path (`cmp`, `b.ne` ×2, `orr`, `tst`, `b.vs`, `ldur`,
+  `br`), the Chez store `str x0,[x20,#8]`, and the SBCL `ret`, `blr x10`
+  (the call into ALLOC-TRAMP) and `brk #15` (trap). Each fixes the selected
+  encoding, the SEE guard, every decoder register read (BRK reads
+  `FeatureImpl`) and the exact execute call. Execute-side behaviour is not
+  covered.
+* **Bridge (model theorem relating trace and model)** in
+  `ports/arm/coq/BuriArmBridge.v`. `chez_0014_bridge` takes the Islaris trace
+  `a14.v` for ADDS at +0x14, the very file the Islaris fast-path theorem
+  uses. From any register map holding the model's inputs, the trace runs to
+  completion under Islaris's own `seq_step`, never blocking. Its final map
+  holds exactly the model's AddWithCarry result in R23 and the model's NZCV
+  in PSTATE. At the same time, the v9.4 model's decoder admits its unique
+  register trace. The isla side (`a14_run`) and the bit-level lemmas are
+  closed under the global context. The pairing is an Armv8.5-IR trace
+  (isla `b8e614bd`) against the Armv9.4 Coq model. The theorem does not cover
+  the trace's `_PC += 4` against the model's `__InstructionExecute` PC
+  advance, nor the other eight words. Islaris's fast-path theorem therefore
+  still trusts isla for every word except +0x14 and for the PC step.
+* **EL0 / MMU-on.** Under an EL0 Linux (non-VHE) isla config, traces exist
+  for 8 of the 9 fast-path words. The branches differ from EL2 by a
+  top-byte-ignore split. `ldur` exhausted memory twice (resource-exhausted;
+  no trace), so no EL0 proof exists.
+* **coqchk of the model** passes: 3 min 18 s at 1.0 GB. The context axioms
+  are the model's six external memory/sleep primitives and five Coq-stdlib
+  axioms. None comes from Buri.
+
+Open: execute-side proofs for the load, store, call, return and trap; an
+allocation stub and an atomic; the bridge for the other eight words and the
+PC step; any EL0 proof; and the SBCL fast path in Islaris. E2E-20 is not
+complete.
