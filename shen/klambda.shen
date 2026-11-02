@@ -16,12 +16,20 @@
   [apply F A] -> (and (buri.expression? F) (buri.expression? A))
   [let X A B] -> (and (symbol? X) (and (buri.expression? A) (buri.expression? B)))
   [if C A B] -> (and (buri.expression? C) (and (buri.expression? A) (buri.expression? B)))
-  [primitive Op Args] -> (and (buri.member? Op [+ - * = < cons hd tl cons? number? string?]) (buri.expressions? Args))
+  [primitive Op Args] -> (and (buri.saturated? Op Args) (buri.expressions? Args))
   [raise E] -> (buri.expression? E)
   [trap E H] -> (and (buri.expression? E) (buri.expression? H))
   [freeze E] -> (buri.expression? E)
   [thaw E] -> (buri.expression? E)
   _ -> false)
+\\ Primitive syntax is saturated only: [primitive Op Args] is a direct call of
+\\ exactly (arity Op) arguments. KLambda curries and over-applies primitives;
+\\ BURI/KL-PURE-1 rejects other arities at admission (release charter
+\\ profile difference prim-partial-application on feature kl-currying).
+(define buri.saturated?
+  Op [_] -> (buri.member? Op [hd tl cons? number? string?])
+  Op [_ _] -> (buri.member? Op [+ - * = < cons])
+  _ _ -> false)
 (define buri.expressions? [] -> true [E | Es] -> (and (buri.expression? E) (buri.expressions? Es)) _ -> false)
 (define buri.definitions? D -> (and (buri.definitions-h? D) (buri.unique? (buri.definition-names D))))
 (define buri.definitions-h?
@@ -66,11 +74,13 @@
   D [closure X E Env] A N -> (buri.eval D E [[X A] | Env] (- N 1))
   D [function Name Previous] A N ->
     (buri.apply-global D (buri.definition Name D) Name (buri.append Previous [A]) N)
+  _ [thunk _ _] _ _ -> [raised "arity"]
   _ _ _ _ -> [raised "not-callable"])
 (define buri.apply-global D [definition Ps B] Name Args N ->
-    (if (< (length Args) (length Ps)) [returned [function Name Args]]
+    (if (buri.fewer? Args Ps) [returned [function Name Args]]
         (buri.apply-bound D B (buri.zip Ps Args) N))
   _ _ _ _ _ -> [raised "unbound-function"])
+(define buri.fewer? [] [_ | _] -> true [_ | Xs] [_ | Ys] -> (buri.fewer? Xs Ys) _ _ -> false)
 (define buri.apply-bound D B [zipped Env] N -> (buri.eval D B Env (- N 1))
   _ _ _ _ -> [raised "arity"])
 (define buri.eval-args _ [] _ _ -> [arguments []]
@@ -83,7 +93,7 @@
   - [[int A] [int B]] -> [returned [int (- A B)]]
   * [[int A] [int B]] -> [returned [int (* A B)]]
   < [[int A] [int B]] -> [returned [bool (< A B)]]
-  = [A B] -> (if (and (buri.literal? A) (buri.literal? B)) [returned [bool (= A B)]] [unsupported closure-equality])
+  = [A B] -> (buri.equality-verdict (buri.equal A B))
   cons [A B] -> [returned [pair A B]]
   hd [[pair A _]] -> [returned A]
   tl [[pair _ B]] -> [returned B]
@@ -94,6 +104,18 @@
   string? [[str _]] -> [returned [bool true]]
   string? [_] -> [returned [bool false]]
   _ _ -> [raised "primitive-domain-or-arity"])
+\\ KLambda structural equality: pairs left to right; a function value (closure,
+\\ function, thunk) is unequal to every non-function value, and equality of two
+\\ function values is undefined in the agreed profile (unsupported).
+(define buri.function-value? [closure _ _ _] -> true [function _ _] -> true [thunk _ _] -> true _ -> false)
+(define buri.equal
+  [pair A1 A2] [pair B1 B2] -> (buri.equal-pair (buri.equal A1 B1) A2 B2)
+  A B -> (buri.equal-leaf (buri.function-value? A) (buri.function-value? B) A B))
+(define buri.equal-pair true A B -> (buri.equal A B) R _ _ -> R)
+(define buri.equal-leaf true true _ _ -> unsupported
+  false false A B -> (= A B)
+  _ _ _ _ -> false)
+(define buri.equality-verdict unsupported -> [unsupported closure-equality] B -> [returned [bool B]])
 (define buri.eval-raise [returned [str S]] -> [raised S]
   [returned _] -> [raised "error-message-not-string"] R -> R)
 (define buri.eval-trap [raised Message] D H Env N ->
@@ -102,4 +124,7 @@
 (define buri.eval-handler [returned H] D Message N -> (buri.apply-value D H [str Message] N)
   R _ _ _ -> R)
 (define buri.eval-thaw [returned [thunk E Env]] D N -> (buri.eval D E Env N)
-  [returned _] _ _ -> [raised "not-frozen"] R _ _ -> R)
+  [returned [closure _ _ _]] _ _ -> [raised "arity"]
+  [returned [function Name Previous]] D N ->
+    (buri.apply-global D (buri.definition Name D) Name Previous N)
+  [returned _] _ _ -> [raised "not-callable"] R _ _ -> R)

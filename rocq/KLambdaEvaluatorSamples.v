@@ -33,9 +33,14 @@ Theorem sample_app : run_eval p_app 20 = Native.Native.Returned (enc_verdict (WR
 Proof. vm_compute. reflexivity. Qed.
 Theorem sample_budget : run_eval p_app 2 = Native.Native.Returned (enc_verdict WBudget).
 Proof. vm_compute. reflexivity. Qed.
-(* (= (lambda x x) 1): the evaluator declines closure equality. *)
-Definition p_closure_eq := TPrim "=" [TLambda "x" (TVar "x"); TLit (RInt 1)].
+(* (= (lambda x x) (lambda x x)): equality of two function values is
+   undefined in the agreed profile; the evaluator answers unsupported. *)
+Definition p_closure_eq := TPrim "=" [TLambda "x" (TVar "x"); TLambda "x" (TVar "x")].
 Theorem sample_closure_eq : run_eval p_closure_eq 20 = Native.Native.Returned (enc_verdict WUnsupported).
+Proof. vm_compute. reflexivity. Qed.
+(* (= (lambda x x) 1): a function value is unequal to data, as in KLValue.kl_eq. *)
+Definition p_closure_data_eq := TPrim "=" [TLambda "x" (TVar "x"); TLit (RInt 1)].
+Theorem sample_closure_data_eq : run_eval p_closure_data_eq 20 = Native.Native.Returned (enc_verdict (WRet (RBool false))).
 Proof. vm_compute. reflexivity. Qed.
 
 Theorem samples_in_profile : sub p_let /\ sub p_trap /\ sub p_nonbool /\ sub p_app /\ sub p_closure_eq.

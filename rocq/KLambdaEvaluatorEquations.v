@@ -97,16 +97,17 @@ Lemma argument_verdict : forall w F N,
  match w with WRet a => ask k "kl:buri.apply-value" [D; F; enc a; N] | _ => Some (enc_verdict w) end.
 Proof. intros; unf d_eval_argument_lk; destruct w; calls. Qed.
 (* Application of a closure or of a non-callable value. [function ...]
-   values (from [global X]) go through buri.apply-global and kl:length,
-   which this profile does not cover (obligation E2E07-GLOBAL). *)
+   values (from [global X]) go through buri.apply-global and a thunk raises
+   "arity"; both are covered by KLambdaEvaluatorGlobal. *)
 Lemma apply_value_eq : forall f a z, (forall g args, f <> RFunction g args) ->
+ (forall e env, f <> RThunk e env) ->
  ask (S k) "kl:buri.apply-value" [D; enc f; enc a; Integer z] =
  gate z (match f with
    | RClosure x e env => ask k "kl:buri.eval" [D; enc_term e; enc_env ((x, a) :: env); Integer (z - 1)]
    | _ => Some (enc_verdict (WRaise "not-callable")) end).
 Proof.
- intros f a z NF; unf d_apply_value_lk; destruct z; [calls| |];
- (destruct f; [calls|calls|calls|calls|calls|calls|calls|exfalso; eapply NF; reflexivity|calls]).
+ intros f a z NF NT; unf d_apply_value_lk; destruct z; [calls| |];
+ (destruct f; [calls|calls|calls|calls|calls|calls|calls|exfalso; eapply NF; reflexivity|exfalso; eapply NT; reflexivity]).
 Qed.
 Lemma args_nil : forall Env N,
  ask (S k) "kl:buri.eval-args" [D; L (map enc_term []); Env; N] = Some (enc_args (AVals [])).
