@@ -1,0 +1,11 @@
+--- a/tests/primitives-tests.shen
++++ b/tests/primitives-tests.shen
+@@ -78,7 +78,7 @@
+ (assert-caught "invalid addition remains catchable" (freeze (prim-test.add bad 2)))
+ (assert-caught "invalid subtraction remains catchable" (freeze (prim-test.subtract 2 bad)))
+ (assert-caught "invalid multiplication remains catchable" (freeze (prim-test.multiply bad 0)))
+-(assert= "zero multiplication retains short circuit" 0 (prim-test.multiply 0 bad))
++(assert-caught "zero multiplication rejects a non-number" (freeze (prim-test.multiply 0 bad)))
+ (assert-caught "zero multiplication evaluates arguments"
+   (freeze (prim-test.multiply 0 (simple-error "argument error"))))
+ (set prim-test.*arguments* 0)

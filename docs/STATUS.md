@@ -822,3 +822,53 @@ Open, with owners recorded in `spec/obligations.json`:
 * the whole CL relation (E2E-21).
 
 E2E-21 is not complete.
+
+## Port-fix lane: proved proposed upstream patches (Wave C)
+
+Five unified diffs live in `ports/patches/` (see its README and NATIVE.md).
+They target the pinned Shen-Scheme `8d261518` and Shen-CL `4844072d` files.
+`make prove` re-applies them with pinned sha256 and patched blobs and
+re-captures the patched definitions. These are theorems about the
+**patched** code only. Stock Shen-Scheme and Shen-CL are unchanged, and
+their obligations stay refuted.
+
+* **Universal theorems** (`rocq/SchemePatched.v`):
+  - The patched Scheme `emit-cond-clauses` ends every cond with no
+    literal-true test in a `#t` clause holding the compiled
+    `(simple-error "condition failure")`. Under the stated read premises, the
+    cond is read as `(if T1 B1 (if ... E))`.
+  - The patched numeric-literal `=` path is read as exactly
+    `(kl:= d1 d2)`, so it agrees with `kl:=` on all values. Premise:
+    `prefix-op` names `kl:=`.
+* **Universal theorems** (`rocq/CLLoweringPatch.v`):
+  - The patched CL `optimise-boolean-check` is test-equivalent to its input
+    for every datum, with **no qsafe premise**. It holds for any `symbol?`
+    oracle that answers true only on symbols.
+  - The patched CL `emit-cond-clauses` always ends in a `T` clause, whose
+    body is the compiled error when no source test is literally `true`.
+* **Ground derivations:** stock CL `[]` and `[[false 1]]` emit no clauses.
+* **Universal theorems** (`rocq/CLMultiplyPatched.v`): the patched
+  `shen-cl.multiply` returns the exact product on integers. It raises on a
+  non-number in either position. This is a profile choice: upstream keeps
+  `(* 0 x) = 0` on purpose.
+* **Sampled:**
+  - Full Shen-CL images (SBCL 2.6.8), stock and patched:
+    - `(* 0 true)` returns `0`, then raises after the patch.
+    - `(eval-kl [cond [false 1]])` returns `[]`, then raises
+      "condition failure".
+    - The `lisp.` EQ case returns `no`, then `yes`.
+    - The upstream suites pass with the accompanying test change.
+  - Shen-Scheme v0.52 binary, with the patched emitters called directly (no
+    rebuild): the cond raises, and `(= X 1)` with an inexact X is true.
+
+New ledger entries:
+
+- Discharged, about the patched code only:
+  - OB-SCHEME-COND-PATCH
+  - OB-SCHEME-EQ-LITERAL-PATCH
+  - OB-CL-COND-PATCH
+  - OB-CL-MULTIPLY-PATCH
+  - OB-CL-EQ-REWRITE-PATCH
+- Refuted, stock: OB-CL-COND-FALLTHROUGH and OB-CL-EQ-REWRITE.
+- `lane_audits` lists `rocq/Audit_Portfix.v`, so the ledger audits lane
+  theorems.

@@ -2,7 +2,7 @@
 from pathlib import Path
 import sys
 kind, source, destination = sys.argv[1:]
-if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal', 'kernel_list', 'eq1_base', 'eq1_equations', 'eq1_theory', 'eq1_kernel', 'compiler_branches', 'kernel_element', 'e2e07_klambda'):
+if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal', 'kernel_list', 'eq1_base', 'eq1_equations', 'eq1_theory', 'eq1_kernel', 'compiler_branches', 'compiler_branches_patched', 'kernel_element', 'e2e07_klambda'):
     raise SystemExit('Unknown packaging profile')
 bits = Path(source).read_bytes()
 if not bits or any(b not in b'01' for b in bits):
@@ -21,6 +21,9 @@ count, names = {'bootstrap': (2, ['kl:buri.native-bytes', 'kl:buri.native-node']
                 # E2E-15 compiler branches: exact upstream defines read inside the
                 # upstream package header, and the kernel element? they call.
                 'compiler_branches': (8, ['kl:_scm.yields-boolean?','kl:_scm.force-boolean','kl:_scm.emit-symbol','kl:_scm.emit-let','kl:_scm.emit-if','kl:_scm.emit-cond','kl:_scm.emit-cond-clauses','kl:_scm.emit-equality-check']),
+                # Port-fix lane: the same eight defines from the PATCHED upstream
+                # compiler.shen (ports/patches/shen-scheme-compiler.diff applied).
+                'compiler_branches_patched': (8, ['kl:_scm.yields-boolean?','kl:_scm.force-boolean','kl:_scm.emit-symbol','kl:_scm.emit-let','kl:_scm.emit-if','kl:_scm.emit-cond','kl:_scm.emit-cond-clauses','kl:_scm.emit-equality-check']),
                 'kernel_element': (1, ['kl:buri.kernel.element?']),
                 # EQ-1: every definition of each source file, in source order.
                 'eq1_base': (17, ['kl:buri.member?','kl:buri.unique?','kl:buri.append','kl:buri.rev','kl:buri.rev-h','kl:buri.get','kl:buri.keys','kl:buri.remove','kl:buri.nat?','kl:buri.index','kl:buri.every-list?','kl:buri.all-symbols?','kl:buri.check','kl:buri.exact-integer?','kl:buri.integer-spelling?','kl:buri.unsigned-spelling?','kl:buri.digits?']),
@@ -52,7 +55,7 @@ Global Opaque CAP_text CAP_nodes CAP_decode.
 text = text.replace('CAP', kind).replace('BITS', bits.decode('ascii')).replace('COUNT', str(count))
 text = text.replace('OFFSET', '3' if kind == 'checked_io' else '0')
 text = text.replace('NAMES', '[' + ';'.join('"' + n + '"' for n in names) + ']')
-if kind in ('equality_core','equality_seal','kernel_list','compiler_branches','kernel_element','eq1_','e2e07_klambda') or kind.startswith('eq1_'):
+if kind in ('equality_core','equality_seal','kernel_list','compiler_branches','compiler_branches_patched','kernel_element','eq1_','e2e07_klambda') or kind.startswith('eq1_'):
     complete = ('Theorem '+kind+'_complete : match '+kind+'_nodes with\n'
                 ' | Some xs => List.length xs = '+str(count)+' | None => False end.\n'
                 'Proof. vm_compute; reflexivity. Qed.\n')

@@ -1553,6 +1553,11 @@
      "source": "docs/VALUE-MODEL.md",
      "recorded": "E2E-15 (Wave B) independently refuted the same eqv? literal lowering as OB-SCHEME-EQV-LITERAL.",
      "reconciliation": "Same defect, two independent counterexamples; both remain refuted until the port lowering is changed and proved."
+    },
+    {
+     "source": "ports/patches/README.md",
+     "recorded": "Port-fix lane: a proposed upstream patch (ports/patches/) is proved in OB-SCHEME-EQ-LITERAL-PATCH. This stock obligation stays refuted: the stock port is unchanged.",
+     "reconciliation": "The patched variant is a separate obligation about different code; nothing about the stock port is claimed by it."
     }
    ],
    "replaced_by": "OB-SCHEME-EQUALITY"
@@ -1631,7 +1636,13 @@
    "sources": [
     "docs/PRIMITIVES.md"
    ],
-   "history": [],
+   "history": [
+    {
+     "source": "ports/patches/README.md",
+     "recorded": "Port-fix lane: a proposed upstream patch (ports/patches/) is proved in OB-CL-MULTIPLY-PATCH. This stock obligation stays refuted: the stock port is unchanged. Refuted only against Buri's stricter arithmetic profile; upstream deliberately keeps (* 0 <non-number>) = 0 (tests/primitives-tests.shen).",
+     "reconciliation": "The patched variant is a separate obligation about different code; nothing about the stock port is claimed by it."
+    }
+   ],
    "replaced_by": "OB-CL-ARITH-WRAPPERS"
   },
   {
@@ -2973,7 +2984,13 @@
     "docs/SCHEME-PORT.md",
     "docs/VALUE-MODEL.md"
    ],
-   "history": [],
+   "history": [
+    {
+     "source": "ports/patches/README.md",
+     "recorded": "Port-fix lane: a proposed upstream patch (ports/patches/) is proved in OB-SCHEME-COND-PATCH. This stock obligation stays refuted: the stock port is unchanged.",
+     "reconciliation": "The patched variant is a separate obligation about different code; nothing about the stock port is claimed by it."
+    }
+   ],
    "replaced_by": "OB-SCHEME-COND-ADMISSION"
   },
   {
@@ -3036,9 +3053,283 @@
      "source": "docs/VALUE-MODEL.md",
      "recorded": "E2E-17 (Wave B) independently refuted the same eqv? literal lowering as OB-SCHEME-EQ-LITERAL.",
      "reconciliation": "Same defect, two independent counterexamples; both remain refuted until the port lowering is changed and proved."
+    },
+    {
+     "source": "ports/patches/README.md",
+     "recorded": "Port-fix lane: a proposed upstream patch (ports/patches/) is proved in OB-SCHEME-EQ-LITERAL-PATCH. This stock obligation stays refuted: the stock port is unchanged.",
+     "reconciliation": "The patched variant is a separate obligation about different code; nothing about the stock port is claimed by it."
     }
    ],
    "replaced_by": "OB-SCHEME-EQV-EXACT"
+  },
+  {
+   "id": "OB-SCHEME-COND-PATCH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "PATCHED Shen-Scheme emit-cond with no literal-true clause",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen + ports/patches/shen-scheme-compiler.diff (patched blob 8a0aa129)",
+   "statement": "For every clause list with no literal-true test, every successful run of the captured patched emit-cond emits a cond ending in a #t clause holding the compiled (simple-error \"condition failure\"); under the stated read premises it is read as (if T1 B1 (if ... E)) with E the reading of that compiled error, i.e. (cond) = (simple-error \"condition failure\").",
+   "premises": [
+    "compile-expression, order-call and every uncaptured compiler function are arbitrary operations",
+    "read premises: compiled clause parts are read at budget N and compiled non-true tests are not the literal #t"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemePatched.SchemePatched.patched_emit_cond_clauses_exact",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemePatched.SchemePatched.patched_cond_no_true",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemePatched.SchemePatched.patched_cond_reads",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorems over the captured patched definitions (rocq/SchemePatched.v); sampled native run of the loaded patched emitter on the v0.52 binary (no rebuild). Says nothing about stock Shen-Scheme.",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-SCHEME-EQ-LITERAL-PATCH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-15",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "PATCHED Shen-Scheme = against a numeric literal",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/compiler.shen + ports/patches/shen-scheme-compiler.diff (patched blob 8a0aa129)",
+   "statement": "When a literal number occurs (and neither operand is an unbound symbol or [fail]), every successful run of the captured patched emit-equality-check yields syntax read as a target with exactly the outcomes, state and trace of (kl:= d1 d2), for every program, operation table and environment; the literal path therefore agrees with kl:= on all values, including mixed exactness.",
+   "premises": [
+    "the uncaptured prefix-op answers kl:= for = (upstream: *kl-prefix* concatenated with =)",
+    "unbound-symbol? answers are pure Booleans",
+    "order-call outcomes are outcomes of the captured ordering pass"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemePatched.SchemePatched.patched_emit_equality_exact",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemePatched.SchemePatched.patched_numeric_equality_is_kleq",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorems over the captured patched definitions; sampled native emission [kl:= X 1] and true for X = (exact->inexact 1) on the v0.52 binary.",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-COND-FALLTHROUGH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "refuted",
+   "boundary": "stock Shen-CL emit-cond with no true clause",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/compiler.shen emit-cond-clauses",
+   "statement": "The CL cond emitted by stock Shen-CL for a KLambda cond raises (simple-error \"condition failure\") when no clause test is true.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "CLLoweringPatch.stock_cond_empty",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "CLLoweringPatch.stock_cond_false_only",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted in a full Shen-CL 4844072d image (SBCL 2.6.8): (eval-kl [cond [false 1]]) returns []. The captured stock emit-cond-clauses emits no clause for [] and [[false 1]] (ground derivations).",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-CL-COND-PATCH"
+  },
+  {
+   "id": "OB-CL-COND-PATCH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "PATCHED Shen-CL emit-cond-clauses",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/compiler.shen + ports/patches/shen-cl-compiler.diff (patched blob 60522d09)",
+   "statement": "For every compile-expression function, fuel and clause list, whatever the captured patched emit-cond-clauses returns is a list of two-element clauses followed by a final (T fin) clause, with fin the compiled (simple-error \"condition failure\") when no source test is literally true; when every emitted test evaluates to NIL the CL COND evaluates as fin.",
+   "premises": [
+    "compile-expression is an arbitrary function",
+    "CL COND in the CLWrappers functional model"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLLoweringPatch.patched_cond_final_t",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLLoweringPatch.patched_cond_profile",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorems over the admitted patched capture (rocq/CLLoweringPatch.v, CLLoweringPatchCapture.v); sampled: patched full image raises \"condition failure\".",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-MULTIPLY-PATCH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "PATCHED shen-cl.multiply under Buri's stricter arithmetic profile",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp + ports/patches/shen-cl-primitives.diff (patched blob 3872f83e)",
+   "statement": "The captured patched shen-cl.multiply returns the exact product on every pair of integers and raises whenever either argument is a non-number first-order datum, matching the profile rule that * on a non-number is a domain error. This is a profile choice: upstream deliberately keeps (* 0 <non-number>) = 0 and its tests assert it.",
+   "premises": [
+    "every host table satisfying CLWrappers.sbcl_arith_ops and CLMultiplyPatched.sbcl_nonnumber_ops"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLMultiplyPatched.CLMultiplyPatched.patched_multiply_admitted",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLMultiplyPatched.CLMultiplyPatched.patched_multiply_int",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLMultiplyPatched.CLMultiplyPatched.patched_multiply_rejects_nonnumber",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorems over the admitted patched bytes; sampled full-image runs before/after the patch, upstream suites pass with the accompanying test change.",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-EQ-REWRITE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "refuted",
+   "boundary": "stock Shen-CL optimise-boolean-check EQ rewrite of a quoted comparand",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/compiler.shen optimise-boolean-check",
+   "statement": "Rewriting (shen-cl.equal? X (quote S)) to (EQ X (quote S)) preserves the test for every quoted datum S.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLWrappers.CLWrappers.eq_rewrite_unsafe",
+     "establishes": "model-proof"
+    }
+   ],
+   "completion_evidence": "Refuted in a full Shen-CL image: (eval-kl [if [lisp. \"(|shen-cl.equal?| (list 1 2) (quote (1 2)))\"] yes no]) returns no while the bare call is true. Reachable through lisp. escapes; ordinary = bypasses it. eq_rewrite_unsafe is an iff only within the Buri CL model, not natively.",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-CL-EQ-REWRITE-PATCH"
+  },
+  {
+   "id": "OB-CL-EQ-REWRITE-PATCH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "PATCHED optimise-boolean-check (symbol? guard on the EQ rewrite)",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/compiler.shen + ports/patches/shen-cl-compiler.diff (patched blob 60522d09)",
+   "statement": "For every CL world satisfying primitive_contracts, every Shen symbol? oracle that answers true only on symbols, every compile-expression function, fuel and input datum (no qsafe restriction), whatever the captured patched optimise-boolean-check returns is test-equivalent to its input.",
+   "premises": [
+    "CLLowering.primitive_contracts",
+    "symbol? answers true only on symbols (kernel symbol? is false on booleans, numbers, strings, conses, () and vectors)"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLLoweringPatch.patched_optimise_sound",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/patches/NATIVE.md",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorem without the qsafe premise over the admitted patched capture; sampled: the lisp. escape case answers yes on the patched image.",
+   "sources": [
+    "ports/patches/README.md",
+    "ports/patches/NATIVE.md"
+   ],
+   "history": []
   },
   {
    "id": "OB-SCHEME-EQV-EXACT",
@@ -3560,5 +3851,10 @@
    "obligation": "OB-PR117-SOUNDNESS",
    "note": ""
   }
+ ],
+ "lane_audits": [
+  "rocq/Audit_Clcontracts.v",
+  "rocq/Audit_Portfix.v",
+  "rocq/Audit_Repr.v"
  ]
 }
