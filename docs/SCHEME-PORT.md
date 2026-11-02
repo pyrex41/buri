@@ -248,7 +248,37 @@ these emitters, and from a forced test to a `kl:_scm.assert-boolean` call, is
 source text, not a theorem; the boolean-yielding-head premise of
 `yields-boolean?` (redefinition of `not`, `=` etc., OB-KL-GLOBAL-REBINDING);
 the relation of the KLambda profile to the decoded Scheme (OB-GENERATED-SCHEME-
-SEMANTICS); `unbound-symbol?`; termination of the ordering pass with the real
-counter-based `gensym` (not attempted in this wave; every theorem quantifies
-over all generators instead); boot-image kernel identity; native Chez
-execution.
+SEMANTICS); `unbound-symbol?`; boot-image kernel identity; native Chez execution. (Termination with the
+counter-based `gensym` is now proved; see below.)
+
+# Shen-Scheme ordering pass: progress with the counter gensym (E2E-15, Wave C)
+
+`rocq/OrderCallProgress.v` (audited in `rocq/Audit_Termination.v`). Universal
+theorems, axiom-free, about the same captured pass.
+
+- `counter` is the stated contract of pinned Shen kernel 43.1 `sys.shen`
+  (`gensym Sym = concat Sym (set *gensym* (+ 1 (value *gensym*)))`,
+  `concat` = `intern (cn (str S1) (str S2))`): the evaluator state is the
+  counter, a call returns `arg` followed by the decimal spelling of the next
+  value. That the boot image's compiled gensym behaves so is a contract
+  (OB-FRESH-OCCURRENCE), not a capture.
+- `spelling_inj` (decimal spellings are injective, via the stdlib
+  `int_of_string` round trip), `absent_candidate` (pigeonhole: among the next
+  `#names + 1` generated names one does not occur in the used syntax),
+  `fresh_step` / `fresh_progress` (the captured fresh loop returns within that
+  many iterations, with a name of zero occurrence count), `inputs_progress`
+  (the captured input loop, structural on the argument list), and
+  `order_call_progress`: for every application call `(f a1 ... an)` (head not
+  a special-form keyword) and every counter value, the captured order-call
+  returns, with no events.
+- Unconditional composition: `order_call_preserves_total`,
+  `order_then_merge_total` and `let_clause_total` conclude the existence of
+  the successful run instead of assuming it. `let_clause_total` keeps two
+  premises about the uncaptured `compile-expression`: compiling the bound
+  value returns (leaving an integer counter), and compiling the body is the
+  captured order-call.
+- Mutant (`tests/mutate-termination.py`): a counter that does not advance is
+  refused by the progress proof.
+
+Still open: the gensym implementation itself, the remaining compiler passes
+and dispatcher, and native Chez execution.

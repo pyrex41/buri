@@ -913,3 +913,37 @@ Open:
 * There is no aarch64 Shen-Scheme process.
 
 `OB-CHEZ-COMPILATION` is partial and is not discharged.
+
+## Termination: EQ-1 checker and Shen-Scheme ordering pass (E2E-09, E2E-15, Wave C)
+
+Universal theorems, axiom-free, audited in `rocq/Audit_Termination.v` (31
+statements; modules in `rocq/modules.d/50-termination.list`).
+
+* **EQ1-TERM** ([EQ1](EQ1.md)). `EqualityInductionTermination.native_guarded_body_total`:
+  for every theory `T`, bundle `B` and budget `N` whose numbers are integers
+  (`idata B`, `numok N`), the actual Native evaluation of the decoded captured
+  `check-bundle` guarded body returns exactly `r_check_bundle T B N` at some
+  fuel and at every larger fuel. `captured_check_bundle_total` /
+  `captured_check_bundle_decides` lift this through the stated `guard_model`.
+  With the existing refinement theorems this is total correctness of the
+  captured checker under Native. The fuel is existential (constructive proof),
+  not a closed bound. Every helper the acceptance path calls is also total on
+  its validated domain (`EqualityInductionTotalBase`, `EqualityInductionTotalTerms`).
+  Ground derivation, not universal: `fraction_budget_unsupported` (a 1/2 budget
+  makes Native reach an unsupported primitive, so the integer condition is
+  needed).
+* **Ordering pass progress** ([SCHEME-PORT](SCHEME-PORT.md)).
+  `OrderCallProgress.order_call_progress`: with the counter-based gensym
+  contract of pinned `sys.shen`, the captured order-call returns on every
+  application call from every counter value. The composed preservation
+  theorems no longer assume a successful run (`order_call_preserves_total`,
+  `order_then_merge_total`, `let_clause_total`).
+
+Not changed: EQ1-GUARD (the guard is the stated `guard_model`), the numeric
+`kl:=` contract, gensym as a contract rather than a capture, and every
+Chez-to-Native gap (E2E-32). A theorem about Native evaluation of the decoded
+capture is not a theorem about Chez executing it.
+Three proof mutations join the gate (104 total): a non-decreasing `member?`
+recursion fails the inductive termination step (its unmutated control is
+accepted), dropping the integer-budget condition is refused, and a gensym
+counter that does not advance is refused.

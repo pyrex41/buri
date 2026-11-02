@@ -143,6 +143,58 @@ conclusion check, `check-step-result` with swapped rewrite directions,
 `check-cases` without the freshness test, `check-bundle` without the theory test, and a
 `check-bundle` guard whose handler accepts are each refused by Rocq.
 
+## Termination: total correctness under Native (EQ1-TERM)
+
+Universal theorems, axiom-free, about the same decoded program
+(`EqualityInductionTrace`, `EqualityInductionTotalBase`,
+`EqualityInductionTotalTerms`, `EqualityInductionTermination`; audited in
+`rocq/Audit_Termination.v`).
+
+* Technique. `stepT` runs one captured body against the reference call table
+  `oref` and records every program call with the value the reference function
+  gives. `traced` (generic): if that run succeeds and every recorded call
+  terminates under the actual `Native.run` with the recorded value, the body's
+  Native evaluation terminates with the same value. Each captured body is run
+  once symbolically, with the same lazy-branch technique as the drivers
+  (`hide`, tests split on their outcome, shapes learnt on success, `eq?`
+  against a literal kept as a two-way test). Recorded calls are discharged by
+  the termination lemma of the callee, or, for recursion, by the structural
+  induction hypothesis (`vind`) on the step list, case list, theorem list,
+  path, argument list, term or string the run has exposed. Partial
+  correctness (`EqualityInductionRefinement`, `Specs`, `Helpers`) supplies the
+  value.
+* Domains. The Shen code has helpers without a fallback clause (`member?`,
+  `get`, `rule`, `subst`, ...); they are only called on data the kernel has
+  validated. The predicates `lst`, `kv`, `tm`, `wfr`, `zok`, `sigok` describe
+  that data and are propagated (`goal_ok`, `kv_app`, `wfr_ihyps`,
+  `rl_resolve`, `substitution_kv`, ...). The only condition on the input is
+  `idata` (no fractions or inexact numbers anywhere in the bundle) and
+  `numok` on the budget: Native's number primitives are integer-only.
+* `ok_*` (per captured function): terminates with its reference value on its
+  domain, e.g. `ok_member`, `ok_nat`, `ok_sort`, `ok_ctx`, `ok_subst`,
+  `ok_substitution`, `ok_inst`, `ok_goal`, `ok_replace`, `ok_steps`,
+  `ok_cases`, `ok_theorem`, `ok_bundle`. The four argument-free theory
+  constants are ground computations of the actual evaluator.
+* `native_guarded_body_total`: for every `T`, `B`, `N` with `idata B` and
+  `numok N`, there is a fuel `n` such that for every `m >= n` the Native
+  evaluation of the captured guarded body returns `r_check_bundle T B N`.
+  `captured_check_bundle_total`, `captured_check_bundle_decides` (under
+  `guard_model`: the captured check-bundle always decides, with the reference
+  verdict, and what it accepts is valid in the standard model),
+  `native_bundle_total`, `native_steps_total`.
+* Ground derivation (not universal): `fraction_budget_unsupported`; with the
+  loaded theory and budget `1/2` the Native evaluation is `Unsupported`
+  (Chez would raise inside the guard and reject), so `numok` is necessary for
+  the Native statement.
+
+Mutants (`tests/mutate-termination.py`): a `member?` whose recursive call
+passes the whole list, linked into the program, fails the inductive
+termination step whose unmutated control is accepted; dropping the budget
+condition is refused.
+
+Per-module times on this machine (shared, 4 cores): Trace 3 s, TotalBase
+~35 s, TotalTerms ~150 s, Termination ~215 s.
+
 ## Open obligations
 
 * **EQ1-DRIVERS**: prove that the captured recursive drivers (`check-steps`,
@@ -171,8 +223,9 @@ conclusion check, `check-step-result` with swapped rewrite directions,
 * **EQ1-NUMERIC** (remaining): `kl:=` is modelled by `equal?`; the runtime's
   numeric `=` also identifies `1` and `1.0`. Well-sorted terms contain no
   numbers, but this is a stated contract difference. (`nat?` is now proved.)
-* **EQ1-TERM**: termination of the captured kernel on finite certificates is
-  not proved; the refinement theorems are partial correctness.
+* **EQ1-TERM**: proved under the Native evaluator for integer-only inputs (see
+  below). Remaining: inputs with non-integer numbers are outside the Native
+  numeric model, and the fuel bound is existential, not a closed formula.
 * Chez-to-Native simulation, as for every Native result (E2E-32). A theorem
   about the Native evaluation of the decoded capture is not a theorem about
   Chez executing it.
