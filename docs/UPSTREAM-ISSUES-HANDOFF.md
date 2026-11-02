@@ -1,5 +1,10 @@
 # Handoff: independently confirm the upstream port findings
 
+> **Status:** completed by an independent reviewer on 2026-11-02. Verdicts and
+> every correction are recorded in [UPSTREAM-ISSUES.md](UPSTREAM-ISSUES.md#review-record-2026-11-02).
+> The steps below remain valid for re-verification. Do not name a probe
+> function `g`: it is a protected system function. Use `verify-g`.
+
 You are verifying four claimed bugs before they are filed upstream. The drafts are in
 [UPSTREAM-ISSUES.md](UPSTREAM-ISSUES.md). Treat every claim there as **unverified**.
 Your job is to reproduce or refute each one from clean inputs. Do not take the
@@ -18,7 +23,7 @@ Do not file issues, push or comment anywhere. Only report back.
 | Item | Exact identity |
 |---|---|
 | Shen-Scheme source | https://github.com/tizoc/shen-scheme at `8d261518db17fbfec32d1b268b40ed216b925c74` |
-| Shen-Scheme runtime | release v0.52 `shen-scheme-v0.52-linux-bin.tar.gz`, sha256 `aa711f576ea0ec96d86b0120eeba875153317a9af9e6a69f9c6ef4c00a4ad8c9` |
+| Shen-Scheme runtime | release v0.52 asset `shen-scheme-v0.52-linux-x64-bin.tar.gz`, sha256 `aa711f576ea0ec96d86b0120eeba875153317a9af9e6a69f9c6ef4c00a4ad8c9` |
 | Shen-CL source | https://github.com/Shen-Language/shen-cl at `4844072dde0208c3e4b99dcbfea58e4fdfd812e8` |
 | SBCL | 2.6.8 (any official 2.6.x is acceptable; record the exact version) |
 | Shen spec text | ShenOSKernel-43.1 `doc/porting.md` (from the shen-sources `shen-43.1` release tarball) |
@@ -59,7 +64,7 @@ Claim: `(= X <number literal>)` compiles to `eqv?`, so it is false for an inexac
    - `(* 2 (/ 1 2))`
    - `(integer? (* 2 (/ 1 2)))`
    - `(= 1 (* 2 (/ 1 2)))`
-   - `(define g X -> (= X 1))` then `(g (* 2 (/ 1 2)))`
+   - `(define verify-g X -> (= X 1))` then `(verify-g (* 2 (/ 1 2)))`
    - `(define h X Y -> (= X Y))` then `(h 1 (* 2 (/ 1 2)))`
    - `(= 1 1.0)`
 3. The draft says the reader reads `1.0` as exact `1`, so the last form returns
