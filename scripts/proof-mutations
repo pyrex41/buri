@@ -83,3 +83,5 @@ for name in $(python3 tests/mutate-primitives.py); do
   grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# Port-fix lane: unpatched captures must fail the patched theorems.
+sh tests/run-portfix-mutations.sh

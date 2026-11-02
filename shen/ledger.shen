@@ -566,7 +566,11 @@
 (define buri.ledger-env Charter Plan Graph AuditPath ->
   (let Tests (buri.lunique (buri.lreferenced-tests Charter Graph))
        Files (buri.lfilter (/. P (buri.lexists? P)) (buri.lunique (buri.lreferenced-files Charter Plan Graph)))
-    [(buri.laudit-names (read-file-as-bytelist AuditPath))
+    \\ Lane audit modules (rocq/Audit_<Lane>.v, each with a checked count in
+    \\ rocq/audit.d) listed in the graph's optional "lane_audits" field are
+    \\ audited exactly like AuditPath; a listed module that is missing fails.
+    [(buri.lconcat (map (/. P (buri.laudit-names (read-file-as-bytelist P)))
+                        [AuditPath | (buri.lstrs (buri.lopt "lane_audits" [arr []] Graph))]))
      (map (/. T [T (if (buri.lexists? T) (buri.ltest-names (read-file-as-bytelist T)) [])]) Tests)
      Files]))
 

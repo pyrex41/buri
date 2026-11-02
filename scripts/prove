@@ -7,7 +7,8 @@ rm -f _build/EquationBridge.v _build/NativeOutput.v _build/compiler-output.sexp 
  _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v _build/EncoderSource.v \
  _build/encoder-kl.bits _build/encoder-kl.sexp _build/EncoderKLambda.v \
  _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v _build/StockDivisionInput.v _build/OrderCallInput.v _build/ObserverFormsInput.v _build/IOReadInput.v _build/io-read.bits _build/io-read.bits.source _build/io-read.bits.sexp _build/order-call.bits _build/order-call.bits.source _build/order-call.bits.sexp _build/KernelListInput.v _build/kernel-list.bits _build/kernel-list.bits.source _build/kernel-list.bits.sexp _build/EqualityCoreInput.v _build/EqualitySealInput.v _build/equality-core.bits _build/equality-core.bits.source _build/equality-core.bits.sexp _build/equality-core-for-seal.bits _build/equality-core-for-seal.bits.source _build/equality-core-for-seal.bits.sexp _build/equality-seal.bits _build/equality-seal.bits.source _build/equality-seal.bits.sexp \
- _build/CompilerBranchesInput.v _build/compiler-branches.bits _build/compiler-branches.bits.source _build/compiler-branches.bits.sexp _build/KernelElementInput.v _build/kernel-element.bits _build/kernel-element.bits.source _build/kernel-element.bits.sexp _build/PrimitiveSources.v _build/KLambdaEvaluatorInput.v _build/e2e07-klambda.bits _build/e2e07-klambda.bits.source _build/e2e07-klambda.bits.sexp
+ _build/CompilerBranchesInput.v _build/compiler-branches.bits _build/compiler-branches.bits.source _build/compiler-branches.bits.sexp _build/KernelElementInput.v _build/kernel-element.bits _build/kernel-element.bits.source _build/kernel-element.bits.sexp _build/PrimitiveSources.v _build/KLambdaEvaluatorInput.v _build/e2e07-klambda.bits _build/e2e07-klambda.bits.source _build/e2e07-klambda.bits.sexp \
+ _build/CompilerBranchesPatchedInput.v _build/compiler-branches-patched.bits _build/compiler-branches-patched.bits.source _build/compiler-branches-patched.bits.sexp
 scripts/rocq coqc --version > _build/rocq-version.log
 grep -q 'version 8.18.0' _build/rocq-version.log || { cat _build/rocq-version.log; exit 1; }
 # Require a fresh image and regenerate the bridge from actual loaded equations.
@@ -76,7 +77,21 @@ python3 scripts/package-adapter.py _build/adapter.bits _build/AdapterInput.v
 python3 scripts/check-adapter-package.py _build/adapter.bits _build/AdapterInput.v
 diff -u rocq/AdapterInput.v _build/AdapterInput.v
 python3 scripts/check-upstream-pass.py
-for profile in bootstrap observer compiler_pass order_call kernel_list io_read equality_core equality_seal eq1_base eq1_equations eq1_theory eq1_kernel compiler_branches kernel_element e2e07_klambda; do
+# Port-fix lane: apply the pinned proposed upstream patches (packaging only:
+# patch sha256 and patched blobs pinned in package-patched.py), check the
+# patched extraction, and regenerate the patched captures. Acceptance is Rocq
+# (SchemePatched.v, CLLoweringPatch.v, CLMultiplyPatched.v).
+rm -rf _build/patched _build/CLLoweringPatchCapture.v _build/PatchedPrimitiveSources.v
+python3 scripts/package-patched.py apply _build/patched
+python3 scripts/package-patched.py check-branches _build/patched
+scripts/shen -l shen/cl-lowering-capture.shen -l shen/cl-lowering-patch-capture.shen \
+ -e '(buri.cllp-capture "ports/upstream/shen-cl/compiler.shen" "_build/patched/shen-cl/compiler.shen" "2d624377c02030f9513769f7bad11e84330b8c5a" "60522d0924b44a218161bced9771783192ae301d" "_build/CLLoweringPatchCapture.v")' > _build/cl-patch-capture.log 2>&1
+grep -qx captured _build/cl-patch-capture.log || { cat _build/cl-patch-capture.log; exit 1; }
+diff -u rocq/CLLoweringPatchCapture.v _build/CLLoweringPatchCapture.v
+python3 scripts/package-patched.py multiply _build/patched _build/PatchedPrimitiveSources.v
+python3 scripts/check-patched-package.py _build/patched _build/PatchedPrimitiveSources.v
+diff -u rocq/PatchedPrimitiveSources.v _build/PatchedPrimitiveSources.v
+for profile in bootstrap observer compiler_pass order_call kernel_list io_read equality_core equality_seal eq1_base eq1_equations eq1_theory eq1_kernel compiler_branches compiler_branches_patched kernel_element e2e07_klambda; do
  case "$profile" in
   bootstrap) source=shen/observe-constructor.shen; capture=bootstrap; module=BootstrapInput ;;
   observer) source=shen/observe-encoder.shen; capture=observer; module=ObserverInput ;;
@@ -93,6 +108,8 @@ for profile in bootstrap observer compiler_pass order_call kernel_list io_read e
   eq1_kernel) source=shen/kernel.shen; capture=eq1-kernel; module=EqualityInductionKernelInput ;;
   # E2E-15 compiler branches (let/if/cond/equality emission) and kernel element?.
   compiler_branches) source=ports/compiler-branches.shen; capture=compiler-branches; module=CompilerBranchesInput ;;
+  # Port-fix lane: the same branch defines from the PATCHED upstream compiler.shen.
+  compiler_branches_patched) source=ports/compiler-branches-patched.shen; capture=compiler-branches-patched; module=CompilerBranchesPatchedInput ;;
   kernel_element) source=ports/kernel-element.shen; capture=kernel-element; module=KernelElementInput ;;
   # E2E-07: the KL-PURE-1 reference evaluator, every definition in source order.
   e2e07_klambda) source=shen/klambda.shen; capture=e2e07-klambda; module=KLambdaEvaluatorInput ;;

@@ -1,0 +1,23 @@
+--- a/src/compiler.shen
++++ b/src/compiler.shen
+@@ -233,7 +233,8 @@
+   Clauses Scope -> [cond | (emit-cond-clauses Clauses Scope)])
+ 
+ (define emit-cond-clauses
+-  [] _ -> []
++  [] Scope -> [[true (compile-expression [simple-error "condition failure"] Scope)]]
++  [[true Body]] Scope -> [[true (compile-expression Body Scope)]]
+   [[Test Body] | Rest] Scope
+   -> (let CompiledTest (compile-expression (force-boolean Test) Scope)
+           CompiledBody (compile-expression Body Scope)
+@@ -284,8 +285,8 @@
+                 (unbound-symbol? V2 Scope)
+                 (= [fail] V1)
+                 (= [fail] V2))
+-  V1 V2 Scope -> (order-call [eqv? (compile-expression V1 Scope)
+-                                   (compile-expression V2 Scope)])
++  V1 V2 Scope -> (order-call [(prefix-op =) (compile-expression V1 Scope)
++                                            (compile-expression V2 Scope)])
+       where (or (number? V1) (number? V2))
+   V1 V2 Scope -> (order-call [equal? (compile-expression V1 Scope)
+                                      (compile-expression V2 Scope)])

@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import sys
 kind, source, target = sys.argv[1:]
-if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal', 'kernel_list', 'eq1_base', 'eq1_equations', 'eq1_theory', 'eq1_kernel', 'compiler_branches', 'kernel_element', 'e2e07_klambda'):
+if kind not in ('bootstrap', 'observer', 'compiler_pass', 'checked_io', 'order_call', 'observer_forms', 'io_read', 'equality_core', 'equality_seal', 'kernel_list', 'eq1_base', 'eq1_equations', 'eq1_theory', 'eq1_kernel', 'compiler_branches', 'compiler_branches_patched', 'kernel_element', 'e2e07_klambda'):
     raise SystemExit('Unknown packaging profile')
 module = Path(target).read_bytes()
 if kind.startswith('eq1_') or kind == 'e2e07_klambda':
