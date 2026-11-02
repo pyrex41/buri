@@ -563,10 +563,17 @@
      (map (/. E (buri.lev-ref E)) (buri.lconcat (map (/. O (buri.lob-evidence O)) (buri.la (buri.lf "obligations" Graph)))))])))
 (define buri.lunique [] -> [] [X | Xs] -> (if (buri.member? X Xs) (buri.lunique Xs) [X | (buri.lunique Xs)]))
 
+\\ Audit modules: AuditPath (rocq/Audit.v) plus each lane's rocq/Audit_<lane>.v,
+\\ registered with a count in rocq/audit.d. Shen has no directory listing, so
+\\ the lane files are named here; a missing file contributes no names.
+(define buri.laudit-lane-files -> ["rocq/Audit_Clcontracts.v"])
+(define buri.laudit-all AuditPath ->
+  (buri.lconcat (map (/. P (buri.laudit-names (read-file-as-bytelist P)))
+                     [AuditPath | (buri.lfilter (/. P (buri.lexists? P)) (buri.laudit-lane-files))])))
 (define buri.ledger-env Charter Plan Graph AuditPath ->
   (let Tests (buri.lunique (buri.lreferenced-tests Charter Graph))
        Files (buri.lfilter (/. P (buri.lexists? P)) (buri.lunique (buri.lreferenced-files Charter Plan Graph)))
-    [(buri.laudit-names (read-file-as-bytelist AuditPath))
+    [(buri.laudit-all AuditPath)
      (map (/. T [T (if (buri.lexists? T) (buri.ltest-names (read-file-as-bytelist T)) [])]) Tests)
      Files]))
 

@@ -83,3 +83,12 @@ for name in $(python3 tests/mutate-primitives.py); do
   grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# E2E-16/17 CL contract restatements: each claim the captured bodies do not
+# justify must be refused as a type mismatch against the real theorem.
+for name in $(python3 tests/mutate-cl-contracts.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'while it is expected to have type' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done

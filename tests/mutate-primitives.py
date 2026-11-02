@@ -31,6 +31,10 @@ mutations = {
     'PrimCLAbsequalEqNumbers': ('cl', '((numberp x) (and (numberp y) (= x y)))', '((numberp x) (and (numberp y) (eq x y)))'),
     # divide lets a CL ratio escape to Shen.
     'PrimCLDivideRatioEscape': ('cl', "(* (coerce 1.0 'double-float) div)", 'div'),
+    # numeric-equal compares non-integer numbers by identity.
+    'PrimCLNumericEqualEq': ('cl', '(and (numberp x) (numberp y) (= x y))', '(and (numberp x) (numberp y) (eq x y))'),
+    # increment steps a non-fixnum (bignum) argument downwards.
+    'PrimCLIncrementBignum': ('cl', '(1+ x)))', '(1- x)))'),
     # multiply returns 1 for a zero factor.
     'PrimCLMultiplyZero': ('cl', '((or (zerop x) (zerop y)) 0)', '((or (zerop x) (zerop y)) 1)'),
 }

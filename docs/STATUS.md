@@ -700,3 +700,47 @@ Open: no bridge theorem connects isla traces and the Coq model. Proofs for a
 call, store, fault, allocation stub and atomic are still missing, and so are
 the SBCL code, fetch/execute and PC update in the v9.4 model, and the
 EL0/MMU-on profile. E2E-20 is not complete.
+
+## Shen-CL lowering contracts from captured bodies (E2E-16/E2E-17, Wave C)
+
+The proven boundary moves in three ways. See [PRIMITIVES](PRIMITIVES.md) and
+[CL-PORT](CL-PORT.md).
+
+* **Narrowed record.** The nine predicate fields of
+  `CLLowering.primitive_contracts` were stated for every argument count, which
+  was a false requirement. Wrong-arity calls are never emitted, and the
+  captured body cannot justify them: `CLContracts.all_arity_unjustified`, and
+  `captured_all_arity_false` for the captured world. Each field is now stated
+  at exactly the emitted arity. `optimise_sound` and `emit_if_refines` are
+  re-proved with `sem_pred1`/`sem_pred2`. Every world admitted before is still
+  admitted (`pred_refines_narrows`).
+* **Discharge.** `rocq/CLContracts.v` connects CLLowering's relational CL
+  model to CLWrappers' functional evaluator: a helper call's outcome is the
+  result on which the fuel-indexed evaluation stabilises.
+  `captured_contracts` proves every field for the world that runs the
+  admitted `primitives.lsp` bodies, for every state type, every relation for
+  unmodeled forms, every host table and every kernel relation satisfying the
+  named records. Eight fields need no host premise at all. Nine are reduced to
+  individually named contracts:
+  - `cl_host_ops`: 16 SBCL operations, E2E-21/24;
+  - `cl_kernel_ops`: compiled kernel `not`, `empty?`, `fail`, E2E-16.
+
+  This includes, for every value and not only first-order data, the captured
+  `absequal` against symbol, NIL, string and numeric literals, and
+  `numeric-equal`. `discharged_optimise_sound` and
+  `discharged_emit_if_refines` are the captured lowering theorems with only
+  those contracts and `qsafe` left. They are universal theorems. The
+  instantiation keeps fn_heads host operations pure and quotients
+  fresh-condition identity.
+* **Increment/decrement.** The pinned `shen-cl.increment`/`decrement` are now
+  packaged and admitted. `step_refines_rules` proves them exact on every
+  integer, assuming `cl_step_ops`.
+
+Not proved: the host and kernel contracts themselves, `cf-vectors`, floats in
+the arithmetic wrappers, `emit-cond-clauses`, `compile-expression`, the CL
+reader and SBCL execution. A theorem about this CL model is not a theorem
+about SBCL.
+
+Twenty-four statements join the assumption audit (`rocq/Audit_Clcontracts.v`,
+630 total). Two admission mutants and three restated-claim mutants join the
+proof mutations (106 total). The matrix names 123 contracts.

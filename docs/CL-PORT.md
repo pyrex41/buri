@@ -155,8 +155,30 @@ Premises, all explicit in the statements:
   `number?`/`NUMBERP`, `empty?`/`NULL`, the four comparisons, `shen-cl.equal?`
   versus `shen-cl.absequal`, `NULL`, `EQUAL`, `shen-cl.numeric-equal` and `EQ` in
   the shapes the optimizer uses, the value of `(fail)`, Shen `not` and CL `NOT`.
+  Every field is stated at exactly the arity and shape the optimizer emits
+  (Wave C narrowing; `sem_pred1`/`sem_pred2`). The earlier predicate fields
+  quantified over every argument list. That was a false requirement: a
+  wrong-arity call of a wrapper is never emitted. The captured body gives it
+  no outcome of its own, and SBCL raises a fresh program-error naming a
+  different function (`CLContracts.all_arity_unjustified`).
+  `pred_refines_narrows` shows that the old fields imply the new ones.
   `model_contracts` shows the hypotheses are jointly satisfiable (anti-vacuity);
   it is not a model of SBCL.
+- The record is no longer an unexplained premise for the actual primitives.
+  `CLContracts.captured_contracts` proves it for the world that runs the
+  captured `primitives.lsp` bodies. In that world the Boolean wrappers run
+  relationally, `absequal`/`numeric-equal` run in the functional evaluator
+  through the stabilised-fuel bridge, and the remaining heads are a host table
+  and a kernel relation. `discharged_optimise_sound` and
+  `discharged_emit_if_refines` are the captured lowering theorems with only
+  these hypotheses left:
+  - `cl_host_ops` (16 individually named SBCL operation contracts, E2E-21/24);
+  - `cl_kernel_ops` (compiled kernel `not`, `empty?`, `fail`, E2E-16);
+  - `qsafe`.
+
+  Instantiation boundary: host operations are pure, and a raised host
+  condition is a function of its arguments, so fresh condition identity is
+  quotiented. See [PRIMITIVES](PRIMITIVES.md).
 - `qsafe`: no `(shen-cl.equal? _ 'd)` or `(shen-cl.equal? 'd _)` with `d` other
   than a symbol or NIL. The optimizer rewrites those to `EQ`, which disagrees
   with Shen equality for a quoted cons, string or number; the native gate shows
@@ -188,13 +210,11 @@ Premises, all explicit in the statements:
 
 ## Next composition
 
-Cover `emit-cond-clauses` (which also calls the optimizer), discharge the named
-contracts from captured `primitives.lsp` bodies (E2E-17 has started:
-`rocq/CLWrappers.v` proves `pc_cons`, `pc_string`, `pc_number`, the four
-comparison fields and `pc_absequal` at the arity the optimizer emits, and that
-`qsafe` is exactly the safe domain of the `EQ` rewrite; see
-[PRIMITIVES](PRIMITIVES.md). The record's all-arity form is stronger than the
-bodies justify and should be narrowed), relate
+Cover `emit-cond-clauses` (which also calls the optimizer). The named record
+is now narrowed and discharged from the captured bodies down to
+`cl_host_ops`/`cl_kernel_ops`, and `qsafe` is exactly the safe domain of the
+`EQ` rewrite (see [PRIMITIVES](PRIMITIVES.md)). Still to do: prove those host
+contracts (E2E-21/24) and the compiled kernel functions (E2E-16), and relate
 `compile-expression` and `bind-accessor-chains` to the KLambda semantics, and
 share a language-level Boolean contract with the Scheme port while retaining
 separate host syntax and semantics. Coalton is neither a prerequisite nor proof

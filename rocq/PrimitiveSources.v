@@ -55,7 +55,9 @@ Definition cl_spans : list (string * string * nat * nat) := [
   ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 30048, 30112);
   ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 30114, 30175);
   ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 30177, 30259);
-  ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 30261, 30340)].
+  ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 30261, 30340);
+  ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 28865, 28948);
+  ("ports/upstream/shen-cl/primitives.lsp", "f9b11c8a0b57c8492e66094d5e236a8711983e7a", 28950, 29033)].
 Definition cl_source : string := "(defun |cons?| (X)
   (if (consp X) '|true| '|false|))
 
@@ -144,4 +146,10 @@ Definition cl_source : string := "(defun |cons?| (X)
 
 (defun |shen-cl.less-than-or-equal-to?| (x y)
   (if (<= x y) '|true| '|false|))
+
+(defun |shen-cl.increment| (x)
+  (if (typep x 'fixnum) (1+ (the fixnum x)) (1+ x)))
+
+(defun |shen-cl.decrement| (x)
+  (if (typep x 'fixnum) (1- (the fixnum x)) (1- x)))
 ".

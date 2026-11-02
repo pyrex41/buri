@@ -18,7 +18,7 @@
 (set buri.pt-env (buri.pm-env))
 (define buri.pt-verdict M -> (buri.pm-decide-env M (value buri.pt-env)))
 (define buri.pt-show [rejected Vs] -> (do (map (/. V (output "VIOLATION ~S~%" V)) Vs) [rejected (length Vs)])  V -> V)
-(buri.test real-matrix-consistent (buri.pt-show (buri.pt-verdict (value buri.pt-matrix))) [primitive-matrix-consistent 114 101])
+(buri.test real-matrix-consistent (buri.pt-show (buri.pt-verdict (value buri.pt-matrix))) [primitive-matrix-consistent 114 123])
 (buri.test kl-primitives-are-36 (length (hd (value buri.pt-env))) 36)
 
 \\ Hostile variants of the parsed matrix.
@@ -58,6 +58,16 @@
   (buri.pt-has? [missing-contract "SchemeWrappers.chez_equality_ops.chez_eq"]
     (buri.pt-verdict (buri.pt-put "contracts" [arr (buri.lfilter (/. C (not (= (buri.lfs "id" C) "SchemeWrappers.chez_equality_ops.chez_eq")))
                                                           (buri.la (buri.lf "contracts" (buri.pt-m))))] (buri.pt-m)))) true)
+\\ The named SBCL host contracts left by CLContracts.captured_contracts cannot
+\\ be dropped from the matrix, and a lane theorem must be in its audit module.
+(buri.test missing-host-op-contract-rejected
+  (buri.pt-has? [missing-contract "CLContracts.cl_host_ops.host_eq"]
+    (buri.pt-verdict (buri.pt-put "contracts" [arr (buri.lfilter (/. C (not (= (buri.lfs "id" C) "CLContracts.cl_host_ops.host_eq")))
+                                                          (buri.la (buri.lf "contracts" (buri.pt-m))))] (buri.pt-m)))) true)
+(buri.test unaudited-lane-theorem-rejected
+  (buri.pt-has? [unaudited-theorem "shen-cl:shen-cl.numeric-equal CLContracts.CLContracts.numeric_equal_always_true"]
+    (buri.pt-verdict (buri.pt-edit "shen-cl:shen-cl.numeric-equal"
+      (/. E (buri.pt-evidence "theorems" [arr [[str "CLContracts.CLContracts.numeric_equal_always_true"]]] E)) (buri.pt-m)))) true)
 (buri.test aggregate-contract-rejected
   (buri.pt-has? [unknown-contract-reference "shen-cl:= runtime-behaves-correctly"]
     (buri.pt-verdict (buri.pt-edit "shen-cl:=" (/. E (buri.pt-evidence "contracts" [arr [[str "runtime-behaves-correctly"]]] E)) (buri.pt-m)))) true)

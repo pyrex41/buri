@@ -12,7 +12,7 @@
 (define buri.pm-host-owners -> ["E2E-21" "E2E-22" "E2E-23" "E2E-24" "E2E-25" "E2E-26" "E2E-27"])
 (define buri.pm-contract-owners -> ["E2E-05" "E2E-16" "E2E-17" "E2E-21" "E2E-22" "E2E-23" "E2E-24" "E2E-25" "E2E-26" "E2E-27"])
 (define buri.pm-kinds -> ["proved" "contract-assumed" "sampled" "none"])
-(define buri.pm-statuses -> ["host-contract" "discharged-at-use" "assumed" "bridged" "profile-slot"])
+(define buri.pm-statuses -> ["host-contract" "discharged" "reduced" "assumed" "bridged" "profile-slot"])
 
 \\ String literals inside the prim_name definition of rocq/KLSyntax.v.
 (define buri.pm-kl-names Bytes -> (buri.pm-quoted (buri.pm-between (buri.lj-bytes-of "Definition prim_name") (buri.lj-bytes-of " end.") Bytes)))
@@ -114,6 +114,9 @@
    ["rocq/CLWrappers.v" "sbcl_equality_ops" "CLWrappers.sbcl_equality_ops."]
    ["rocq/CLWrappers.v" "sbcl_arith_ops" "CLWrappers.sbcl_arith_ops."]
    ["rocq/CLLowering.v" "primitive_contracts" "CLLowering.primitive_contracts."]
+   ["rocq/CLContracts.v" "cl_host_ops" "CLContracts.cl_host_ops."]
+   ["rocq/CLContracts.v" "cl_kernel_ops" "CLContracts.cl_kernel_ops."]
+   ["rocq/CLContracts.v" "cl_step_ops" "CLContracts.cl_step_ops."]
    ["rocq/KLValue.v" "profile" "KLValue.profile."]])
 (define buri.pm-expected-contracts ->
   (append (buri.pi-concat (map (/. R (map (/. F (cn (hd (tl (tl R))) F)) (buri.pm-record-fields (hd (tl R)) (read-file-as-bytelist (hd R)))))
@@ -123,7 +126,7 @@
 (define buri.pm-env ->
   (let KL (buri.pm-kl-names (read-file-as-bytelist "rocq/KLSyntax.v"))
     [KL [["shen-scheme" (buri.pm-registered "shen-scheme" KL)] ["shen-cl" (buri.pm-registered "shen-cl" KL)]]
-     (buri.laudit-names (read-file-as-bytelist "rocq/Audit.v")) (buri.pm-expected-contracts)
+     (buri.laudit-all "rocq/Audit.v") (buri.pm-expected-contracts)
      (buri.lfilter (/. F (buri.lexists? F)) (buri.pm-files))]))
 (define buri.pm-decide-env M [KL Reg Aud Exp Files] -> (buri.pm-decide M KL Reg Aud Exp Files))
 (define buri.pm-check Path -> (buri.pm-decide-env (buri.lread-json Path) (buri.pm-env)))

@@ -78,6 +78,8 @@ Definition additive_body g := SL [Sy "COND";
 Definition divide_body := SL [Sy "LET"; SL [SL [Sy "DIV"; SL [Sy "/"; dp "X"; dp "Y"]]];
  SL [Sy "IF"; SL [Sy "INTEGERP"; Sy "DIV"]; Sy "DIV";
      SL [Sy "*"; SL [Sy "COERCE"; VNum "1.0"; Q (Sy "DOUBLE-FLOAT")]; Sy "DIV"]]].
+(* (if (typep x 'fixnum) (1+ (the fixnum x)) (1+ x)), and 1- for decrement. *)
+Definition step_body g := SL [Sy "IF"; fx "X"; SL [Sy g; SL [Sy "THE"; Sy "FIXNUM"; Sy "X"]]; SL [Sy g; Sy "X"]].
 Definition expected_program : list (string * cdef) := [
  ("cons?", (["X"], [bool_body "CONSP" ["X"]]));
  ("string?", (["S"], [bool_body "STRINGP" ["S"]]));
@@ -93,7 +95,9 @@ Definition expected_program : list (string * cdef) := [
  ("shen-cl.greater?", (["X"; "Y"], [bool_body ">" ["X"; "Y"]]));
  ("shen-cl.less?", (["X"; "Y"], [bool_body "<" ["X"; "Y"]]));
  ("shen-cl.greater-than-or-equal-to?", (["X"; "Y"], [bool_body ">=" ["X"; "Y"]]));
- ("shen-cl.less-than-or-equal-to?", (["X"; "Y"], [bool_body "<=" ["X"; "Y"]]))].
+ ("shen-cl.less-than-or-equal-to?", (["X"; "Y"], [bool_body "<=" ["X"; "Y"]]));
+ ("shen-cl.increment", (["X"], [step_body "1+"]));
+ ("shen-cl.decrement", (["X"], [step_body "1-"]))].
 
 Fixpoint decode_all (ds : list sv) : option (list (string * cdef)) := match ds with
  | [] => Some []
@@ -257,6 +261,9 @@ Fixpoint ceval (n : nat) (h : string -> list sv -> cres) (env : CLLowering.bindi
              | _ => CUnsup end
            | _ => CUnsup end
          | _ => CUnsup end
+       (* (THE type x) evaluates x; the type declaration is not checked
+          (SBCL's checking of it is a host contract, cl_step_ops). *)
+       else if String.eqb hd "THE" then match xs with [_; x] => ceval m h env x | _ => CUnsup end
        else if special hd then CUnsup
        else match args xs with
          | inr o => o
@@ -293,16 +300,17 @@ Proof. intros; cbn; rewrite H; destruct v; reflexivity. Qed.
 Lemma ce_quote : forall m env d, ceval (S m) h env (Q d) = CRet d.
 Proof. reflexivity. Qed.
 Definition plain g := negb (String.eqb g "QUOTE" || String.eqb g "IF" || String.eqb g "COND" || String.eqb g "AND"
- || String.eqb g "OR" || String.eqb g "LET" || special g)%bool.
+ || String.eqb g "OR" || String.eqb g "LET" || String.eqb g "THE" || special g)%bool.
 Lemma plain_split : forall g, plain g = true -> String.eqb g "QUOTE" = false /\ String.eqb g "IF" = false /\
- String.eqb g "COND" = false /\ String.eqb g "AND" = false /\ String.eqb g "OR" = false /\ String.eqb g "LET" = false /\ special g = false.
+ String.eqb g "COND" = false /\ String.eqb g "AND" = false /\ String.eqb g "OR" = false /\ String.eqb g "LET" = false /\
+ String.eqb g "THE" = false /\ special g = false.
 Proof.
  intros g H. unfold plain in H. apply Bool.negb_true_iff in H.
  repeat (apply Bool.orb_false_iff in H as [H ?]). repeat split; assumption.
 Qed.
 Ltac plain_rw P := let Q := fresh in pose proof (plain_split _ P) as Q;
- destruct Q as [Q1 [Q2 [Q3 [Q4 [Q5 [Q6 Q7]]]]]];
- cbn [ceval R.to_list SL fold_right option_map Sy]; rewrite Q1, Q2, Q3, Q4, Q5, Q6, Q7.
+ destruct Q as [Q1 [Q2 [Q3 [Q4 [Q5 [Q6 [Q8 Q7]]]]]]];
+ cbn [ceval R.to_list SL fold_right option_map Sy]; rewrite Q1, Q2, Q3, Q4, Q5, Q6, Q8, Q7.
 Lemma ce_host1 : forall m env g x v r, plain g = true -> assoc g program = None ->
  ceval m h env x = CRet v -> h g [v] = r -> ceval (S m) h env (SL [Sy g; x]) = r.
 Proof. intros m env g x v r P A Hx Hr. plain_rw P. rewrite Hx, A. exact Hr. Qed.
