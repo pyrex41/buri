@@ -1,6 +1,7 @@
 Chez Scheme (cisco/ChezScheme v10.3.0, commit adfaf9e6): applies to the files in
 ports/repr/chez/ copied from the upstream tree (cmacros.ss, arm64.ss, arm64.def,
-types.h) and to the generated tarm64le-equates.h / tarm64le-machine.def.
+types.h), to the generated tarm64le-equates.h / tarm64le-machine.def, and to
+ports/chez-np/upstream/np-languages.ss and the Chez-produced IR captures in ports/chez-np/.
 Upstream NOTICE and LICENSE follow unchanged.
 
 Chez Scheme Version 10.3.0

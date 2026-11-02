@@ -104,3 +104,12 @@ for name in $(python3 tests/mutate-cl-contracts.py); do
 done
 # Port-fix lane: unpatched captures must fail the patched theorems.
 sh tests/run-portfix-mutations.sh
+# E2E-22 Chez nanopass mutants: a changed captured byte, a changed printed
+# pass output and a changed generated grammar must each fail their Rocq check.
+for name in $(python3 tests/mutate-chez-np.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done

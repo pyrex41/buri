@@ -156,6 +156,18 @@ rm -rf _build/repr; mkdir -p _build/repr
 python3 -I scripts/package-repr-layout.py _build/repr
 diff -u rocq/ChezLayout.v _build/repr/ChezLayout.v
 diff -u rocq/SbclLayout.v _build/repr/SbclLayout.v
+# E2E-22: Chez 10.3.0 nanopass grammar source and captured tarm64le IR trace
+# (packaging only; Rocq reads, resolves and checks them in rocq/ChezNp*.v).
+rm -f _build/ChezNpLanguagesInput.v _build/ChezNpSyntax.v _build/chez-np-languages.json _build/ChezNpCaptureInput.v
+(cd ports/chez-np && sha256sum -c --quiet SHA256SUMS)
+python3 scripts/package-chez-np.py languages ports/chez-np/upstream/np-languages.ss _build/ChezNpLanguagesInput.v _build/chez-np-languages.json _build/ChezNpSyntax.v
+python3 scripts/check-chez-np-package.py languages ports/chez-np/upstream/np-languages.ss _build/ChezNpLanguagesInput.v
+diff -u rocq/ChezNpLanguagesInput.v _build/ChezNpLanguagesInput.v
+diff -u rocq/ChezNpSyntax.v _build/ChezNpSyntax.v
+diff -u spec/chez-np-languages.json _build/chez-np-languages.json
+python3 scripts/package-chez-np.py capture ports/chez-np/tarm64le-buri-arm-add.np ports/arm/chez/chez1030-buri-arm-add.hex ports/arm/chez/chez1030-buri-arm-add.relocs _build/ChezNpCaptureInput.v
+python3 scripts/check-chez-np-package.py capture ports/chez-np/tarm64le-buri-arm-add.np ports/arm/chez/chez1030-buri-arm-add.hex ports/arm/chez/chez1030-buri-arm-add.relocs _build/ChezNpCaptureInput.v
+diff -u rocq/ChezNpCaptureInput.v _build/ChezNpCaptureInput.v
 # Module registration: each lane owns a file in rocq/modules.d (concatenated in
 # C-locale name order), and every audit module rocq/Audit*.v owns an explicit
 # expected count in rocq/audit.d/<module>.count. Every rocq/*.v must be

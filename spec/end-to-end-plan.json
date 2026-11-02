@@ -77,7 +77,7 @@
           "claim": "host bootstrap and Nix sandbox builds of one commit gave byte-identical .vo/.glob/captures; .aux paths and timings and Shen run-time log lines are explained nondeterminism"
         }
       ],
-      "acceptance": "the\nrelease can be rebuilt and its differences explained. Reproducibility establishes\nidentity evidence, never semantic preservation; steps 20\u201332 discharge that gap.",
+      "acceptance": "the\nrelease can be rebuilt and its differences explained. Reproducibility establishes\nidentity evidence, never semantic preservation; steps 20–32 discharge that gap.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -278,7 +278,7 @@
         "E2E-09"
       ],
       "evidence": [],
-      "acceptance": "each advertised \u201ccorrect by construction\u201d guarantee names a proved judgment;\npost-check redefinition invalidates or revalidates dependent claims.",
+      "acceptance": "each advertised “correct by construction” guarantee names a proved judgment;\npost-check redefinition invalidates or revalidates dependent claims.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -310,7 +310,7 @@
         "E2E-11"
       ],
       "evidence": [],
-      "acceptance": "source properties reach\nKLambda without an unproved \u201cthe frontend did the right thing\u201d premise, including\nerrors, partial installation and dynamic definitions.",
+      "acceptance": "source properties reach\nKLambda without an unproved “the frontend did the right thing” premise, including\nerrors, partial installation and dynamic definitions.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -329,7 +329,7 @@
         "E2E-12"
       ],
       "evidence": [],
-      "acceptance": "no reachable helper is justified solely because it is \u201cstandard\u201d or community code.",
+      "acceptance": "no reachable helper is justified solely because it is “standard” or community code.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -683,7 +683,7 @@
           "claim": "Three restated claims are refused by Rocq in make prove: the all-arity cons? field for the captured world, numeric-equal without the operand swap the optimizer performs, and EQ in place of EQUAL against a string literal."
         }
       ],
-      "acceptance": "no root is\nhidden behind an aggregate \u201cruntime behaves correctly\u201d assumption.",
+      "acceptance": "no root is\nhidden behind an aggregate “runtime behaves correctly” assumption.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -703,7 +703,7 @@
         "E2E-17"
       ],
       "evidence": [],
-      "acceptance": "successful evidence describes exactly the code installed, while\nnative IO and deployment identity obligations flow explicitly to 26\u201331.",
+      "acceptance": "successful evidence describes exactly the code installed, while\nnative IO and deployment identity obligations flow explicitly to 26–31.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -843,7 +843,7 @@
       "id": "E2E-22",
       "title": "Close Chez compilation to ARM.",
       "lane": "chez-native",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-14",
@@ -851,7 +851,48 @@
         "E2E-20",
         "E2E-21"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "research-report",
+          "artifact": "docs/CHEZ-NANOPASS.md",
+          "claim": "Inventory of the Chez 10.3.0 tarm64le eval/compile pipeline actually run for Shen-Scheme v0.52 parameters (front end, 40 nanopass passes, 13 register-allocator sub-passes run per lambda, conditional passes), per-pass difficulty classes, effort estimate and the bridge to the E2E-20 ARM theorems. Exit criterion unmet."
+        },
+        {
+          "kind": "review",
+          "artifact": "spec/chez-passes.json",
+          "claim": "Machine-readable pass inventory with source line ranges, languages, conditions and whether each ran for the captured function. Reading aid; the trace order is re-derived in Rocq."
+        },
+        {
+          "kind": "capture",
+          "artifact": "ports/chez-np/tarm64le-buri-arm-add.np",
+          "claim": "Every traced pass output of real Chez 10.3.0 tarm64le (qemu-user) compiling the exact Shen-Scheme output of buri-arm-add with Shen-Scheme parameters; reproducible byte for byte (ports/chez-np/scripts/run-np-dump.sh); hash-pinned, packaged and diffed by make prove."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/chez-np/ta6le-buri-arm-add.np",
+          "claim": "The x86_64 ta6le trace equals the tarm64le trace for the front end and the first 18 nanopass outputs and first differs at $np-expand-primitives. One function; not a machine-independence theorem."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezNpGrammarCheck.v",
+          "claim": "np_languages_resolved: Rocq reads the 28 define-language forms of the pinned np-languages.ss, resolves every extends delta and obtains exactly the grammars behind the generated inductive syntax rocq/ChezNpSyntax.v (audited in rocq/Audit_Nanopass.v)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezNpCore.v",
+          "claim": "check_recognize_mrvs_sound: for all printed L4/L4.5 terms, acceptance implies equal core denotation and equal results under every primitive semantics, world type, truthiness and argument-evaluation-order policy; info fields the unparser omits are outside the semantics."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezNpReloc.v",
+          "claim": "check_code_object_sound: acceptance implies the captured bytes are the np-generate-code template with each relocation window rewritten by arm64_set_abs, template windows hold item 0, and relocation offsets/targets equal the code object table."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezNpValidate.v",
+          "claim": "For kl:buri-arm-add only: np-recognize-mrvs validated; 10 same-language passes print identically; the 152 captured tarm64le bytes are the relocation instance of np-generate-code output (codegen_buri_arm_add_instance); tampering rejected. Not a theorem about other programs."
+        }
+      ],
       "acceptance": "every required code\npath/configuration is handled, or a universal compiler proof supplies the result.\nA validator may reject an output safely, but cannot then claim universal coverage\nof that unsupported required output. Generic closure uses compositional schemas,\nnot a test corpus. Proving outputs does not claim all unrelated Chez programs or\nall possible compiler invocations are correct.",
       "details": "docs/END-TO-END-PLAN.md"
     },
@@ -897,7 +938,7 @@
         "E2E-24"
       ],
       "evidence": [],
-      "acceptance": "successful collections and all modeled failure paths preserve the runtime\ninvariant; there is no implicit \u201cGC works\u201d premise.",
+      "acceptance": "successful collections and all modeled failure paths preserve the runtime\ninvariant; there is no implicit “GC works” premise.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {
@@ -914,7 +955,7 @@
         "E2E-25"
       ],
       "evidence": [],
-      "acceptance": "no gap remains between proved binary contents and modeled loaded code;\nsecure boot/physical identity roots are separately recorded in 31\u201332.",
+      "acceptance": "no gap remains between proved binary contents and modeled loaded code;\nsecure boot/physical identity roots are separately recorded in 31–32.",
       "details": "docs/END-TO-END-PLAN.md"
     },
     {

@@ -2415,22 +2415,46 @@
    "scope": "universal",
    "owner": "E2E-22",
    "packages": [],
-   "status": "assumed",
+   "status": "partial",
    "boundary": "Chez compilation to ARM",
-   "identity": "Chez inside shen-scheme v0.52 (version unrecorded)",
+   "identity": "Chez Scheme 10.3.0 (csv10.3.0.tar.gz d237d987..., tag v10.3.0 commit adfaf9e6), threaded tarm64le, Shen-Scheme v0.52 eval parameters (optimize-level 0, debug-level 1)",
    "statement": "Chez lowering of generated Scheme to AArch64 preserves meaning (per-output validation or verified backend).",
-   "premises": [],
+   "premises": [
+    "Chez printer: the traced unparsed pass output is a faithful rendering of the in-memory IR except for the info fields its unparse forms omit",
+    "the plain tarm64le Chez process stands in for an aarch64 Shen-Scheme process (sampled agreement on x86_64 only, E2E-20)"
+   ],
    "depends_on": [
     "OB-NATIVE-REPR-CHEZ",
-    "OB-GENERATED-SCHEME-SEMANTICS"
+    "OB-GENERATED-SCHEME-SEMANTICS",
+    "OB-CHEZ-NP-PRINTER"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "rocq/ChezNpValidate.v",
+     "establishes": "artifact-correspondence",
+     "note": "Ground derivations for kl:buri-arm-add: np-recognize-mrvs validated, 10 printed-identity passes, captured 152 bytes = relocation instance of np-generate-code output. Audited in rocq/Audit_Nanopass.v (the ledger reads only rocq/Audit.v, so the kind recorded here is review). Cannot discharge this universal obligation."
+    },
+    {
+     "kind": "review",
+     "ref": "docs/CHEZ-NANOPASS.md",
+     "establishes": "artifact-correspondence",
+     "note": "Pass inventory and the remaining 38 unvalidated nanopass passes, the front end and the register allocator."
+    }
+   ],
    "completion_evidence": "Machine-code validation against SEM-ARM.",
    "sources": [
     "docs/PORTS.md",
-    "docs/TRUST-AUDIT.md"
+    "docs/TRUST-AUDIT.md",
+    "docs/CHEZ-NANOPASS.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/CHEZ-NANOPASS.md",
+     "recorded": "Wave C pinned the Chez version (10.3.0) and validated two pass steps of one function.",
+     "reconciliation": "Status partial: ground evidence only; universal coverage still assumed."
+    }
+   ]
   },
   {
    "id": "OB-SBCL-COMPILATION",
@@ -3722,6 +3746,25 @@
    ],
    "history": [],
    "replaced_by": "OB-SCHEME-INTERN-ADMISSION"
+  },
+  {
+   "id": "OB-CHEZ-NP-PRINTER",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Chez nanopass tracer output",
+   "identity": "Chez Scheme 10.3.0 $np-tracer ir-printer (cpnanopass.ss 95-140) and unparse forms of s/np-languages.ss",
+   "statement": "Each traced pass output printed by Chez (unparser, flatten-seq, print-gensym pretty/suffix, print-graph) determines the in-memory IR up to the info fields its unparse forms omit, and those omitted fields do not change meaning.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Raw (non-pretty) IR export from an instrumented Chez build including info fields, with a proved printer/reader round trip; or validators that read the compiler data directly.",
+   "sources": [
+    "docs/CHEZ-NANOPASS.md"
+   ],
+   "history": []
   }
  ],
  "legacy_inventory_map": [
@@ -3854,6 +3897,7 @@
  ],
  "lane_audits": [
   "rocq/Audit_Clcontracts.v",
+  "rocq/Audit_Nanopass.v",
   "rocq/Audit_Portfix.v",
   "rocq/Audit_Repr.v"
  ]
