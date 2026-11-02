@@ -693,7 +693,7 @@
         {
           "kind": "research-report",
           "artifact": "docs/ARM-FOUNDATION.md",
-          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin (sections 1-9, Wave A); section 10 records the Wave B proofs below and what they trust. The exit criterion (branch, call, load/store, fault, allocation stub and atomic checked against the selected model) is unmet."
+          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin (sections 1-9, Wave A); section 10 records the Wave B proofs below and what they trust; section 11 records the Wave C decode coverage, bridge, EL0 attempt and coqchk. The exit criterion (branch, call, load/store, fault, allocation stub and atomic checked against the selected model) is unmet."
         },
         {
           "kind": "byte-capture-and-emulated-run",
@@ -729,6 +729,31 @@
           "kind": "islaris-theorem-over-isla-traces",
           "artifact": "ports/arm/islaris/buri_chez_add.v",
           "claim": "Checked by ports/arm/islaris/check-islaris.sh in the Coq 8.19.0 environment; closed under the global context. For all fixnum-tagged a, b without signed overflow, with X23 = 2 and an aligned frame slot holding ra, the Chez fast path +0x00..+0x23 (captured bytes) reaches ra with X23 = a+b, X30 = a|b, X10 = ra; slow paths proved infeasible. Relative to Islaris's semantics of isla b8e614bd (and e9b5d945) traces of the Armv8.5 IR under Islaris's EL2/MMU-off constraints, not the Armv9.4 Coq model and not EL0 Linux; trace = architecture is trusted to isla and z3."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmDecode.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B (Coq 8.19.0 Islaris env, coq-sail 0.19, sail-arm 7d058164 Armv9.4 Coq model rebuilt in 8.19.0; not in scripts/prove). Universal over pc: exact iMon equations for __DecodeA64 on twelve captured words, each bound to the stored bytes: Chez +0x00 cmp, +0x04/+0x10 b.ne, +0x08 orr, +0x0c tst, +0x18 b.vs, +0x1c ldur (load), +0x20 br, +0x2c str (store); SBCL +0x210 ret (return), +0x2a0 blr x10 (call to ALLOC-TRAMP), +0x264 brk #15 (trap). Each fixes encoding, SEE guard, decoder register reads and exact execute arguments; execute-side behaviour (memory, BranchTo, exception entry) is NOT covered. Decoder statements inherit the model's three Coq-stdlib Reals axioms; three auxiliary equations are closed. A modified word (b.eq) is rejected."
+        },
+        {
+          "kind": "model-theorem-relating-isla-trace",
+          "artifact": "ports/arm/coq/BuriArmBridge.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B in one Coq 8.19.0 with both Islaris opsem and the Armv9.4 model. chez_0014_bridge (universal over pc, SEE<15, X0, X1, PSTATE, prior PC/R23): the model's decoder on 0xab010017 admits its unique register trace AND the Islaris trace a14.v used by buri_chez_add_fast_path (isla b8e614bd, Armv8.5 IR) runs to completion under Islaris's seq_step, never blocking, to the map with R23 = the model's AddWithCarry result, PSTATE.NZCV = the model's flags and _PC += 4 (a14_run and the bit lemmas closed under the global context). Covers one word only; the trace's PC step versus the model's __InstructionExecute PC advance, the converse direction, and the other eight fast-path words are not bridged. A trace with bvadd replaced by bvxor is rejected."
+        },
+        {
+          "kind": "isla-trace-unchecked",
+          "artifact": "ports/arm/islaris/el0/STATUS",
+          "claim": "EL0/stage-1-MMU-on (Linux non-VHE) isla b8e614bd footprints of the Chez fast path: 8 of 9 words traced (data-processing identical to EL2; branches add a TBI0 top-byte split), ldur resource-exhausted (killed twice, 7 GiB cap on the second run; no trace). No EL0 Islaris proof exists. Unchecked isla output, not a theorem."
+        },
+        {
+          "kind": "kernel-recheck",
+          "artifact": "docs/ARM-FOUNDATION.md",
+          "claim": "Section 11.5: coqchk -o of SailArm.armv9 (Coq 8.19.0 build, all dependencies) passes in 3 min 18 s at 1.0 GB; context axioms are the model's six external memory/sleep primitives and five Coq-stdlib axioms, none from Buri. check-arm.sh Part B re-runs coqchk over BuriArmDecode and BuriArmBridge."
+        },
+        {
+          "kind": "toolchain-build",
+          "artifact": "nix/arm/sail-model.nix",
+          "claim": "coq-sail 0.19 (by commit) and the sail-arm 7d058164 arm-v9.4-a Coq snapshot (three files by sha256) compiled with the Islaris Coq 8.19.0 + stdpp; armv9.v 7 min, 6.4 GB peak."
         }
       ],
       "acceptance": "exact\ninstructions are checked against the selected ISA model; no disassembly-text or\ntoy-ISA agreement is substituted. Tool compatibility and missing mechanisms are\nresearch deliverables, not assumed available integrations.",

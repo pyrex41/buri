@@ -147,3 +147,24 @@ toolchain and outside `scripts/prove` (see ARM-FOUNDATION section 10):
 | isla (Islaris-tested) | `b8e614bda4a20e42c37d8b216853653133d04322`; binary `dd996a770a5caaa62a672b41527d86b9ca40a7462d8a024f0ff117d93dff7e67` (rustc 1.99.0, z3 5.1.0) |
 | Armv8.5 IR | isla-snapshots `d8b31014` `armv8p5.ir`, sha256 `4ece4410a43c32b58737957d55920b485ade5171bb53deddebb9c7d61df77075` (Islaris's `aarch64.ir`) |
 | Coq 8.19 env | `nix/arm/islaris.nix`; pins and store paths in ARM-FOUNDATION 10.2 |
+
+## Wave C (`coq/BuriArmDecode.v`, `coq/BuriArmBridge*.v`, `islaris/el0/`)
+
+These are checked by `scripts/check-arm.sh` Part B in one Coq 8.19.0 that
+loads Islaris and the sail-arm model, built with
+`nix-build nix/arm/sail-model.nix -A env` (see ARM-FOUNDATION section 11).
+
+* `coq/BuriArmDecode.v` holds exact decode equations for twelve more captured
+  words. Every `Definition *_word_XXXX` line is bound to the stored bytes.
+  The words are the Chez fast path, the Chez store at +0x2c, and the SBCL
+  `ret` (+0x210), `blr x10` (+0x2a0) and `brk #15` (+0x264). SBCL `.bin`
+  offset + 0x1f0 = `.sbcl-disasm` address.
+* `coq/BuriArmBridgeValues.v` and `coq/BuriArmBridge.v` hold the
+  trace-to-model bridge for ADDS at +0x14 against `islaris/instructions/buri_chez_add/a14.v`.
+* `islaris/etc/mk-el0-config.sh` derives
+  `islaris/etc/aarch64_isla_coq_el0_linux.toml` (EL0, MMU on) from Islaris's
+  config. `islaris/gen-el0-traces.sh` regenerates `islaris/el0/*.isla`.
+  `islaris/el0/STATUS` gives one outcome per word, including the
+  resource-exhausted `ldur`. The `*.el2-to-el0.diff` files show what changes
+  for the branches. These traces are unchecked isla output.
+* `scripts/sha256sums.py` regenerates `SHA256SUMS`.

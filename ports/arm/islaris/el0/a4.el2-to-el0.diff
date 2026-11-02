@@ -1,0 +1,49 @@
+7a8
+>   (assume-reg |TCR_EL1| nil #x00000035b5103510)
+13d13
+<   (assume-reg |TCR_EL2| nil #x0000000000000000)
+16c16
+<   (assume-reg |PSTATE| ((_ field |EL|)) #b10)
+---
+>   (assume-reg |PSTATE| ((_ field |EL|)) #b00)
+43c43
+<       (read-reg |PSTATE| ((_ field |EL|)) (_ struct (|EL| #b10)))
+---
+>       (read-reg |PSTATE| ((_ field |EL|)) (_ struct (|EL| #b00)))
+48,52c48,65
+<       (read-reg |TCR_EL2| nil #x0000000000000000)
+<       (read-reg |__v83_implemented| nil false)
+<       (write-reg |_PC| nil v32)
+<       (write-reg |__PC_changed| nil true)
+<       (read-reg |__PC_changed| nil true))
+---
+>       (define-const v59 (= (bvor #b0 ((_ extract 0 0) (bvlshr v32 #x0000000000000037))) #b1))
+>       (cases "model/aarch_mem.sail 6234:20 - 6234:81"
+>         (trace
+>           (assert v59)
+>           (read-reg |TCR_EL1| nil #x00000035b5103510)
+>           (read-reg |__v83_implemented| nil false)
+>           (write-reg |_PC| nil v32)
+>           (write-reg |__PC_changed| nil true)
+>           (read-reg |__PC_changed| nil true))
+>         (trace
+>           (assert (not v59))
+>           (read-reg |TCR_EL1| nil #x00000035b5103510)
+>           (read-reg |__v83_implemented| nil false)
+>           (assert (not (= (bvor #b0 ((_ extract 0 0) (bvlshr v32 #x0000000000000037))) #b1)))
+>           (define-const v64 (concat #x00 ((_ extract 55 0) v32)))
+>           (write-reg |_PC| nil v64)
+>           (write-reg |__PC_changed| nil true)
+>           (read-reg |__PC_changed| nil true))))
+56,57c69,70
+<       (declare-const v50 (_ BitVec 64)) ; SourceLoc { file: 13, line1: 424, char1: 34, line2: 424, char2: 60 }
+<       (read-reg |_PC| nil v50)
+---
+>       (declare-const v65 (_ BitVec 64)) ; SourceLoc { file: 13, line1: 424, char1: 34, line2: 424, char2: 60 }
+>       (read-reg |_PC| nil v65)
+59,60c72,73
+<       (define-const v51 (bvadd v50 #x0000000000000004))
+<       (write-reg |_PC| nil v51))))
+---
+>       (define-const v66 (bvadd v65 #x0000000000000004))
+>       (write-reg |_PC| nil v66))))

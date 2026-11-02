@@ -1,4 +1,4 @@
-731890617876995ed70b112240d97278e1d297e6d781053c5c64fee85133ecac  ./README.md
+732cd1f6c928ce24be189486680ec48a4e9be2bb4d8db2c0ae25523a114b6491  ./README.md
 110ea86236e72852038303f2ecf192fb7b3bd3cfce4a7d8f9638ab430510fcc5  ./chez/chez1030-buri-arm-add.bin
 54578c54f74a57c2dcf6f636930ccebc549a2f7a8b563a85aa10ecb4dd7176e6  ./chez/chez1030-buri-arm-add.chez-asm
 931188882bd5b93880e3eae5a929c3b71c5fa74ae3a0f9335e309b72cfb2ff41  ./chez/chez1030-buri-arm-add.closure
@@ -10,6 +10,9 @@ e44936d1575646c29d880ab5e8b70bb6d959633b6766e4d5b5b4e986cfe6030c  ./chez/chez103
 b068dd3f3987f21343b2009c3b101e98928033eed862113ba8754b8891f0bb37  ./chez/shen-scheme-ta6le-buri-arm-add.hex
 a29eab4fb3a36cbcff22f9c7f0960b2cf9d9e1056856a38e5f6f0fd2dec621f1  ./chez/shen-scheme-ta6le-buri-arm-add.relocs
 19511e1acbf34b7986c21bae1ca6e230bac6b70c83ad31ce08c5aa562c5c78e0  ./coq/BuriArmAdds.v
+a1393502ad7b66a63d6b03dcbf4a65976a1ac72cbab75d2d3dddecb30fe288b9  ./coq/BuriArmBridge.v
+0fbdbe881a78dcb2c05a713d52ad9bcaa8ac8256f558b67308844412633ad638  ./coq/BuriArmBridgeValues.v
+e769cb236d26ce9d70377d98e08d8245b23cb8f929edfd73e730077e53737585  ./coq/BuriArmDecode.v
 e2e99c7cf0cceb498bc8c7dfa407579a7b089af8102c3a1a74e2fec129b7a032  ./coq/BuriDecodeProbe.v
 176c78d81bc90dfec58fcb0d180fdd8e270ad2c480b91a2b5a251a3caf78bebb  ./coq/build-armv9-coq.sh
 774cfde9551a949d9e5552ab93b37af593643882b354983c0ec43a6e8bdddf7a  ./coq/build-sail-arm-coq.sh
@@ -25,6 +28,22 @@ b30845ecc43ca029898acd03a40251f6bbe31999d6b1a02df884dc5d99551792  ./islaris/buri
 17a63dac2327eed8137122b662d680c8797b73f83913300315b8a10bf4c75117  ./islaris/buri_chez_add.v
 a87510f718c00af7d9caa19d6b8e906529a7a27a2ee6ac4c58ad57bddd3f2fb2  ./islaris/check-islaris-example.sh
 4dc687a777ec24c06d2806e76435f4e37992d105106c5df9a56b2309b83026b9  ./islaris/check-islaris.sh
+fba67e0a51ba9e39b0e82fe20b65833dd407344446cb135df98f7ebcf315d65d  ./islaris/el0/STATUS
+1f8440df0f49098e75c0d1b0667ef52ec5d8e3852cf56a08fb01e3275ac85cd2  ./islaris/el0/a0.isla
+74f28117ee0c44a1a748b83af8f6354f6b316dd4cba18ed2485e975895763dc5  ./islaris/el0/a10.el2-to-el0.diff
+43dbaa3e301e1eb0fae8c42b453d7eb131e809860b6577a812f37409d4136355  ./islaris/el0/a10.isla
+cc5d4b97ef485ed3a0e81e4503d5c66e60270f56ee0947b5e95c4e87be931d49  ./islaris/el0/a14.isla
+6d3b08c9308340a0b80fe8e9c52e07fb46256e7f58b74b5cc15ff74f22e3e182  ./islaris/el0/a18.el2-to-el0.diff
+5ca7aaddfc89425b8d916339bc58d5dbdf693ff79d786776d4b4d3889bf1ffb3  ./islaris/el0/a18.isla
+e3c71918a26f10dffc27a8d7ba67dff55ad49025cd25e7d732020fe393431686  ./islaris/el0/a20.el2-to-el0.diff
+693bf3917a9a14db5cc7240ac77a95ab624b1088791d3ca618f47a2a23c5d127  ./islaris/el0/a20.isla
+74f28117ee0c44a1a748b83af8f6354f6b316dd4cba18ed2485e975895763dc5  ./islaris/el0/a4.el2-to-el0.diff
+76df8fef9670cc4af595c212755e3f5f6591f4239a6285c26d0e613e5b9e6450  ./islaris/el0/a4.isla
+7554799509e44cfa5e4a648ef2487fa0c893421e3dd51aea6375d239f35f4ae7  ./islaris/el0/a8.isla
+a4b0fe47930b53743a226e0ab5485fa10d9f3670069913ae16357738e119f9b6  ./islaris/el0/ac.isla
+32f6f8696ff202960fd176d10534604a63296c0c5bb3b23def7680c0960c16a1  ./islaris/etc/aarch64_isla_coq_el0_linux.toml
+35d97eba0aa3c0699b944b02c642dbada4bcefdaa915a0391ebe319cf32aa356  ./islaris/etc/mk-el0-config.sh
+dba6d55216b33f81611792c971c66cfb3ea23ae13b2d5e6c1866899c2a6cccbc  ./islaris/gen-el0-traces.sh
 b58805cf4afafd2c8f47cfdbb1c13a1d49a381c3722f3e3b83d93cf1e6e10f39  ./islaris/gen-traces.sh
 3c64d8320119963481e3913d30c706958a5d2cd88f3303e89a1250a45db9c328  ./islaris/instructions/buri_chez_add-isla-e9b5d945/a0.isla
 34d88dffe3b130ad37f053fbee9a2dc08e44649407981be8c33d1ef8416ec687  ./islaris/instructions/buri_chez_add-isla-e9b5d945/a0.v
@@ -82,5 +101,6 @@ d182fdbfc1224d6a15edc3717cd17b1bbfaab8e246da108be82ab52014af81a8  ./scripts/chez
 2de5549b23db30e99750bc360dd478b926666f9a0dbc0011090f939e509efb60  ./scripts/mk-opcodes.py
 5662fa5adfb7a25bf57bf4bb94f7e6cb50bfcc7b251b90e850d26c19fd8a55fa  ./scripts/sbcl-closure.lisp
 dc4e50458314153e19cf25a1f50687bc2a1343b720f698e7c26d5fd0bddbee1c  ./scripts/sbcl-dump.lisp
+dfe9434155f3136abfe232408cc33a237a91f69d21fe4356063d4a592e9cd3c6  ./scripts/sha256sums.py
 5decd083c8c3586f97c9cc05003bddfb7b765d4a578b463db3121d2a8ea60fc5  ./scripts/shen-in-situ.shen
 51192d96f4f3688a4e1c774654bd92aa5d080ac2a12d24d7f4f854aa030209ae  ./scripts/shen-scheme-params.shen
