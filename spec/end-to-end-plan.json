@@ -257,9 +257,29 @@
           "claim": "five modified captured driver bodies (no conclusion check, swapped rewrite direction, no freshness, no theory check, accepting guard handler) are refused by Rocq"
         },
         {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionTermination.v",
+          "claim": "EQ1-TERM: for every theory T, bundle B and budget N whose numbers are integers, the captured guarded check-bundle body under the actual Native evaluator returns exactly r_check_bundle T B N at some fuel and every larger fuel (native_guarded_body_total, captured_check_bundle_total, captured_check_bundle_decides); with the partial-correctness theorems this is total correctness of the captured checker under Native and the guard_model contract. Audited in rocq/Audit_Termination.v."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionTotalTerms.v",
+          "claim": "every captured helper the acceptance path calls (base, equations, kernel leaf helpers, nat? spelling chain) terminates on its domain with its reference value (EqualityInductionTotalBase, EqualityInductionTotalTerms; generic traced-run lemma in EqualityInductionTrace)"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/EqualityInductionTermination.v",
+          "claim": "fraction_budget_unsupported: one input (loaded theory, empty bundle, budget 1/2) on which the Native evaluation is Unsupported; the integer-only domain condition is needed for the Native statement"
+        },
+        {
+          "kind": "proof-mutation",
+          "artifact": "tests/mutate-termination.py",
+          "claim": "a captured member? with a non-decreasing recursive call (linked into the program) fails the inductive termination step whose unmutated control is accepted; dropping the integer budget condition is refused"
+        },
+        {
           "kind": "open-obligation",
           "artifact": "docs/EQ1.md",
-          "claim": "EQ1-GUARD (guard_model is a stated contract), EQ1-TERM (termination), numeric kl:= contract and Chez-to-Native simulation remain open; EQ1-DRIVERS is closed under the Native evaluator"
+          "claim": "EQ1-GUARD (guard_model is a stated contract), numeric kl:= contract and Chez-to-Native simulation remain open; EQ1-DRIVERS is closed and EQ1-TERM is proved under the Native evaluator for integer-only inputs (existential fuel, not a closed bound)"
         }
       ],
       "acceptance": "all acceptance routes imply the same soundness theorem; no alternate UI, cache,\nserializer or fast path bypasses it. Native checker execution is closed in 32.",
@@ -471,6 +491,26 @@
           "kind": "rejected-mutations",
           "artifact": "tests/mutate-compose.py",
           "claim": "an else-compiling literal-true if, an unscoped let body, an unforced cond test, an equal?-lowered numeric = and two theorem restatements (dropped binding, swapped strict branches) are rejected by Rocq"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/OrderCallProgress.v",
+          "claim": "with the counter-based gensym contract of pinned Shen kernel 43.1 sys.shen, the captured order-call pass returns on every application call from every counter value (order_call_progress; decimal-spelling injectivity spelling_inj, pigeonhole absent_candidate, fresh_progress, inputs_progress), and the composed preservation theorems hold without assuming a successful run (order_call_preserves_total, order_then_merge_total, let_clause_total). Audited in rocq/Audit_Termination.v.",
+          "names": [
+            "order_call_progress",
+            "fresh_progress",
+            "inputs_progress",
+            "absent_candidate",
+            "spelling_inj",
+            "order_call_preserves_total",
+            "order_then_merge_total",
+            "let_clause_total"
+          ]
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-termination.py",
+          "claim": "a gensym counter that does not advance is refused by the progress proof"
         }
       ],
       "acceptance": "no required compiler branch remains an oracle or merely a sampled schema.",

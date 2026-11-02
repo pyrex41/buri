@@ -74,6 +74,18 @@ for name in $(python3 tests/mutate-eq1.py); do
   grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# EQ1-TERM and order-call progress mutants: the unmutated control of the
+# member? inductive step must be accepted; each mutant must be refused.
+names=$(python3 tests/mutate-termination.py)
+scripts/rocq coqc -Q _build/rocq Buri _build/mutations/TermMemberControl.v > _build/mutations/TermMemberControl.log 2>&1 || {
+  cat _build/mutations/TermMemberControl.log; echo "Termination mutation control refused" >&2; exit 1; }
+for name in $names; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
 # E2E-17 primitive wrapper mutants: each changed pinned definition must fail
 # Rocq admission (computed equality with the reviewed AST).
 for name in $(python3 tests/mutate-primitives.py); do

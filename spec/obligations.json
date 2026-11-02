@@ -676,6 +676,12 @@
      "kind": "universal-theorem",
      "ref": "EqualityInductionRefinement.EqualityInductionRefinement.captured_bundle_sound",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "review",
+     "ref": "rocq/EqualityInductionTermination.v",
+     "establishes": "implementation-correspondence",
+     "note": "EQ1-TERM: captured check-bundle guarded body terminates with r_check_bundle on every integer-only input under Native (native_guarded_body_total, captured_check_bundle_total). Universal theorem audited in rocq/Audit_Termination.v; the ledger audit inventory reads only rocq/Audit.v, so it is cited here as a reviewed file."
     }
    ],
    "completion_evidence": "Source-bound refinement of shen/kernel.shen preserving rejection distinctions.",
@@ -694,6 +700,11 @@
      "source": "docs/EQ1.md",
      "recorded": "EQ1-DRIVERS closed for the decoded capture under the Native evaluator (partial correctness).",
      "reconciliation": "Remaining: EQ1-GUARD (guard_model is a stated contract), EQ1-TERM, numeric kl:= contract, Chez-to-Native (OB-SHEN-EVALUATOR-REFINEMENT)."
+    },
+    {
+     "source": "docs/EQ1.md",
+     "recorded": "EQ1-TERM proved under the Native evaluator for integer-only inputs (total correctness with the existing refinement).",
+     "reconciliation": "Status stays partial: EQ1-GUARD (stated guard_model), numeric kl:= contract and Chez-to-Native (OB-SHEN-EVALUATOR-REFINEMENT) remain."
     }
    ]
   },
@@ -1205,6 +1216,12 @@
      "kind": "universal-theorem",
      "ref": "SchemeCompose.SchemeCompose.order_then_merge_preserves",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "review",
+     "ref": "rocq/OrderCallProgress.v",
+     "establishes": "implementation-correspondence",
+     "note": "order_call_progress and order_call_preserves_total/order_then_merge_total/let_clause_total: the pass returns on every application call with the counter gensym contract; composition no longer assumes a successful run. Universal theorem audited in rocq/Audit_Termination.v; the ledger audit inventory reads only rocq/Audit.v, so it is cited here as a reviewed file."
     }
    ],
    "completion_evidence": "Composition through every order-call-inputs branch plus occurrence/gensym correspondence.",
@@ -1212,7 +1229,13 @@
     "docs/PORTS.md",
     "docs/SIX-STAGES.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SCHEME-PORT.md",
+     "recorded": "Progress with the counter-based gensym contract proved; composed preservation is unconditional on a successful run.",
+     "reconciliation": "Status stays partial: gensym is a stated contract of the pinned kernel source (OB-FRESH-OCCURRENCE), not a capture; remaining passes and native Chez execution open."
+    }
+   ]
   },
   {
    "id": "OB-FRESH-OCCURRENCE",
@@ -1231,6 +1254,12 @@
      "kind": "universal-theorem",
      "ref": "FreshSupply.finite_supply_finds_first_absent",
      "establishes": "model-proof"
+    },
+    {
+     "kind": "review",
+     "ref": "rocq/OrderCallProgress.v",
+     "establishes": "model-proof",
+     "note": "counter: the contract of pinned sys.shen gensym/concat; fresh_progress proves the captured fresh loop returns with it (decimal-spelling injectivity plus pigeonhole). The compiled gensym itself is not captured. Universal theorem audited in rocq/Audit_Termination.v; the ledger audit inventory reads only rocq/Audit.v, so it is cited here as a reviewed file."
     }
    ],
    "completion_evidence": "Implementation proof of the captured occurrence and gensym code.",
