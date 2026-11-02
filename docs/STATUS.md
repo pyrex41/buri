@@ -700,3 +700,33 @@ Open: no bridge theorem connects isla traces and the Coq model. Proofs for a
 call, store, fault, allocation stub and atomic are still missing, and so are
 the SBCL code, fetch/execute and PC update in the v9.4 model, and the
 EL0/MMU-on profile. E2E-20 is not complete.
+
+## E2E-07 extended: globals, function values, freeze/thaw and the converse (Wave C)
+
+`shen/klambda.shen` changed to agree with the agreed KLambda semantics:
+structural equality follows `KLValue.kl_eq` (a function value is unequal to
+data; equality of two function values is undefined and stays
+`[unsupported closure-equality]`), `thaw` of a closure and application of a
+thunk raise `arity`, `thaw` of a partial application returns it, and the
+uncaptured `kl:length` is replaced by the captured `buri.fewer?`.
+`make conformance` passes. Unsaturated `[primitive ...]` syntax is rejected at
+admission: a recorded profile difference (`kl-currying` /
+`prim-partial-application`, owner E2E-07), now checked by the ledger
+(owner and registered enforcement tests), not a theorem. This supersedes
+"no change to `shen/klambda.shen` was needed" in the earlier E2E-07 section.
+
+Universal, axiom-free, about the recaptured evaluator run by the Native model
+(`rocq/Audit_E2e07b.v`): `klambda_refines_ext` extends soundness to every
+KL-PURE-1 construct (`[global]`, currying through `[function ...]` values,
+`freeze`, `thaw`) for every well-formed definition table translated into the
+KLambda global namespace, and states `[unsupported]` as the KLambda machine
+going wrong; `klambda_complete` is the converse: every silently terminating
+KLambda run of a subset term is matched, for every budget above its step count
+and all large enough Native fuel, by `[returned v]`/`[raised m]` with the
+corresponding outcome. The pure-subset theorems keep their statements.
+Completeness fails, by design, for small budgets and for unsaturated
+primitives (outside the subset). Open: E2E07-GUARD (Chez `guard`),
+E2E07-NATIVE (Chez-to-Native simulation), E2E07-ADMISSION (admission
+predicates versus the subset). This is about the reference evaluator, not
+Shen-Scheme. Twenty additional statements join the assumption audit
+(`Audit_E2e07b.count` 20); six proof mutations join the gate (107).
