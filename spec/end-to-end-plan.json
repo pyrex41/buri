@@ -498,7 +498,7 @@
             "CLLowering.generated_if"
           ],
           "premises": [
-            "primitive_contracts (named, owned by E2E-17)",
+            "primitive_contracts narrowed to the emitted arities and shapes (CLLowering.sem_pred1/sem_pred2; the former all-arity fields were a false requirement, CLContracts.CLContracts.all_arity_unjustified)",
             "qsafe: no quoted non-symbol comparand of shen-cl.equal?",
             "Boolean-error diagnostic text quotiented",
             "compile-expression opaque",
@@ -520,7 +520,7 @@
           "names": [
             "CLLowering.model_contracts"
           ],
-          "claim": "The primitive_contracts hypotheses are jointly satisfiable by a concrete world (anti-vacuity; not a model of SBCL)."
+          "claim": "The narrowed primitive_contracts hypotheses are jointly satisfiable by a concrete world (anti-vacuity; not a model of SBCL)."
         },
         {
           "kind": "ground-derivation",
@@ -531,6 +531,25 @@
             "CLLoweringCapture.captured_emit_if_refines"
           ],
           "claim": "Inert reader-level capture of src/compiler.shen (blob 2d624377c02030f9513769f7bad11e84330b8c5a, with byte spans) admitted by computed equality against the reviewed expected AST; corollaries instantiate the universal theorems."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLContracts.v",
+          "names": [
+            "CLContracts.CLContracts.captured_contracts",
+            "CLContracts.CLContracts.discharged_optimise_sound",
+            "CLContracts.CLContracts.discharged_emit_if_refines",
+            "CLContracts.CLContracts.all_arity_unjustified",
+            "CLContracts.CLContracts.captured_all_arity_false",
+            "CLContracts.CLContracts.model_world_contracts"
+          ],
+          "premises": [
+            "cl_host_ops: 16 individually named SBCL operation contracts (EQ, TYPEP, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, STRING=, NOT, NULL, EQUAL x2, EQL, = x2), owned by E2E-21/E2E-24",
+            "cl_kernel_ops: kernel not, empty? and fail as compiled by Shen-CL (E2E-16)",
+            "host operations are pure functions of their arguments; a raised host condition is a function of the arguments (fresh condition identity quotiented)",
+            "qsafe, quotiented Boolean-error text, opaque compile-expression, and the CL model/reader/printer/SBCL contracts as above"
+          ],
+          "claim": "For every state type, every relation for unmodeled forms, every host table satisfying cl_host_ops and every kernel relation satisfying cl_kernel_ops, the world that runs the admitted primitives.lsp wrapper bodies relationally and the absequal/numeric-equal bodies functionally satisfies every field of the narrowed primitive_contracts, so the captured optimise-boolean-check and emit-if theorems hold there with only those named host and kernel contracts left."
         },
         {
           "kind": "sampled-agreement",
@@ -605,9 +624,34 @@
           ],
           "premises": [
             "sbcl_equality_ops / sbcl_arith_ops: individually named SBCL operation contracts (E2E-21/24)",
-            "Boolean wrappers at the arity the optimizer emits; first-order data for absequal"
+            "Boolean wrappers at the arity the optimizer emits (now exactly the narrowed CLLowering record); first-order data for absequal_data"
           ],
-          "claim": "The actual pinned Shen-CL Boolean wrappers discharge CLLowering.primitive_contracts pc_cons/pc_string/pc_number/pc_greater*/pc_less*/pc_absequal at use arity; absequal is structural equality on data; the optimizer EQ rewrite is exact iff the quoted comparand is a symbol or NIL; the arithmetic wrappers are exact on all integers, divide never lets a ratio escape, and (* 0 non-number) answers 0 (a divergence)."
+          "claim": "The actual pinned Shen-CL Boolean wrappers prove CLLowering.primitive_contracts pc_cons/pc_string/pc_number/pc_greater*/pc_less*/pc_absequal (stated at the emitted arity); absequal is structural equality on data; the optimizer EQ rewrite is exact iff the quoted comparand is a symbol or NIL; the arithmetic wrappers are exact on all integers, divide never lets a ratio escape, and (* 0 non-number) answers 0 (a divergence)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLContracts.v",
+          "names": [
+            "CLContracts.CLContracts.abs_symbolic_right",
+            "CLContracts.CLContracts.abs_symbolic_left",
+            "CLContracts.CLContracts.abs_string_right",
+            "CLContracts.CLContracts.abs_string_left",
+            "CLContracts.CLContracts.abs_numeric_right",
+            "CLContracts.CLContracts.abs_numeric_left",
+            "CLContracts.CLContracts.numeric_equal_value",
+            "CLContracts.CLContracts.captured_contracts",
+            "CLContracts.CLContracts.model_host_ops",
+            "CLContracts.CLContracts.increment_int",
+            "CLContracts.CLContracts.decrement_int",
+            "CLContracts.CLContracts.step_refines_rules",
+            "CLContracts.CLContracts.model_step_ops"
+          ],
+          "premises": [
+            "cl_host_ops: individually named SBCL operation contracts over every value (E2E-21/24)",
+            "cl_kernel_ops: compiled kernel not, empty?, fail (E2E-16)",
+            "cl_step_ops: TYPEP FIXNUM, 1+ and 1- on integers (E2E-21/24)"
+          ],
+          "claim": "For every value (not only first-order data) the captured shen-cl.absequal against a symbol, NIL, string or numeric literal, in either operand order, answers exactly what the optimizer's replacement (NULL, EQ, EQUAL, shen-cl.numeric-equal) answers; the captured numeric-equal agrees with absequal against every numeric literal. These discharge the pc_null_*, pc_fail, pc_string_equal, pc_numeric and pc_symbol_eq fields through the relational/functional bridge. The captured shen-cl.increment/decrement (now packaged and admitted) return z+1 and z-1 for every integer, as rule_arith does for the (+ 1 X), (+ X 1) and (- X 1) they replace."
         },
         {
           "kind": "ground-derivation",
@@ -631,7 +675,12 @@
         {
           "kind": "rejected-mutations",
           "artifact": "tests/mutate-primitives.py",
-          "claim": "Seven altered copies of the pinned wrapper bytes (eqv? for numbers, wrong assert predicate, dropped tail comparison, swapped Boolean, EQ for numbers, ratio escape, wrong zero product) are refused by Rocq admission in make prove."
+          "claim": "Nine altered copies of the pinned wrapper bytes (eqv? for numbers, wrong assert predicate, dropped tail comparison, swapped Boolean, EQ for numbers, ratio escape, wrong zero product, EQ in numeric-equal, 1- in increment) are refused by Rocq admission in make prove."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-cl-contracts.py",
+          "claim": "Three restated claims are refused by Rocq in make prove: the all-arity cons? field for the captured world, numeric-equal without the operand swap the optimizer performs, and EQ in place of EQUAL against a string literal."
         }
       ],
       "acceptance": "no root is\nhidden behind an aggregate \u201cruntime behaves correctly\u201d assumption.",

@@ -1581,9 +1581,14 @@
      "kind": "universal-theorem",
      "ref": "CLWrappers.CLWrappers.model_arith_ops",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLContracts.CLContracts.step_refines_rules",
+     "establishes": "implementation-correspondence"
     }
    ],
-   "completion_evidence": "Floats, shen-cl.increment/decrement, the int_div_inexact pin, and the SBCL operation contracts (E2E-24).",
+   "completion_evidence": "Floats, the int_div_inexact pin, and the SBCL operation contracts (E2E-24); shen-cl.increment/decrement are proved on integers (CLContracts.step_refines_rules).",
    "sources": [
     "docs/PRIMITIVES.md"
    ],
@@ -1659,17 +1664,119 @@
    "kind": "implementation-correspondence",
    "scope": "universal",
    "owner": "E2E-16",
-   "packages": [],
-   "status": "open",
+   "packages": [
+    "E2E-17"
+   ],
+   "status": "partial",
    "boundary": "Shen-CL emit-if / optimise-boolean-check",
    "identity": "Shen-CL@4844072dde0208c3e4b99dcbfea58e4fdfd812e8",
    "statement": "Captured CL conditional lowering preserves evaluation order and error behavior with the strict guard.",
    "premises": [],
    "depends_on": [
-    "OB-CL-GUARD-MODEL"
+    "OB-CL-GUARD-MODEL",
+    "OB-CL-HOST-OPS",
+    "OB-CL-KERNEL-FNS"
    ],
-   "evidence": [],
-   "completion_evidence": "Proof over the actual captured lowering.",
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLLowering.optimise_sound",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLLowering.emit_if_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLContracts.CLContracts.captured_contracts",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLContracts.CLContracts.discharged_optimise_sound",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLContracts.CLContracts.discharged_emit_if_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "CLLoweringCapture.captured_lowering_admitted",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "The captured lowering is proved over the world running the captured primitives.lsp bodies with only the named cl_host_ops and cl_kernel_ops contracts left. Open: those contracts (OB-CL-HOST-OPS, OB-CL-KERNEL-FNS), the qsafe defect boundary, compile-expression and emit-cond-clauses, the CL reader/package model, and SBCL execution.",
+   "sources": [
+    "docs/CL-PORT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/CL-PORT.md",
+     "recorded": "CLLowering.primitive_contracts stated predicate fields for every argument count, which the captured wrapper bodies cannot justify.",
+     "reconciliation": "Narrowed to the emitted arities and shapes, then discharged from the captured bodies (CLContracts) down to OB-CL-HOST-OPS and OB-CL-KERNEL-FNS."
+    }
+   ]
+  },
+  {
+   "id": "OB-CL-HOST-OPS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-21",
+   "packages": [
+    "E2E-24",
+    "E2E-16",
+    "E2E-17"
+   ],
+   "status": "assumed",
+   "boundary": "SBCL operations reached by the captured equality helpers and the optimised IF tests",
+   "identity": "CLContracts.cl_host_ops (16 fields)",
+   "statement": "SBCL EQ, TYPEP FIXNUM, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, STRING=, NOT, NULL, EQUAL (string and object cases), EQL on integers and = (symmetry, reflexivity on literals) satisfy the individually named fields of cl_host_ops on the represented values, and are pure.",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-SBCL"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLContracts.CLContracts.model_host_ops",
+     "establishes": "model-proof",
+     "note": "satisfiability only (anti-vacuity), not a model of SBCL"
+    }
+   ],
+   "completion_evidence": "SBCL representation relation and operation proofs (E2E-21/E2E-24).",
+   "sources": [
+    "docs/CL-PORT.md",
+    "docs/PRIMITIVES.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-KERNEL-FNS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-16",
+   "packages": [
+    "E2E-15"
+   ],
+   "status": "assumed",
+   "boundary": "Shen kernel not, empty? and fail as compiled by Shen-CL",
+   "identity": "CLContracts.cl_kernel_ops (3 fields)",
+   "statement": "The Shen-CL compilation of the kernel functions not, empty? and fail behaves as cl_kernel_ops states: Boolean negation with the Boolean error otherwise, true exactly for (), and the symbol shen.fail!, each without state change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLContracts.CLContracts.model_kernel_ops",
+     "establishes": "model-proof",
+     "note": "satisfiability only"
+    }
+   ],
+   "completion_evidence": "Proof of the compiled kernel definitions through the captured Shen-CL compiler.",
    "sources": [
     "docs/CL-PORT.md"
    ],

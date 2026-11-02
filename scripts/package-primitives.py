@@ -36,6 +36,8 @@ EXCERPTS = [
     ('cl', 'cl_primitives', '(defun |shen-cl.less?| (x y)\n'),
     ('cl', 'cl_primitives', '(defun |shen-cl.greater-than-or-equal-to?| (x y)\n'),
     ('cl', 'cl_primitives', '(defun |shen-cl.less-than-or-equal-to?| (x y)\n'),
+    ('cl', 'cl_primitives', '(defun |shen-cl.increment| (x)\n'),
+    ('cl', 'cl_primitives', '(defun |shen-cl.decrement| (x)\n'),
 ]
 
 

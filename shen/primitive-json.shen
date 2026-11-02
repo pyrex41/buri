@@ -3,9 +3,11 @@
 
 \\ Every primitive contract assumed anywhere in the repository, by name:
 \\ [Id HostOp Owner Status Note]. Status: host-contract (a premise of a proved
-\\ wrapper theorem), discharged-at-use (a CLLowering field now a theorem at the
-\\ arity the optimizer emits), assumed (still a premise elsewhere), bridged
-\\ (proved on a stated domain), profile-slot (a KLambda profile parameter).
+\\ wrapper theorem), discharged (a CLLowering field proved from captured bodies
+\\ alone, CLContracts.captured_contracts), reduced (a CLLowering field proved
+\\ there from the individually named host/kernel contracts its note lists),
+\\ assumed (still a premise elsewhere), bridged (proved on a stated domain),
+\\ profile-slot (a KLambda profile parameter).
 (define buri.pj-fields Prefix Owner Rows -> (map (/. R (buri.pj-field Prefix Owner R)) Rows))
 (define buri.pj-field Prefix _ [F Op Owner] -> [(cn Prefix F) Op Owner "host-contract" ""])
 (define buri.pj-contracts ->
@@ -30,23 +32,50 @@
     ["sbcl_coerce_one" "sbcl:COERCE" "E2E-24"] ["sbcl_float_ratio" "sbcl:* (ratio to double rounding)" "E2E-24"]
     ["sbcl_fixnum_sym" "sbcl:TYPEP" "E2E-21"]])
   (append
-  [["CLLowering.primitive_contracts.pc_cons" "sbcl:CONSP" "E2E-21" "discharged-at-use" "CLWrappers.CLWrappers.cons_wrapper at arity 1; the all-arity field is stronger than the body (wrong-arity calls raise fresh program-errors)."]
-   ["CLLowering.primitive_contracts.pc_string" "sbcl:STRINGP" "E2E-21" "discharged-at-use" "CLWrappers.CLWrappers.string_wrapper at arity 1."]
-   ["CLLowering.primitive_contracts.pc_number" "sbcl:NUMBERP" "E2E-21" "discharged-at-use" "CLWrappers.CLWrappers.number_wrapper at arity 1."]
-   ["CLLowering.primitive_contracts.pc_empty" "kernel empty? (compiled)" "E2E-16" "assumed" "empty? is kernel Shen code compiled by Shen-CL; no primitives.lsp body."]
-   ["CLLowering.primitive_contracts.pc_greater" "sbcl:>" "E2E-24" "discharged-at-use" "CLWrappers.CLWrappers.comparison_wrappers at arity 2."]
-   ["CLLowering.primitive_contracts.pc_greater_eq" "sbcl:>=" "E2E-24" "discharged-at-use" "CLWrappers.CLWrappers.comparison_wrappers at arity 2."]
-   ["CLLowering.primitive_contracts.pc_less" "sbcl:<" "E2E-24" "discharged-at-use" "CLWrappers.CLWrappers.comparison_wrappers at arity 2."]
-   ["CLLowering.primitive_contracts.pc_less_eq" "sbcl:<=" "E2E-24" "discharged-at-use" "CLWrappers.CLWrappers.comparison_wrappers at arity 2."]
-   ["CLLowering.primitive_contracts.pc_absequal" "shen-cl.absequal" "E2E-17" "discharged-at-use" "CLWrappers.CLWrappers.equal_wrapper at arity 2; absequal itself: CLWrappers.CLWrappers.absequal_data on data."]
-   ["CLLowering.primitive_contracts.pc_not" "kernel not (compiled)" "E2E-16" "assumed" "Kernel not compiled by Shen-CL."]
-   ["CLLowering.primitive_contracts.pc_cl_not" "sbcl:NOT" "E2E-21" "assumed" "CL NOT on host truth."]
-   ["CLLowering.primitive_contracts.pc_null_right" "sbcl:NULL" "E2E-17" "assumed" "Follows in the functional model from equal_data; the relational bridge is open."]
-   ["CLLowering.primitive_contracts.pc_null_left" "sbcl:NULL" "E2E-17" "assumed" "As pc_null_right."]
-   ["CLLowering.primitive_contracts.pc_fail" "kernel fail + sbcl:EQ" "E2E-16" "assumed" "(fail) is the symbol shen.fail!; EQ on a symbol is exact by eq_rewrite_safe in the functional model."]
-   ["CLLowering.primitive_contracts.pc_string_equal" "sbcl:EQUAL" "E2E-17" "assumed" "EQUAL against a string literal; not yet proved."]
-   ["CLLowering.primitive_contracts.pc_numeric" "shen-cl.numeric-equal" "E2E-17" "assumed" "Captured and admitted, not yet proved."]
-   ["CLLowering.primitive_contracts.pc_symbol_eq" "sbcl:EQ" "E2E-21" "assumed" "Proved in the functional model (CLWrappers.CLWrappers.eq_rewrite_safe); relational bridge open."]
+  [["CLLowering.primitive_contracts.pc_cons" "shen-cl cons? body" "E2E-17" "discharged" "Narrowed to the emitted arity 1; CLContracts.CLContracts.captured_contracts from CLWrappers.CLWrappers.cons_wrapper, with no host premise (CONSP stays opaque)."]
+   ["CLLowering.primitive_contracts.pc_string" "shen-cl string? body" "E2E-17" "discharged" "Arity 1; captured_contracts from CLWrappers.CLWrappers.string_wrapper, no host premise."]
+   ["CLLowering.primitive_contracts.pc_number" "shen-cl number? body" "E2E-17" "discharged" "Arity 1; captured_contracts from CLWrappers.CLWrappers.number_wrapper, no host premise."]
+   ["CLLowering.primitive_contracts.pc_empty" "kernel empty? (compiled) + sbcl:NULL" "E2E-16" "reduced" "Arity 1; captured_contracts from CLContracts.cl_kernel_ops.kernel_empty and CLContracts.cl_host_ops.host_null."]
+   ["CLLowering.primitive_contracts.pc_greater" "shen-cl.greater? body" "E2E-17" "discharged" "Arity 2; captured_contracts from CLWrappers.CLWrappers.comparison_wrappers, no host premise (CL > stays opaque)."]
+   ["CLLowering.primitive_contracts.pc_greater_eq" "shen-cl.greater-than-or-equal-to? body" "E2E-17" "discharged" "Arity 2; as pc_greater."]
+   ["CLLowering.primitive_contracts.pc_less" "shen-cl.less? body" "E2E-17" "discharged" "Arity 2; as pc_greater."]
+   ["CLLowering.primitive_contracts.pc_less_eq" "shen-cl.less-than-or-equal-to? body" "E2E-17" "discharged" "Arity 2; as pc_greater."]
+   ["CLLowering.primitive_contracts.pc_absequal" "shen-cl.equal? body" "E2E-17" "discharged" "Arity 2; captured_contracts from CLWrappers.CLWrappers.equal_wrapper, no host premise (absequal stays a call)."]
+   ["CLLowering.primitive_contracts.pc_not" "kernel not (compiled)" "E2E-16" "reduced" "captured_contracts from CLContracts.cl_kernel_ops.kernel_not (kernel code compiled by Shen-CL)."]
+   ["CLLowering.primitive_contracts.pc_cl_not" "sbcl:NOT" "E2E-21" "reduced" "captured_contracts from CLContracts.cl_host_ops.host_not."]
+   ["CLLowering.primitive_contracts.pc_null_right" "shen-cl.absequal body + sbcl:NULL" "E2E-17" "reduced" "captured_contracts: captured absequal against NIL (CLContracts.CLContracts.abs_symbolic_right) for every value, from cl_host_ops."]
+   ["CLLowering.primitive_contracts.pc_null_left" "shen-cl.absequal body + sbcl:NULL" "E2E-17" "reduced" "As pc_null_right (abs_symbolic_left)."]
+   ["CLLowering.primitive_contracts.pc_fail" "kernel fail + shen-cl.absequal body + sbcl:EQ" "E2E-16" "reduced" "captured_contracts from cl_kernel_ops.kernel_fail and abs_symbolic_left/right."]
+   ["CLLowering.primitive_contracts.pc_string_equal" "shen-cl.absequal body + sbcl:EQUAL" "E2E-17" "reduced" "captured_contracts: captured absequal against a string literal (abs_string_left/right) for every value, from cl_host_ops."]
+   ["CLLowering.primitive_contracts.pc_numeric" "shen-cl.absequal + shen-cl.numeric-equal bodies" "E2E-17" "reduced" "captured_contracts: both captured bodies reach the same host = for every value and numeric literal (abs_numeric_left/right, numeric_equal_value), from cl_host_ops."]
+   ["CLLowering.primitive_contracts.pc_symbol_eq" "shen-cl.absequal body + sbcl:EQ" "E2E-17" "reduced" "captured_contracts: captured absequal against a symbol or NIL (abs_symbolic_left/right) for every value, from cl_host_ops.host_eq."]]
+  (append
+  (map (/. R [(cn "CLContracts.cl_host_ops." (hd R)) (hd (tl R)) (hd (tl (tl R))) "host-contract" (hd (tl (tl (tl R))))])
+   [["host_eq" "sbcl:EQ" "E2E-21" "Every value pair: T only for identical values; T whenever one side is a symbol or NIL and they are equal."]
+    ["host_typep_fixnum" "sbcl:TYPEP" "E2E-21" "(TYPEP a 'FIXNUM) is a host Boolean; a fixnum is a number and INTEGERP."]
+    ["host_integerp" "sbcl:INTEGERP" "E2E-21" "A host Boolean; only numbers are integers."]
+    ["host_numberp" "sbcl:NUMBERP" "E2E-21" "Exactly the VNum values (VObj host objects are not numbers)."]
+    ["host_consp" "sbcl:CONSP" "E2E-21" "Exactly the conses."]
+    ["host_stringp" "sbcl:STRINGP" "E2E-21" "Exactly the strings."]
+    ["host_arrayp" "sbcl:ARRAYP" "E2E-21" "Strings are arrays; only strings and host objects can be."]
+    ["host_symbolp" "sbcl:SYMBOLP" "E2E-21" "Exactly the symbols and NIL."]
+    ["host_string_eq" "sbcl:STRING=" "E2E-24" "Character-wise string equality."]
+    ["host_not" "sbcl:NOT" "E2E-21" "T exactly for NIL."]
+    ["host_null" "sbcl:NULL" "E2E-21" "T exactly for NIL."]
+    ["host_equal_string" "sbcl:EQUAL" "E2E-24" "EQUAL with a string operand is string equality (either order)."]
+    ["host_equal_object" "sbcl:EQUAL" "E2E-24" "EQUAL of a non-array host object with a non-object is NIL."]
+    ["host_eql_integer" "sbcl:EQL" "E2E-24" "EQL and = agree on integers."]
+    ["host_num_eq_sym" "sbcl:=" "E2E-24" "= is symmetric on numbers (including any raised condition)."]
+    ["host_num_eq_refl" "sbcl:=" "E2E-24" "= is reflexive on numeric literals; a VNum spelling never denotes NaN."]])
+  (append
+  [["CLContracts.cl_kernel_ops.kernel_not" "kernel not (compiled)" "E2E-16" "assumed" "Shen-CL's compiled kernel not: true/false negation, Boolean error otherwise."]
+   ["CLContracts.cl_kernel_ops.kernel_empty" "kernel empty? (compiled)" "E2E-16" "assumed" "Shen-CL's compiled kernel empty?: true exactly for (), state unchanged."]
+   ["CLContracts.cl_kernel_ops.kernel_fail" "kernel fail (compiled)" "E2E-16" "assumed" "Shen-CL's compiled kernel fail returns the symbol shen.fail!, state unchanged."]
+   ["CLContracts.cl_step_ops.step_typep_int" "sbcl:TYPEP" "E2E-21" "host-contract" "(TYPEP z 'FIXNUM) is a host Boolean on every integer."]
+   ["CLContracts.cl_step_ops.step_incr" "sbcl:1+" "E2E-24" "host-contract" "1+ is the exact successor on every integer (fixnum or bignum); THE FIXNUM is evaluated as its operand."]
+   ["CLContracts.cl_step_ops.step_decr" "sbcl:1-" "E2E-24" "host-contract" "1- is the exact predecessor on every integer."]]
+  (append
+  [
    ["StockDivisionGeneral.operation.divide" "chez:/" "E2E-24" "host-contract" "Premise of StockDivisionGeneral.all_value_wrapper_contract."]
    ["StockDivisionGeneral.operation.classify" "chez:integer?" "E2E-21" "host-contract" "As divide."]
    ["StockDivisionGeneral.operation.round" "chez:inexact" "E2E-24" "host-contract" "As divide; the int_div_inexact slot."]
@@ -56,7 +85,7 @@
    ["CLPortGuard.format_printer" "sbcl:FORMAT ~A" "E2E-24" "assumed" "OB-CL-FORMAT-PRINTER: printer effects of the Boolean diagnostic."]]
   (append (buri.pj-native-rows)
    (map (/. F [(cn "KLValue.profile." F) "profile slot" "E2E-05" "profile-slot" "A per-port pin is required before any claim depends on it."])
-        ["inexact_op" "inexact_cmp" "int_div_inexact" "float_text" "str_other" "sys_message" "absvector_fill" "time_value" "stack_limit" "heap_limit"]))))))))
+        ["inexact_op" "inexact_cmp" "int_div_inexact" "float_text" "str_other" "sys_message" "absvector_fill" "time_value" "stack_limit" "heap_limit"])))))))))))
 \\ Native.primitive (OB-PRIM-CONTRACTS): the sealed lane's Chez library table.
 (define buri.pj-native-ops -> ["cons" "list" "car" "cdr" "pair?" "null?" "eq?" "eqv?" "equal?" "number?" "integer?" "exact?"
   "boolean?" "string?" "symbol?" "symbol->string" "number->string" "/" "floor" "+" "-" "*" ">=" "<" "string-append"

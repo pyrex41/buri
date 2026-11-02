@@ -46,10 +46,11 @@ Each entry (114 in total: 46 Shen-Scheme, 68 Shen-CL) records:
   E2E-27 OS/IO/clock. The closure is conservative. It counts every unbound
   symbol in evaluated position, over-approximates binders, and honours SBCL
   read-time conditionals as the SBCL reader would.
-- `evidence`: `proved` (with theorems in `rocq/Audit.v`), `contract-assumed`
-  (the primitive is a direct host operation), `sampled` or `none`.
+- `evidence`: `proved` (with theorems in `rocq/Audit.v` or a lane audit
+  module `rocq/Audit_<lane>.v`), `contract-assumed` (the primitive is a direct
+  host operation), `sampled` or `none`.
 
-The `contracts` section (101 entries) gives a name to every primitive
+The `contracts` section (123 entries) gives a name to every primitive
 contract that is currently assumed anywhere in the repository. Each entry has
 a host operation, an owner and a status:
 
@@ -57,7 +58,10 @@ a host operation, an owner and a status:
 |---|---|---|
 | `SchemeWrappers.chez_equality_ops`, `chez_assert_ops` | 11 | premises of proved wrappers |
 | `CLWrappers.sbcl_equality_ops`, `sbcl_arith_ops` | 25 | premises of proved wrappers |
-| `CLLowering.primitive_contracts` (17 fields) | 17 | 8 discharged at the emitted arity, 9 still assumed |
+| `CLLowering.primitive_contracts` (17 fields, narrowed) | 17 | 8 `discharged` (captured bodies alone), 9 `reduced` to the named contracts below |
+| `CLContracts.cl_host_ops` | 16 | SBCL host-op premises (E2E-21/24) |
+| `CLContracts.cl_kernel_ops` | 3 | compiled kernel `not`, `empty?`, `fail` (E2E-16), assumed |
+| `CLContracts.cl_step_ops` | 3 | SBCL `TYPEP`, `1+`, `1-` premises |
 | `StockDivisionGeneral.operation` (divide, classify, round) | 3 | premises |
 | `Native.primitive` table (OB-PRIM-CONTRACTS) and `error` | 31 | assumed |
 | EQ-1 `ask_eq` (EQ1-NUMERIC, `kl:=`) | 1 | bridged on data |
@@ -83,15 +87,17 @@ The checker reads the matrix as inert JSON. It rejects the matrix when:
 - an entry is duplicated, or an entry has no implementation.
 - the evidence kind is unknown.
 - a `proved` entry cites no theorem, or cites a theorem missing from
-  `rocq/Audit.v`.
+  `rocq/Audit.v` and the lane audit modules.
 - a host operation is not owned by one of E2E-21..27.
 - a field of a named contract record, a `Native.primitive` operation or a
   profile slot has no contract entry. The checker reads these from the Rocq
   sources.
 
-`tests/primitives.shen` runs eleven hostile variants and requires each one to
-be rejected. Acceptance is bookkeeping only; the theorems are checked by
-`make prove`.
+`tests/primitives.shen` runs thirteen hostile variants and requires each one
+to be rejected (the two newest drop the `cl_host_ops.host_eq` contract and
+cite an unaudited lane theorem). Acceptance is bookkeeping only; the theorems
+are checked by `make prove`. Audited names are read from `rocq/Audit.v` and
+the lane audit modules listed in `buri.laudit-lane-files` (`shen/ledger.shen`).
 
 ## First proved batch
 
@@ -102,10 +108,12 @@ re-checks the literal against the source bytes. `make prove` regenerates the
 package and diffs it. `rocq/PortReader.v` is an independent, rejecting Rocq
 reader for the Scheme and CL subsets. Admission (`scheme_wrappers_admitted`,
 `cl_wrappers_admitted`) is computed equality of the decoded definitions with
-the reviewed AST, and the theorems interpret the admitted AST. Seven altered
+the reviewed AST, and the theorems interpret the admitted AST. Nine altered
 copies of the bytes are refused (`tests/mutate-primitives.py`): `eqv?` for
 numbers, a wrong assert predicate, a dropped tail comparison, a swapped
-Boolean, `EQ` for numbers, a ratio escape, and a wrong zero product.
+Boolean, `EQ` for numbers, a ratio escape, a wrong zero product, `EQ` in
+`numeric-equal`, and `1-` in the bignum branch of `increment`. The package
+now also carries `shen-cl.increment` and `shen-cl.decrement`.
 
 ### Shen-Scheme (`rocq/SchemeWrappers.v`)
 
@@ -152,12 +160,9 @@ the other operand is not an inexact number.
   each wrapper is the CL test of its host predicate. These discharge
   `CLLowering.primitive_contracts` fields `pc_cons`, `pc_string`,
   `pc_number`, `pc_greater`, `pc_greater_eq`, `pc_less`, `pc_less_eq` and
-  `pc_absequal` *at the arity the optimizer emits*.
-  **Finding:** the record states these fields for every argument list. That
-  is stronger than the bodies justify, because a wrong-arity call raises a
-  fresh SBCL program-error. Narrowing the record to the emitted arity would
-  let these theorems replace the hypotheses directly (E2E-16 owns that
-  change).
+  `pc_absequal` *at the arity the optimizer emits*. Wave B found that the
+  record stated these fields for every argument list, which the bodies cannot
+  justify. Wave C narrowed the record; see the next section.
 - `absequal_data` uses a small functional CL evaluator quantified over every
   table satisfying `sbcl_equality_ops`. On first-order data (symbols,
   strings, canonical integers, NIL, conses) the captured `absequal` answers
@@ -190,17 +195,108 @@ the other operand is not an inexact number.
 - `model_equality_ops` and `model_arith_ops` show the contracts are
   satisfiable.
 
-Open: `shen-cl.numeric-equal` (captured and admitted, not proved), `EQUAL`
-against string literals, `cf-vectors` (a LOOP body outside the model),
-floats, `increment` and `decrement`, the relational/functional model bridge
-for the `pc_null_*`, `pc_symbol_eq`, `pc_string_equal` and `pc_numeric`
-fields, every `none` entry in the matrix, and all host operation contracts.
+### The lowering's contracts from the captured bodies (`rocq/CLContracts.v`, Wave C)
+
+**Narrowing (a false requirement removed).** `CLLowering.primitive_contracts`
+used to state its nine predicate fields as `pred_refines f g`, that is, for
+every argument list. The optimizer never emits a wrong-arity call: each
+clause's source pattern fixes the operand count (`[cons? X]` has one,
+`[greater? X Y]` two). And the captured wrapper body cannot justify the
+all-arity form. Called with the wrong number of arguments, `cons?` has no
+outcome of its own in the model. In SBCL it raises a fresh program-error
+that names `cons?`, while `CONSP` raises a different condition.
+`all_arity_unjustified` proves the field false in every world that runs the
+captured body and where `CONSP` raises at that arity. `captured_all_arity_false`
+proves the same for the captured world whenever the host raises.
+
+The record now states each field at exactly the emitted arity and shape.
+`sem_pred1` and `sem_pred2` replace `sem_pred` in `optimise_sound`, and
+`optimise_sound` and `emit_if_refines` are re-proved unchanged in statement.
+`pred_refines_narrows` shows that the old fields imply the new ones, so every
+world admitted before is still admitted. This is a strengthening of the
+theorems' applicability, not a weakening.
+
+**The bridge.** `captured_prim St h kern other` is a relational world for
+CLLowering's `ev`:
+
+- the eight Boolean wrappers run their captured bodies relationally
+  (`CLWrappers.wrapped`);
+- `shen-cl.absequal` and `shen-cl.numeric-equal` run their captured bodies in
+  the functional `ceval`. A call's outcome is the result on which the
+  fuel-indexed evaluation stabilises (`run_helper`, `eventually`);
+  `helper_value` turns any "for all fuel ≥ 10" theorem into that outcome;
+- the kernel functions `not`, `empty?` and `fail`, which have no
+  `primitives.lsp` body, are a relation `kern`;
+- every other head is a host table `h`. Exhausted fuel and unsupported forms
+  give no outcome; they are never values.
+
+All results are universal theorems, for every state type, every relation
+for unmodeled forms, and every `h`, `kern` satisfying the named records:
+
+- `abs_symbolic_right/left`, `abs_string_right/left`: for **every** value `v`
+  (not only first-order data), the captured `absequal` against a symbol or
+  NIL, or against a string literal, in either operand order, answers
+  `hb (sv_eqb …)`. That is exactly what `EQ`, `NULL` or `EQUAL` answer there.
+- `abs_numeric_right/left`, `numeric_equal_value`: for every value and every
+  numeric literal, `absequal` (either order) and `numeric-equal` (with the
+  optimizer's operand swap) return the same result, `num_spec`. Both reach the
+  same host `=`, so floats and mixed exactness need no assumption beyond `=`'s
+  symmetry and reflexivity on literals.
+- `captured_contracts`: every field of the narrowed record holds in
+  `captured_prim`. Eight fields need no host premise, because the wrapper is
+  equivalent to its host predicate whatever that does: `pc_cons`,
+  `pc_string`, `pc_number`, the four comparisons and `pc_absequal`. Six are
+  reduced to `cl_host_ops` alone: `pc_cl_not`, `pc_null_right/left`,
+  `pc_string_equal`, `pc_numeric` and `pc_symbol_eq`. Three also use
+  `cl_kernel_ops`: `pc_not`, `pc_empty` and `pc_fail`.
+- `discharged_optimise_sound`, `discharged_emit_if_refines`: the captured
+  `optimise-boolean-check` and `emit-if` theorems in `captured_prim`. Each is
+  conjoined with `cl_wrappers_admitted`, so the bodies are the admitted
+  decoding of the pinned bytes. The only hypotheses left are `cl_host_ops`,
+  `cl_kernel_ops` and the theorem's own `qsafe`.
+- `increment_int`, `decrement_int`, `step_refines_rules`: the captured
+  `shen-cl.increment`/`decrement`, now packaged and admitted, return z+1 and
+  z-1 for every integer. These are `rule_arith`'s answers for the
+  `(+ 1 X)`, `(+ X 1)` and `(- X 1)` that `optimise-static-application`
+  replaces. Premise: `cl_step_ops` (`TYPEP` gives a Boolean, `1+`/`1-` exact
+  on integers). `ceval` evaluates `(THE type x)` as `x`.
+- `model_host_ops`, `model_kernel_ops`, `model_step_ops` and
+  `model_world_contracts` show the records are satisfiable (anti-vacuity, not
+  SBCL).
+
+**Contracts that remain**, each named individually in `spec/primitives.json`:
+
+- `cl_host_ops` (16 fields). E2E-21 owns `EQ`, `TYPEP FIXNUM`, `INTEGERP`,
+  `NUMBERP`, `CONSP`, `STRINGP`, `ARRAYP`, `SYMBOLP`, `NOT` and `NULL`.
+  E2E-24 owns `STRING=`, `EQUAL` (string and object cases), `EQL` versus `=`
+  on integers, and `=` symmetry and reflexivity.
+- `cl_kernel_ops` (3, E2E-16): kernel code compiled by Shen-CL.
+- `cl_step_ops` (3, E2E-21/24).
+- Modeling boundary, not a hypothesis but a limit of the instantiation:
+  - the host operations in `fn_heads` are pure functions of their arguments;
+  - a raised host condition is a function of the arguments, so fresh
+    condition identity is quotiented;
+  - `VObj` values are not numbers, symbols, strings or conses;
+  - no `VNum` spelling denotes NaN.
+- `FORMAT` printer effects (`CLPortGuard.format_printer`) and the quotiented
+  Boolean-error text, both unchanged.
+
+Mutation cases: two admission mutants (above) and three restated claims
+refused by Rocq (`tests/mutate-cl-contracts.py`):
+
+- the all-arity `cons?` field for the captured world;
+- `numeric-equal` without the operand swap;
+- `EQ` in place of `EQUAL` against a string literal.
+
+Open: `cf-vectors` (a LOOP body outside the model) for two vectors, floats in
+the arithmetic wrappers, every `none` entry in the matrix, and all host
+operation contracts.
 
 ## Evidence kinds kept apart
 
 | Kind | Artifacts |
 |---|---|
-| Universal theorems | `rocq/SchemeWrappers.v`, `rocq/CLWrappers.v` (28 audited statements) |
+| Universal theorems | `rocq/SchemeWrappers.v`, `rocq/CLWrappers.v` (28 audited statements), `rocq/CLContracts.v` with the narrowed `CLLowering` lemmas (24, `rocq/Audit_Clcontracts.v`) |
 | Ground derivation (admission) | `scheme_wrappers_admitted`, `cl_wrappers_admitted` over `rocq/PrimitiveSources.v` |
 | Sampled (Shen-Scheme host) | `tests/primitives.shen` sample-* tests |
 | Native SBCL samples (opt-in) | `ports/shen-cl-primitive-samples.lisp` via `scripts/check-cl-port.sh` |

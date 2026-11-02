@@ -882,6 +882,29 @@ Lemma sem_pred : forall f g args, is_fn f = true -> is_fn g = true -> f <> TRUEP
  pred_refines f g -> OptEquiv (VCons (VSym f) args) (VCons (VSym g) args).
 Proof. intros. apply sem_same_args; auto. Qed.
 
+(* The optimizer only ever emits a predicate with the argument count its
+   source pattern fixed: [cons? X] has one operand, [greater? X Y] two. The
+   refinement is therefore needed at exactly that arity. *)
+Lemma sem_pred1 : forall f g x, is_fn f = true -> is_fn g = true -> f <> TRUEP -> g <> TRUEP ->
+ (forall v, args_refine f [v] g [v]) -> OptEquiv (f2 f x) (f2 g x).
+Proof.
+ intros f g x Hf Hg Nf Ng H. apply sem_same_args; auto. intros e s vs s1 Hl.
+ apply list1_iff in Hl as [[v [s2 [_ Heq]]]|[o [_ [_ Heq]]]]; try discriminate.
+ injection Heq; intros; subst. apply H.
+Qed.
+Lemma sem_pred2 : forall f g x y, is_fn f = true -> is_fn g = true -> f <> TRUEP -> g <> TRUEP ->
+ (forall v w, args_refine f [v; w] g [v; w]) -> OptEquiv (f3 f x y) (f3 g x y).
+Proof.
+ intros f g x y Hf Hg Nf Ng H. apply sem_same_args; auto. intros e s vs s1 Hl.
+ apply list2_iff in Hl as [[v [s2 [w [s3 [_ [_ Heq]]]]]]|[[o [_ [_ Heq]]]|[? [? [o [_ [_ [_ Heq]]]]]]]];
+ try discriminate. injection Heq; intros; subst. apply H.
+Qed.
+(* Every instance of the former all-arity field is an instance of the
+   narrowed one, so narrowing only enlarges the set of admissible worlds. *)
+Lemma pred_refines_narrows : forall f g, pred_refines f g ->
+ (forall v, args_refine f [v] g [v]) /\ (forall v w, args_refine f [v; w] g [v; w]).
+Proof. intros f g H. split; intros; apply H. Qed.
+
 (* Two argument lists whose successful evaluations produce related value lists
    and whose abrupt evaluations coincide. *)
 Lemma sem_args_map : forall f g a1 a2 (m : list sv -> list sv), is_fn f = true -> is_fn g = true ->
@@ -1089,16 +1112,24 @@ Proof.
 Qed.
 
 (* ----- Named primitive contracts (owned by E2E-17; hypotheses here) ----- *)
+(* Each field is stated at exactly the arity and shape the captured
+   optimise-boolean-check emits. An earlier version required the predicate
+   fields for every argument list (pred_refines); a wrong-arity call of a
+   wrapper is never emitted, and SBCL answers it with a fresh program-error
+   naming the called function, so that form was a false requirement
+   (CLContracts.all_arity_unjustified). pred_refines_narrows shows the old
+   fields imply these. CLContracts.captured_contracts discharges the record
+   for the world that runs the captured primitives.lsp bodies. *)
 Record primitive_contracts : Prop := {
- pc_cons : pred_refines "cons?" "CONSP";
- pc_string : pred_refines "string?" "STRINGP";
- pc_number : pred_refines "number?" "NUMBERP";
- pc_empty : pred_refines "empty?" "NULL";
- pc_greater : pred_refines "shen-cl.greater?" ">";
- pc_greater_eq : pred_refines "shen-cl.greater-than-or-equal-to?" ">=";
- pc_less : pred_refines "shen-cl.less?" "<";
- pc_less_eq : pred_refines "shen-cl.less-than-or-equal-to?" "<=";
- pc_absequal : pred_refines EQUALP "shen-cl.absequal";
+ pc_cons : forall v, args_refine "cons?" [v] "CONSP" [v];
+ pc_string : forall v, args_refine "string?" [v] "STRINGP" [v];
+ pc_number : forall v, args_refine "number?" [v] "NUMBERP" [v];
+ pc_empty : forall v, args_refine "empty?" [v] "NULL" [v];
+ pc_greater : forall v w, args_refine "shen-cl.greater?" [v; w] ">" [v; w];
+ pc_greater_eq : forall v w, args_refine "shen-cl.greater-than-or-equal-to?" [v; w] ">=" [v; w];
+ pc_less : forall v w, args_refine "shen-cl.less?" [v; w] "<" [v; w];
+ pc_less_eq : forall v w, args_refine "shen-cl.less-than-or-equal-to?" [v; w] "<=" [v; w];
+ pc_absequal : forall v w, args_refine EQUALP [v; w] "shen-cl.absequal" [v; w];
  pc_not : forall v s o, prim "not" [v] s o <-> o = shen_not_result v s;
  pc_cl_not : forall v s o, prim "NOT" [v] s o <-> o = cl_not_result v s;
  pc_null_right : forall v, args_refine EQUALP [v; VNil] "NULL" [v];
@@ -1341,8 +1372,9 @@ Ltac opt_finish IHo IHs :=
  | apply sem_null_left
  | apply sem_fail_left
  | apply sem_fail_right
- | apply sem_pred; [fn_side|fn_side|fn_side|fn_side|first [apply (pc_cons C)|apply (pc_string C)
-     |apply (pc_number C)|apply (pc_empty C)|apply (pc_greater C)|apply (pc_greater_eq C)
+ | apply sem_pred1; [fn_side|fn_side|fn_side|fn_side|first [apply (pc_cons C)|apply (pc_string C)
+     |apply (pc_number C)|apply (pc_empty C)]]
+ | apply sem_pred2; [fn_side|fn_side|fn_side|fn_side|first [apply (pc_greater C)|apply (pc_greater_eq C)
      |apply (pc_less C)|apply (pc_less_eq C)|apply (pc_absequal C)]]
  | eapply sem_same2_lit_left; [fn_side|fn_side|fn_side|fn_side|apply pure_str|intros; apply (proj1 (pc_string_equal C _ _))]
  | eapply sem_same2_lit_right; [fn_side|fn_side|fn_side|fn_side|apply pure_str|intros; apply (proj2 (pc_string_equal C _ _))]
@@ -1567,15 +1599,9 @@ Qed.
 Theorem model_contracts : primitive_contracts unit model_prim.
 Proof.
  constructor.
- - eapply pred_model; reflexivity.
- - eapply pred_model; reflexivity.
- - eapply pred_model; reflexivity.
- - eapply pred_model; reflexivity.
- - eapply cmp_model; reflexivity.
- - eapply cmp_model; reflexivity.
- - eapply cmp_model; reflexivity.
- - eapply cmp_model; reflexivity.
- - intros vs. apply refine_by_fn. destruct vs as [|v [|w [|x r]]]; try exact I. apply res_test.
+ 1-4: intros v; eapply pred_model; reflexivity.
+ 1-4: intros v w; eapply cmp_model; reflexivity.
+ - intros v w. apply refine_by_fn. apply res_test.
  - intros v [] o. unfold model_prim. simpl. split; [congruence | intros ->; reflexivity].
  - intros v [] o. unfold model_prim. simpl. split; [congruence | intros ->; reflexivity].
  - intros v. apply refine_by_fn. simpl. destruct v; reflexivity.
