@@ -1,0 +1,27 @@
+From Buri Require Import Prims2Sources SchemeIntern CLStrings.
+Print Assumptions SchemeIntern.SchemeIntern.intern_admitted.
+Print Assumptions SchemeIntern.SchemeIntern.patched_intern_body.
+Print Assumptions SchemeIntern.SchemeIntern.patched_intern_symbol.
+Print Assumptions SchemeIntern.SchemeIntern.patched_intern_refines_rule.
+Print Assumptions SchemeIntern.SchemeIntern.stock_intern_body.
+Print Assumptions SchemeIntern.SchemeIntern.stock_intern_digit_led.
+Print Assumptions SchemeIntern.SchemeIntern.stock_intern_twelve.
+Print Assumptions SchemeIntern.SchemeIntern.stock_patched_agree.
+Print Assumptions SchemeIntern.SchemeIntern.model_intern_ops.
+Print Assumptions CLStrings.CLStrings.cl_strings_admitted.
+Print Assumptions CLStrings.CLStrings.tlstr_body_spec.
+Print Assumptions CLStrings.CLStrings.tlstr_refines.
+Print Assumptions CLStrings.CLStrings.string_to_n_body_spec.
+Print Assumptions CLStrings.CLStrings.string_to_n_refines.
+Print Assumptions CLStrings.CLStrings.string_to_n_long.
+Print Assumptions CLStrings.CLStrings.pos_refines.
+Print Assumptions CLStrings.CLStrings.n_to_string_int.
+Print Assumptions CLStrings.CLStrings.n_to_string_nonnum.
+Print Assumptions CLStrings.CLStrings.n_to_string_refines.
+Print Assumptions CLStrings.CLStrings.n_to_string_scalar.
+Print Assumptions CLStrings.CLStrings.n_to_string_surrogate.
+Print Assumptions CLStrings.CLStrings.get_address_svref.
+Print Assumptions CLStrings.CLStrings.get_address_refines.
+Print Assumptions CLStrings.CLStrings.intern_body_plain.
+Print Assumptions CLStrings.CLStrings.intern_refines.
+Print Assumptions CLStrings.CLStrings.model_strings_ops.

@@ -117,7 +117,11 @@
    ["rocq/CLContracts.v" "cl_host_ops" "CLContracts.cl_host_ops."]
    ["rocq/CLContracts.v" "cl_kernel_ops" "CLContracts.cl_kernel_ops."]
    ["rocq/CLContracts.v" "cl_step_ops" "CLContracts.cl_step_ops."]
-   ["rocq/KLValue.v" "profile" "KLValue.profile."]])
+   ["rocq/KLValue.v" "profile" "KLValue.profile."]
+   ["rocq/SchemeIntern.v" "chez_intern_ops" "SchemeIntern.chez_intern_ops."]
+   ["rocq/CLStrings.v" "cl_string_ops" "CLStrings.cl_string_ops."]
+   ["rocq/CLStrings.v" "cl_vector_ops" "CLStrings.cl_vector_ops."]
+   ["rocq/CLStrings.v" "cl_intern_ops" "CLStrings.cl_intern_ops."]])
 (define buri.pm-expected-contracts ->
   (append (buri.pi-concat (map (/. R (map (/. F (cn (hd (tl (tl R))) F)) (buri.pm-record-fields (hd (tl R)) (read-file-as-bytelist (hd R)))))
                                (buri.pm-records)))

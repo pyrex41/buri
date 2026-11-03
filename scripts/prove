@@ -91,6 +91,13 @@ diff -u rocq/CLLoweringPatchCapture.v _build/CLLoweringPatchCapture.v
 python3 scripts/package-patched.py multiply _build/patched _build/PatchedPrimitiveSources.v
 python3 scripts/check-patched-package.py _build/patched _build/PatchedPrimitiveSources.v
 diff -u rocq/PatchedPrimitiveSources.v _build/PatchedPrimitiveSources.v
+# Wave-D primitives lane: exact stock/patched kl:intern and Shen-CL string,
+# vector-read and intern definition bytes (packaging only; Rocq admits them
+# in SchemeIntern.v and CLStrings.v).
+rm -f _build/Prims2Sources.v
+python3 scripts/package-prims2.py _build/patched _build/Prims2Sources.v
+python3 scripts/check-prims2-package.py _build/patched _build/Prims2Sources.v
+diff -u rocq/Prims2Sources.v _build/Prims2Sources.v
 for profile in bootstrap observer compiler_pass order_call kernel_list io_read equality_core equality_seal eq1_base eq1_equations eq1_theory eq1_kernel compiler_branches compiler_branches_patched kernel_element e2e07_klambda; do
  case "$profile" in
   bootstrap) source=shen/observe-constructor.shen; capture=bootstrap; module=BootstrapInput ;;

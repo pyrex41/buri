@@ -115,7 +115,10 @@
 (define buri.pt-none -> [none [] [] ""])
 (define buri.pt-host Note -> [contract-assumed [] [] Note])
 (define buri.pt-scheme-entries ->
- [["intern" kl "rule_intern" [[inline "compile-expression [intern S] where (string? S): compile-time quote" ["quote"]] [def "kl:intern"]] (buri.pt-none)]
+ [["intern" kl "rule_intern" [[inline "compile-expression [intern S] where (string? S): compile-time quote" ["quote"]] [def "kl:intern"]]
+   [proved (buri.pt-si ["intern_admitted" "stock_intern_body" "stock_intern_digit_led" "stock_intern_twelve" "stock_patched_agree" "patched_intern_body" "patched_intern_symbol" "patched_intern_refines_rule" "model_intern_ops"])
+    ["SchemeIntern.chez_intern_ops"]
+    "Stock kl:intern given its exact denotation: on a digit-led name of length > 1 it returns the host string->number answer when that is a number (sampled: (intern 12-string) is the integer 12 on v0.52), so it diverges from rule_intern there (OB-SCHEME-INTERN-NUMERIC stays refuted) and agrees elsewhere. The proposed patch (ports/patches/shen-scheme-primitives.diff) is proved to refine rule_intern for every string. The compile-time fold of a literal (intern S) calls the compiling image's kl:intern; it matches only in a binary rebuilt with the patch."]]
   ["pos" kl "rule_pos" [[inline "compile-expression [pos S N]" ["string" "string-ref"]]] (buri.pt-host "Inlined Chez string-ref; bounds errors are Chez conditions.")]
   ["tlstr" kl "rule_tlstr" [[inline "compile-expression [tlstr S]" ["let" "substring" "string-length"]]] (buri.pt-host "Inlined Chez substring.")]
   ["cn" kl "rule_cn" [[inline "binary-op-mapping cn" ["string-append"]]] (buri.pt-host "Mapped directly to Chez string-append.")]
@@ -174,17 +177,29 @@
   ["symbol?" extra "kernel symbol? (overrides.shen)" [[def "kl:symbol?"]] (buri.pt-none)]])
 (define buri.pt-cl-wrap Names -> (map (/. N (cn "CLWrappers.CLWrappers." N)) Names))
 (define buri.pt-clc Names -> (map (/. N (cn "CLContracts.CLContracts." N)) Names))
+(define buri.pt-si Names -> (map (/. N (cn "SchemeIntern.SchemeIntern." N)) Names))
+(define buri.pt-cs Names -> (map (/. N (cn "CLStrings.CLStrings." N)) Names))
 (define buri.pt-cl-entries ->
- [["intern" kl "rule_intern" [[inline "compile-expression [intern S] where (string? S): compile-time quote" ["QUOTE"]] [def "intern"]] (buri.pt-none)]
-  ["pos" kl "rule_pos" [[def "pos"]] (buri.pt-none)]
-  ["tlstr" kl "rule_tlstr" [[def "tlstr"]] (buri.pt-none)]
+ [["intern" kl "rule_intern" [[inline "compile-expression [intern S] where (string? S): compile-time quote" ["QUOTE"]] [def "intern"]]
+   [proved (buri.pt-cs ["cl_strings_admitted" "intern_body_plain" "intern_refines" "model_strings_ops"]) ["CLStrings.cl_intern_ops"]
+    "Captured |intern| refines rule_intern on every name without the characters hash, quote, backquote and bar, given the uncaptured shen-cl.process-intern (a LOOP body) as the named contract CLStrings.cl_intern_ops.process_plain. Names with those characters are mangled; two distinct names can then intern to the same symbol (sampled on SBCL 2.6.8, docs/UPSTREAM-ISSUES-INTERN.md)."]]
+  ["pos" kl "rule_pos" [[def "pos"]]
+   [proved (buri.pt-cs ["cl_strings_admitted" "pos_refines" "model_strings_ops"]) ["CLContracts.cl_host_ops" "CLStrings.cl_string_ops"]
+    "Captured |pos| refines rule_pos on every represented argument pair: the one-character string in range; a raise for an out-of-range or non-integer index or a non-string."]]
+  ["tlstr" kl "rule_tlstr" [[def "tlstr"]]
+   [proved (buri.pt-cs ["cl_strings_admitted" "tlstr_body_spec" "tlstr_refines" "model_strings_ops"]) ["CLContracts.cl_host_ops" "CLStrings.cl_string_ops"]
+    "Captured |tlstr| refines rule_tlstr on every represented argument; the empty string and non-strings raise."]]
   ["cn" kl "rule_cn" [[inline "binary-op-mapping cn -> (kl cn)" ["cn"]]] (buri.pt-none)]
   ["str" kl "rule_str" [[def "str"]] (buri.pt-none)]
   ["string?" kl "rule_stringp" [[inline "compile-expression [string? X] -> emit-boolean" ["IF" "STRINGP" "QUOTE"]] [def "string?"]]
    [proved (append (buri.pt-cl-wrap ["string_wrapper" "cl_wrappers_admitted"]) (buri.pt-clc ["captured_contracts"])) ["CLLowering.primitive_contracts.pc_string"]
     "Captured |string?| proved to be the Shen-test refinement of STRINGP at the emitted arity."]]
-  ["n->string" kl "rule_n_to_string" [[def "n->string"]] (buri.pt-none)]
-  ["string->n" kl "rule_string_to_n" [[def "string->n"]] (buri.pt-none)]
+  ["n->string" kl "rule_n_to_string" [[def "n->string"]]
+   [proved (buri.pt-cs ["cl_strings_admitted" "n_to_string_int" "n_to_string_nonnum" "n_to_string_refines" "n_to_string_scalar" "n_to_string_surrogate" "model_strings_ops"]) ["CLContracts.cl_host_ops" "CLStrings.cl_string_ops"]
+    "Captured |n->string| refines rule_n_to_string on ASCII codes, out-of-range integers and non-integers; every scalar value is accepted by both. Discovered divergence n_to_string_surrogate: a surrogate code returns a string where the rule is a domain error (OB-CL-N-TO-STRING-SURROGATE). Code points 256 and above lie outside the ASCII string model."]]
+  ["string->n" kl "rule_string_to_n" [[def "string->n"]]
+   [proved (buri.pt-cs ["cl_strings_admitted" "string_to_n_body_spec" "string_to_n_refines" "string_to_n_long" "model_strings_ops"]) ["CLContracts.cl_host_ops" "CLStrings.cl_string_ops"]
+    "Captured |string->n| refines rule_string_to_n on unit and empty strings and non-strings. Discovered divergence string_to_n_long: a string of length 2 or more raises where the rule answers the first code point (OB-CL-STRING-TO-N-UNIT)."]]
   ["set" kl "rule_set" [[inline "compile-expression [set Sym Exp] -> shen-cl.set-global" ["shen-cl.set-global"]] [def "set"]] (buri.pt-none)]
   ["value" kl "rule_value" [[inline "compile-expression [value Sym] -> Sym" ["special-variable-read"]] [def "value"]] (buri.pt-none)]
   ["simple-error" kl "rule_simple_error" [[def "simple-error"]] (buri.pt-none)]
@@ -204,7 +219,9 @@
   ["eval-kl" kl "rule_eval_kl" [[def "eval-kl"]] (buri.pt-none)]
   ["absvector" kl "rule_absvector" [[def "absvector"]] (buri.pt-none)]
   ["address->" kl "rule_address_set" [[def "address->"]] (buri.pt-none)]
-  ["<-address" kl "rule_address_get" [[def "<-address"]] (buri.pt-none)]
+  ["<-address" kl "rule_address_get" [[def "<-address"]]
+   [proved (buri.pt-cs ["cl_strings_admitted" "get_address_svref" "get_address_refines" "model_strings_ops"]) ["CLStrings.cl_vector_ops"]
+    "Captured |<-address| is exactly SVREF; it refines rule_address_get (element in range, raise otherwise) for every heap vector represented element-wise by the host simple vector. That heap correspondence is an E2E-21 premise."]]
   ["absvector?" kl "rule_absvectorp" [[inline "compile-expression [absvector? X] -> emit-boolean" ["IF" "shen-cl.absvector-p" "QUOTE"]] [def "absvector?"]] (buri.pt-none)]
   ["write-byte" kl "rule_write_byte" [[def "write-byte"]] (buri.pt-none)]
   ["read-byte" kl "rule_read_byte" [[def "read-byte"]] (buri.pt-none)]

@@ -1,0 +1,30 @@
+\\ Wave-D primitives lane: native samples (SAMPLED evidence, not proof).
+\\ Run unchanged on both pinned ports:
+\\   shen-scheme eval -l ports/prims2-native-samples.shen     (v0.52 release)
+\\   bin/sbcl/shen eval -l ports/prims2-native-samples.shen   (Shen-CL 4844072d, SBCL 2.6.8)
+\\ Each line prints the value, or [raised Message] when the call raised.
+(define buri.p2-try
+  F -> (trap-error (thaw F) (/. E [raised (error-to-string E)])))
+(define buri.p2-show
+  Label F -> (output "~A => ~S~%" Label (buri.p2-try F)))
+(buri.p2-show "intern 12 integer?" (freeze (integer? (intern "12"))))
+(buri.p2-show "intern 007 integer?" (freeze (integer? (intern "007"))))
+(buri.p2-show "intern 1/2 number?" (freeze (number? (intern "1/2"))))
+(buri.p2-show "intern 7 integer?" (freeze (integer? (intern "7"))))
+(buri.p2-show "intern a#b = intern a_hash1957b" (freeze (= (intern "a#b") (intern "a_hash1957b"))))
+(buri.p2-show "str intern a_hash1957b" (freeze (str (intern "a_hash1957b"))))
+(buri.p2-show "string->n ab" (freeze (string->n "ab")))
+(buri.p2-show "string->n a" (freeze (string->n "a")))
+(buri.p2-show "string->n empty" (freeze (string->n "")))
+(buri.p2-show "n->string 55296 string?" (freeze (string? (n->string 55296))))
+(buri.p2-show "n->string 97" (freeze (n->string 97)))
+(buri.p2-show "n->string -1" (freeze (n->string -1)))
+(buri.p2-show "n->string 1114112" (freeze (n->string 1114112)))
+(buri.p2-show "pos abc 1" (freeze (pos "abc" 1)))
+(buri.p2-show "pos abc 3" (freeze (pos "abc" 3)))
+(buri.p2-show "pos abc -1" (freeze (pos "abc" -1)))
+(buri.p2-show "tlstr abc" (freeze (tlstr "abc")))
+(buri.p2-show "tlstr empty" (freeze (tlstr "")))
+(buri.p2-show "<-address in range" (freeze (<-address (address-> (absvector 2) 1 x) 1)))
+(buri.p2-show "<-address 2 of 2" (freeze (<-address (absvector 2) 2)))
+(buri.p2-show "<-address -1" (freeze (<-address (absvector 2) -1)))
