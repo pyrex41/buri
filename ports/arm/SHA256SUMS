@@ -1,4 +1,4 @@
-bc17c8ea4829e107405d8c566f8a676ecdffe8f763eba420e132406641a13f51  ./README.md
+a4817c540ccd031f523816fcabe7560b3a23e4c43ad7717dcf6438158d72ad52  ./README.md
 110ea86236e72852038303f2ecf192fb7b3bd3cfce4a7d8f9638ab430510fcc5  ./chez/chez1030-buri-arm-add.bin
 54578c54f74a57c2dcf6f636930ccebc549a2f7a8b563a85aa10ecb4dd7176e6  ./chez/chez1030-buri-arm-add.chez-asm
 931188882bd5b93880e3eae5a929c3b71c5fa74ae3a0f9335e309b72cfb2ff41  ./chez/chez1030-buri-arm-add.closure
@@ -11,8 +11,14 @@ b068dd3f3987f21343b2009c3b101e98928033eed862113ba8754b8891f0bb37  ./chez/shen-sc
 a29eab4fb3a36cbcff22f9c7f0960b2cf9d9e1056856a38e5f6f0fd2dec621f1  ./chez/shen-scheme-ta6le-buri-arm-add.relocs
 19511e1acbf34b7986c21bae1ca6e230bac6b70c83ad31ce08c5aa562c5c78e0  ./coq/BuriArmAdds.v
 a1393502ad7b66a63d6b03dcbf4a65976a1ac72cbab75d2d3dddecb30fe288b9  ./coq/BuriArmBridge.v
+437590d5ad2042884e59373c9b84e7c243acdd97b8064b501568b1288a61af62  ./coq/BuriArmBridgeLib.v
 0fbdbe881a78dcb2c05a713d52ad9bcaa8ac8256f558b67308844412633ad638  ./coq/BuriArmBridgeValues.v
+5b983798f1993cbc5920d03473fddbaa0359d9755878cdfdd8555aebcadcbaa5  ./coq/BuriArmBridgeValues2.v
 e769cb236d26ce9d70377d98e08d8245b23cb8f929edfd73e730077e53737585  ./coq/BuriArmDecode.v
+f85ccff00be863ef8eadbe2521845511ac67bdd696a56e47be8e7595e276248d  ./coq/BuriArmFastPath.v
+1236eed78b6dd0ba80b12d1513e0602ea0e52f15b3f94929847af41482e7e320  ./coq/BuriArmFastPathBridge.v
+ba7c58b3a02347b77eebaefdc435103c758f645e9eb50ad01a9ebac1788e32e3  ./coq/BuriArmPC.v
+0ff174a8e84014902e37aac16f6f248f82d21a24f3f156246cf60db801a25411  ./coq/BuriArmSeq.v
 e2e99c7cf0cceb498bc8c7dfa407579a7b089af8102c3a1a74e2fec129b7a032  ./coq/BuriDecodeProbe.v
 176c78d81bc90dfec58fcb0d180fdd8e270ad2c480b91a2b5a251a3caf78bebb  ./coq/build-armv9-coq.sh
 774cfde9551a949d9e5552ab93b37af593643882b354983c0ec43a6e8bdddf7a  ./coq/build-sail-arm-coq.sh
@@ -30,7 +36,7 @@ b30845ecc43ca029898acd03a40251f6bbe31999d6b1a02df884dc5d99551792  ./islaris/buri
 a87510f718c00af7d9caa19d6b8e906529a7a27a2ee6ac4c58ad57bddd3f2fb2  ./islaris/check-islaris-example.sh
 d07d6bc1495d9a9cf38244efdd0529523a9ad3e22b0314838cd9ed258f6b95cf  ./islaris/check-islaris-shen.sh
 4dc687a777ec24c06d2806e76435f4e37992d105106c5df9a56b2309b83026b9  ./islaris/check-islaris.sh
-fba67e0a51ba9e39b0e82fe20b65833dd407344446cb135df98f7ebcf315d65d  ./islaris/el0/STATUS
+bd5d82c32d3c264f1ca810a64298feec7d212ddd2aba1761ad369902a3e683a2  ./islaris/el0/STATUS
 1f8440df0f49098e75c0d1b0667ef52ec5d8e3852cf56a08fb01e3275ac85cd2  ./islaris/el0/a0.isla
 74f28117ee0c44a1a748b83af8f6354f6b316dd4cba18ed2485e975895763dc5  ./islaris/el0/a10.el2-to-el0.diff
 43dbaa3e301e1eb0fae8c42b453d7eb131e809860b6577a812f37409d4136355  ./islaris/el0/a10.isla
@@ -45,6 +51,7 @@ e3c71918a26f10dffc27a8d7ba67dff55ad49025cd25e7d732020fe393431686  ./islaris/el0/
 a4b0fe47930b53743a226e0ab5485fa10d9f3670069913ae16357738e119f9b6  ./islaris/el0/ac.isla
 32f6f8696ff202960fd176d10534604a63296c0c5bb3b23def7680c0960c16a1  ./islaris/etc/aarch64_isla_coq_el0_linux.toml
 35d97eba0aa3c0699b944b02c642dbada4bcefdaa915a0391ebe319cf32aa356  ./islaris/etc/mk-el0-config.sh
+b76fdb148b292b8816ebdf17e46a2917f6f454076519cea29dd5e5eb382295dc  ./islaris/gen-el0-ldur.sh
 dba6d55216b33f81611792c971c66cfb3ea23ae13b2d5e6c1866899c2a6cccbc  ./islaris/gen-el0-traces.sh
 b58805cf4afafd2c8f47cfdbb1c13a1d49a381c3722f3e3b83d93cf1e6e10f39  ./islaris/gen-traces.sh
 3c64d8320119963481e3913d30c706958a5d2cd88f3303e89a1250a45db9c328  ./islaris/instructions/buri_chez_add-isla-e9b5d945/a0.isla

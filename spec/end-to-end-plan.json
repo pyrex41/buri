@@ -933,7 +933,7 @@
         {
           "kind": "research-report",
           "artifact": "docs/ARM-FOUNDATION.md",
-          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin (sections 1-9, Wave A); section 10 records the Wave B proofs below and what they trust; section 11 records the Wave C decode coverage, bridge, EL0 attempt and coqchk. The exit criterion (branch, call, load/store, fault, allocation stub and atomic checked against the selected model) is unmet."
+          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin (sections 1-9, Wave A); section 10 records the Wave B proofs below and what they trust; section 11 records the Wave C decode coverage, bridge, EL0 attempt and coqchk; section 12 records the Wave D sequential semantics, eight model IFFs, the PC step, eight trace-to-model bridges (both directions) and the EL0 ldur retry. The exit criterion (branch, call, load/store, fault, allocation stub and atomic checked against the selected model) is unmet."
         },
         {
           "kind": "byte-capture-and-emulated-run",
@@ -994,6 +994,31 @@
           "kind": "toolchain-build",
           "artifact": "nix/arm/sail-model.nix",
           "claim": "coq-sail 0.19 (by commit) and the sail-arm 7d058164 arm-v9.4-a Coq snapshot (three files by sha256) compiled with the Islaris Coq 8.19.0 + stdpp; armv9.v 7 min, 6.4 GB peak."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmSeq.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B (Coq 8.19.0; not in scripts/prove). Universal and closed under the global context: sexec_sound/sexec_complete prove that the sequential register-record reading sexec of a sail-arm iMon tree is equivalent to coq-sail's own Interface.iTrace_match restricted to pure traces consistent with a single-threaded register file (seq_ok). Defines the semantics the Wave D model theorems are stated in; adds no axiom."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmFastPath.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B. Universal over pc and the register record: for the eight captured Chez fast-path words other than the load (+0x00 cmp, +0x04/+0x10 b.ne, +0x08 orr, +0x0c tst, +0x14 adds, +0x18 b.vs, +0x20 br x10), chez_XXXX_model is an IFF: sexec rs (__DecodeA64 pc w) rs' a <-> rs' = chez_XXXX_final rs /\\ a = tt (the model's own write sequence), under SEE below the decoder guard and, for branches, the stated EL2 configuration el2_cfg (FEAT_AA64EL0 on; VHE, BRBE, SPE off; nRW = 0; EL = 2; TCR_EL2.TBI = 0; both FEAT_PAuth values covered); br also InGuardedPage = false. Left-to-right is the model-side converse (no other behaviour). Each carries exactly the decoder's three Coq-stdlib Reals axioms. The load (+0x1c) is not covered."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmPC.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B. InstructionExecute_pc_part: __InstructionExecute is by conversion a verbatim copy applied to pc_part, the model's PC-advance code after __DecodeExecute; pc_part_not_taken/pc_part_after (closed IFFs): with an A64 encoding the step writes _PC := _PC + 4 when __BranchTaken is false and nothing when it is true; pc_next_bv: the value is the bit-vector sum isla's wrapper writes. The rest of __InstructionExecute (fetch, the __BranchTaken := false write, encoding source, debug/PMU/SPE/single-step) is not proved; the bridges state __BranchTaken = false and A64 as premises."
+        },
+        {
+          "kind": "model-theorem-relating-isla-trace",
+          "artifact": "ports/arm/coq/BuriArmFastPathBridge.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B with Islaris opsem and the Armv9.4 model in one Coq 8.19.0; closed under the global context. For the eight words above and their exact Islaris traces (a0 a4 a8 ac a10 a14 a18 a20, hash-checked), for every model record and isla register map that agree on R0..R30, _PC and PSTATE.NZCV and every memory: the trace has a complete never-blocking seq_step run, and EVERY complete run ends agreeing with chez_XXXX_final followed by the model's PC step (pc_next, or pc_after for branches). Branch traces need the isla-side AssumeReg configuration isla_el2_cfg; b.cond needs __BranchTaken = false; br needs InGuardedPage = false. With the model IFFs this relates all model behaviours to all trace runs in both directions (chez_0014_exact states it for ADDS). The Islaris fast-path theorem still trusts isla for the load at +0x1c, the rest of __InstructionExecute, and the stated configuration premises. Mutants rejected: ORR final with AND; a8 trace with bvand for bvor."
+        },
+        {
+          "kind": "isla-trace-unchecked",
+          "artifact": "ports/arm/islaris/el0/STATUS",
+          "claim": "Wave D EL0 ldur retry with Islaris's own R20 reset-constraint under flock and a 7 GiB cap: resource-exhausted (SIGSEGV at the cap after 38 s, measured peak RSS 7,100,404 kB; with -T 1, SIGABRT at the cap after 83 s, peak 7,148,272 kB), no trace. Unchecked isla output, not a theorem; no EL0 proof exists. An EL0 statement needs the stated premise ra[63:56] = 0 (top-byte-ignore, TCR_EL1.TBI0 = 1)."
         }
       ],
       "acceptance": "exact\ninstructions are checked against the selected ISA model; no disassembly-text or\ntoy-ISA agreement is substituted. Tool compatibility and missing mechanisms are\nresearch deliverables, not assumed available integrations.",

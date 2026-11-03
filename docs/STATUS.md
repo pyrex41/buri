@@ -1191,3 +1191,48 @@ Details: [CHEZ-NANOPASS](CHEZ-NANOPASS.md) sections 8-11. One function
   statement, not by proof. The `main` clause's `$set-top-level-value!`
   expansion is unvalidated.
 * Five proof mutations join the gate (132).
+
+## ARM fast path: eight words bridged both ways, the PC step (E2E-20, Wave D, in progress)
+
+Details are in [ARM-FOUNDATION](ARM-FOUNDATION.md) section 12. Nothing here
+is in `scripts/prove`. Everything is checked by the opt-in
+`scripts/check-arm.sh` Part B (Coq 8.19.0 with Islaris and the sail-arm
+7d058164 Armv9.4 model), and the audit count does not change.
+
+* **Sequential semantics** (`BuriArmSeq.v`). This is a universal theorem,
+  closed under the global context. It reads the model's `iMon` trees against
+  its own register record, and proves that reading equivalent to coq-sail's
+  `iTrace_match` over a single-threaded register file.
+* **Model IFFs on eight words** (`BuriArmFastPath.v`). These are universal
+  over `pc` and the register record. For `cmp`, both `b.ne`, `orr`, `tst`,
+  `adds`, `b.vs` and `br x10`, the model's decode and execute have exactly
+  one sequential behaviour, given as the model's own write sequence. The
+  premises are SEE below the guard, and for the branches the stated EL2
+  configuration. Each IFF carries only the decoder's three Coq-stdlib Reals
+  axioms.
+* **PC step** (`BuriArmPC.v`). `__InstructionExecute` contains, by
+  conversion, the model's PC advance. Its behaviour is _PC := _PC + 4 when
+  __BranchTaken is false, and no change when it is true. The rest of
+  `__InstructionExecute` is not proved.
+* **Bridges** (`BuriArmFastPathBridge.v`). These are closed under the global
+  context. For each of the eight words and its exact Islaris trace, and for
+  any model and isla states that agree on R0..R30, _PC and PSTATE.NZCV:
+  * the trace has a complete run;
+  * every complete run agrees with the model's unique result after the
+    model's PC step.
+
+  This is both directions of the bridge. `chez_0014_exact` states the ADDS
+  converse as one theorem. The branch traces' `AssumeReg` configuration and
+  __BranchTaken = false are stated premises.
+* **EL0 `ldur`** is still resource-exhausted. It was retried with Islaris's
+  X20 constraint. Both runs died at the 7 GiB cap: the default-threads run at a
+  peak RSS of 7,100,404 kB, and the `-T 1` run at 7,148,272 kB. So there is no
+  trace. The top-byte-ignore premise for an EL0
+  statement, ra[63:56] = 0, is recorded but not used, because no EL0 proof
+  exists.
+
+Open: the load at +0x1c (its trace and its model execute path through
+translation and `MemRead`) and the store; the rest of
+`__InstructionExecute`; an EL0 trace and proof; the allocation stub, an
+atomic, and the SBCL fast path. The Islaris theorem still trusts isla for
+the load and for the configuration premises. E2E-20 is not complete.
