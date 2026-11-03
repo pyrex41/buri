@@ -54,3 +54,15 @@ regenerates and diffs.
     --core …/lib/sbcl/sbcl.core --noinform --non-interactive --no-sysinit \
     --no-userinit --load sbcl-layout.lisp
   ```
+* `arm64-type-vops.lisp`, `arm64-pred.lisp`, `generic-type-vops.lisp`,
+  `type-vop-macros.lisp` and `genesis.lisp` are `src/compiler/arm64/type-vops.lisp`,
+  `src/compiler/arm64/pred.lisp`, `src/compiler/generic/type-vops.lisp`,
+  `src/compiler/type-vop-macros.lisp` and `src/compiler/generic/genesis.lisp`
+  from the same tarball, unchanged.
+* `sbcl-type-tests.lisp` and `sbcl-2.6.8-arm64-type-tests.capture` are an
+  **image capture** of the arm64 code the pinned image emits for
+  `(lambda (x) (op x))` for each host operation of `CLContracts.cl_host_ops`:
+  the raw instruction words read from the code objects, with the disassembly
+  as comments. The capture was made with the same command as above, loading
+  `sbcl-type-tests.lisp`. `scripts/package-sbcl-type-tests.py` packages it
+  into `rocq/SbclTypeTests.v`.

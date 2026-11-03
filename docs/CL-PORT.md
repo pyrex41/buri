@@ -172,7 +172,12 @@ Premises, all explicit in the statements:
   and a kernel relation. `discharged_optimise_sound` and
   `discharged_emit_if_refines` are the captured lowering theorems with only
   these hypotheses left:
-  - `cl_host_ops` (16 individually named SBCL operation contracts, E2E-21/24);
+  - `cl_host_ops` (16 individually named SBCL operation contracts, E2E-21/24).
+    Wave D (`rocq/SbclHostOps.v`, [REPRESENTATION](REPRESENTATION.md) 5)
+    discharges the ten E2E-21 fields at the SBCL 2.6.8 arm64 representation
+    level against the captured inline code; `sbcl_optimise_sound_e24` and
+    `sbcl_emit_if_refines_e24` leave only `cl_e2e24_ops` (STRING=, EQUAL x2,
+    EQL, = x2, all full calls) and `cl_kernel_ops`;
   - `cl_kernel_ops` (compiled kernel `not`, `empty?`, `fail`, E2E-16);
   - `qsafe`.
 
@@ -213,8 +218,10 @@ Premises, all explicit in the statements:
 Cover `emit-cond-clauses` (which also calls the optimizer). The named record
 is now narrowed and discharged from the captured bodies down to
 `cl_host_ops`/`cl_kernel_ops`, and `qsafe` is exactly the safe domain of the
-`EQ` rewrite (see [PRIMITIVES](PRIMITIVES.md)). Still to do: prove those host
-contracts (E2E-21/24) and the compiled kernel functions (E2E-16), and relate
+`EQ` rewrite (see [PRIMITIVES](PRIMITIVES.md)). Still to do: prove the six E2E-24 host
+contracts (the ten E2E-21 ones are proved at the representation level,
+relative to the A64 transcription and the untyped inline compile,
+OB-SBCL-INLINE-TESTS) and the compiled kernel functions (E2E-16), and relate
 `compile-expression` and `bind-accessor-chains` to the KLambda semantics, and
 share a language-level Boolean contract with the Scheme port while retaining
 separate host syntax and semantics. Coalton is neither a prerequisite nor proof

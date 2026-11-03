@@ -50,23 +50,25 @@
    ["CLLowering.primitive_contracts.pc_numeric" "shen-cl.absequal + shen-cl.numeric-equal bodies" "E2E-17" "reduced" "captured_contracts: both captured bodies reach the same host = for every value and numeric literal (abs_numeric_left/right, numeric_equal_value), from cl_host_ops."]
    ["CLLowering.primitive_contracts.pc_symbol_eq" "shen-cl.absequal body + sbcl:EQ" "E2E-17" "reduced" "captured_contracts: captured absequal against a symbol or NIL (abs_symbolic_left/right) for every value, from cl_host_ops.host_eq."]]
   (append
+  (append
+  (map (/. R [(cn "CLContracts.cl_host_ops." (hd R)) (hd (tl R)) (hd (tl (tl R))) "bridged" (hd (tl (tl (tl R))))])
+   [["host_eq" "sbcl:EQ" "E2E-21" "Every value pair: T only for identical values; T whenever one side is a symbol or NIL and they are equal. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_typep_fixnum" "sbcl:TYPEP" "E2E-21" "(TYPEP a 'FIXNUM) is a host Boolean; a fixnum is a number and INTEGERP. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_integerp" "sbcl:INTEGERP" "E2E-21" "A host Boolean; only numbers are integers. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_numberp" "sbcl:NUMBERP" "E2E-21" "Exactly the VNum values (VObj host objects are not numbers). Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_consp" "sbcl:CONSP" "E2E-21" "Exactly the conses. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_stringp" "sbcl:STRINGP" "E2E-21" "Exactly the strings. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_arrayp" "sbcl:ARRAYP" "E2E-21" "Strings are arrays; only strings and host objects can be. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_symbolp" "sbcl:SYMBOLP" "E2E-21" "Exactly the symbols and NIL. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_not" "sbcl:NOT" "E2E-21" "T exactly for NIL. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]
+    ["host_null" "sbcl:NULL" "E2E-21" "T exactly for NIL. Bridged at the representation level (SbclHostOps.e2e21_machine; eq_machine for EQ): the captured SBCL 2.6.8 arm64 inline code, untyped variant, on values represented in a well-formed snapshot."]])
   (map (/. R [(cn "CLContracts.cl_host_ops." (hd R)) (hd (tl R)) (hd (tl (tl R))) "host-contract" (hd (tl (tl (tl R))))])
-   [["host_eq" "sbcl:EQ" "E2E-21" "Every value pair: T only for identical values; T whenever one side is a symbol or NIL and they are equal."]
-    ["host_typep_fixnum" "sbcl:TYPEP" "E2E-21" "(TYPEP a 'FIXNUM) is a host Boolean; a fixnum is a number and INTEGERP."]
-    ["host_integerp" "sbcl:INTEGERP" "E2E-21" "A host Boolean; only numbers are integers."]
-    ["host_numberp" "sbcl:NUMBERP" "E2E-21" "Exactly the VNum values (VObj host objects are not numbers)."]
-    ["host_consp" "sbcl:CONSP" "E2E-21" "Exactly the conses."]
-    ["host_stringp" "sbcl:STRINGP" "E2E-21" "Exactly the strings."]
-    ["host_arrayp" "sbcl:ARRAYP" "E2E-21" "Strings are arrays; only strings and host objects can be."]
-    ["host_symbolp" "sbcl:SYMBOLP" "E2E-21" "Exactly the symbols and NIL."]
-    ["host_string_eq" "sbcl:STRING=" "E2E-24" "Character-wise string equality."]
-    ["host_not" "sbcl:NOT" "E2E-21" "T exactly for NIL."]
-    ["host_null" "sbcl:NULL" "E2E-21" "T exactly for NIL."]
+   [["host_string_eq" "sbcl:STRING=" "E2E-24" "Character-wise string equality."]
     ["host_equal_string" "sbcl:EQUAL" "E2E-24" "EQUAL with a string operand is string equality (either order)."]
     ["host_equal_object" "sbcl:EQUAL" "E2E-24" "EQUAL of a non-array host object with a non-object is NIL."]
     ["host_eql_integer" "sbcl:EQL" "E2E-24" "EQL and = agree on integers."]
     ["host_num_eq_sym" "sbcl:=" "E2E-24" "= is symmetric on numbers (including any raised condition)."]
-    ["host_num_eq_refl" "sbcl:=" "E2E-24" "= is reflexive on numeric literals; a VNum spelling never denotes NaN."]])
+    ["host_num_eq_refl" "sbcl:=" "E2E-24" "= is reflexive on numeric literals; a VNum spelling never denotes NaN."]]))
   (append
   [["CLContracts.cl_kernel_ops.kernel_not" "kernel not (compiled)" "E2E-16" "assumed" "Shen-CL's compiled kernel not: true/false negation, Boolean error otherwise."]
    ["CLContracts.cl_kernel_ops.kernel_empty" "kernel empty? (compiled)" "E2E-16" "assumed" "Shen-CL's compiled kernel empty?: true exactly for (), state unchanged."]

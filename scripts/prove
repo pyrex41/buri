@@ -156,6 +156,10 @@ rm -rf _build/repr; mkdir -p _build/repr
 python3 -I scripts/package-repr-layout.py _build/repr
 diff -u rocq/ChezLayout.v _build/repr/ChezLayout.v
 diff -u rocq/SbclLayout.v _build/repr/SbclLayout.v
+# E2E-21 (SBCL native): captured arm64 type-test words and source type codes
+# (packaging only; Rocq decodes, runs and checks them in rocq/Sbcl*.v).
+python3 -I scripts/package-sbcl-type-tests.py _build/repr
+diff -u rocq/SbclTypeTests.v _build/repr/SbclTypeTests.v
 # E2E-22: Chez 10.3.0 nanopass grammar source and captured tarm64le IR trace
 # (packaging only; Rocq reads, resolves and checks them in rocq/ChezNp*.v).
 rm -f _build/ChezNpLanguagesInput.v _build/ChezNpSyntax.v _build/chez-np-languages.json _build/ChezNpCaptureInput.v

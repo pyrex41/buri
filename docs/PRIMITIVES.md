@@ -59,7 +59,7 @@ a host operation, an owner and a status:
 | `SchemeWrappers.chez_equality_ops`, `chez_assert_ops` | 11 | premises of proved wrappers |
 | `CLWrappers.sbcl_equality_ops`, `sbcl_arith_ops` | 25 | premises of proved wrappers |
 | `CLLowering.primitive_contracts` (17 fields, narrowed) | 17 | 8 `discharged` (captured bodies alone), 9 `reduced` to the named contracts below |
-| `CLContracts.cl_host_ops` | 16 | SBCL host-op premises (E2E-21/24) |
+| `CLContracts.cl_host_ops` | 16 | 10 E2E-21 fields `bridged` (SbclHostOps: captured SBCL 2.6.8 arm64 inline code on represented values); 6 E2E-24 premises |
 | `CLContracts.cl_kernel_ops` | 3 | compiled kernel `not`, `empty?`, `fail` (E2E-16), assumed |
 | `CLContracts.cl_step_ops` | 3 | SBCL `TYPEP`, `1+`, `1-` premises |
 | `StockDivisionGeneral.operation` (divide, classify, round) | 3 | premises |
@@ -253,7 +253,10 @@ for unmodeled forms, and every `h`, `kern` satisfying the named records:
   `optimise-boolean-check` and `emit-if` theorems in `captured_prim`. Each is
   conjoined with `cl_wrappers_admitted`, so the bodies are the admitted
   decoding of the pinned bytes. The only hypotheses left are `cl_host_ops`,
-  `cl_kernel_ops` and the theorem's own `qsafe`.
+  `cl_kernel_ops` and the theorem's own `qsafe`. `SbclHostOps.sbcl_optimise_sound_e24`
+  and `sbcl_emit_if_refines_e24` replace the ten E2E-21 fields of
+  `cl_host_ops` by the representation-level theorems, leaving `cl_e2e24_ops`
+  and `cl_kernel_ops` ([REPRESENTATION](REPRESENTATION.md) 5.5).
 - `increment_int`, `decrement_int`, `step_refines_rules`: the captured
   `shen-cl.increment`/`decrement`, now packaged and admitted, return z+1 and
   z-1 for every integer. These are `rule_arith`'s answers for the

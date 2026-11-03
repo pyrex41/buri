@@ -1022,3 +1022,37 @@ E2E07-NATIVE (Chez-to-Native simulation), E2E07-ADMISSION (admission
 predicates versus the subset). This is about the reference evaluator, not
 Shen-Scheme. Twenty additional statements join the assumption audit
 (`Audit_E2e07b.count` 20); six proof mutations join the gate (107).
+
+## E2E-21 SBCL arm64 representation and the E2E-21 host operations (Wave D)
+
+SBCL 2.6.8 arm64 now has representation relations, from the pinned layout
+(`rocq/SbclLayout.v`): `SbclValues.kv` for KLValue values (one memory
+snapshot, vector locations, an interned-symbol table, meaning parameters for
+procedures, streams and conditions) and `SbclHostOps.cv` for the CL-model
+values of CLLowering. NIL's list/symbol duality is taken from the pinned
+genesis.lisp: Shen `[]` is NIL, SYMBOLP is true on it and on both Shen
+booleans, and Shen `false` is CL true; the word of a Shen boolean also
+represents the symbol of its name, so the KLValue relation is not a function
+on words (the CL-model relation is, `cv_functional`).
+
+The ten E2E-21 fields of `CLContracts.cl_host_ops` (EQ, TYPEP FIXNUM,
+INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, NOT, NULL) are inline
+type tests in the pinned image. Their raw instruction words, compiled for an
+untyped argument and read from the code objects under qemu-aarch64, are an
+image capture (`ports/repr/sbcl/sbcl-2.6.8-arm64-type-tests.capture`,
+packaged into `rocq/SbclTypeTests.v`). Rocq decodes them with a small A64
+transcription (`rocq/SbclA64.v`, a trust boundary) and proves, universally
+over registers and memory, the word-level test each window decides
+(`SbclTests.*_window`); ground checks tie the windows to the standard entry
+and return frames, show STRING=, EQUAL, EQL and = are full calls, and match
+the header tests against the define-type-vop type codes of the pinned
+sources. `SbclHostOps.e2e21_machine`/`eq_machine` then show the code returns
+exactly the contract answers on every represented value, and
+`sbcl_optimise_sound_e24`/`sbcl_emit_if_refines_e24` restate the CL lowering
+theorems with only the six E2E-24 contracts (`cl_e2e24_ops`) and
+`cl_kernel_ops` left. Not covered: type-specialised variants and the Shen-CL
+call sites (OB-SBCL-INLINE-TESTS), frames, GC, symbol names, Shen-CL staying
+inside the relation. OB-CL-HOST-OPS is narrowed to the E2E-24 fields;
+OB-NATIVE-REPR-SBCL is partial. Seventy-two statements join the assumption
+audit (`Audit_Sbclnative.count` 72); five proof mutations join the gate (132).
+E2E-21 stays in progress.
