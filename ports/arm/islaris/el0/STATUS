@@ -20,3 +20,10 @@
                      load goes through the stage-1 translation-table walk over symbolic
                      memory.  Not retried (shared-machine memory policy).
 0x20 40011fd6 br x10 trace; differs from EL2 (a20.el2-to-el0.diff): same TBI split as 0x04
+# Wave D retry of 0x1c (ARM-FOUNDATION 12.5): same isla, IR and EL0 config, plus Islaris's own
+# dump constraint as --reset-constraint '= (bvand R20 0xfff0000000000007) 0x0000000000000000',
+# under flock /tmp/buri-heavy.lock and prlimit --as=7 GiB (ports/arm/islaris/gen-el0-ldur.sh).
+0x1c 8a0240f8 ldur   NO TRACE: resource-exhausted again.  Default threads: SIGSEGV (rc 139) at the
+                     7 GiB address-space cap after 38 s, measured peak RSS 7100404 kB.
+                     -T 1 (one worker thread): SIGABRT (rc 134) at the cap after 83 s of run
+                     time, measured peak RSS 7148272 kB.  No trace from either run.

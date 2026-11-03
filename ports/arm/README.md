@@ -179,3 +179,20 @@ loads Islaris and the sail-arm model, built with
   resource-exhausted `ldur`. The `*.el2-to-el0.diff` files show what changes
   for the branches. These traces are unchecked isla output.
 * `scripts/sha256sums.py` regenerates `SHA256SUMS`.
+
+## Wave D (`coq/BuriArmSeq.v`, `BuriArmFastPath.v`, `BuriArmPC.v`, `BuriArmBridgeLib.v`, `BuriArmBridgeValues2.v`, `BuriArmFastPathBridge.v`)
+
+These are checked by `scripts/check-arm.sh` Part B in the same Coq 8.19.0 as
+Wave C (ARM-FOUNDATION section 12). The run takes about 30 min at 4.0 GB peak.
+
+* `BuriArmSeq.v` reads the model sequentially, proved equivalent to coq-sail's
+  `iTrace_match` over a single-threaded register file.
+* `BuriArmFastPath.v` holds exact IFFs for the model's behaviour on eight
+  fast-path words (every word but the load).
+* `BuriArmPC.v` holds the model's PC step from `__InstructionExecute`.
+* `BuriArmFastPathBridge.v` bridges each of those eight words to its exact
+  Islaris trace in both directions (every model behaviour, every complete
+  trace run). The traces are hash-checked.
+* `islaris/gen-el0-ldur.sh` is the Wave D EL0 `ldur` retry. It adds
+  Islaris's own X20 constraint. The run was resource-exhausted; see
+  `islaris/el0/STATUS`.

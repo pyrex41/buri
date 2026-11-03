@@ -704,3 +704,191 @@ store and a fault-path trap; one bridge word; `coqchk`. Still missing:
 * the other eight bridge words and the `__InstructionExecute` PC step;
 * any EL0/MMU-on proof;
 * the SBCL fast path in Islaris (not started).
+
+## 12. Wave D: eight bridged fast-path words, the PC step, the converse, EL0 `ldur`
+
+Branch `wave-d/armbridge2` from `0181dc0`. As in section 11, every result is
+checked only by the opt-in `scripts/check-arm.sh` Part B (Coq 8.19.0,
+`nix-build nix/arm/sail-model.nix -A env`). None is in `scripts/prove`, so
+the repository audit count does not change. Every heavy job ran under a
+7 GiB address-space cap. The new Part B work takes about 30 minutes at
+4.0 GB peak (the bridge file alone is 17 minutes).
+
+### 12.1 A sequential reading of the model, proved equal to coq-sail's (`BuriArmSeq.v`)
+
+coq-sail gives an instruction its meaning with `Interface.iTrace_match`. In a
+trace, a register read may return any value. `seq_ok rs evs rs'` reads a
+trace against the model's own register record `regstate`: every read returns
+the value last written, and every write updates the record.
+`sexec rs m rs' a` is the same relation, stated as an inductive over the
+`iMon` tree. Two closed theorems connect them:
+* `sexec_sound`: every `sexec` run is a pure trace (no `Choose` events)
+  that `iTrace_match` accepts and that is `seq_ok`;
+* `sexec_complete`: the converse.
+
+So `sexec` is coq-sail's semantics restricted only by the premise of a
+single-threaded register file. Memory, barrier, exception and other events
+pass through with any answer, as they do in `iTrace_match`. The inversion
+lemma `sexec_invert` is computed from the head of the tree, so no
+dependent-equality axiom is needed.
+
+The tactics `sx_fwd` and `sx_bwd` only build or take apart derivations, and
+the kernel checks every step. A Boolean the tree is stuck on must be decided
+by `vm_compute` (when it is closed) or by a premise in the context. It is
+never assumed. One finding: stdpp declares all its bit-vector operations
+`Opaque`, so head reduction could not evaluate the model's closed bit
+comparisons. The proof files make those operations `Transparent` locally;
+no definition changes.
+
+### 12.2 Exact model behaviour on eight words (`BuriArmFastPath.v`)
+
+For each word except the load, `chez_XXXX_model` is an IFF, universal over
+`pc` and the register record:
+
+    sexec rs (__DecodeA64 pc w) rs' a  <->  rs' = chez_XXXX_final rs /\ a = tt
+
+The final state is the model's own register writes, in order.
+
+| Word | Premises | Final state |
+|---|---|---|
+| +0x00 `cmp` | SEE < 21 | SEE := 21; PSTATE.N, Z, C, V from `AddWithCarry X23 (NOT 2) 1` |
+| +0x08 `orr` | SEE < 55 | SEE := 55; X30 := X0 OR X1 |
+| +0x0c `tst` | SEE < 41 | SEE := 41; NZCV := X30&7 [63], IsZeroBit, 0, 0 |
+| +0x14 `adds` | SEE < 15 | SEE := 15; NZCV; X23 := `AddWithCarry` sum |
+| +0x04 / +0x10 `b.ne` | SEE < 69, `el2_cfg` | SEE := 69; if Z = 0: Branchtypetaken := DIR, _PC := (PC + off)[63:0], __BranchTaken := true |
+| +0x18 `b.vs` | SEE < 69, `el2_cfg` | the same when V = 1 |
+| +0x20 `br x10` | SEE < 92, `el2_cfg`, InGuardedPage = false | SEE := 92; BTypeNext := 0b01; Branchtypetaken := INDIR; _PC := X10; __BranchTaken := true |
+
+`el2_cfg` states the configuration that Islaris's EL2 trace was generated
+under, as premises on the model's registers:
+* FEAT_AA64EL0 is implemented;
+* FEAT_VHE, FEAT_BRBE and FEAT_SPE are not;
+* PSTATE.nRW = 0 and PSTATE.EL = EL2;
+* TCR_EL2.TBI = 0.
+
+These are exactly the guards that `BranchTo`, `AArch64_BranchAddr`,
+`EffectiveTBI` and `HaveAArch64` evaluate on this path, found by running the
+model. FEAT_PAuth is not a premise: both values are proved, and with PAuth the
+model also reads TCR_EL2.TBID. The left-to-right direction of each IFF is the
+converse for the model: it has no other sequential behaviour. All eight
+theorems carry exactly the decoder's three Coq-stdlib Reals axioms, and the
+helper lemmas are closed.
+
+### 12.3 The PC step (`BuriArmPC.v`)
+
+* `InstructionExecute_pc_part` (conversion): `__InstructionExecute` equals a
+  verbatim copy of its body, `InstructionExecute_with pc_part`, where
+  `pc_part` is the model's own code after `__DecodeExecute`, SPE
+  post-execution, the InGuardedPage reset and the BTYPE update:
+  `if not __BranchTaken then _PC := (_PC + ThisInstrLength/8)[63:0]`.
+* `pc_part_not_taken` and `pc_part_after` (IFFs) say what that step does. If
+  the encoding is A64 and __BranchTaken is false, it writes _PC + 4 and
+  nothing else. If __BranchTaken is true, it changes nothing.
+* `pc_next_bv` says the value written is the bit-vector sum `_PC + 4`, which
+  is what isla's `isla_footprint_no_init` wrapper writes.
+
+Not proved: the other parts of `__InstructionExecute`. These are the fetch
+(`AArch64_MemSingle_read`), the write of __BranchTaken := false before
+decoding, the source of `__ThisInstrEnc = __A64`, and the debug, PMU, SPE and
+single-step steps. The bridges take __BranchTaken = false and the A64
+encoding as stated premises.
+
+### 12.4 Trace-to-model bridges (`BuriArmFastPathBridge.v`)
+
+`agree rs regs` relates the model's record to an isla register map on the
+registers the traces touch:
+* the general-purpose registers R0..R30 (Sail `R0` is isla `"R0"`);
+* `_PC`;
+* PSTATE.N, Z, C and V (an isla struct whose first four fields are N, Z, C, V;
+  the other fields are unconstrained).
+
+For each of the eight words, `chez_XXXX_bridge` uses the exact trace file
+that `buri_chez_add_fast_path` consumes (all eight are now hash-checked). It
+says that for every agreeing `rs` and `regs`, and every memory:
+1. the trace has a complete, never-blocking run under Islaris's `seq_step`;
+2. **every** such run ends in a map that agrees with the model's final state
+   followed by the model's PC step: `pc_next` for `cmp`, `orr`, `tst` and
+   `adds`, and `pc_after` for the branches.
+
+The "every run" half is proved with `mrun_invert`, an inversion principle for
+Islaris's `seq_step` computed from the head of the trace. It goes through
+`tcases`. A wrong branch dies at its `Assert` (Islaris then sets
+`seq_nb_state`), and DeclareConst values are forced by the following
+ReadReg.
+
+Together with `chez_XXXX_model`, this relates **all** model behaviours to
+**all** complete trace runs, in both directions, on the agreed registers.
+`chez_0014_exact` states this for ADDS as one theorem.
+
+Premises outside `agree`:
+* For the branch traces, `isla_el2_cfg regs`. These are the values the
+  traces' `AssumeReg` events need: HCR_EL2 = 0x80000000, the four
+  `CFG_ID_AA64PFR0_EL1_EL*` pseudo-registers = 1 (isla-only, with no
+  counterpart in the v9.4 model), TCR_EL2 = 0, SCR_EL3 = 0x501,
+  PSTATE.EL = 2 and PSTATE.nRW = 0.
+* For `br`, InGuardedPage = false on the isla side.
+
+Bit-level agreement for `cmp` and `tst` (the subtract-with-carry flags at 128
+bits, and the ANDS flags) is in the closed lemmas of
+`BuriArmBridgeValues2.v`. All bridge theorems are closed under the global
+context. `chez_0014_exact` carries the decoder's Reals axioms.
+
+Mutants checked by `check-arm.sh`:
+* the ORR model final state computed with AND breaks `chez_0008_model`;
+* the `a8` trace with `bvor` replaced by `bvand` breaks `chez_0008_bridge`.
+
+The Wave C mutants (the b.eq decode and the bvxor `a14` trace) are kept.
+
+**What the Islaris fast-path theorem still trusts isla for.** Eight of nine
+words are now bridged, both ways, to the Armv9.4 model under the stated
+premises. The remaining trust is:
+1. The load at +0x1c. Its isla trace `a1c.v` is not bridged, and its model
+   execute path is not evaluated: `sx_fwd` stops at `SecurityStateAtEL`
+   inside address translation, on FEAT_RME. Beyond that lie translation with
+   the MMU off, alignment and tag checks, and an `Interface.MemRead` outcome
+   whose answer would have to be related to Islaris's `seq_mem`.
+2. The parts of `__InstructionExecute` other than the PC step (12.3).
+3. The premises' link to the real machine: the EL2 configuration, the
+   four isla-only CFG pseudo-registers, the single-threaded register file,
+   and that isla's initial-register `AssumeReg` set is the configuration the
+   model premises describe. These are stated premises, not consequences.
+4. Islaris's adequacy (its own theorem) and its trace semantics `seq_step`,
+   which define what "a run of the trace" means.
+
+The trace-generation completeness direction is not needed for these eight
+words: every model behaviour is matched by a trace run and vice versa, as
+proved. For the load it is still trusted.
+
+### 12.5 EL0 `ldur`: still resource-exhausted
+
+Islaris generated its EL2 `ldur` trace with a dump constraint on X20,
+`(bvand R20 0xfff0000000000007) = 0`. Wave C's EL0 run omitted it. Wave D
+retried with isla b8e614bd, the EL0 config (section 11.4), `-x -i 8a0240f8`
+and `--reset-constraint '= (bvand R20 0xfff0000000000007) 0x0000000000000000'`
+(the frontend's own mechanism), under `flock` and a 7 GiB address-space cap:
+* default threads: **resource-exhausted**. The run died with SIGSEGV after
+  38 s at the cap, with a measured peak RSS of 7,100,404 kB. No trace.
+* `-T 1` (one worker): also **resource-exhausted**. The run died with SIGABRT
+  after 83 s at the cap, with a measured peak RSS of 7,148,272 kB. No trace.
+
+With TTBR0_EL1 and the descriptors unconstrained, the walk still branches
+over symbolic memory. A bounded footprint needs concrete page tables
+(`--armv8-page-tables` with the litmus setup language, and
+`page_table_base` in the isla config) or Islaris-side translation, as section
+11.4 said.
+
+The top-byte-ignore premise for an EL0 statement is recorded but not proved.
+At EL0 with TCR_EL1.TBI0 = 1, the `b.ne`, `b.vs` and `br x10` traces split on
+bit 55 of the target, and write `0x00:target[55:0]`. So an EL0 fast-path
+statement needs the premise that the return address `ra` (X10 at `br`) has a
+zero top byte (`ra[63:56] = 0`). Under that premise, the TBI-cleared PC
+equals `ra`. No EL0 Islaris proof exists, because there is no `ldur` trace.
+
+### 12.6 What remains open for E2E-20
+
+* The load (+0x1c) bridge and model execute path, and the store.
+* The rest of `__InstructionExecute`.
+* An EL0 trace for `ldur`, and an EL0 proof.
+* The allocation stub, an atomic, and the SBCL fast path.
+
+The exit criterion is still unmet.
