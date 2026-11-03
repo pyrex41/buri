@@ -209,14 +209,55 @@
       "id": "E2E-08",
       "title": "Specify and prove the application contract logic.",
       "lane": "shared-shen-semantics",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": true,
       "depends_on": [
         "E2E-04",
         "E2E-05",
         "E2E-06"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractLogic.v",
+          "claim": "soundness: every rule of the calculus (deriv/dargs/appj) is sound in the Partial, Total and Always I modes under policy_ok and context validity; rec_partial (step index) and rec_total (explicit nat measure); total_meaning/partial_meaning give the meaning in KLMetatheory maximal behaviors (terminating, diverging, reacting, going wrong; resource failure only as ResourceOut within the policy); total_run/partial_run in KLMetatheory.run"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractPrims.v",
+          "claim": "prim_spec_valid/io_spec_valid: primitive call contracts proved, host contracts stay premises; write_byte_visible: failed and partial writes are visible; if_nonbool_premise_needed and unmeasured_recursion_unsound: dropping a premise is unsound"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractExample.v",
+          "claim": "recursive higher-order map (the translated klambda.shen definition) with a total contract validated by rec_total; main_mut with a mutable global counter: every behavior terminates with the mapped list paired with the counter equal to the list length, or an admitted resource failure"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractTransport.v",
+          "claim": "the pure instance transported through klambda_refines_ext and klambda_complete: every returned value of the captured buri.eval is budget exhaustion or the doubled list, and beyond a budget bound it is the doubled list (Native model; E2E07-NATIVE open)"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractCert.v",
+          "claim": "certificate grammar BURI/KL-CONTRACT-1 and checker: acceptance binds theory, program fingerprint and evaluator, declares every host premise, carries measures in total certificates, and fits every skeleton to the program syntax"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ContractCertExample.v",
+          "claim": "the example certificate is accepted and stale, undeclared, unmeasured and misfitted mutants are rejected (single computed checker runs)"
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "tests/contracts.shen",
+          "claim": "shen/contract-cert.shen gives the same verdicts and fingerprints on 19 cases; the Shen-checker refinement is open (OB-CONTRACT-CERT-SHEN)"
+        },
+        {
+          "kind": "open-obligation",
+          "artifact": "docs/CONTRACT-LOGIC.md",
+          "claim": "OB-CONTRACT-RULES-COVERAGE, OB-CONTRACT-CERT-SEM, OB-CONTRACT-CERT-SHEN and mutable-state transport (OB-CONTRACT-TRANSPORT) remain open"
+        }
+      ],
       "acceptance": "checked\nderivability entails the stated semantic property under exactly the recorded\npremises. This does not assert a terminating decision procedure for validity.",
       "details": "docs/END-TO-END-PLAN.md"
     },

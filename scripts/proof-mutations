@@ -134,3 +134,14 @@ for name in $(python3 tests/mutate-chez-np.py); do
   grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# E2E-08 contract-logic mutants: a dropped rule premise, an unmeasured total
+# recursion, a weakened currying or resource premise, a transported claim
+# without budget exhaustion, a checker without its measure test and a hidden
+# short write must each be refused by Rocq.
+for name in $(python3 tests/mutate-contracts.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done

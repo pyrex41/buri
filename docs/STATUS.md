@@ -1022,3 +1022,48 @@ E2E07-NATIVE (Chez-to-Native simulation), E2E07-ADMISSION (admission
 predicates versus the subset). This is about the reference evaluator, not
 Shen-Scheme. Twenty additional statements join the assumption audit
 (`Audit_E2e07b.count` 20); six proof mutations join the gate (107).
+
+## Application contract logic BURI/KL-CONTRACT-1 (E2E-08, Wave D, in progress)
+
+New: a contract calculus over the formal KLambda semantics
+([CONTRACT-LOGIC](CONTRACT-LOGIC.md)). There are three distinct judgments:
+Partial (step-indexed safety), Total (every path terminates) and Always I
+(every emitted event satisfies I). Assertions cover values, stores and local
+IO traces in the Observation vocabulary. Exceptions are postconditions.
+Resource failure is admitted only as `ResourceOut` within a recorded policy
+that covers the profile's limits. Heap framing uses explicit footprints.
+Primitive call contracts are proved; host contracts are named premises.
+
+Universal, axiom-free (`rocq/Audit_Contracts.v`, 59 lines, 47 universal):
+
+* `soundness` (every rule), `rec_partial`, and `rec_total` (explicit nat
+  measure).
+* `total_meaning` and `partial_meaning` (KLMetatheory maximal behaviors under
+  every answering environment, with divergence, reaction and going wrong
+  distinguished), `total_run` and `partial_run`.
+* `prim_spec_valid`, `io_spec_valid` and `write_byte_visible`.
+* Refutations of dropped premises: `if_nonbool_premise_needed` and
+  `unmeasured_recursion_unsound`.
+* A recursive higher-order `map` with a mutable global counter
+  (`main_mut_behaviors`). Its pure instance is transported to the captured
+  `shen/klambda.shen` verdicts in the Native model (`contract_verdict_sound`,
+  `contract_verdict_exists`).
+* Certificate checker theorems (`check_identity`, `check_hyps_declared`,
+  `check_total_measures`, `check_shapes`, `fits_rule_shape`, stale-identity
+  rejections).
+
+Ground (12 lines): the example certificate is accepted, and its mutants are
+rejected (`ContractCertExample`). Sampled: `tests/contracts.shen` (the Shen
+checker `shen/contract-cert.shen`, 19 cases agreeing with Rocq). Seven proof
+mutations join the gate (134).
+
+Open:
+
+* OB-CONTRACT-RULES-COVERAGE: and/or/cond, multi-argument closure application,
+  eval-kl, history-dependent temporal properties, signals, and liveness.
+* OB-CONTRACT-CERT-SEM: an accepted skeleton yields a derivation.
+* OB-CONTRACT-CERT-SHEN: the Shen checker refines the Rocq checker.
+* OB-CONTRACT-TRANSPORT: mutable state is not in KL-PURE-1, so `main_mut` is
+  not transported; E2E07-NATIVE remains open.
+
+This is not a theorem about Shen-Scheme.
