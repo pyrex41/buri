@@ -168,6 +168,11 @@ diff -u spec/chez-np-languages.json _build/chez-np-languages.json
 python3 scripts/package-chez-np.py capture ports/chez-np/tarm64le-buri-arm-add.np ports/arm/chez/chez1030-buri-arm-add.hex ports/arm/chez/chez1030-buri-arm-add.relocs _build/ChezNpCaptureInput.v
 python3 scripts/check-chez-np-package.py capture ports/chez-np/tarm64le-buri-arm-add.np ports/arm/chez/chez1030-buri-arm-add.hex ports/arm/chez/chez1030-buri-arm-add.relocs _build/ChezNpCaptureInput.v
 diff -u rocq/ChezNpCaptureInput.v _build/ChezNpCaptureInput.v
+# E2E-22 chezprim lane: the raw (info-carrying) capture, packaged as bytes only.
+rm -f _build/ChezPrimRawInput.v
+python3 scripts/package-chez-prim.py ports/chez-np/tarm64le-buri-arm-add.raw.np _build/ChezPrimRawInput.v
+python3 scripts/check-chez-prim-package.py ports/chez-np/tarm64le-buri-arm-add.raw.np _build/ChezPrimRawInput.v
+diff -u rocq/ChezPrimRawInput.v _build/ChezPrimRawInput.v
 # Module registration: each lane owns a file in rocq/modules.d (concatenated in
 # C-locale name order), and every audit module rocq/Audit*.v owns an explicit
 # expected count in rocq/audit.d/<module>.count. Every rocq/*.v must be

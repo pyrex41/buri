@@ -12,6 +12,10 @@ Findings are in [CHEZ-NANOPASS](../../docs/CHEZ-NANOPASS.md). Hashes are in
 | `scripts/np-dump.ss` | compiles `(define (kl:buri-arm-add V3015 V3016) (+ V3015 V3016))` with `eval` and `($np-tracer #t)`, and replays the untraced front end. It prints with `print-gensym 'pretty/suffix` and `print-graph #t`. Its only printing change is that `info` records show their fields |
 | `scripts/run-np-dump.sh` | reruns both captures. Two runs gave byte-identical files |
 | `scripts/chez-passes.py` | regenerates `spec/chez-passes.json` from a Chez source tree and the trace. It is a reading aid |
+| `patches/np-trace-raw.patch` | Wave D: the printing-only patch to Chez 10.3.0 `s/cpnanopass.ss` (tracer `ir-printer`): with `BURI_NP_RAW` set, each pass's output is followed by `raw output:` and the nanopass raw unparse, which keeps every field. A trusted dumping tool (`OB-CHEZ-NP-RAW-DUMP`); nothing proves the patch |
+| `scripts/build-patched-chez.sh` | copies the stage-1 host tree, checks and applies the patch, rebuilds and regenerates the tarm64le boot files (`make bootquick XM=tarm64le`) |
+| `scripts/np-dump-raw.ss`, `scripts/run-np-dump-raw.sh` | `np-dump.ss` with `BURI_NP_RAW` set and all-field writers for the info subtypes; runs it under the stock tarm64le kernel with the patched boot files |
+| `tarm64le-buri-arm-add.raw.np` | the raw capture. Rerun byte-identical on the same boot files; a fresh patched build differs only in the block record-type uid. `scripts/package-chez-prim.py` packages it into `rocq/ChezPrimRawInput.v` |
 
 Each `.np` file is made of sections that begin with a line `@@@ NAME` and end
 with a line `@@@ end`. The sections are:

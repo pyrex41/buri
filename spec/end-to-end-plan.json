@@ -981,6 +981,36 @@
           "kind": "ground-derivation",
           "artifact": "rocq/ChezNpValidate.v",
           "claim": "For kl:buri-arm-add only: np-recognize-mrvs validated; 10 same-language passes print identically; the 152 captured tarm64le bytes are the relocation instance of np-generate-code output (codegen_buri_arm_add_instance); tampering rejected. Not a theorem about other programs."
+        },
+        {
+          "kind": "capture",
+          "artifact": "ports/chez-np/tarm64le-buri-arm-add.raw.np",
+          "claim": "Raw, info-carrying trace of the same compilation from Chez 10.3.0 with the printing-only patch ports/chez-np/patches/np-trace-raw.patch (trusted dumping tool, OB-CHEZ-NP-RAW-DUMP). Rerun byte-identical on the same boot files; a fresh patched build reproduces it except the block record-type uid."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/chez-np/scripts/build-patched-chez.sh",
+          "claim": "With BURI_NP_RAW unset, the patched build's dump equals the stock capture except the block record-type uid, exactly as an unpatched rebuild does. One function; not a proof that the patch changes printing only."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezPrimRaw.v",
+          "claim": "check_raw_sound: raw L4/L4.5 terms read with their info-call and info-lambda fields (check? #f only on primref operators, no attachment shifting, interface* = clause interfaces); acceptance implies equal results under every primitive semantics, world, truthiness and order policy."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezPrimExpand.v",
+          "claim": "check_expand_plus_sound: for every L7 + call and L9 term the validator accepts, equal value and world under any primitive/library semantics meeting H_fix and H_lib (OB-CHEZ-LIB-PLUS), over a stated word-level semantics of the fixnum fast path (log!test tag check, +/ovfl, overflow condition code, label/goto fallback to library +). plus_expansion_fast needs no premise on primitives."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezPrimBlocks.v",
+          "claim": "check_block_order_sound: accepted L16 pairs differ only in block-list order (sort_refs_perm), so every order-independent L16 meaning agrees. Says nothing about np-generate-code layout."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezPrimValidate.v",
+          "claim": "For kl:buri-arm-add only: $np-expand-primitives validated (expand_plus_buri_arm_add_preserves); the L9 fast path yields ChezWord.fx_enc (x + y) (expanded_fast_path_shen), the value buri_chez_add_shen proves at the byte level; np-suppress-procedure-checks validated with info fields; np-optimize-block-order! validated; 5 mutants rejected (audited in rocq/Audit_Chezprim.v)."
         }
       ],
       "acceptance": "every required code\npath/configuration is handled, or a universal compiler proof supplies the result.\nA validator may reject an output safely, but cannot then claim universal coverage\nof that unsupported required output. Generic closure uses compositional schemas,\nnot a test corpus. Proving outputs does not claim all unrelated Chez programs or\nall possible compiler invocations are correct.",
