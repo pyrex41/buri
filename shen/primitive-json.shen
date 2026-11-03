@@ -83,9 +83,47 @@
    ["IOReadCorrect.native_read_contract_suffices" "read-file-as-string, *home-directory*" "E2E-27" "assumed" "Chez file read and home-directory lookup."]
    ["EqualitySealCorrect.activation" "chez:eval, interaction-environment" "E2E-26" "assumed" "Chez eval/environment contract of the sealed activation."]
    ["CLPortGuard.format_printer" "sbcl:FORMAT ~A" "E2E-24" "assumed" "OB-CL-FORMAT-PRINTER: printer effects of the Boolean diagnostic."]]
+  (append (buri.pj-prims2-contracts)
   (append (buri.pj-native-rows)
    (map (/. F [(cn "KLValue.profile." F) "profile slot" "E2E-05" "profile-slot" "A per-port pin is required before any claim depends on it."])
-        ["inexact_op" "inexact_cmp" "int_div_inexact" "float_text" "str_other" "sys_message" "absvector_fill" "time_value" "stack_limit" "heap_limit"])))))))))))
+        ["inexact_op" "inexact_cmp" "int_div_inexact" "float_text" "str_other" "sys_message" "absvector_fill" "time_value" "stack_limit" "heap_limit"]))))))))))))
+\\ Wave-D primitives lane (rocq/SchemeIntern.v, rocq/CLStrings.v): host-op premises
+\\ of the intern, string and vector-read body proofs, and the uncaptured
+\\ shen-cl.process-intern body.
+(define buri.pj-prims2-row Prefix Status [F Op Owner Note] -> [(cn Prefix F) Op Owner Status Note])
+(define buri.pj-prims2-contracts ->
+ (append (map (/. R (buri.pj-prims2-row "SchemeIntern.chez_intern_ops." "host-contract" R))
+   [["intern_equal_text" "chez:equal?" "E2E-24" "equal? on two strings is string equality."]
+    ["intern_string_symbol" "chez:string->symbol" "E2E-21" "string->symbol yields the symbol of exactly that name."]
+    ["intern_string_length" "chez:string-length" "E2E-21" "string-length is the length."]
+    ["intern_gt" "chez:>" "E2E-24" "> on exact integers."]
+    ["intern_string_ref" "chez:string-ref" "E2E-21" "string-ref at index 0 of a non-empty string is its first character."]
+    ["intern_char_numeric" "chez:char-numeric?" "E2E-24" "char-numeric? on an ASCII character is the decimal-digit test."]
+    ["intern_string_number" "chez:string->number" "E2E-24" "string->number answers #f or a number (stock body only; sampled: 12 for the string 12)."]])
+ (append (map (/. R (buri.pj-prims2-row "CLStrings.cl_string_ops." "host-contract" R))
+   [["str_length" "sbcl:LENGTH" "E2E-21" "LENGTH of a string is its length."]
+    ["str_plusp" "sbcl:PLUSP" "E2E-24" "PLUSP on integers."]
+    ["str_minusp" "sbcl:MINUSP" "E2E-24" "MINUSP on integers."]
+    ["str_ge" "sbcl:>=" "E2E-24" ">= on integers."]
+    ["str_lt" "sbcl:<" "E2E-24" "< on integers."]
+    ["str_num_eq" "sbcl:=" "E2E-24" "= on integers."]
+    ["str_integerp_int" "sbcl:INTEGERP" "E2E-21" "Every integer is INTEGERP."]
+    ["str_subseq_one" "sbcl:SUBSEQ" "E2E-24" "(SUBSEQ s 1) of a non-empty string drops its first character."]
+    ["str_char" "sbcl:CHAR" "E2E-21" "CHAR at an index below the length is that character."]
+    ["str_char_code" "sbcl:CHAR-CODE" "E2E-21" "CHAR-CODE of an ASCII character is its code."]
+    ["str_make_string" "sbcl:MAKE-STRING" "E2E-25" "(MAKE-STRING 1 :INITIAL-ELEMENT c) is the one-character string."]
+    ["str_code_char" "sbcl:CODE-CHAR" "E2E-21" "CODE-CHAR below CHAR-CODE-LIMIT 1114112 yields a character, never NIL; SBCL characters include surrogates."]
+    ["str_code_char_ascii" "sbcl:CODE-CHAR" "E2E-21" "CODE-CHAR below 256 is the ASCII character."]
+    ["str_make_string_char" "sbcl:MAKE-STRING" "E2E-25" "MAKE-STRING of any CODE-CHAR result returns a string."]
+    ["str_error" "sbcl:ERROR" "E2E-24" "ERROR always raises; the condition is quotiented."]])
+ (append (map (/. R (buri.pj-prims2-row "CLStrings.cl_vector_ops." "host-contract" R))
+   [["vec_svref_in" "sbcl:SVREF" "E2E-21" "SVREF in range is the element."]
+    ["vec_svref_out" "sbcl:SVREF" "E2E-24" "SVREF out of range raises under the image's (safety 3) proclamation."]])
+ (append (map (/. R (buri.pj-prims2-row "CLStrings.cl_intern_ops." "host-contract" R))
+   [["intern_symbol" "sbcl:INTERN" "E2E-21" "INTERN of a string is the symbol of that name in the current package."]
+    ["process_nonstring" "shen-cl.process-intern type declaration" "E2E-24" "A non-string raises a type error under safety 3."]])
+   [["CLStrings.cl_intern_ops.process_plain" "shen-cl.process-intern body (LOOP, uncaptured)" "E2E-17" "assumed" "Identity on names without the characters hash, quote, backquote and bar. The body is a LOOP outside the evaluated subset."]])))))
+
 \\ Native.primitive (OB-PRIM-CONTRACTS): the sealed lane's Chez library table.
 (define buri.pj-native-ops -> ["cons" "list" "car" "cdr" "pair?" "null?" "eq?" "eqv?" "equal?" "number?" "integer?" "exact?"
   "boolean?" "string?" "symbol?" "symbol->string" "number->string" "/" "floor" "+" "-" "*" ">=" "<" "string-append"

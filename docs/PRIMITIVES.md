@@ -50,7 +50,7 @@ Each entry (114 in total: 46 Shen-Scheme, 68 Shen-CL) records:
   module `rocq/Audit_<lane>.v`), `contract-assumed` (the primitive is a direct
   host operation), `sampled` or `none`.
 
-The `contracts` section (123 entries) gives a name to every primitive
+The `contracts` section (150 entries) gives a name to every primitive
 contract that is currently assumed anywhere in the repository. Each entry has
 a host operation, an owner and a status:
 
@@ -67,6 +67,8 @@ a host operation, an owner and a status:
 | EQ-1 `ask_eq` (EQ1-NUMERIC, `kl:=`) | 1 | bridged on data |
 | IO read, sealed activation, CL `FORMAT` printer | 3 | assumed |
 | `KLValue.profile` slots | 10 | profile slots needing a per-port pin |
+| `SchemeIntern.chez_intern_ops` (Wave D) | 7 | premises of proved wrappers |
+| `CLStrings.cl_string_ops`, `cl_vector_ops`, `cl_intern_ops` (Wave D) | 20 | 19 premises of proved wrappers, plus `cl_intern_ops.process_plain` (the uncaptured `shen-cl.process-intern` LOOP body, E2E-17), assumed |
 
 No entry is an aggregate "runtime behaves correctly" assumption: the
 checker rejects any evidence reference that is not a named contract, a
@@ -292,12 +294,113 @@ Open: `cf-vectors` (a LOOP body outside the model) for two vectors, floats in
 the arithmetic wrappers, every `none` entry in the matrix, and all host
 operation contracts.
 
+## Wave-D batch: intern, strings and vector reads
+
+Packaging uses the same discipline as above. `scripts/package-prims2.py`
+copies blob-checked definition bytes into `rocq/Prims2Sources.v`. These are
+stock and patched `kl:intern`, and the Shen-CL `|intern|`, `|pos|`,
+`|tlstr|`, `|n->string|`, `|string->n|` and `|<-address|`.
+`scripts/check-prims2-package.py` re-checks every literal. `make prove`
+regenerates and diffs the package. The patched `primitives.scm` comes from
+`package-patched.py apply`, which now also applies
+`ports/patches/shen-scheme-primitives.diff`.
+
+### Shen-Scheme `kl:intern` (`rocq/SchemeIntern.v`)
+
+These are universal theorems over every Chez table that satisfies
+`chez_intern_ops`. Its seven fields are `equal?` on strings,
+`string->symbol`, `string-length`, `>`, `string-ref` at 0, `char-numeric?`
+on ASCII characters, and `string->number` (which answers `#f` or a number).
+
+- `stock_intern_body` is the exact denotation. `stock_intern_digit_led`
+  and `stock_intern_twelve` show the divergence from `rule_intern`: a name
+  that is digit-led with length > 1 and that the host reads as a number is
+  returned as that number. OB-SCHEME-INTERN-NUMERIC stays refuted.
+- `stock_patched_agree`: on every other name, stock equals patched.
+- `patched_intern_body`, `patched_intern_symbol` and
+  `patched_intern_refines_rule`: the patched body refines `rule_intern` for
+  every string. This is OB-SCHEME-INTERN-PATCH.
+- `model_intern_ops` shows the contracts are satisfiable.
+
+The compile-time fold `[intern S] -> [quote (intern S)]` runs the compiling
+image's `kl:intern`. No theorem here covers it.
+
+### Shen-CL strings, vector read and intern (`rocq/CLStrings.v`)
+
+The bodies run in `CLWrappers.ceval`. The theorems quantify over every host
+table that satisfies `CLContracts.cl_host_ops` (for `STRINGP`, `NOT` and
+`INTEGERP`) and the new records:
+
+- `cl_string_ops`: `LENGTH`, `PLUSP`, `MINUSP`, `>=`, `<` and `=` on
+  integers, `SUBSEQ`, `CHAR`, `CHAR-CODE`, `MAKE-STRING`, `CODE-CHAR` and
+  `ERROR`. Characters are abstract (`chr`, `cchar`).
+- `cl_vector_ops`: `SVREF` in range and out of range (safety 3).
+- `cl_intern_ops`: `INTERN`, plus the uncaptured `shen-cl.process-intern`.
+
+The modeling boundary is stated in the module. The environment binds the CL
+constants `:INITIAL-ELEMENT` (to itself) and `CHAR-CODE-LIMIT` (1114112,
+the pinned SBCL image value). A raised condition is quotiented. Strings are
+ASCII. `refines` means one of two things: both sides return represented
+values with the store unchanged, or the rule throws and the body raises.
+
+| Theorem | Statement |
+|---|---|
+| `pos_refines` | every represented argument pair |
+| `tlstr_body_spec`, `tlstr_refines` | every represented argument; `""` and non-strings raise |
+| `string_to_n_refines` | unit and empty strings, non-strings |
+| `string_to_n_long` | **divergence**: length >= 2 raises; the rule answers the first code point (OB-CL-STRING-TO-N-UNIT) |
+| `n_to_string_refines`, `n_to_string_scalar` | ASCII codes, out-of-range integers, non-integers; every scalar value is accepted by both |
+| `n_to_string_surrogate` | **divergence**: a surrogate returns a string; the rule is a domain error (OB-CL-N-TO-STRING-SURROGATE) |
+| `get_address_svref`, `get_address_refines` | `<-address` is exactly `SVREF`. It refines `rule_address_get` (element, or a raise where the rule throws `XBounds`) for every heap vector represented element-wise by the host vector. That correspondence is an E2E-21 premise. |
+| `intern_body_plain`, `intern_refines` | names without `#`, `'`, `` ` `` and `|`; `"true"`/`"false"` give the Boolean symbols |
+| `model_strings_ops` | one table satisfies all four records (anti-vacuity, not SBCL) |
+
+These results discharge OB-CL-STRING-PRIMS on the stated domains.
+
+### Native samples (`ports/prims2-native-samples.shen`, sampled)
+
+| Probe | Shen-Scheme v0.52 | Shen-CL 4844072d / SBCL 2.6.8 |
+|---|---|---|
+| `(integer? (intern "12"))`, `(integer? (intern "007"))` | true, true | false, false |
+| `(number? (intern "1/2"))` | true (an exact ratio) | false |
+| `(= (intern "a#b") (intern "a_hash1957b"))` | false | **true** (collision) |
+| `(string->n "ab")` | 97 | raises "not a unit string" |
+| `(string->n "")` | raises | raises |
+| `(string? (n->string 55296))` | raises | **true** |
+| `(n->string -1)`, `(n->string 1114112)` | raise | raise |
+| `(pos "abc" 3)`, `(pos "abc" -1)` | raise | raise |
+| `(tlstr "")` | raises | raises |
+| `(<-address (absvector 2) 2)`, `... -1` | raise | raise |
+
+Mutation cases: `tests/mutate-prims2.py` has seven mutants, run by
+`tests/run-prims2-mutations.sh`:
+
+- the numeric branch put back into the patched intern bytes;
+- the patched AST restated as the stock one;
+- stock intern claimed to return the symbol `12`;
+- `(plusp n)` in place of `(minusp n)` in `|pos|`;
+- `|tlstr|` without its guard;
+- `string->n` and `n->string` restated over every argument.
+
+Each is refused by Rocq.
+
+Still open, each named in the matrix:
+
+- Shen-Scheme: `str` (`kl:str` uses a `lambda`, outside the decoder). Also
+  the inlined `pos`, `tlstr`, `n->string`, `string->n`, `absvector`,
+  `<-address` and `address->` clauses. These stay contract-assumed on the
+  named Chez operations.
+- Shen-CL: `str`, `cn` (a DEFUN with a `declare` form), `absvector` (a
+  global and `MAKE-ARRAY`) and `address->` (`SETF`).
+
 ## Evidence kinds kept apart
 
 | Kind | Artifacts |
 |---|---|
-| Universal theorems | `rocq/SchemeWrappers.v`, `rocq/CLWrappers.v` (28 audited statements), `rocq/CLContracts.v` with the narrowed `CLLowering` lemmas (24, `rocq/Audit_Clcontracts.v`) |
+| Universal theorems | `rocq/SchemeWrappers.v`, `rocq/CLWrappers.v` (28 audited statements), `rocq/CLContracts.v` with the narrowed `CLLowering` lemmas (24, `rocq/Audit_Clcontracts.v`), `rocq/SchemeIntern.v` and `rocq/CLStrings.v` (26, `rocq/Audit_Prims2.v`) |
+| Ground derivation (Wave D admission) | `SchemeIntern.intern_admitted`, `CLStrings.cl_strings_admitted` over `rocq/Prims2Sources.v` |
 | Ground derivation (admission) | `scheme_wrappers_admitted`, `cl_wrappers_admitted` over `rocq/PrimitiveSources.v` |
 | Sampled (Shen-Scheme host) | `tests/primitives.shen` sample-* tests |
 | Native SBCL samples (opt-in) | `ports/shen-cl-primitive-samples.lisp` via `scripts/check-cl-port.sh` |
+| Native samples on both ports (Wave D) | `ports/prims2-native-samples.shen` (outputs below) |
 | Bookkeeping | `spec/primitives.json`, checked by `shen/primitive-matrix.shen` |

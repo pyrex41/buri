@@ -13,6 +13,7 @@ code only.
 | `shen-cl-compiler.diff` | Shen-Language/shen-cl `4844072d` `src/compiler.shen` (blob `2d624377`) | `60522d09` |
 | `shen-cl-primitives.diff` | shen-cl `4844072d` `src/primitives.lsp` (blob `f9b11c8a`) | `3872f83e` |
 | `shen-cl-primitives-tests.diff` | shen-cl `4844072d` `tests/primitives-tests.shen` (blob `73ea5b85`) | n/a (not vendored) |
+| `shen-scheme-primitives.diff` (Wave-D primitives lane) | shen-scheme `8d261518` `src/primitives.scm` (blob `92b8875a`) | `526a89b2` |
 
 Evidence kinds are kept apart below. A **theorem** is a Rocq universal theorem
 about the captured patched definitions. **Native** means a sampled run of the
@@ -108,10 +109,37 @@ This is reachable through `lisp.` escapes. Ordinary `=` does not reach it.
 - **Caveat:** `CLWrappers.eq_rewrite_unsafe` is an "iff" only within Búri's
   CL model (`model_h`), not a native SBCL iff.
 
+## Shen-Scheme finding 5: `intern` of digit-led names (Wave-D primitives lane)
+
+Draft write-up: [docs/UPSTREAM-ISSUES-INTERN.md](../../docs/UPSTREAM-ISSUES-INTERN.md).
+
+- **Patch:** the `else` branch of `kl:intern` becomes `(string->symbol name)`.
+  The `string->number` path for names of length > 1 with a leading digit is
+  removed. `"true"` and `"false"` still give `#t` and `#f`.
+- **Theorems** (`rocq/SchemeIntern.v`). The bytes are packaged by
+  `scripts/package-prims2.py` into `rocq/Prims2Sources.v`:
+  - `intern_admitted`: the stock and patched excerpts decode to the
+    reviewed ASTs.
+  - `patched_intern_body` and `patched_intern_symbol`: for **every** string
+    the patched body returns `#t`, `#f` or the symbol of that name, with no
+    raise and no events.
+  - `patched_intern_refines_rule`: the patched body refines
+    `KLSemantics.rule_intern` through `SchemeWrappers.rep_s`.
+  - The stock contrast is `stock_intern_digit_led` / `stock_intern_twelve`.
+    The stock obligation OB-SCHEME-INTERN-NUMERIC stays **refuted**.
+  - Every theorem holds for every Chez table satisfying the named
+    `SchemeIntern.chez_intern_ops`.
+- **Limit:** the compiler folds a literal `(intern S)` at compile time, using
+  the compiling image's `kl:intern`. That fold is covered only in a binary
+  rebuilt with the patch.
+- **Native:** the patched definition was loaded into the v0.52 binary.
+  Run-time calls then return symbols. The literal fold built into the
+  binary still uses stock. No rebuild was done.
+
 ## Regenerating
 
 `make prove` re-applies every patch into `_build/patched`. It then checks
 `ports/compiler-branches-patched.shen` against the patched upstream file,
 recaptures the patched definitions, and compares them with the committed
-`rocq/CompilerBranchesPatchedInput.v`, `rocq/CLLoweringPatchCapture.v` and
-`rocq/PatchedPrimitiveSources.v`.
+`rocq/CompilerBranchesPatchedInput.v`, `rocq/CLLoweringPatchCapture.v`,
+`rocq/PatchedPrimitiveSources.v` and (Wave D) `rocq/Prims2Sources.v`.

@@ -1067,3 +1067,56 @@ Open:
   not transported; E2E07-NATIVE remains open.
 
 This is not a theorem about Shen-Scheme.
+
+## Primitives: intern, string and vector-read bodies (E2E-17, Wave D, in progress)
+
+Two new modules hold body proofs of the actual pinned definitions. The
+bytes are packaged by `scripts/package-prims2.py` into `rocq/Prims2Sources.v`,
+re-checked by `scripts/check-prims2-package.py`, read by `PortReader` and
+admitted by computed equality. Every theorem below quantifies over every
+host table that satisfies the individually named contracts. None of it is a
+theorem about Chez or SBCL.
+
+* **Universal theorems** (`rocq/SchemeIntern.v`):
+  - Stock Shen-Scheme `kl:intern` has an exact denotation. On every name
+    that is digit-led with length > 1, it returns the host `string->number`
+    answer when that answer is a number, which represents no KLambda symbol.
+    OB-SCHEME-INTERN-NUMERIC therefore stays **refuted**. Elsewhere, stock
+    and patched agree, so OB-SCHEME-INTERN-ADMISSION is now partial: the
+    admission choice itself is still open.
+  - The proposed patch `ports/patches/shen-scheme-primitives.diff` returns
+    `#t`, `#f` or the symbol of the name for **every** string, and refines
+    `rule_intern` (OB-SCHEME-INTERN-PATCH, about the patched code only).
+    The compile-time fold of a literal `(intern S)` is covered only in a
+    binary rebuilt with the patch.
+* **Universal theorems** (`rocq/CLStrings.v`):
+  - The captured Shen-CL `|pos|`, `|tlstr|`, `|n->string|`, `|string->n|`,
+    `|<-address|` and `|intern|` refine their KLambda rules on their stated
+    domains (OB-CL-STRING-PRIMS). Bounds and out-of-range calls raise
+    exactly where the rule throws.
+  - New contracts: `cl_string_ops`, `cl_vector_ops` and `cl_intern_ops`. The
+    last one includes the uncaptured `shen-cl.process-intern` LOOP body as
+    the named contract `process_plain`.
+  - **Two divergences**, proved for every contract-satisfying host:
+    `string->n` raises on strings of length >= 2 where the rule returns the
+    first code point (OB-CL-STRING-TO-N-UNIT, refuted), and `n->string`
+    returns a string on surrogates where the rule is a domain error
+    (OB-CL-N-TO-STRING-SURROGATE, refuted). Shen-Scheme agrees with the
+    rule in both cases (sampled).
+* **Sampled:** `ports/prims2-native-samples.shen`, run on both pinned ports.
+  Shen-Scheme host samples are in `tests/primitives.shen`. The `intern`
+  upstream draft is `docs/UPSTREAM-ISSUES-INTERN.md`, not filed and only
+  self-reviewed. It includes a Shen-CL intern collision,
+  `(= (intern "a#b") (intern "a_hash1957b"))`, which is sampled only.
+* **Matrix:** seven `none` entries are now `proved`: `shen-scheme:intern`,
+  and `shen-cl:` `intern`, `pos`, `tlstr`, `n->string`, `string->n` and
+  `<-address`. There are 27 new named contracts (150 in total).
+* **Gates:** 26 statements join the audit (`rocq/Audit_Prims2.v`,
+  `Audit_Prims2.count` 26). Seven proof mutations join the gate (134).
+* **Open:** Shen-Scheme `str`, `pos`, `tlstr`, `n->string`, `string->n` and
+  `absvector` / `address->` / `<-address`. These are compiler clauses that
+  inline Chez operations and stay contract-assumed, or `kl:str`, which uses
+  a `lambda` outside the decoder. Also open: Shen-CL `str`, `cn` (a DEFUN
+  with a `declare` form), `absvector`, `address->` (SETF), code points >= 256
+  in `n->string`, and the heap-vector correspondence premise of
+  `<-address` (E2E-21).

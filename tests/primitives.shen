@@ -18,7 +18,7 @@
 (set buri.pt-env (buri.pm-env))
 (define buri.pt-verdict M -> (buri.pm-decide-env M (value buri.pt-env)))
 (define buri.pt-show [rejected Vs] -> (do (map (/. V (output "VIOLATION ~S~%" V)) Vs) [rejected (length Vs)])  V -> V)
-(buri.test real-matrix-consistent (buri.pt-show (buri.pt-verdict (value buri.pt-matrix))) [primitive-matrix-consistent 114 123])
+(buri.test real-matrix-consistent (buri.pt-show (buri.pt-verdict (value buri.pt-matrix))) [primitive-matrix-consistent 114 150])
 (buri.test kl-primitives-are-36 (length (hd (value buri.pt-env))) 36)
 
 \\ Hostile variants of the parsed matrix.
@@ -99,4 +99,16 @@
 (buri.test sample-generic-path-kl-eq (buri.pt-eq-generic (value buri.pt-inexact-one) 1) true)
 (buri.test sample-eval-kl-literal-path (eval-kl [= [* 2 [/ 1 2]] 1]) false)
 (buri.test sample-zero-times-symbol-raises (trap-error (do (* 0 true) returned) (/. E raised)) raised)
+\\ Wave-D primitives lane, Shen-Scheme host samples (SAMPLED; the Shen-CL
+\\ counterparts are recorded in docs/PRIMITIVES.md, ports/prims2-native-samples.shen).
+\\ Stock kl:intern maps a digit-led name of length > 1 through string->number,
+\\ including a leading zero and an exact ratio (OB-SCHEME-INTERN-NUMERIC).
+(buri.test sample-intern-leading-zero-is-integer (integer? (intern "007")) true)
+(buri.test sample-intern-ratio-is-number (number? (intern "1/2")) true)
+\\ Shen-Scheme string->n reads the first character of any non-empty string,
+\\ as rule_string_to_n does; Shen-CL raises (CLStrings.string_to_n_long).
+(buri.test sample-string-to-n-long-first-char (string->n "ab") 97)
+\\ Shen-Scheme n->string rejects a surrogate, as rule_n_to_string does;
+\\ Shen-CL returns a string (CLStrings.n_to_string_surrogate).
+(buri.test sample-n-to-string-surrogate-raises (trap-error (do (n->string 55296) returned) (/. E raised)) raised)
 (buri.done)

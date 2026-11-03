@@ -125,6 +125,8 @@ for name in $(python3 tests/mutate-cl-contracts.py); do
 done
 # Port-fix lane: unpatched captures must fail the patched theorems.
 sh tests/run-portfix-mutations.sh
+# Wave-D primitives lane: changed intern/string bytes and unjustified restatements.
+sh tests/run-prims2-mutations.sh
 # E2E-22 Chez nanopass mutants: a changed captured byte, a changed printed
 # pass output and a changed generated grammar must each fail their Rocq check.
 for name in $(python3 tests/mutate-chez-np.py); do

@@ -3740,18 +3740,35 @@
    "packages": [
     "E2E-21"
    ],
-   "status": "open",
+   "status": "partial",
    "boundary": "intern of names that start with a digit",
    "identity": "tizoc/shen-scheme@fa0717374d907545c997ba0e38526f02b720a2ab src/primitives.scm kl:intern",
    "statement": "Shen-Scheme intern agrees with rule_intern on the admitted names: either names of length > 1 starting with a digit are excluded by admission, or the profile defines intern of such names.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.stock_intern_body",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.stock_patched_agree",
+     "establishes": "implementation-correspondence"
+    }
+   ],
    "completion_evidence": "Admission rule or profile slot plus proof for kl:intern.",
    "sources": [
     "docs/REPRESENTATION.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "rocq/SchemeIntern.v",
+     "recorded": "Wave-D primitives lane: the stock body has an exact denotation (stock_intern_body), and on every name that is not digit-led of length > 1 it returns exactly what the patched body returns (stock_patched_agree), which refines rule_intern. What remains is the admission decision itself (exclude such names, or a profile slot), which no proof can make.",
+     "reconciliation": "Partial: the agreement domain is proved; the admission rule is not yet chosen."
+    }
+   ]
   },
   {
    "id": "OB-SCHEME-INTERN-NUMERIC",
@@ -3773,13 +3790,29 @@
      "ref": "tests/representation.shen",
      "test": "intern-numeric-is-integer",
      "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.stock_intern_digit_led",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.stock_intern_twelve",
+     "establishes": "implementation-correspondence"
     }
    ],
    "completion_evidence": "Refuted on Shen-Scheme v0.52: (intern \"12\") is the integer 12; replaced by the admission obligation.",
    "sources": [
     "docs/REPRESENTATION.md"
    ],
-   "history": [],
+   "history": [
+    {
+     "source": "docs/UPSTREAM-ISSUES-INTERN.md",
+     "recorded": "Wave-D primitives lane: confirmed on the v0.52 binary ((intern \"12\") and (intern \"007\") are integers, (intern \"1/2\") an exact ratio, (intern \"1e400\") +inf.0), and proved for every host satisfying SchemeIntern.chez_intern_ops: the captured stock body returns the host string->number answer on every digit-led name of length > 1 that it reads as a number. The kl:intern bytes are identical at fa071737 (v0.52 tag) and 8d261518. A proposed patch is proved in OB-SCHEME-INTERN-PATCH. This stock obligation stays refuted: the stock port is unchanged.",
+     "reconciliation": "The patched variant is a separate obligation about different code; nothing about the stock port is claimed by it."
+    }
+   ],
    "replaced_by": "OB-SCHEME-INTERN-ADMISSION"
   },
   {
@@ -4089,6 +4122,200 @@
     "docs/E2E-07.md"
    ],
    "history": []
+  },
+  {
+   "id": "OB-SCHEME-INTERN-PATCH",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "PATCHED Shen-Scheme kl:intern",
+   "identity": "tizoc/shen-scheme@8d261518db17fbfec32d1b268b40ed216b925c74 src/primitives.scm + ports/patches/shen-scheme-primitives.diff (patched blob 526a89b2)",
+   "statement": "For every string s and every Chez operation table satisfying SchemeIntern.chez_intern_ops, the captured patched kl:intern returns #t for \"true\", #f for \"false\" and otherwise the symbol named s, with the state unchanged and no events; it refines rule_intern through SchemeWrappers.rep_s.",
+   "premises": [
+    "every Chez operation table satisfying SchemeIntern.chez_intern_ops (equal? on strings, string->symbol)",
+    "ASCII names (SchemeWrappers.rep_s)",
+    "a literal (intern S) is folded at compile time by the compiling image's kl:intern; it is covered only in a binary rebuilt with the patch"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.intern_admitted",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.patched_intern_body",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.patched_intern_symbol",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SchemeIntern.SchemeIntern.patched_intern_refines_rule",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "docs/UPSTREAM-ISSUES-INTERN.md",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorems over the admitted patched bytes (rocq/SchemeIntern.v); sampled: the patched definition loaded into the v0.52 binary returns symbols at run time (the binary's own compile-time fold still uses stock). Says nothing about stock Shen-Scheme.",
+   "sources": [
+    "ports/patches/README.md",
+    "docs/UPSTREAM-ISSUES-INTERN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CL-STRING-TO-N-UNIT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-16"
+   ],
+   "status": "refuted",
+   "boundary": "Shen-CL string->n on a string of length >= 2",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp |string->n|",
+   "statement": "The captured |string->n| agrees with rule_string_to_n on every string.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "ports/prims2-native-samples.shen",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.string_to_n_long",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted: on every string of length >= 2 the body raises (not a unit string) where rule_string_to_n answers the first code point (proved for every host satisfying the named contracts; observed on SBCL 2.6.8: (string->n \"ab\") raises, Shen-Scheme answers 97). Agreement on unit and empty strings and non-strings is OB-CL-STRING-PRIMS.",
+   "sources": [
+    "docs/PRIMITIVES.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-CL-STRING-PRIMS"
+  },
+  {
+   "id": "OB-CL-N-TO-STRING-SURROGATE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "refuted",
+   "boundary": "Shen-CL n->string on a surrogate code 55296..57343",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp |n->string|",
+   "statement": "The captured |n->string| is a domain error on every integer that is not a Unicode scalar value, as rule_n_to_string requires.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "counterexample",
+     "ref": "ports/prims2-native-samples.shen",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.n_to_string_surrogate",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Refuted: on a surrogate code the body returns a string whenever SBCL CODE-CHAR yields a character (proved for every host satisfying the named contracts; observed on SBCL 2.6.8: (string? (n->string 55296)) is true, Shen-Scheme raises). Same root as OB-REPR-SBCL-CHARS.",
+   "sources": [
+    "docs/PRIMITIVES.md",
+    "docs/REPRESENTATION.md"
+   ],
+   "history": [],
+   "replaced_by": "OB-CL-STRING-PRIMS"
+  },
+  {
+   "id": "OB-CL-STRING-PRIMS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-17",
+   "packages": [
+    "E2E-16",
+    "E2E-21"
+   ],
+   "status": "discharged",
+   "boundary": "Shen-CL pos, tlstr, n->string, string->n, <-address and intern on their stated domains",
+   "identity": "Shen-Language/shen-cl@4844072dde0208c3e4b99dcbfea58e4fdfd812e8 src/primitives.lsp (blob f9b11c8a)",
+   "statement": "For every host table satisfying CLContracts.cl_host_ops and CLStrings.cl_string_ops / cl_vector_ops / cl_intern_ops, the captured bodies refine their KLambda rules on represented first-order arguments: |pos| and |tlstr| on every argument; |string->n| on unit and empty strings and non-strings; |n->string| on ASCII codes, out-of-range integers and non-integers (every scalar value accepted by both); |<-address| for every heap vector represented element-wise and every integer index; |intern| on every name without the characters # ' ` |.",
+   "premises": [
+    "the named host contracts CLContracts.cl_host_ops, CLStrings.cl_string_ops, CLStrings.cl_vector_ops, CLStrings.cl_intern_ops (including the uncaptured shen-cl.process-intern body, CLStrings.cl_intern_ops.process_plain)",
+    "the CL constants :INITIAL-ELEMENT and CHAR-CODE-LIMIT = 1114112 bound in the environment",
+    "raised conditions quotiented; ASCII strings; the heap-vector to host-vector correspondence (E2E-21)"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.cl_strings_admitted",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.pos_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.tlstr_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.string_to_n_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.n_to_string_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.n_to_string_scalar",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.get_address_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.intern_refines",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "CLStrings.CLStrings.model_strings_ops",
+     "establishes": "implementation-correspondence"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "ports/prims2-native-samples.shen",
+     "establishes": "implementation-correspondence"
+    }
+   ],
+   "completion_evidence": "Universal theorems over the admitted captured bodies (rocq/CLStrings.v), with the domains stated; the two refuted complements are OB-CL-STRING-TO-N-UNIT and OB-CL-N-TO-STRING-SURROGATE. Host operations remain E2E-21/24/25 contracts.",
+   "sources": [
+    "docs/PRIMITIVES.md"
+   ],
+   "history": []
   }
  ],
  "legacy_inventory_map": [
@@ -4221,11 +4448,12 @@
  ],
  "lane_audits": [
   "rocq/Audit_Clcontracts.v",
+  "rocq/Audit_Contracts.v",
   "rocq/Audit_E2e07b.v",
   "rocq/Audit_Nanopass.v",
   "rocq/Audit_Portfix.v",
+  "rocq/Audit_Prims2.v",
   "rocq/Audit_Repr.v",
-  "rocq/Audit_Termination.v",
-  "rocq/Audit_Contracts.v"
+  "rocq/Audit_Termination.v"
  ]
 }

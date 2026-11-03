@@ -787,6 +787,71 @@
           "kind": "rejected-mutations",
           "artifact": "tests/mutate-cl-contracts.py",
           "claim": "Three restated claims are refused by Rocq in make prove: the all-arity cons? field for the captured world, numeric-equal without the operand swap the optimizer performs, and EQ in place of EQUAL against a string literal."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeIntern.v",
+          "names": [
+            "SchemeIntern.SchemeIntern.patched_intern_body",
+            "SchemeIntern.SchemeIntern.patched_intern_symbol",
+            "SchemeIntern.SchemeIntern.patched_intern_refines_rule",
+            "SchemeIntern.SchemeIntern.stock_intern_body",
+            "SchemeIntern.SchemeIntern.stock_intern_digit_led",
+            "SchemeIntern.SchemeIntern.stock_intern_twelve",
+            "SchemeIntern.SchemeIntern.stock_patched_agree",
+            "SchemeIntern.SchemeIntern.model_intern_ops"
+          ],
+          "premises": [
+            "chez_intern_ops: individually named Chez operation contracts (E2E-21/24)",
+            "ASCII names (SchemeWrappers.rep_s)"
+          ],
+          "claim": "Stock Shen-Scheme kl:intern (8d261518, identical at the v0.52 tag) has an exact denotation: on a digit-led name of length > 1 it returns the host string->number answer when that is a number, so it diverges from rule_intern there (OB-SCHEME-INTERN-NUMERIC stays refuted) and agrees with the patched body elsewhere. The proposed patch ports/patches/shen-scheme-primitives.diff is proved to return a symbol for every string other than true/false and to refine rule_intern (OB-SCHEME-INTERN-PATCH)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLStrings.v",
+          "names": [
+            "CLStrings.CLStrings.tlstr_body_spec",
+            "CLStrings.CLStrings.tlstr_refines",
+            "CLStrings.CLStrings.string_to_n_body_spec",
+            "CLStrings.CLStrings.string_to_n_refines",
+            "CLStrings.CLStrings.string_to_n_long",
+            "CLStrings.CLStrings.pos_refines",
+            "CLStrings.CLStrings.n_to_string_int",
+            "CLStrings.CLStrings.n_to_string_nonnum",
+            "CLStrings.CLStrings.n_to_string_refines",
+            "CLStrings.CLStrings.n_to_string_scalar",
+            "CLStrings.CLStrings.n_to_string_surrogate",
+            "CLStrings.CLStrings.get_address_svref",
+            "CLStrings.CLStrings.get_address_refines",
+            "CLStrings.CLStrings.intern_body_plain",
+            "CLStrings.CLStrings.intern_refines",
+            "CLStrings.CLStrings.model_strings_ops"
+          ],
+          "premises": [
+            "cl_host_ops plus cl_string_ops / cl_vector_ops / cl_intern_ops: individually named SBCL operation contracts (E2E-21/24/25), and the uncaptured shen-cl.process-intern LOOP body (cl_intern_ops.process_plain, E2E-17)",
+            "CL constants :INITIAL-ELEMENT and CHAR-CODE-LIMIT = 1114112 bound in the environment; raised conditions quotiented; ASCII strings"
+          ],
+          "claim": "The captured Shen-CL |pos|, |tlstr|, |n->string|, |string->n|, |<-address| and |intern| refine their KLambda rules on the stated domains (OB-CL-STRING-PRIMS), including bounds and out-of-range behaviour (raise where the rule throws). Two divergences are proved for every contract-satisfying host: string->n raises on strings of length >= 2 (OB-CL-STRING-TO-N-UNIT) and n->string returns a string on surrogates (OB-CL-N-TO-STRING-SURROGATE)."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/Prims2Sources.v",
+          "names": [
+            "SchemeIntern.SchemeIntern.intern_admitted",
+            "CLStrings.CLStrings.cl_strings_admitted"
+          ],
+          "claim": "Exact bytes of stock and patched kl:intern and of the six Shen-CL definitions (blob-checked, spans recorded by scripts/package-prims2.py, re-checked by scripts/check-prims2-package.py) are read by PortReader and admitted by computed equality with the reviewed ASTs; make prove regenerates and diffs the package."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/prims2-native-samples.shen",
+          "claim": "Native runs on the v0.52 Shen-Scheme binary and a Shen-CL 4844072d image on SBCL 2.6.8 (outputs in docs/PRIMITIVES.md and docs/UPSTREAM-ISSUES-INTERN.md): intern of digit-led names, the Shen-CL intern collision, string->n of a two-character string, n->string of a surrogate, pos/tlstr/<-address bounds. Sampled, not proof."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-prims2.py",
+          "claim": "Seven mutants refused by Rocq: the numeric branch put back into the patched intern bytes, the patched AST restated as stock, stock intern claimed to return the symbol 12, (plusp n) for (minusp n) in |pos|, |tlstr| without its non-empty guard, and string->n and n->string claimed to refine their rules on every argument."
         }
       ],
       "acceptance": "no root is\nhidden behind an aggregate “runtime behaves correctly” assumption.",

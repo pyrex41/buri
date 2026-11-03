@@ -8,7 +8,7 @@ bytes into a Coq string literal. Reading, decoding, admission and every
 theorem are Rocq computations (rocq/SchemePatched.v, rocq/CLLoweringPatch.v,
 rocq/CLMultiplyPatched.v).
 
-  apply OUT               write OUT/shen-scheme/compiler.shen, OUT/shen-cl/{compiler.shen,primitives.lsp}
+  apply OUT               write OUT/shen-scheme/{compiler.shen,primitives.scm}, OUT/shen-cl/{compiler.shen,primitives.lsp}
   check-branches OUT      ports/compiler-branches-patched.shen is the patched extraction
   multiply OUT DEST.v     exact bytes of the patched |shen-cl.multiply|
 """
@@ -29,6 +29,11 @@ PATCHES = [
     ('shen-cl/primitives.lsp', 'ports/upstream/shen-cl/primitives.lsp', 'f9b11c8a0b57c8492e66094d5e236a8711983e7a',
      'ports/patches/shen-cl-primitives.diff', '577724bc2d477217c430d8967ad7fd1784f67512f4b2e9aaec6c76d8c323b895',
      '3872f83e8a50f5b4e9c445380dd52c839dddccc2'),
+    # Wave-D primitives lane: kl:intern no longer maps digit-led names through
+    # string->number (rocq/SchemeIntern.v; bytes packaged by package-prims2.py).
+    ('shen-scheme/primitives.scm', 'ports/upstream/primitives.scm', '92b8875a276848b473c59879f075f429ba44a7a0',
+     'ports/patches/shen-scheme-primitives.diff', '6c21e6799c5bf23ef17ff040d71b0312aa06679a39dd06829543242cb4e991d3',
+     '526a89b2d7693e11f50b4726efbd2ed8f111d1fe'),
 ]
 # Upstream test change that accompanies the multiply patch (applied only in the
 # native reproduction; the test file is not vendored).
