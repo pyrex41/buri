@@ -1,4 +1,4 @@
-# Native representation relations (E2E-21, Wave C, in progress)
+# Native representation relations (E2E-21, Waves C and D, in progress)
 
 This is the first E2E-21 deliverable. It covers the Chez Scheme 10.3.0
 `tarm64le` object representation, which Shen-Scheme v0.52 uses. The
@@ -9,8 +9,10 @@ representation is defined against the KLambda value model of
   uses, and a **Rocq representation relation** with proved basic properties.
 * The Islaris fast-path theorem of [ARM-FOUNDATION](ARM-FOUNDATION.md) 10.3
   is restated as a statement about Shen integers.
-* For SBCL 2.6.8 arm64 there is a specification table only; no relation is
-  defined yet.
+* For SBCL 2.6.8 arm64 there are representation relations for KLValue and for
+  the CL-model values, and the ten E2E-21 host operations of
+  CLContracts.cl_host_ops are proved against the captured inline type-test
+  code (section 5, Wave D).
 
 Evidence kinds are kept apart throughout:
 
@@ -227,9 +229,9 @@ theorem does not cover. The link between the two kernels (Coq 8.18 in
 `scripts/prove`, Coq 8.19 Islaris) is that both check the same source text.
 No proof connects the kernels.
 
-## 5. SBCL 2.6.8 arm64 specification table (no relation yet)
+## 5. SBCL 2.6.8 arm64: representation relations and the E2E-21 host operations
 
-`rocq/SbclLayout.v` holds the generated values. `SbclRepr.sbcl_source_matches_image`
+`rocq/SbclLayout.v` holds the generated layout values. `SbclRepr.sbcl_source_matches_image`
 is a ground derivation: the lowtag, widetag and register values evaluated
 from source equal those captured from the pinned image.
 `sbcl_layout_facts` records the layout facts below.
@@ -242,13 +244,158 @@ and others. `compact-instance-header`, `sb-simd-pack-256` and
 | Kind | Representation |
 |---|---|
 | Word | 64 bits; `n-lowtag-bits` 4, lowtag mask 15; `n-widetag-bits` 8 |
-| Fixnum | `n << 1`, `n-fixnum-tag-bits` 1 (even-fixnum lowtag 0, odd 8); range [-2^62, 2^62-1]. Unlike Chez, the fast-path tag test is `(a\|b)&1 = 0` |
+| Fixnum | `n << 1`, `n-fixnum-tag-bits` 1 (every even lowtag is a fixnum lowtag); range [-2^62, 2^62-1]. Unlike Chez, the fast-path tag test is `(a\|b)&1 = 0` |
 | Lowtags | instance-pointer 3, list-pointer 7, fun-pointer 11, other-pointer 15; other-immediate 1/5/9/13 |
-| NIL | `nil-value` 0x2F0100017 (address in the pinned image), lowtag 7: both a cons and a symbol (list-pointer + 8 = other-pointer). Shen `[]` is NIL, which is also CL false (VALUE-MODEL) |
-| Widetags | bignum 0x11, ratio 0x15, single-float 0x19 (immediate on 64-bit), double-float 0x1D, symbol 0x2D, code-header 0x35, instance 0x39, funcallable-instance 0x3D, simple-fun 0x41, closure 0x45, character 0x51, unbound-marker 9, simple-vector 0x89, simple-base-string 0xE1, simple-character-string 0xE5 |
-| Slots | cons car 0, cdr 1 (2 words); symbol hash 1, value 2, fdefn 3, info 4, name 5 (6 words); vector length 1, data 2; bignum digits 1; double-float value 1 (2 words); closure fun 1, info 2 |
-| Registers | `thread` x21, `lexenv` x22, `nargs` x23, `nfp` x24, `ocfp` x25, `null` x26, `csp` x27, `cardtable` x28, `cfp` x29, `lr` x30, `nsp` 31; descriptor args r0-r3 = x10-x13; `tmp` x9; non-descriptor nl0-nl8 = x0-x8 |
-| Characters | `char-code-limit` 1114112: SBCL characters include the surrogate block. They are wider than the VALUE-MODEL scalar-value strings (OB-REPR-SBCL-CHARS) |
+| NIL | `nil-value` 0x2F0100017, lowtag 7. See "NIL" below |
+| T | the symbol at NIL + 56 (image capture `t-address`; the captured code builds it with `ADD R0, NULL, #56`) |
+| Widetags | bignum 0x11, ratio 0x15, single-float 0x19 (immediate on 64-bit: `bits << 32 \| 0x19`), double-float 0x1D, symbol 0x2D, instance 0x39, simple-fun 0x41, closure 0x45, character 0x51 (immediate: `code << 8 \| 0x51`), simple-vector 0x89, simple-base-string 0xE1, simple-character-string 0xE5 |
+| Slots | slot i of a lowtag-t object is the word at `w - t + 8i`. cons car 0, cdr 1; symbol header widetag at `w - 15`; vector length 1 (a fixnum), data 2; bignum digits from 1, least significant first, two's complement, count in the header above the widetag byte; double-float value 1 |
+| Registers | `thread` x21, `nargs` x23, `null` x26 (holds NIL), `csp` x27, `cfp` x29, `lr` x30; descriptor args r0-r3 = x10-x13 (r0 = x10 also returns a single value); `tmp` x9; non-descriptor nl0-nl8 = x0-x8 |
+| Characters | `char-code-limit` 1114112: SBCL characters include the surrogate block (OB-REPR-SBCL-CHARS) |
+
+### 5.1 Pinned inputs (Wave D)
+
+In addition to the files of section 1, `ports/repr/sbcl/` holds, with
+upstream hashes pinned in `scripts/package-sbcl-type-tests.py` as well as
+`SHA256SUMS`: `arm64-type-vops.lisp`, `arm64-pred.lisp`,
+`generic-type-vops.lisp`, `type-vop-macros.lisp` and `genesis.lisp`
+(`src/compiler/{arm64/type-vops,arm64/pred,generic/type-vops,type-vop-macros,generic/genesis}.lisp`
+of the same SBCL 2.6.8 tarball), and the **image capture**
+`sbcl-2.6.8-arm64-type-tests.capture` written by `sbcl-type-tests.lisp`.
+That script compiles `(lambda (x) (op x))` (two arguments for EQ, STRING=,
+EQUAL, EQL and `=`) in the pinned aarch64 image under qemu-aarch64 and
+prints the raw 32-bit instruction words read from each code object, from the
+simple-fun entry to the end of the text, plus the disassembly as comments.
+`scripts/package-sbcl-type-tests.py` packages only the words, the
+define-type-vop type-code lists (as SbclLayout names) and presence flags of
+quoted generator and genesis lines into `rocq/SbclTypeTests.v`;
+`scripts/prove` regenerates and diffs it. It decodes nothing.
+
+### 5.2 The captured code (rocq/SbclA64.v, rocq/SbclTests.v)
+
+`SbclA64` is a decoder and integer semantics for the A64 forms the windows
+use: AND/ANDS/ORR (immediate, with DecodeBitMasks; shifted register),
+ADD/SUB/SUBS (immediate, shifted register), CCMP (register), CSEL,
+TBZ/TBNZ, B.cond, B, LDURB, and, for frame checks only, LDR/STR/LDP/RET.
+Flags are AddWithCarry; register 31 is ZR where the architecture says so and
+every SP use is refused; unsupported words decode to `None` and an
+unsupported step stops `run`. **This transcription of the Arm ARM is a trust
+boundary** (OB-SBCL-INLINE-TESTS); it is not checked against the Sail model.
+
+All ten E2E-21 operations are inline type tests in the pinned image:
+
+| Operation | Window (decoded from the captured words) | Word-level test |
+|---|---|---|
+| EQ | `CMP R2, R1`; T/NIL by `CSEL EQ` | `x = y` |
+| TYPEP FIXNUM | `TST R1, #1` | bit 0 clear |
+| INTEGERP | `TBZ R1,#0`; lowtag 15 and header byte 17 | fixnum or bignum |
+| NUMBERP | `TBZ`; `CMP W1, #25` (single float); lowtag 15 and header ≤ 41 | |
+| CONSP | `AND #15; CMP #7; CCMP R1, NULL` | lowtag 7 and not NIL |
+| STRINGP | lowtag 15 and `header - 225 ≤ 12` unsigned | header in [225, 237] |
+| ARRAYP | lowtag 15 and header ≥ 129 (signed `B.GE`) | |
+| SYMBOLP | `CMP R1, NULL` first; then lowtag 15 and header 45 | NIL or symbol |
+| NOT, NULL | `CMP R1, NULL` (identical code, `not_null_same_code`) | `w = NIL` |
+
+`SbclTests.*_window` are **universal theorems**: for every register file in
+which the argument register holds any word and x26 holds NIL, and every
+memory, the decoded window reaches its end with x10 = T or NIL exactly as the
+word-level test says. `frame_ground` (ground) checks each captured function
+is the standard external entry (argument count check, the argument moved from
+R0), the window, and the single-value return. `full_calls` (ground) shows
+STRING=, EQUAL, EQL and `=` end in an indirect tail branch through a function
+object: they are full calls, and their contracts stay with E2E-24.
+`tests_match_sources` (ground) shows that on every header widetag of the
+early-objdef enumeration the captured INTEGERP, NUMBERP, STRINGP and symbol
+header tests agree with the define-type-vop type codes. ARRAYP's code list is
+computed from the saetp table and is not lifted; its test is `≥
+simple-array-widetag` (129), and widetag 253 (`unused-array`) is no object's.
+
+The captured functions take an **untyped** argument. SBCL emits shorter code
+when it has derived a type (type-vops.lisp branches on the TN type); those
+variants, and whether the Shen-CL call sites use the untyped one, are
+OB-SBCL-INLINE-TESTS.
+
+### 5.3 NIL
+
+genesis.lisp (pinned; flags in `sbcl_source_flags`) lays NIL out so that its
+word (lowtag 7, a list pointer) is its symbol descriptor plus 8 (an
+other-pointer descriptor `des = NIL - 8`), its car and cdr (`NIL - 7`,
+`NIL + 1`) are NIL, and the byte at `NIL - 15` is symbol-widetag.
+`SbclValues.nil_dual` proves, from that layout as a snapshot premise: CONSP
+is false on NIL, NULL and SYMBOLP true, and the generic other-pointer symbol
+test is false on NIL, which is why the captured SYMBOLP compares with NULL
+first.
+
+How Shen values land on it: Shen `[]` is NIL; Shen `true` and `false` are the
+symbols `true`/`false` (Shen-CL's `shen-cl.true?`), so
+
+* SYMBOLP is T on Shen `[]` and on both Shen booleans (`kl_tests`,
+  `kl_machine_tests`): Shen `symbol?` cannot be the raw CL SYMBOLP;
+* NULL and NOT are NIL on Shen `false` (`kl_false_is_cl_true`): Shen false
+  is CL true;
+* the word of `VBool b` also represents `VSym` of its name
+  (`kl_bool_symbol_collision`): unlike Chez, the KLValue relation is not a
+  function on words. A Shen symbol whose CL interning is NIL itself has no
+  representation (the relation requires an ordinary symbol object).
+
+### 5.4 The relations
+
+`SbclWord` (universal, plus the ground `sbcl_word_layout`): fixnum encoding,
+round trip, injectivity, every even word a fixnum, wrapping add, the
+no-overflow iff, `(a|b)&1 = 0` iff both fixnums, slot alignment.
+
+`SbclValues.kv` relates KLValue values to words over a byte memory `m`, a
+vector-location map `loc`, a symbol table `symw` and meaning parameters
+`proc`, `port`, `cond`: fixnums, normalised bignums, double-floats, NIL,
+interned symbols (booleans as their symbols), strings (simple-character or
+simple-base, fixnum length, scalar code points), conses, simple-vectors at
+`loc l`, function objects (simple-fun, closure, funcallable instance) and
+instances (streams, conditions). `heap_rel`, `car_cdr_repr`,
+`vector_ref_repr`, `immediate_pointer_disjoint` and `kl_tests` are proved.
+
+`SbclHostOps.cv` relates the CL-model values `sv` of CLLowering to words in a
+snapshot (memory, symbol table, host-object words and kinds, float
+spellings): NIL, symbols, strings, canonical integer spellings as fixnums or
+bignums, other number spellings as double-floats or single-float immediates,
+host objects as simple-vectors, functions, instances or characters, conses.
+`snap_wf` requires injective interning, object identity and float spellings,
+T at NIL + 56 and the genesis NIL layout; `ex_snap_wf` exhibits one.
+`cv_functional` proves a word represents at most one `sv`.
+
+### 5.5 E2E-21 host operations discharged
+
+`e2e21_machine`: for every well-formed snapshot, every `sv` value and every
+word representing it, the captured code for CONSP, NULL, NOT, SYMBOLP,
+STRINGP, NUMBERP, INTEGERP, TYPEP FIXNUM and ARRAYP returns the word that
+represents exactly the cl_host_ops answer. `eq_machine`: EQ's answer is the
+word identity, sound, and complete when either side is a symbol or NIL; EQ is
+not a function of `sv` values (one cons compared with itself is T, two equal
+fresh conses NIL).
+
+`sbcl_host` is the host table whose ten E2E-21 entries are those answers
+(EQ: any admissible answer `e`) and whose other entries are a table `h24`.
+`sbcl_host_ops` proves `cl_host_ops (sbcl_host K e h24)` from
+`cl_e2e24_ops h24` (STRING=, EQUAL twice, EQL vs `=` on integers, `=`
+symmetric, `=` reflexive) and `eq_admissible e`; `sbcl_host_is_machine`
+proves its entries are the captured code's answers on every representation.
+`sbcl_optimise_sound` / `sbcl_emit_if_refines` restate
+CLContracts.discharged_optimise_sound / discharged_emit_if_refines for that
+host; the `_e24` corollaries fix `e := eq_fresh` and leave exactly
+`cl_e2e24_ops` and `cl_kernel_ops` (plus `qsafe`) as premises.
+`e24_satisfiable` is anti-vacuity only (CLContracts.model_host, not SBCL).
+
+Every statement is closed under the global context: 72 in
+`rocq/Audit_Sbclnative.v`. Five proof mutations (`tests/mutate-sbclnative.py`)
+must be refused: the consp CCMP condition flipped in the capture, a string
+test claimed to accept the symbol widetag, NIL claimed not a symbol, Shen
+false claimed CL false, and EQ claimed complete on all equal values.
+
+What this does not give: the A64 transcription is trusted; only the untyped
+compile of each operation is covered; frames, calling convention and the
+return protocol (E2E-22); that Shen-CL and primitives.lsp keep values inside
+the relation; GC, allocation and threads (E2E-25/28); symbol names and
+packages (the relation uses a symbol table); bignum normalisation by SBCL
+arithmetic; float meaning; characters beyond scalars (OB-REPR-SBCL-CHARS).
 
 ## 6. Discovered disagreement: `intern` of numeric names on Shen-Scheme
 
@@ -291,8 +438,10 @@ These items are open; none is assumed away:
   theorem says that compiled Shen code only produces related words. The
   VALUE-MODEL `cond` sample returns `#<void>`, which `non_values_unrepresented`
   shows has no meaning (OB-REPR-SHEN-SCHEME-PRESERVES).
-* **The CL relation** (E2E-21). Only the table above exists
-  (OB-NATIVE-REPR-SBCL).
+* **The CL relation** (E2E-21). Defined and its basic properties proved
+  (section 5); partial: frames, GC, symbol names, Shen-CL preservation and
+  the inline-test compilation boundary remain (OB-NATIVE-REPR-SBCL,
+  OB-SBCL-INLINE-TESTS).
 
 E2E-21 stays in progress. Its exit criterion ("all native values and memory
 accesses used by the admitted execution paths have justified meanings") is

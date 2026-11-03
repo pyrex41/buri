@@ -1,0 +1,384 @@
+lisp-implementation-version 2.6.8
+machine-type ARM64
+nil-value 12617515031
+t-address 12617515087
+case eq
+form (LAMBDA (X Y) (EQ X Y))
+entry-offset 32
+words 4177528766 4043313919 1409286529 2432721851 2852783084 4181723818 4177529770 3943367071 2432754506 2593784138 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 76 bytes. Origin: #x1001C109C0 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X Y)))
+; ; 9C0:       .ENTRY (LAMBDA (X Y))
+; ; 9D0:       BE0700F9         STR LR, [CFP, #8]
+; ; 9D4:       FF1200F1         CMP NARGS, #4
+; ; 9D8:       81010054         BNE L0
+; ; 9DC:       BB630091         ADD CSP, CFP, #24
+; ; 9E0:       EC030AAA         MOV R2, R0
+; ; Origin #x1001C109E4 (segment 2 of 2)                        ; (LAMBDA (X Y))
+; ; 9E4:       AA0A40F9         LDR R0, [THREAD, #16]           ; binding-stack-pointer
+; ; 9E8:       AA0B00F9         STR R0, [CFP, #16]
+; ; 9EC:       9F010BEB         CMP R2, R1
+; ; 9F0:       4AE30091         ADD R0, NULL, #56               ; T
+; ; 9F4:       4A019A9A         CSEL R0, R0, NULL, EQ
+; ; 9F8:       FB031DAA         MOV CSP, CFP
+; ; 9FC:       5F0300F1         CMP NULL, #0
+; ; A00:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; A04:       C0035FD6         RET
+; ; A08: L0:   E00120D4         BRK #15                         ; Invalid argument count trap
+end
+case typep-fixnum
+form (LAMBDA (X) (TYPEP X 'FIXNUM))
+entry-offset 32
+words 4177528766 4043311871 1409286529 2432721851 2852783083 4181723818 4177529770 4064280959 2432754506 2593784138 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 76 bytes. Origin: #x1001C10AD0 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; AD0:       .ENTRY (LAMBDA (X))
+; ; AE0:       BE0700F9         STR LR, [CFP, #8]
+; ; AE4:       FF0A00F1         CMP NARGS, #2
+; ; AE8:       81010054         BNE L0
+; ; AEC:       BB630091         ADD CSP, CFP, #24
+; ; AF0:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C10AF4 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; AF4:       AA0A40F9         LDR R0, [THREAD, #16]           ; binding-stack-pointer
+; ; AF8:       AA0B00F9         STR R0, [CFP, #16]
+; ; AFC:       7F0140F2         TST R1, #1
+; ; B00:       4AE30091         ADD R0, NULL, #56               ; T
+; ; B04:       4A019A9A         CSEL R0, R0, NULL, EQ
+; ; B08:       FB031DAA         MOV CSP, CFP
+; ; B0C:       5F0300F1         CMP NULL, #0
+; ; B10:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; B14:       C0035FD6         RET
+; ; B18: L0:   E00120D4         BRK #15                         ; Invalid argument count trap
+end
+case integerp
+form (LAMBDA (X) (INTEGERP X))
+entry-offset 32
+words 4177528766 4043311871 1409286753 2432721851 2852783083 4181723818 4177529770 905969963 2453671265 4043324479 1409286273 945754465 4043326527 1409286240 2853831658 335544322 2432754506 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 104 bytes. Origin: #x1001C10BE0 (segment 1 of 2)      ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; BE0:       .ENTRY (LAMBDA (X))
+; ; BF0:       BE0700F9         STR LR, [CFP, #8]
+; ; BF4:       FF0A00F1         CMP NARGS, #2
+; ; BF8:       61020054         BNE L3
+; ; BFC:       BB630091         ADD CSP, CFP, #24
+; ; C00:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C10C04 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; C04:       AA0A40F9         LDR R0, [THREAD, #16]           ; binding-stack-pointer
+; ; C08:       AA0B00F9         STR R0, [CFP, #16]
+; ; C0C:       2B010036         TBZ WR1, #0, L1
+; ; C10:       610D4092         AND NL1, R1, #15
+; ; C14:       3F3C00F1         CMP NL1, #15
+; ; C18:       81000054         BNE L0
+; ; C1C:       61115F38         LDRB WNL1, [R1, #-15]
+; ; C20:       3F4400F1         CMP NL1, #17
+; ; C24:       60000054         BEQ L1
+; ; C28: L0:   EA031AAA         MOV R0, NULL
+; ; C2C:       02000014         B L2
+; ; C30: L1:   4AE30091         ADD R0, NULL, #56               ; T
+; ; C34: L2:   FB031DAA         MOV CSP, CFP
+; ; C38:       5F0300F1         CMP NULL, #0
+; ; C3C:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; C40:       C0035FD6         RET
+; ; C44: L3:   E00120D4         BRK #15                         ; Invalid argument count trap
+end
+case numberp
+form (LAMBDA (X) (NUMBERP X))
+entry-offset 32
+words 4177528766 4043311871 1409286817 2432721851 2852783083 4181723818 4177529770 905970027 1895851391 1409286432 2453671265 4043324479 1409286273 945754465 4043351103 1409286253 2853831658 335544322 2432754506 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 112 bytes. Origin: #x1001C10D00 (segment 1 of 2)      ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; 00:       .ENTRY (LAMBDA (X))
+; ; 10:       BE0700F9         STR LR, [CFP, #8]
+; ; 14:       FF0A00F1         CMP NARGS, #2
+; ; 18:       A1020054         BNE L3
+; ; 1C:       BB630091         ADD CSP, CFP, #24
+; ; 20:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C10D24 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; 24:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 28:       AA0B00F9         STR R0, [CFP, #16]
+; ; 2C:       6B010036         TBZ WR1, #0, L1
+; ; 30:       7F650071         CMP WR1, #25
+; ; 34:       20010054         BEQ L1
+; ; 38:       610D4092         AND NL1, R1, #15
+; ; 3C:       3F3C00F1         CMP NL1, #15
+; ; 40:       81000054         BNE L0
+; ; 44:       61115F38         LDRB WNL1, [R1, #-15]
+; ; 48:       3FA400F1         CMP NL1, #41
+; ; 4C:       6D000054         BLE L1
+; ; 50: L0:   EA031AAA         MOV R0, NULL
+; ; 54:       02000014         B L2
+; ; 58: L1:   4AE30091         ADD R0, NULL, #56                ; T
+; ; 5C: L2:   FB031DAA         MOV CSP, CFP
+; ; 60:       5F0300F1         CMP NULL, #0
+; ; 64:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; 68:       C0035FD6         RET
+; ; 6C: L3:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case consp
+form (LAMBDA (X) (CONSP X))
+entry-offset 32
+words 4177528766 4043311871 1409286593 2432721851 2852783083 4181723818 4177529770 2453671265 4043316287 4200202596 2432754506 2593788234 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 84 bytes. Origin: #x1001C10E30 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; 30:       .ENTRY (LAMBDA (X))
+; ; 40:       BE0700F9         STR LR, [CFP, #8]
+; ; 44:       FF0A00F1         CMP NARGS, #2
+; ; 48:       C1010054         BNE L0
+; ; 4C:       BB630091         ADD CSP, CFP, #24
+; ; 50:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C10E54 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; 54:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 58:       AA0B00F9         STR R0, [CFP, #16]
+; ; 5C:       610D4092         AND NL1, R1, #15
+; ; 60:       3F1C00F1         CMP NL1, #7
+; ; 64:       64015AFA         CCMP R1, NULL, #4, EQ
+; ; 68:       4AE30091         ADD R0, NULL, #56                ; T
+; ; 6C:       4A119A9A         CSEL R0, R0, NULL, NE
+; ; 70:       FB031DAA         MOV CSP, CFP
+; ; 74:       5F0300F1         CMP NULL, #0
+; ; 78:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; 7C:       C0035FD6         RET
+; ; 80: L0:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case stringp
+form (LAMBDA (X) (STRINGP X))
+entry-offset 32
+words 4177528766 4043311871 1409286753 2432721851 2852783083 4181723818 4177529770 2453671265 4043324479 1409286305 945754465 3506668577 4043321407 1409286249 2853831658 335544322 2432754506 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 104 bytes. Origin: #x1001C10F40 (segment 1 of 2)      ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; 40:       .ENTRY (LAMBDA (X))
+; ; 50:       BE0700F9         STR LR, [CFP, #8]
+; ; 54:       FF0A00F1         CMP NARGS, #2
+; ; 58:       61020054         BNE L3
+; ; 5C:       BB630091         ADD CSP, CFP, #24
+; ; 60:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C10F64 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; 64:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 68:       AA0B00F9         STR R0, [CFP, #16]
+; ; 6C:       610D4092         AND NL1, R1, #15
+; ; 70:       3F3C00F1         CMP NL1, #15
+; ; 74:       A1000054         BNE L0
+; ; 78:       61115F38         LDRB WNL1, [R1, #-15]
+; ; 7C:       218403D1         SUB NL1, NL1, #225
+; ; 80:       3F3000F1         CMP NL1, #12
+; ; 84:       69000054         BLS L1
+; ; 88: L0:   EA031AAA         MOV R0, NULL
+; ; 8C:       02000014         B L2
+; ; 90: L1:   4AE30091         ADD R0, NULL, #56                ; T
+; ; 94: L2:   FB031DAA         MOV CSP, CFP
+; ; 98:       5F0300F1         CMP NULL, #0
+; ; 9C:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; A0:       C0035FD6         RET
+; ; A4: L3:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case arrayp
+form (LAMBDA (X) (ARRAYP X))
+entry-offset 32
+words 4177528766 4043311871 1409286721 2432721851 2852783083 4181723818 4177529770 2453671265 4043324479 1409286273 945754465 4043441215 1409286250 2853831658 335544322 2432754506 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 100 bytes. Origin: #x1001C11060 (segment 1 of 2)      ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; 60:       .ENTRY (LAMBDA (X))
+; ; 70:       BE0700F9         STR LR, [CFP, #8]
+; ; 74:       FF0A00F1         CMP NARGS, #2
+; ; 78:       41020054         BNE L3
+; ; 7C:       BB630091         ADD CSP, CFP, #24
+; ; 80:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C11084 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; 84:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 88:       AA0B00F9         STR R0, [CFP, #16]
+; ; 8C:       610D4092         AND NL1, R1, #15
+; ; 90:       3F3C00F1         CMP NL1, #15
+; ; 94:       81000054         BNE L0
+; ; 98:       61115F38         LDRB WNL1, [R1, #-15]
+; ; 9C:       3F0402F1         CMP NL1, #129
+; ; A0:       6A000054         BGE L1
+; ; A4: L0:   EA031AAA         MOV R0, NULL
+; ; A8:       02000014         B L2
+; ; AC: L1:   4AE30091         ADD R0, NULL, #56                ; T
+; ; B0: L2:   FB031DAA         MOV CSP, CFP
+; ; B4:       5F0300F1         CMP NULL, #0
+; ; B8:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; BC:       C0035FD6         RET
+; ; C0: L3:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case symbolp
+form (LAMBDA (X) (SYMBOLP X))
+entry-offset 32
+words 4177528766 4043311871 1409286785 2432721851 2852783083 4181723818 4177529770 3944350079 1409286432 2453671265 4043324479 1409286273 945754465 4043355199 1409286240 2853831658 335544322 2432754506 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 108 bytes. Origin: #x1001C11180 (segment 1 of 2)      ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; 80:       .ENTRY (LAMBDA (X))
+; ; 90:       BE0700F9         STR LR, [CFP, #8]
+; ; 94:       FF0A00F1         CMP NARGS, #2
+; ; 98:       81020054         BNE L3
+; ; 9C:       BB630091         ADD CSP, CFP, #24
+; ; A0:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C111A4 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; A4:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; A8:       AA0B00F9         STR R0, [CFP, #16]
+; ; AC:       7F011AEB         CMP R1, NULL
+; ; B0:       20010054         BEQ L1
+; ; B4:       610D4092         AND NL1, R1, #15
+; ; B8:       3F3C00F1         CMP NL1, #15
+; ; BC:       81000054         BNE L0
+; ; C0:       61115F38         LDRB WNL1, [R1, #-15]
+; ; C4:       3FB400F1         CMP NL1, #45
+; ; C8:       60000054         BEQ L1
+; ; CC: L0:   EA031AAA         MOV R0, NULL
+; ; D0:       02000014         B L2
+; ; D4: L1:   4AE30091         ADD R0, NULL, #56                ; T
+; ; D8: L2:   FB031DAA         MOV CSP, CFP
+; ; DC:       5F0300F1         CMP NULL, #0
+; ; E0:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; E4:       C0035FD6         RET
+; ; E8: L3:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case not
+form (LAMBDA (X) (NOT X))
+entry-offset 32
+words 4177528766 4043311871 1409286529 2432721851 2852783083 4181723818 4177529770 3944350079 2432754506 2593784138 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 76 bytes. Origin: #x1001C112B0 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; B0:       .ENTRY (LAMBDA (X))
+; ; C0:       BE0700F9         STR LR, [CFP, #8]
+; ; C4:       FF0A00F1         CMP NARGS, #2
+; ; C8:       81010054         BNE L0
+; ; CC:       BB630091         ADD CSP, CFP, #24
+; ; D0:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C112D4 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; D4:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; D8:       AA0B00F9         STR R0, [CFP, #16]
+; ; DC:       7F011AEB         CMP R1, NULL
+; ; E0:       4AE30091         ADD R0, NULL, #56                ; T
+; ; E4:       4A019A9A         CSEL R0, R0, NULL, EQ
+; ; E8:       FB031DAA         MOV CSP, CFP
+; ; EC:       5F0300F1         CMP NULL, #0
+; ; F0:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; F4:       C0035FD6         RET
+; ; F8: L0:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case null
+form (LAMBDA (X) (NULL X))
+entry-offset 32
+words 4177528766 4043311871 1409286529 2432721851 2852783083 4181723818 4177529770 3944350079 2432754506 2593784138 2854028283 4043309919 2839575485 3596551104 3558867424
+; ; Size: 76 bytes. Origin: #x1001C113C0 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X)))
+; ; 3C0:       .ENTRY (LAMBDA (X))
+; ; 3D0:       BE0700F9         STR LR, [CFP, #8]
+; ; 3D4:       FF0A00F1         CMP NARGS, #2
+; ; 3D8:       81010054         BNE L0
+; ; 3DC:       BB630091         ADD CSP, CFP, #24
+; ; 3E0:       EB030AAA         MOV R1, R0
+; ; Origin #x1001C113E4 (segment 2 of 2)                        ; (LAMBDA (X))
+; ; 3E4:       AA0A40F9         LDR R0, [THREAD, #16]           ; binding-stack-pointer
+; ; 3E8:       AA0B00F9         STR R0, [CFP, #16]
+; ; 3EC:       7F011AEB         CMP R1, NULL
+; ; 3F0:       4AE30091         ADD R0, NULL, #56               ; T
+; ; 3F4:       4A019A9A         CSEL R0, R0, NULL, EQ
+; ; 3F8:       FB031DAA         MOV CSP, CFP
+; ; 3FC:       5F0300F1         CMP NULL, #0
+; ; 400:       BD7B40A9         LDP CFP, LR, [CFP]
+; ; 404:       C0035FD6         RET
+; ; 408: L0:   E00120D4         BRK #15                         ; Invalid argument count trap
+end
+case string=
+form (LAMBDA (X Y) (STRING= X Y))
+entry-offset 32
+words 4177528766 4043313919 1409286625 2432746427 2852783087 2852848622 4181723818 4177529770 2853110762 2853045227 3531603980 2853831661 2835508159 1493171446 4164981470 2432701406 3592356800 3558867424
+; ; Size: 88 bytes. Origin: #x1001C114E0 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X Y)))
+; ; 4E0:       .ENTRY (LAMBDA (X Y))
+; ; 4F0:       BE0700F9         STR LR, [CFP, #8]
+; ; 4F4:       FF1200F1         CMP NARGS, #4
+; ; 4F8:       E1010054         BNE L0
+; ; 4FC:       BBC30091         ADD CSP, CFP, #48
+; ; 500:       EF030AAA         MOV R5, R0
+; ; 504:       EE030BAA         MOV R4, R1
+; ; Origin #x1001C11508 (segment 2 of 2)                        ; (LAMBDA (X Y))
+; ; 508:       AA0A40F9         LDR R0, [THREAD, #16]           ; binding-stack-pointer
+; ; 50C:       AA0B00F9         STR R0, [CFP, #16]
+; ; 510:       EA030FAA         MOV R0, R5
+; ; 514:       EB030EAA         MOV R1, R4
+; ; 518:       0C0080D2         MOVZ R2, #0
+; ; 51C:       ED031AAA         MOV R3, NULL
+; ; 520:       BF6B02A9         STP ZR, NULL, [CFP, #32]
+; ; 524:       F6FCFF58         LDR LEXENV, #x1001C114C0        ; #<SB-KERNEL:FDEFN SB-KERNEL:STRING=*>
+; ; 528:       DE9240F8         LDR LR, [LEXENV, #9]
+; ; 52C:       DE130091         ADD LR, LR, #4
+; ; 530:       C0031FD6         BR LR
+; ; 534: L0:   E00120D4         BRK #15                         ; Invalid argument count trap
+end
+case equal
+form (LAMBDA (X Y) (EQUAL X Y))
+entry-offset 32
+words 4177528766 4043313919 1409286561 2432721851 2852783085 2852848620 4181723818 4177529770 2852979690 2852914155 1493171542 3531604119 4164981470 2432701406 3592356800 3558867424
+; ; Size: 80 bytes. Origin: #x1001C11600 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X Y)))
+; ; 00:       .ENTRY (LAMBDA (X Y))
+; ; 10:       BE0700F9         STR LR, [CFP, #8]
+; ; 14:       FF1200F1         CMP NARGS, #4
+; ; 18:       A1010054         BNE L0
+; ; 1C:       BB630091         ADD CSP, CFP, #24
+; ; 20:       ED030AAA         MOV R3, R0
+; ; 24:       EC030BAA         MOV R2, R1
+; ; Origin #x1001C11628 (segment 2 of 2)                        ; (LAMBDA (X Y))
+; ; 28:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 2C:       AA0B00F9         STR R0, [CFP, #16]
+; ; 30:       EA030DAA         MOV R0, R3
+; ; 34:       EB030CAA         MOV R1, R2
+; ; 38:       56FDFF58         LDR LEXENV, #x1001C115E0         ; #<SB-KERNEL:FDEFN EQUAL>
+; ; 3C:       970080D2         MOVZ NARGS, #4
+; ; 40:       DE9240F8         LDR LR, [LEXENV, #9]
+; ; 44:       DE130091         ADD LR, LR, #4
+; ; 48:       C0031FD6         BR LR
+; ; 4C: L0:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case eql
+form (LAMBDA (X Y) (EQL X Y))
+entry-offset 32
+words 4177528766 4043313919 1409286561 2432721851 2852783085 2852848620 4181723818 4177529770 2852979690 2852914155 3531643433 4167658334 2432701406 3531604119 3592356800 3558867424
+; ; Size: 80 bytes. Origin: #x1001C11710 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X Y)))
+; ; 10:       .ENTRY (LAMBDA (X Y))
+; ; 20:       BE0700F9         STR LR, [CFP, #8]
+; ; 24:       FF1200F1         CMP NARGS, #4
+; ; 28:       A1010054         BNE L0
+; ; 2C:       BB630091         ADD CSP, CFP, #24
+; ; 30:       ED030AAA         MOV R3, R0
+; ; 34:       EC030BAA         MOV R2, R1
+; ; Origin #x1001C11738 (segment 2 of 2)                        ; (LAMBDA (X Y))
+; ; 38:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 3C:       AA0B00F9         STR R0, [CFP, #16]
+; ; 40:       EA030DAA         MOV R0, R3
+; ; 44:       EB030CAA         MOV R1, R2
+; ; 48:       299A80D2         MOVZ TMP, #1233
+; ; 4C:       5E6B69F8         LDR LR, [NULL, TMP]              ; EQL
+; ; 50:       DE130091         ADD LR, LR, #4
+; ; 54:       970080D2         MOVZ NARGS, #4
+; ; 58:       C0031FD6         BR LR
+; ; 5C: L0:   E00120D4         BRK #15                          ; Invalid argument count trap
+end
+case num-eq
+form (LAMBDA (X Y) (= X Y))
+entry-offset 32
+words 4177528766 4043313919 1409286529 2432721851 2852783085 2852848620 4181723818 4177529770 2852979690 2852914155 3531642409 4167658334 2432701406 3592356800 3558867424
+; ; Size: 76 bytes. Origin: #x1001C11820 (segment 1 of 2)       ; (XEP (LAMBDA
+;                                                               ;          (X Y)))
+; ; 20:       .ENTRY (LAMBDA (X Y))
+; ; 30:       BE0700F9         STR LR, [CFP, #8]
+; ; 34:       FF1200F1         CMP NARGS, #4
+; ; 38:       81010054         BNE L0
+; ; 3C:       BB630091         ADD CSP, CFP, #24
+; ; 40:       ED030AAA         MOV R3, R0
+; ; 44:       EC030BAA         MOV R2, R1
+; ; Origin #x1001C11848 (segment 2 of 2)                        ; (LAMBDA (X Y))
+; ; 48:       AA0A40F9         LDR R0, [THREAD, #16]            ; binding-stack-pointer
+; ; 4C:       AA0B00F9         STR R0, [CFP, #16]
+; ; 50:       EA030DAA         MOV R0, R3
+; ; 54:       EB030CAA         MOV R1, R2
+; ; 58:       299680D2         MOVZ TMP, #1201
+; ; 5C:       5E6B69F8         LDR LR, [NULL, TMP]              ; SB-KERNEL:TWO-ARG-=
+; ; 60:       DE130091         ADD LR, LR, #4
+; ; 64:       C0031FD6         BR LR
+; ; 68: L0:   E00120D4         BRK #15                          ; Invalid argument count trap
+end

@@ -1778,19 +1778,20 @@
    "id": "OB-CL-HOST-OPS",
    "kind": "implementation-correspondence",
    "scope": "universal",
-   "owner": "E2E-21",
+   "owner": "E2E-24",
    "packages": [
-    "E2E-24",
+    "E2E-21",
     "E2E-16",
     "E2E-17"
    ],
    "status": "assumed",
    "boundary": "SBCL operations reached by the captured equality helpers and the optimised IF tests",
-   "identity": "CLContracts.cl_host_ops (16 fields)",
-   "statement": "SBCL EQ, TYPEP FIXNUM, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, STRING=, NOT, NULL, EQUAL (string and object cases), EQL on integers and = (symmetry, reflexivity on literals) satisfy the individually named fields of cl_host_ops on the represented values, and are pure.",
+   "identity": "SbclHostOps.cl_e2e24_ops (6 fields); the ten E2E-21 fields of CLContracts.cl_host_ops are discharged by SbclHostOps.sbcl_host_ops/sbcl_host_is_machine",
+   "statement": "SBCL STRING=, EQUAL (string and object cases), EQL on integers and = (symmetry, reflexivity on literals) satisfy the individually named fields of cl_e2e24_ops on the represented values, and are pure. Each is a full call in the pinned image (SbclTests.full_calls).",
    "premises": [],
    "depends_on": [
-    "OB-NATIVE-REPR-SBCL"
+    "OB-NATIVE-REPR-SBCL",
+    "OB-SBCL-INLINE-TESTS"
    ],
    "evidence": [
     {
@@ -1798,12 +1799,56 @@
      "ref": "CLContracts.CLContracts.model_host_ops",
      "establishes": "model-proof",
      "note": "satisfiability only (anti-vacuity), not a model of SBCL"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SbclHostOps.SbclHostOps.sbcl_host_ops",
+     "establishes": "model-proof",
+     "note": "reduction only: cl_host_ops follows from cl_e2e24_ops and an admissible EQ answer for the host whose E2E-21 entries are the captured code's answers"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SbclHostOps.SbclHostOps.e24_satisfiable",
+     "establishes": "model-proof",
+     "note": "satisfiability only, not a model of SBCL"
     }
    ],
    "completion_evidence": "SBCL representation relation and operation proofs (E2E-21/E2E-24).",
    "sources": [
     "docs/CL-PORT.md",
     "docs/PRIMITIVES.md"
+   ],
+   "history": [
+    {
+     "source": "docs/REPRESENTATION.md",
+     "recorded": "E2E-21 Wave D (sbclnative): EQ, TYPEP FIXNUM, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, NOT and NULL proved at the representation level against the captured SBCL 2.6.8 arm64 inline code (SbclHostOps.e2e21_machine, eq_machine).",
+     "reconciliation": "Narrowed to the six E2E-24 full-call contracts (cl_e2e24_ops); owner moved to E2E-24."
+    }
+   ]
+  },
+  {
+   "id": "OB-SBCL-INLINE-TESTS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [
+    "E2E-21",
+    "E2E-16"
+   ],
+   "status": "open",
+   "boundary": "SBCL compilation of the E2E-21 type tests at their Shen-CL call sites",
+   "identity": "ports/repr/sbcl/sbcl-2.6.8-arm64-type-tests.capture; rocq/SbclTests.v; rocq/SbclA64.v",
+   "statement": "At every Shen-CL call site of EQ, TYPEP FIXNUM, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, NOT and NULL, SBCL 2.6.8 arm64 emits either the captured untyped window or a type-specialised variant that decides the same predicate on the derived type, inside a frame that delivers the argument and returns R0; and the A64 transcription in SbclA64 agrees with the Arm architecture for the decoded forms.",
+   "premises": [],
+   "depends_on": [
+    "OB-NATIVE-REPR-SBCL",
+    "OB-ARM-FOUNDATION"
+   ],
+   "evidence": [],
+   "completion_evidence": "Capture and proof of the code SBCL emits for primitives.lsp and the compiled kernel; A64 forms checked against the Sail/isla model (E2E-20).",
+   "sources": [
+    "docs/REPRESENTATION.md",
+    "docs/CL-PORT.md"
    ],
    "history": []
   },
@@ -2419,8 +2464,10 @@
    "kind": "model-proof",
    "scope": "universal",
    "owner": "E2E-21",
-   "packages": [],
-   "status": "open",
+   "packages": [
+    "E2E-21"
+   ],
+   "status": "partial",
    "boundary": "SBCL native representation relation",
    "identity": "SBCL 2.6.8 arm64 (source sha256 ad5126df..., image sbcl.core 44fce5d1...); ports/repr/SHA256SUMS",
    "statement": "SBCL values, heap and continuations relate to SEM-VALUE.",
@@ -2430,7 +2477,26 @@
     "OB-REPR-SBCL-CHARS",
     "OB-VECTOR-HEAP"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "SbclValues.SbclValues.kl_tests",
+     "establishes": "model-proof",
+     "note": "relation kv and the captured tests on represented KLValue values; one snapshot, closures/streams/conditions by shape plus meaning parameters"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SbclHostOps.SbclHostOps.cv_functional",
+     "establishes": "model-proof",
+     "note": "CL-model relation cv is a function on words in a well-formed snapshot"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "SbclValues.SbclValues.nil_dual",
+     "establishes": "model-proof",
+     "note": "NIL as list pointer, symbol descriptor and cons with car/cdr NIL (genesis.lisp layout as a snapshot premise)"
+    }
+   ],
    "completion_evidence": "Representation relation proofs.",
    "sources": [
     "docs/CL-PORT.md",
@@ -2441,6 +2507,11 @@
      "source": "docs/REPRESENTATION.md",
      "recorded": "E2E-21 Wave C: SBCL 2.6.8 arm64 lowtag/widetag/slot/register table from pinned sources checked against the image capture (SbclRepr ground derivations).",
      "reconciliation": "Still open: no CL representation relation is defined."
+    },
+    {
+     "source": "docs/REPRESENTATION.md",
+     "recorded": "E2E-21 Wave D (sbclnative): SBCL 2.6.8 arm64 relations kv (KLValue) and cv (CL model) defined from SbclLayout with basic properties proved (72 closed statements in rocq/Audit_Sbclnative.v).",
+     "reconciliation": "Partial: continuations/frames, GC and allocation, symbol names and packages, bignum normalisation, float meaning, characters (OB-REPR-SBCL-CHARS) and Shen-CL preserving the relation remain open."
     }
    ]
   },
@@ -4454,6 +4525,7 @@
   "rocq/Audit_Portfix.v",
   "rocq/Audit_Prims2.v",
   "rocq/Audit_Repr.v",
+  "rocq/Audit_Sbclnative.v",
   "rocq/Audit_Termination.v"
  ]
 }

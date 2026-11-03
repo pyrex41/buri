@@ -84,6 +84,16 @@ while read -r name pattern; do
   grep -q "$(printf '%s' "$pattern" | tr _ ' ')" "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done < _build/mutations/repr-names
+# E2E-21 SBCL-native mutants: a changed captured instruction word, a changed
+# source-agreement claim and three false representation-level claims.
+python3 tests/mutate-sbclnative.py > _build/mutations/sbclnative-names
+while read -r name pattern; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q "$(printf '%s' "$pattern" | tr _ ' ')" "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done < _build/mutations/sbclnative-names
 # EQ1-TERM and order-call progress mutants: the unmutated control of the
 # member? inductive step must be accepted; each mutant must be refused.
 names=$(python3 tests/mutate-termination.py)
