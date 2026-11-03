@@ -29,6 +29,7 @@ test:
 	./scripts/check-shen tests/cl-lowering-capture.shen
 	./scripts/check-shen tests/primitives.shen
 	./scripts/check-shen tests/representation.shen
+	./scripts/check-shen tests/contracts.shen
 	python3 tests/gates.py
 
 prove:

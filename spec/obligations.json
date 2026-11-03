@@ -3800,6 +3800,295 @@
     "docs/CHEZ-NANOPASS.md"
    ],
    "history": []
+  },
+  {
+   "id": "OB-CONTRACT-RULES-SOUND",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "BURI/KL-CONTRACT-1 inference rules versus KLMetatheory semantics",
+   "identity": "rocq/ContractLogic.v",
+   "statement": "Every rule of the contract calculus (deriv/dargs/appj: values, unbound variables, let, if, type, defun, trap-error, application with and without arguments, calls, consequence, existential, footprint frame; aj_sem/aj_ctx/aj_partial/aj_lam/aj_frozen) and both recursion rules (rec_partial, step-indexed; rec_total, nat measure strictly decreasing) is sound for the KLambda small-step semantics in each mode (Partial, Total, Always I), under exactly the recorded premises: a resource policy covering the profile limits and validity of the call-contract context. Semantic meaning: total_meaning/partial_meaning (maximal behaviors of the closed system), total_run/partial_run (KLMetatheory.run). No completeness claim.",
+   "premises": [
+    "policy_ok P RP",
+    "ctx_at (validity of every contract in the context, a premise for host contracts)"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.soundness",
+     "establishes": "model-proof",
+     "note": "one case per rule, all modes"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.rec_partial",
+     "establishes": "model-proof",
+     "note": "partial and temporal modes"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.rec_total",
+     "establishes": "model-proof",
+     "note": "explicit measure"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.total_meaning",
+     "establishes": "model-proof",
+     "note": "every behavior terminates within the admitted outcomes; divergence, reaction, going wrong excluded"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.partial_meaning",
+     "establishes": "model-proof",
+     "note": "no going wrong; terminating outcomes admitted; Always I constrains every event of every behavior"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.total_run",
+     "establishes": "model-proof",
+     "note": "KLMetatheory.run returns a decided verdict for some fuel"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.partial_run",
+     "establishes": "model-proof",
+     "note": "every decided verdict admitted; VWrong excluded"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractPrims.ContractPrims.if_nonbool_premise_needed",
+     "establishes": "model-proof",
+     "note": "dropping the non-Boolean premise of r_if is unsound"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractPrims.ContractPrims.unmeasured_recursion_unsound",
+     "establishes": "model-proof",
+     "note": "dropping the measure of rec_total is unsound"
+    }
+   ],
+   "completion_evidence": "Audited axiom-free theorems in rocq/Audit_Contracts.v; proof mutations ContractIfNoNonBool, ContractTotalNoMeasure, ContractPartialLe, ContractFailNoPolicy refused.",
+   "sources": [
+    "docs/CONTRACT-LOGIC.md",
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CONTRACT-RULES-COVERAGE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "open",
+   "boundary": "Contract calculus coverage of the KLambda surface and of temporal properties",
+   "identity": "rocq/ContractLogic.v",
+   "statement": "The calculus has sound rules for every KLambda form and effect: and/or/cond, multi-argument closure application and over-application, eval-kl, history-dependent temporal properties (protocol traces), environment signals and cancellation, liveness under fairness/input availability, and higher-order specifications usable inside step-indexed recursive bodies.",
+   "premises": [],
+   "depends_on": [
+    "OB-CONTRACT-RULES-SOUND"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractLogic.ContractLogic.soundness",
+     "establishes": "model-proof",
+     "note": "covers the rules listed in docs/CONTRACT-LOGIC.md only"
+    }
+   ],
+   "completion_evidence": "Additional rules with audited soundness cases; the missing forms are listed in docs/CONTRACT-LOGIC.md.",
+   "sources": [
+    "docs/CONTRACT-LOGIC.md",
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CONTRACT-PRIM-CONTRACTS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Call contracts of KLambda primitives",
+   "identity": "rocq/ContractPrims.v",
+   "statement": "The exact contract of every non-IO KLambda primitive (prim_spec) and of every IO primitive (io_spec, one event with any environment response) is a valid call contract in every mode; failed and partial writes are visible (write_byte_visible). Contracts of non-primitive (host) names have no such theorem and remain premises.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractPrims.ContractPrims.prim_spec_valid",
+     "establishes": "model-proof",
+     "note": "all non-IO primitives, all profiles"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractPrims.ContractPrims.io_spec_valid",
+     "establishes": "model-proof",
+     "note": "all IO primitives"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractPrims.ContractPrims.write_byte_visible",
+     "establishes": "model-proof",
+     "note": "normal return only after RWrote 1; write_failed events raise XIO"
+    }
+   ],
+   "completion_evidence": "Audited theorems; ContractWriteShort mutation refused.",
+   "sources": [
+    "docs/CONTRACT-LOGIC.md",
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CONTRACT-CERT-SEM",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Accepted BURI/KL-CONTRACT-1 certificates versus calculus derivations",
+   "identity": "rocq/ContractCert.v",
+   "statement": "If ContractCert.check accepts a certificate for a program and every reported side obligation and declared host premise holds, then the corresponding ContractLogic derivations exist for every function body and the main expression, so the stated judgment holds by soundness and the recursion theorems.",
+   "premises": [
+    "declared host contracts",
+    "reported side obligations"
+   ],
+   "depends_on": [
+    "OB-CONTRACT-RULES-SOUND"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractCert.ContractCert.check_identity",
+     "establishes": "model-proof",
+     "note": "acceptance binds format, theory, program fingerprint and evaluator"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractCert.ContractCert.check_hyps_declared",
+     "establishes": "model-proof",
+     "note": "every host leaf is a declared premise"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractCert.ContractCert.check_total_measures",
+     "establishes": "model-proof",
+     "note": "total certificates carry measures for every recursive leaf"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractCert.ContractCert.check_shapes",
+     "establishes": "model-proof",
+     "note": "every body and the main expression fit their skeletons"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractCert.ContractCert.fits_rule_shape",
+     "establishes": "model-proof",
+     "note": "a rule node fits only its constructor conclusion form"
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "ContractCertExample.ContractCertExample.example_accepted",
+     "establishes": "model-proof",
+     "note": "the transported example certificate"
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "ContractCertExample.ContractCertExample.example_stale_program",
+     "establishes": "model-proof",
+     "note": "a certificate does not cover a changed program"
+    }
+   ],
+   "completion_evidence": "A theorem from acceptance plus side-obligation proofs to deriv (needs a deep-embedded assertion language).",
+   "sources": [
+    "docs/CONTRACT-LOGIC.md",
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CONTRACT-CERT-SHEN",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "open",
+   "boundary": "shen/contract-cert.shen versus ContractCert.check",
+   "identity": "shen/contract-cert.shen",
+   "statement": "The captured shen/contract-cert.shen buri.contract-check computes ContractCert.check on encoded inputs (and rejects every input outside the encoding), as EQ-1 does for shen/kernel.shen.",
+   "premises": [],
+   "depends_on": [
+    "OB-CONTRACT-CERT-SEM"
+   ],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/contracts.shen",
+     "test": "example-accepted",
+     "establishes": "implementation-correspondence",
+     "note": "same verdicts and fingerprints on 19 cases; not a proof"
+    }
+   ],
+   "completion_evidence": "Capture of shen/contract-cert.shen and a refinement theorem in the style of EqualityInductionKernel.",
+   "sources": [
+    "docs/CONTRACT-LOGIC.md",
+    "docs/END-TO-END-PLAN.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CONTRACT-TRANSPORT",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-08",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Contracts carried to the captured klambda.shen evaluator",
+   "identity": "ports/e2e07-klambda.bits",
+   "statement": "Contracts proved in the calculus for programs of the KL-PURE-1 subset hold of the verdicts of the actual captured shen/klambda.shen; for the map example both directions are proved in the Native model. Mutable state (set/value/absvector) cannot yet be transported because KL-PURE-1 lacks it.",
+   "premises": [
+    "Native model of Chez execution (E2E07-NATIVE)"
+   ],
+   "depends_on": [
+    "OB-SHEN-EVALUATOR-REFINEMENT"
+   ],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractTransport.ContractTransport.contract_verdict_sound",
+     "establishes": "implementation-correspondence",
+     "note": "every returned value is budget exhaustion or the contracted list"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "ContractTransport.ContractTransport.contract_verdict_exists",
+     "establishes": "implementation-correspondence",
+     "note": "beyond a budget bound buri.eval returns the contracted list"
+    },
+    {
+     "kind": "identity-hash",
+     "ref": "tests/contracts.shen",
+     "test": "evaluator-capture-identity",
+     "establishes": "implementation-correspondence",
+     "note": "certificate evaluator pin equals the hash of the capture bytes"
+    }
+   ],
+   "completion_evidence": "Generic transport theorem for every certificate; mutable-state profile in klambda.shen with refinement; E2E07-NATIVE closed.",
+   "sources": [
+    "docs/CONTRACT-LOGIC.md",
+    "docs/END-TO-END-PLAN.md",
+    "docs/E2E-07.md"
+   ],
+   "history": []
   }
  ],
  "legacy_inventory_map": [
@@ -3936,6 +4225,7 @@
   "rocq/Audit_Nanopass.v",
   "rocq/Audit_Portfix.v",
   "rocq/Audit_Repr.v",
-  "rocq/Audit_Termination.v"
+  "rocq/Audit_Termination.v",
+  "rocq/Audit_Contracts.v"
  ]
 }

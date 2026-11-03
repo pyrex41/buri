@@ -37,11 +37,11 @@ assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
 rows = re.findall(r'^BURI_SUITE_OK ([\w-]+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 26 and set(suite_counts) == {'primitives', 'representation', 'scheme-port-order', 'observation', 'ledger', 'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance', 'scheme-port-merge', 'cl-port-guard', 'cl-lowering-capture', 'scheme-compose'}, 'Incomplete suite gates'
+assert len(rows) == 27 and set(suite_counts) == {'contracts', 'primitives', 'representation', 'scheme-port-order', 'observation', 'ledger', 'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance', 'scheme-port-merge', 'cl-port-guard', 'cl-lowering-capture', 'scheme-compose'}, 'Incomplete suite gates'
 audit_counts = {f.stem: int(f.read_text().strip()) for f in sorted((root / 'rocq/audit.d').glob('*.count'))}
 audited_total = sum(audit_counts.values())
 assert f'BURI_ROCQ_OK {audited_total} audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 127
+assert checks.count('Rejected proof mutation:') == 134
 assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['27']
 ledger = json.loads((root / 'spec/six-stages.json').read_text())
 assert [stage['id'] for stage in ledger['stages']] == list(range(1,7))
@@ -343,7 +343,7 @@ report = {
         'coalton': 'optional tooling experiment; no proof contribution',
     },
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 127,
+    'rejected_proof_mutations': 134,
     'rocq_regression_examples': 96,
     'orchestration_regressions': 22,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',
