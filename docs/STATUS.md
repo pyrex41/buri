@@ -1154,3 +1154,40 @@ inside the relation. OB-CL-HOST-OPS is narrowed to the E2E-24 fields;
 OB-NATIVE-REPR-SBCL is partial. Seventy-two statements join the assumption
 audit (`Audit_Sbclnative.count` 72); five proof mutations join the gate (132).
 E2E-21 stays in progress.
+
+## Chez primitive expansion and an info-carrying IR dump (E2E-22, Wave D, in progress)
+
+Details: [CHEZ-NANOPASS](CHEZ-NANOPASS.md) sections 8-11. One function
+(`kl:buri-arm-add`) only; E2E-22 is not complete.
+
+* **Trusted dumping tool, not proved.** A three-line printing patch to the
+  Chez 10.3.0 tracer (`ports/chez-np/patches/np-trace-raw.patch`) prints the
+  nanopass raw unparse, with every info field, after each pass. This is the
+  new assumed obligation `OB-CHEZ-NP-RAW-DUMP`. It supersedes
+  `OB-CHEZ-NP-PRINTER` and is narrower: in L1-L14 nothing opaque remains but
+  `#<void>`; uvar, label and register internals, L15a/L16 live-info and
+  assembler procedures, and the register-allocator sub-pass outputs stay
+  unprinted (`raw_opaque_census`, `raw_coverage`, ground derivations). That
+  the patch leaves compilation unchanged is **sampled agreement** only (the
+  stock-format output is unchanged except the block record-type uid, exactly
+  as for an unpatched rebuild; `raw_codegen_same`).
+* **Universal theorems** (`rocq/Audit_Chezprim.v`, 31 statements, 7
+  universal): `check_raw_sound` (raw L4/L4.5 reading with info fields);
+  `check_expand_plus_sound`, `plus_expansion_fast`, `plus_expansion_slow`
+  (the `$np-expand-primitives` fixnum fast path for two-argument `+` over a
+  stated word-level semantics, under H_fix and H_lib, the new assumed
+  `OB-CHEZ-LIB-PLUS`; the fast path needs neither); `sort_refs_perm`,
+  `check_block_order_sound` (np-optimize-block-order! changes block-list
+  order only).
+* **Ground derivations**: np-suppress-procedure-checks validated with its
+  `check?` changes (the stock printer hid them); np-recognize-mrvs and nine
+  identities re-checked on the raw form; `$np-expand-primitives` validated on
+  the `+` clause; `expanded_fast_path_shen`: the L9 fast path returns
+  `ChezWord.fx_enc (x + y)`, the value `buri_chez_add_shen` proves in X23;
+  np-optimize-block-order! validated.
+* **What does not connect**: the front end, L9 to L16 (calling convention,
+  the register allocator, instruction selection) and the instruction
+  encoding are unvalidated. The L9 term and the Islaris bytes agree only in
+  statement, not by proof. The `main` clause's `$set-top-level-value!`
+  expansion is unvalidated.
+* Five proof mutations join the gate (132).

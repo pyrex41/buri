@@ -157,3 +157,12 @@ for name in $(python3 tests/mutate-contracts.py); do
   grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done
+# E2E-22 chezprim mutants: a changed info field, tag mask, library entry,
+# condition flag or block field in the raw capture must each fail its check.
+for name in $(python3 tests/mutate-chezprim.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done

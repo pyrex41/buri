@@ -2526,13 +2526,14 @@
    "identity": "Chez Scheme 10.3.0 (csv10.3.0.tar.gz d237d987..., tag v10.3.0 commit adfaf9e6), threaded tarm64le, Shen-Scheme v0.52 eval parameters (optimize-level 0, debug-level 1)",
    "statement": "Chez lowering of generated Scheme to AArch64 preserves meaning (per-output validation or verified backend).",
    "premises": [
-    "Chez printer: the traced unparsed pass output is a faithful rendering of the in-memory IR except for the info fields its unparse forms omit",
+    "Chez IR dump: the patched tracer's raw output and the dump script's info writers (OB-CHEZ-NP-RAW-DUMP) render the in-memory IR except for uvar/label/register record internals, live-info records and L15a/L16 assembler procedures; the stock printer (OB-CHEZ-NP-PRINTER) is no longer relied on",
     "the plain tarm64le Chez process stands in for an aarch64 Shen-Scheme process (sampled agreement on x86_64 only, E2E-20)"
    ],
    "depends_on": [
     "OB-NATIVE-REPR-CHEZ",
     "OB-GENERATED-SCHEME-SEMANTICS",
-    "OB-CHEZ-NP-PRINTER"
+    "OB-CHEZ-NP-RAW-DUMP",
+    "OB-CHEZ-LIB-PLUS"
    ],
    "evidence": [
     {
@@ -2546,6 +2547,42 @@
      "ref": "docs/CHEZ-NANOPASS.md",
      "establishes": "artifact-correspondence",
      "note": "Pass inventory and the remaining 38 unvalidated nanopass passes, the front end and the register allocator."
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "check_expand_plus_sound",
+     "establishes": "artifact-correspondence",
+     "note": "Validator for $np-expand-primitives on a two-argument + call (L7 -> L9), sound for every primitive/library semantics meeting H_fix and H_lib (OB-CHEZ-LIB-PLUS), over a stated word-level semantics of exactly the constructs involved. Checker soundness only; not a theorem about Chez on other programs."
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "expand_plus_buri_arm_add_preserves",
+     "establishes": "artifact-correspondence",
+     "note": "kl:buri-arm-add: the captured expansion preserves the value of (+ V3015 V3016). One artifact; cannot discharge this universal obligation."
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "expanded_fast_path_shen",
+     "establishes": "artifact-correspondence",
+     "note": "The expanded L9 fast path returns ChezWord.fx_enc (x + y), the value buri_chez_add_shen proves in X23; the L9-to-L16 passes and instruction selection in between are not validated."
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "suppress_raw_preserves",
+     "establishes": "artifact-correspondence",
+     "note": "np-suppress-procedure-checks validated on the raw dump, info-call check? flags included."
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "block_order_checked",
+     "establishes": "artifact-correspondence",
+     "note": "np-optimize-block-order! changed only block-list order (structural; np-generate-code layout depends on that order)."
+    },
+    {
+     "kind": "review",
+     "ref": "rocq/ChezPrimValidate.v",
+     "establishes": "artifact-correspondence",
+     "note": "chezprim lane ground derivations, audited in rocq/Audit_Chezprim.v (listed in lane_audits)."
     }
    ],
    "completion_evidence": "Machine-code validation against SEM-ARM.",
@@ -2559,6 +2596,11 @@
      "source": "docs/CHEZ-NANOPASS.md",
      "recorded": "Wave C pinned the Chez version (10.3.0) and validated two pass steps of one function.",
      "reconciliation": "Status partial: ground evidence only; universal coverage still assumed."
+    },
+    {
+     "source": "docs/CHEZ-NANOPASS.md",
+     "recorded": "Wave D (chezprim): raw info-carrying dump from a patched tracer; np-suppress-procedure-checks and np-recognize-mrvs re-validated on it, $np-expand-primitives for + and np-optimize-block-order! validated for kl:buri-arm-add.",
+     "reconciliation": "Status stays partial: ground evidence for one function; the front end, the register allocator and most nanopass passes remain unvalidated."
     }
    ]
   },
@@ -3892,7 +3934,7 @@
    "scope": "universal",
    "owner": "E2E-22",
    "packages": [],
-   "status": "assumed",
+   "status": "superseded",
    "boundary": "Chez nanopass tracer output",
    "identity": "Chez Scheme 10.3.0 $np-tracer ir-printer (cpnanopass.ss 95-140) and unparse forms of s/np-languages.ss",
    "statement": "Each traced pass output printed by Chez (unparser, flatten-seq, print-gensym pretty/suffix, print-graph) determines the in-memory IR up to the info fields its unparse forms omit, and those omitted fields do not change meaning.",
@@ -3900,6 +3942,74 @@
    "depends_on": [],
    "evidence": [],
    "completion_evidence": "Raw (non-pretty) IR export from an instrumented Chez build including info fields, with a proved printer/reader round trip; or validators that read the compiler data directly.",
+   "sources": [
+    "docs/CHEZ-NANOPASS.md"
+   ],
+   "history": [
+    {
+     "source": "docs/CHEZ-NANOPASS.md",
+     "recorded": "Wave D (chezprim): every claim that needed the stock printer for info fields is re-derived from the raw dump (raw_identity_passes, suppress_raw_checked, mrvs_raw_checked, raw_codegen_same).",
+     "reconciliation": "Superseded by the narrower trusted-tool obligation OB-CHEZ-NP-RAW-DUMP; the stock printer is not proved faithful."
+    }
+   ],
+   "superseded_by": "OB-CHEZ-NP-RAW-DUMP"
+  },
+  {
+   "id": "OB-CHEZ-NP-RAW-DUMP",
+   "kind": "artifact-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Chez nanopass raw IR dump (trusted dumping tool)",
+   "identity": "Chez Scheme 10.3.0 with ports/chez-np/patches/np-trace-raw.patch (sha256 42b81e38...), tarm64le boot files rebuilt by make bootquick, run by the stock tarm64le kernel (21900313...), with ports/chez-np/scripts/np-dump-raw.ss",
+   "statement": "The patched tracer's \"raw output\" (nanopass raw unparse, which keeps every production field) together with the dump script's all-field writers for info, info-lambda, info-load, info-foreign and info-literal records determines the in-memory IR of each traced pass, except for: uvar, local-label and register record internals (printed by unique name only), live-info records (#<live-info>), the assembler procedures of L15a/L16 instructions (#<procedure ...>), and the 26 register-allocator sub-pass outputs and np-generate-code (no raw form). The patch changes printing only, so the patched compiler compiles as the stock one does.",
+   "premises": [
+    "printing-only patch (review of the 3-line diff)",
+    "sampled agreement: with BURI_NP_RAW unset the patched build's stock-format dump equals the stock capture except the block record-type uid; an unpatched rebuild differs from stock in exactly the same way; np-generate-code output is identical (raw_codegen_same)"
+   ],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "ground-derivation",
+     "ref": "raw_opaque_census",
+     "establishes": "artifact-correspondence",
+     "note": "In the raw dump of every L1-L14 pass the only opaque object is the #<void> constant; L15a/L16 hide exactly live-info and assembler procedures."
+    },
+    {
+     "kind": "ground-derivation",
+     "ref": "raw_coverage",
+     "establishes": "artifact-correspondence",
+     "note": "Exactly the 26 register-allocator sub-pass outputs and np-generate-code have no raw form."
+    },
+    {
+     "kind": "review",
+     "ref": "ports/chez-np/patches/np-trace-raw.patch",
+     "establishes": "artifact-correspondence",
+     "note": "The patch: after the stock pretty output, print (unparser ir #t) when BURI_NP_RAW is set."
+    }
+   ],
+   "completion_evidence": "A proof that the raw unparser and the dump writers are injective on the IR records (or validators that read the compiler's records directly), and printers for the remaining hidden fields.",
+   "sources": [
+    "docs/CHEZ-NANOPASS.md",
+    "ports/chez-np/README.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-CHEZ-LIB-PLUS",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-22",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Chez generic arithmetic: primitive + and library entry +",
+   "identity": "Chez Scheme 10.3.0 tarm64le: primref + (flags 3165690) and library entry #(libspec + 34838)",
+   "statement": "(H_fix) Scheme + on two fixnums whose sum is a fixnum returns the fixnum of the sum and has no other effect; (H_lib) the library entry + that the cpprim fast path falls back to behaves as the primitive + on every argument list. These are the two premises of check_expand_plus_sound.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "H_fix from the E2E-17 primitive contract of + over the E2E-21 fixnum representation; H_lib from verified library code (E2E-24).",
    "sources": [
     "docs/CHEZ-NANOPASS.md"
    ],
@@ -4518,6 +4628,7 @@
   }
  ],
  "lane_audits": [
+  "rocq/Audit_Chezprim.v",
   "rocq/Audit_Clcontracts.v",
   "rocq/Audit_Contracts.v",
   "rocq/Audit_E2e07b.v",

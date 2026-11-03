@@ -1,0 +1,14 @@
+--- a/s/cpnanopass.ss
++++ b/s/cpnanopass.ss
+@@ -97,7 +97,10 @@
+           (lambda (val*)
+             (safe-assert (not (null? val*)))
+             (pretty-print (flatten-seq (unparser (car val*)))
+-                          (current-error-port)))))
++                          (current-error-port))
++            (when (getenv "BURI_NP_RAW")
++              (fprintf (current-error-port) "raw output:\n")
++              (pretty-print (unparser (car val*) #t) (current-error-port))))))
+       (define values-printer
+         (lambda (val*)
+           (if (null? val*)
