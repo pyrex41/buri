@@ -45,6 +45,11 @@ unification oracle, `eval` escape, circular lemma, or implicit normalization rul
 The whole bundle is bound to the complete theory data. A result from an altered
 trusted image has no standing in an earlier image.
 
+The captured kernel, the reference kernel that mirrors it, and what is proved
+about each (soundness of the reference kernel in the standard model; universal
+helper refinement; ground and sampled evidence for the drivers) are recorded in
+[EQ1](EQ1.md).
+
 ## BURI/KL-PURE-1 (executable Shen profile)
 
 This is a normalized AST for selected KLambda behavior, not a parser for all

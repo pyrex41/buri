@@ -1,0 +1,1164 @@
+{
+ "source": {
+  "release": "csv10.3.0.tar.gz",
+  "release_sha256": "d237d9874c6e8b0ccf7758daa8286a6e825528b13ce3b2bca56eb1f73cddbc2c",
+  "git_tag": "v10.3.0",
+  "git_commit": "adfaf9e6d47a4238a9e5e4bf6a00f9d58792a3db",
+  "files": {
+   "compile.ss": "0661201efd365394c0f85a1b870ce1e364f17b9c2bdc47511e5c0b1d90141662",
+   "cpnanopass.ss": "2377a95116057ab940d4bd9864ed5ec5e1995fca5741ebf394f3933cec139dcd",
+   "cpprim.ss": "fbe2d5f1b65a49d50ace01435d028f8ef84a7d37945a0a7207ca4d765ecdef6e",
+   "np-languages.ss": "db2c01ecfff979bf6b6c2ea2c493c0e2fbe9049f414a5c938f7114b2d48c9f2e",
+   "arm64.ss": "9afef064e0a7eba9e8826163b447e318c76e9283082d969954aff75b5d91146a",
+   "cp0.ss": "a0a4c3b85650b5636191a95a3708776ff2d347c89f775a3aec0914780ad77966",
+   "cptypes.ss": "50d7992ac4e9fdfbad70a4cfb667756210d9d005a4284feab62143cbb35b5e49",
+   "cpletrec.ss": "b33ea2dfd8cbbb8e3de6da2f8fcedec212bff10d4cfe810b5eb8e86fe0d5dfbb",
+   "cpvalid.ss": "5dbbdbe76780b0b823cb351bcafec24f73d57139eb706a4182556898a3a5d699",
+   "cpcheck.ss": "6825f0679d5f9bf2463d27097ee1aa59219b4f6a7eb7ec15ad093141fdce6f88",
+   "cpcommonize.ss": "55f73503e05039c1cb63f2498d4ce944187cdaa39978e6623e472289e593e5af",
+   "syntax.ss": "26e9bf8c881f55af5af2f26a49f27add9412d5ab5e1135ede54b7b0907746244"
+  }
+ },
+ "configuration": {
+  "machine": "tarm64le (threaded)",
+  "entry": "eval with current-eval = compile (compile.ss set-who! compile, 1784-1823)",
+  "parameters": "see the parameters section of ports/chez-np/tarm64le-buri-arm-add.np: optimize-level 0, debug-level 1, generate-inspector-information #t, enable-type-recovery #t, generate-interrupt-trap #t, compile-interpret-simple #t (not taken: the form is not simple), commonization-level 0, compile-profile #f, $lift-closures #t, $optimize-closures #t, $loop-unroll-limit 0, $enable-check-prelex-flags #f",
+  "pipeline_source": "cpnanopass.ss $np-compile 10795-10838 and np-after-calling-conventions 10771-10793; compile.ss compile 1797-1823; c-compile wraps the form as main (compile.ss 68-74)",
+  "after_codegen": "compile.ss c-mkcode (102-190) lays out the code-list; c/fasl.c arm64_set_abs (1714-1735) relocates"
+ },
+ "difficulty_classes": {
+  "syntactic": "output relates to input by a shape change checkable from the two printed terms",
+  "witness": "checkable only with a witness the pass can export (free-variable lists, register/frame maps, liveness)",
+  "semantic": "needs a semantics of primitives, machine integers, effects, interrupts or the ISA"
+ },
+ "front_end": [
+  {
+   "name": "expand",
+   "kind": "non-nanopass",
+   "file": "s/syntax.ss",
+   "lines": [
+    6783,
+    6807
+   ],
+   "language": "Lexpand/Lsrc",
+   "condition": null,
+   "ran": true,
+   "class": "semantic",
+   "note": "non-nanopass expander; Rocq-side model of syntax-case is out of scope; prints as $uncprep"
+  },
+  {
+   "name": "cpvalid",
+   "kind": "non-nanopass",
+   "file": "s/cpvalid.ss",
+   "lines": [
+    568,
+    573
+   ],
+   "language": "Lsrc",
+   "condition": null,
+   "ran": true,
+   "class": "syntactic",
+   "note": "letrec restriction checks (inserts valid-checks)"
+  },
+  {
+   "name": "cp0#1",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cp0.ss",
+   "lines": [
+    5407,
+    5833
+   ],
+   "language": "Lsrc",
+   "condition": "run-cp0 default (cp0 (cp0 x))",
+   "ran": true,
+   "class": "semantic",
+   "note": "inliner/constant folder; heavy (effort counters, primitive folding)"
+  },
+  {
+   "name": "cptypes#1",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cptypes.ss",
+   "lines": [
+    1861,
+    2101
+   ],
+   "language": "Lsrc",
+   "condition": "enable-type-recovery #t",
+   "ran": true,
+   "class": "semantic",
+   "note": "type recovery; removes checks it proves redundant"
+  },
+  {
+   "name": "cpletrec#1",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cpletrec.ss",
+   "lines": [
+    113,
+    412
+   ],
+   "language": "Lsrc",
+   "condition": null,
+   "ran": true,
+   "class": "witness",
+   "note": "letrec optimisation"
+  },
+  {
+   "name": "cp0#2",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cp0.ss",
+   "lines": [
+    5407,
+    5833
+   ],
+   "language": "Lsrc",
+   "condition": "run-cp0 default (cp0 (cp0 x))",
+   "ran": true,
+   "class": "semantic",
+   "note": "second cp0 round"
+  },
+  {
+   "name": "cptypes#2",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cptypes.ss",
+   "lines": [
+    1861,
+    2101
+   ],
+   "language": "Lsrc",
+   "condition": "enable-type-recovery #t",
+   "ran": true,
+   "class": "semantic",
+   "note": "second round"
+  },
+  {
+   "name": "cpletrec#2",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cpletrec.ss",
+   "lines": [
+    113,
+    412
+   ],
+   "language": "Lsrc",
+   "condition": null,
+   "ran": true,
+   "class": "witness",
+   "note": "second round"
+  },
+  {
+   "name": "cpcheck",
+   "kind": "nanopass (Lsrc -> Lsrc)",
+   "file": "s/cpcheck.ss",
+   "lines": [
+    53,
+    222
+   ],
+   "language": "Lsrc",
+   "condition": null,
+   "ran": true,
+   "class": "syntactic",
+   "note": "argument-count checks for known calls"
+  },
+  {
+   "name": "cpcommonize",
+   "kind": "non-nanopass",
+   "file": "s/cpcommonize.ss",
+   "lines": [
+    17,
+    23
+   ],
+   "language": "Lsrc",
+   "condition": "commonization-level 0 => identity",
+   "ran": true,
+   "class": "syntactic",
+   "note": "returns its input at level 0 (cpcommonize.ss 580-585)"
+  }
+ ],
+ "nanopass": [
+  {
+   "order": 1,
+   "name": "cpnanopass",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    683,
+    733
+   ],
+   "in": "Lsrc",
+   "out": "L1",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "prelex -> uvar, preinfo -> info"
+  },
+  {
+   "order": 2,
+   "name": "np-recognize-let",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    752,
+    784
+   ],
+   "in": "L1",
+   "out": "L2",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 3,
+   "name": "np-discover-names",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    786,
+    829
+   ],
+   "in": "L2",
+   "out": "L3",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": "names into info only"
+  },
+  {
+   "order": 4,
+   "name": "np-convert-assignments",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    831,
+    873
+   ],
+   "in": "L3",
+   "out": "L4",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "semantic",
+   "note": "boxes assigned variables"
+  },
+  {
+   "order": 5,
+   "name": "np-sanitize-bindings",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    875,
+    906
+   ],
+   "in": "L4",
+   "out": "L4",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 6,
+   "name": "np-suppress-procedure-checks",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    908,
+    953
+   ],
+   "in": "L4",
+   "out": "L4",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": "changes call info flags (not printed)"
+  },
+  {
+   "order": 7,
+   "name": "np-recognize-mrvs",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    955,
+    1029
+   ],
+   "in": "L4",
+   "out": "L4.5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "VALIDATED (ChezNpValidate)"
+  },
+  {
+   "order": 8,
+   "name": "np-expand-foreign",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1031,
+    1054
+   ],
+   "in": "L4.5",
+   "out": "L4.75",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "semantic",
+   "note": "FFI"
+  },
+  {
+   "order": 9,
+   "name": "np-recognize-loops",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1056,
+    1124
+   ],
+   "in": "L4.75",
+   "out": "L4.875",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 10,
+   "name": "np-recognize-attachment",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1126,
+    1320
+   ],
+   "in": "L4.875",
+   "out": "L4.9375",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "semantic",
+   "note": "continuation attachments"
+  },
+  {
+   "order": 11,
+   "name": "np-name-anonymous-lambda",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1322,
+    1333
+   ],
+   "in": "L4.9375",
+   "out": "L5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "needs freshness + closure-value relation"
+  },
+  {
+   "order": 12,
+   "name": "np-convert-closures",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1335,
+    1413
+   ],
+   "in": "L5",
+   "out": "L6",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "witness",
+   "note": "free-variable lists are checkable witnesses"
+  },
+  {
+   "order": 13,
+   "name": "np-optimize-direct-call",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1415,
+    1470
+   ],
+   "in": "L6",
+   "out": "L6",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 14,
+   "name": "np-identify-scc",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1474,
+    1546
+   ],
+   "in": "L6",
+   "out": "L6",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 15,
+   "name": "np-lift-well-known-closures",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1638,
+    1902
+   ],
+   "in": "L6",
+   "out": "L6",
+   "condition": "($lift-closures) = #t (default)",
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "witness",
+   "note": ""
+  },
+  {
+   "order": 16,
+   "name": "np-expand/optimize-closures",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    2009,
+    2482
+   ],
+   "in": "L6",
+   "out": "L7",
+   "condition": "($optimize-closures) = #t (default); otherwise np-expand-closures",
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "witness",
+   "note": "closure layout"
+  },
+  {
+   "order": null,
+   "name": "np-expand-closures",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    1928,
+    2007
+   ],
+   "in": "L6",
+   "out": "L7",
+   "condition": "only when ($optimize-closures) = #f: NOT RUN",
+   "ran": false,
+   "printed_output_changed": null,
+   "class": "witness",
+   "note": ""
+  },
+  {
+   "order": null,
+   "name": "np-profile-unroll-loops",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    2732,
+    2747
+   ],
+   "in": "L7",
+   "out": "L7",
+   "condition": "only when ($loop-unroll-limit) /= 0 (default 0): NOT RUN",
+   "ran": false,
+   "printed_output_changed": null,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 17,
+   "name": "np-simplify-if",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    2484,
+    2541
+   ],
+   "in": "L7",
+   "out": "L7",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 18,
+   "name": "np-unbox-fp-vars!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    2769,
+    2938
+   ],
+   "in": "L7",
+   "out": "L7",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "semantic",
+   "note": "flonum representation"
+  },
+  {
+   "order": 19,
+   "name": "$np-expand-primitives",
+   "file": "s/cpprim.ss",
+   "lines": [
+    106,
+    305
+   ],
+   "in": "L7",
+   "out": "L9",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "semantic",
+   "note": "cpprim: inline primitive expansion (fixnum fast path for +)"
+  },
+  {
+   "order": 20,
+   "name": "np-place-overflow-and-trap",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    2940,
+    3126
+   ],
+   "in": "L9",
+   "out": "L9.5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "semantic",
+   "note": "interrupt trap placement"
+  },
+  {
+   "order": 21,
+   "name": "np-rebind-on-ruined-path",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3128,
+    3194
+   ],
+   "in": "L9.5",
+   "out": "L9.5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 22,
+   "name": "np-finalize-loops",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3197,
+    3209
+   ],
+   "in": "L9.5",
+   "out": "L9.75",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 23,
+   "name": "np-optimize-pred-in-value",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3211,
+    3237
+   ],
+   "in": "L9.75",
+   "out": "L9.75",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 24,
+   "name": "np-remove-complex-opera*",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3239,
+    3474
+   ],
+   "in": "L9.75",
+   "out": "L10",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "fixes argument evaluation order: needs the unspecified-order semantics"
+  },
+  {
+   "order": 25,
+   "name": "np-push-mrvs",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3476,
+    3647
+   ],
+   "in": "L10",
+   "out": "L10.5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 26,
+   "name": "np-normalize-context",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3649,
+    3839
+   ],
+   "in": "L10.5",
+   "out": "L11",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 27,
+   "name": "np-flatten-case-lambda",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3841,
+    3970
+   ],
+   "in": "L11",
+   "out": "L12",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "arity dispatch, doargerr"
+  },
+  {
+   "order": 28,
+   "name": "np-insert-trap-check",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3973,
+    3988
+   ],
+   "in": "L12",
+   "out": "L12.5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "semantic",
+   "note": "event counter"
+  },
+  {
+   "order": 29,
+   "name": "np-impose-calling-conventions",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    3990,
+    5662
+   ],
+   "in": "L12.5",
+   "out": "L13",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "witness",
+   "note": "registers/frame/return points; needs a calling-convention spec (E2E-21)"
+  },
+  {
+   "order": 30,
+   "name": "np-expand-hand-coded",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    5664,
+    6685
+   ],
+   "in": "L13",
+   "out": "L13.5",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "semantic",
+   "note": ""
+  },
+  {
+   "order": 31,
+   "name": "np-expose-allocation-pointer",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    6687,
+    6792
+   ],
+   "in": "L13.5",
+   "out": "L14",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "semantic",
+   "note": "allocation"
+  },
+  {
+   "order": 32,
+   "name": "np-expose-basic-blocks",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    6902,
+    7112
+   ],
+   "in": "L14",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "witness",
+   "note": "block graph"
+  },
+  {
+   "order": 33,
+   "name": "np-remove-repeater-blocks!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7140,
+    7191
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": null,
+   "name": "np-add-block-source!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7115,
+    7138
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": "only when compile-profile = block (or profile-block-data) and $sfd: NOT RUN",
+   "ran": false,
+   "printed_output_changed": null,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 34,
+   "name": "np-propagate-pariahty!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7193,
+    7222
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "layout hints only"
+  },
+  {
+   "order": null,
+   "name": "np-insert-profiling",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7717,
+    7740
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": "only when compile-profile = source, or block with $sfd: NOT RUN",
+   "ran": false,
+   "printed_output_changed": null,
+   "class": "semantic",
+   "note": ""
+  },
+  {
+   "order": 35,
+   "name": "np-add-in-links!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7810,
+    7830
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 36,
+   "name": "np-compute-loop-depth!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7832,
+    7927
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": false,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 37,
+   "name": "np-weight-references!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    7929,
+    8008
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": null,
+   "name": "np-allocate-registers",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10535,
+    10648
+   ],
+   "in": "L15a",
+   "out": "L16",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": null,
+   "class": "witness",
+   "note": "aggregate pass (no pass macro); sub-passes below, run per lambda"
+  },
+  {
+   "order": 38,
+   "name": "np-remove-repeater-blocks-again!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10651,
+    10703
+   ],
+   "in": "L16",
+   "out": "L16",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": ""
+  },
+  {
+   "order": 39,
+   "name": "np-optimize-block-order!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10707,
+    10769
+   ],
+   "in": "L16",
+   "out": "L16",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "syntactic",
+   "note": "block list permutation"
+  },
+  {
+   "order": 40,
+   "name": "np-generate-code",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    8086,
+    8359
+   ],
+   "in": "L16",
+   "out": "$c-func code-list",
+   "condition": null,
+   "ran": true,
+   "printed_output_changed": true,
+   "class": "semantic",
+   "note": "instruction encoding via arm64.ss; output VALIDATED against bytes (ChezNpReloc)"
+  }
+ ],
+ "register_allocator_subpasses": [
+  {
+   "name": "do-live-analysis!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    8691,
+    8897
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "record-call-live!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    8925,
+    8944
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "identify-poison!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    8968,
+    8997
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": "only when more than 1000 spillables: NOT RUN",
+   "ran": false,
+   "times_traced": 0,
+   "class": "witness"
+  },
+  {
+   "name": "do-spillable-conflict!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    8999,
+    9091
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "assign-frame!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    9122,
+    9216
+   ],
+   "in": "L15a/L15b",
+   "out": "same",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "record-inspector-information!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10346,
+    10407
+   ],
+   "in": "L15a",
+   "out": "L15a",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "assign-new-frame!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    9218,
+    9425
+   ],
+   "in": "L15a",
+   "out": "L15b",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "record-fp-offsets!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    9427,
+    9461
+   ],
+   "in": "L15b",
+   "out": "L15b",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "finalize-frame-locations!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    9463,
+    9513
+   ],
+   "in": "L15b",
+   "out": "L15c",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "select-instructions!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    9852,
+    10035
+   ],
+   "in": "L15c",
+   "out": "L15d",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "do-unspillable-conflict!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10041,
+    10178
+   ],
+   "in": "L15d",
+   "out": "L15d",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "assign-registers!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10180,
+    10339
+   ],
+   "in": "L15d",
+   "out": "L15d",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "finalize-register-locations!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10409,
+    10441
+   ],
+   "in": "L15d",
+   "out": "L15e",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  },
+  {
+   "name": "expose-overflow-check-blocks!",
+   "file": "s/cpnanopass.ss",
+   "lines": [
+    10443,
+    10516
+   ],
+   "in": "L15e",
+   "out": "L16",
+   "condition": null,
+   "ran": true,
+   "times_traced": 2,
+   "class": "witness"
+  }
+ ],
+ "trace_order": [
+  "cpnanopass",
+  "np-recognize-let",
+  "np-discover-names",
+  "np-convert-assignments",
+  "np-sanitize-bindings",
+  "np-suppress-procedure-checks",
+  "np-recognize-mrvs",
+  "np-expand-foreign",
+  "np-recognize-loops",
+  "np-recognize-attachment",
+  "np-name-anonymous-lambda",
+  "np-convert-closures",
+  "np-optimize-direct-call",
+  "np-identify-scc",
+  "np-lift-well-known-closures",
+  "np-expand/optimize-closures",
+  "np-simplify-if",
+  "np-unbox-fp-vars!",
+  "$np-expand-primitives",
+  "np-place-overflow-and-trap",
+  "np-rebind-on-ruined-path",
+  "np-finalize-loops",
+  "np-optimize-pred-in-value",
+  "np-remove-complex-opera*",
+  "np-push-mrvs",
+  "np-normalize-context",
+  "np-flatten-case-lambda",
+  "np-insert-trap-check",
+  "np-impose-calling-conventions",
+  "np-expand-hand-coded",
+  "np-expose-allocation-pointer",
+  "np-expose-basic-blocks",
+  "np-remove-repeater-blocks!",
+  "np-propagate-pariahty!",
+  "np-add-in-links!",
+  "np-compute-loop-depth!",
+  "np-weight-references!",
+  "do-live-analysis!",
+  "record-call-live!",
+  "do-spillable-conflict!",
+  "assign-frame!",
+  "record-inspector-information!",
+  "assign-new-frame!",
+  "record-fp-offsets!",
+  "finalize-frame-locations!",
+  "select-instructions!",
+  "do-unspillable-conflict!",
+  "assign-registers!",
+  "finalize-register-locations!",
+  "expose-overflow-check-blocks!",
+  "do-live-analysis!",
+  "record-call-live!",
+  "do-spillable-conflict!",
+  "assign-frame!",
+  "record-inspector-information!",
+  "assign-new-frame!",
+  "record-fp-offsets!",
+  "finalize-frame-locations!",
+  "select-instructions!",
+  "do-unspillable-conflict!",
+  "assign-registers!",
+  "finalize-register-locations!",
+  "expose-overflow-check-blocks!",
+  "np-remove-repeater-blocks-again!",
+  "np-optimize-block-order!",
+  "np-generate-code"
+ ]
+}

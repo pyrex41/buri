@@ -10,6 +10,23 @@ Vör asks whether a business program satisfies its contract. Búri supplies the
 language/runtime semantics and preservation obligations that such a claim
 ultimately depends on.
 
+## Parallel port verification
+
+The [complete end-to-end plan](docs/END-TO-END-PLAN.md) specifies 36 work packages
+from Shen semantics through both host runtimes, exact ARM artifacts and deployment
+software, with dependencies and acceptance criteria in the
+[planning ledger](spec/end-to-end-plan.json). These are planned obligations, not
+new proof-completion claims.
+
+The [Scheme track](docs/SCHEME-PORT.md) now proves preservation for arbitrary
+admitted binding tails through an actual captured compiler pass. The
+[Common Lisp track](docs/CL-PORT.md) starts with source-bound strict boolean
+admission and a restricted semantics proof. `make test` and `make prove` cover
+both stored proof tracks; `make check-cl-port` additionally regenerates CL source
+captures using the pinned checkout and SBCL described in its documentation.
+[Coalton](docs/COALTON-ASSESSMENT.md) is assessed separately as optional typed
+tooling, with a reproducible experiment and no mandatory dependency.
+
 ## What works now
 
 - **Independent Rocq proofs:** generic arithmetic compiler preservation for

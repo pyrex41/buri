@@ -35,12 +35,14 @@ if sys.argv[1] == 'check':
 before = json.loads((root / '_build/source-before.json').read_text())
 assert before == manifest(), 'Source changed during checking; no report issued.'
 checks = (root / '_build/check.log').read_text()
-rows = re.findall(r'^BURI_SUITE_OK (\w+) (\d+)$', checks, re.M)
+rows = re.findall(r'^BURI_SUITE_OK ([\w-]+) (\d+)$', checks, re.M)
 suite_counts = {name: int(n) for name, n in rows}
-assert len(rows) == 17 and set(suite_counts) == {'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance'}, 'Incomplete suite gates'
-assert 'BURI_ROCQ_OK 347 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
-assert checks.count('Rejected proof mutation:') == 71
-assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['22']
+assert len(rows) == 27 and set(suite_counts) == {'contracts', 'primitives', 'representation', 'scheme-port-order', 'observation', 'ledger', 'kernel', 'evaluator', 'wire', 'frontend', 'trust', 'observed', 'bindings', 'sealed', 'constructor', 'adapter', 'bootstrap', 'compilerpass', 'checkedio', 'correctness', 'stages', 'equalityseal', 'conformance', 'scheme-port-merge', 'cl-port-guard', 'cl-lowering-capture', 'scheme-compose'}, 'Incomplete suite gates'
+audit_counts = {f.stem: int(f.read_text().strip()) for f in sorted((root / 'rocq/audit.d').glob('*.count'))}
+audited_total = sum(audit_counts.values())
+assert f'BURI_ROCQ_OK {audited_total} audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed' in checks
+assert checks.count('Rejected proof mutation:') == 151
+assert re.findall(r'^BURI_GATE_TESTS_OK (\d+)$', checks, re.M) == ['27']
 ledger = json.loads((root / 'spec/six-stages.json').read_text())
 assert [stage['id'] for stage in ledger['stages']] == list(range(1,7))
 assert not ledger['full_plan_complete'] and all(stage['status'] == 'partial' for stage in ledger['stages'])
@@ -63,7 +65,8 @@ report = {
         'checker': 'Coq 8.18.0 / coqchk',
         'audit_log_sha256': digest(root / '_build/rocq/Audit.log'),
         'audit_log': '_build/rocq/Audit.log',
-        'audited_theorems': 347,
+        'audit_logs_sha256': {name: digest(root / f'_build/rocq/{name}.log') for name in audit_counts},
+        'audited_theorems': audited_total,
         'custom_axioms': [],
         'scope': ['arithmetic reference compiler', 'equational certificate calculus',
                   'lexical lambda evaluator fuel stability and determinism', 'let-to-lambda lowering', '12 actual compiler-output schema equivalences',
@@ -328,11 +331,19 @@ report = {
         'tagging_adapter_captured_pure_targets_proved': True,
         'binary_source_correspondence_verified': False,
     },
-    'shen_tests': {'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
+    'shen_tests': {'scheme-port-merge': suite_counts['scheme-port-merge'], 'cl-port-guard': suite_counts['cl-port-guard'], 'kernel': suite_counts['kernel'], 'evaluator': suite_counts['evaluator'],
                    'wire': suite_counts['wire'], 'frontend': suite_counts['frontend'],
                    'trust': suite_counts['trust'], 'observed': suite_counts['observed'], 'bindings': suite_counts['bindings'], 'sealed': suite_counts['sealed'], 'constructor': suite_counts['constructor'], 'adapter': suite_counts['adapter'], 'bootstrap': suite_counts['bootstrap'], 'compilerpass': suite_counts['compilerpass'], 'checkedio': suite_counts['checkedio'], 'correctness': suite_counts['correctness'], 'stages': suite_counts['stages'], 'equalityseal': suite_counts['equalityseal']},
+    'parallel_port_scope': {
+        'scheme': 'captured merge-nested-lets preserves arbitrary admitted binding tails',
+        'cl': 'exact admitted guard AST implements strict booleans in a restricted CL model',
+        'cl_native_source_regenerated_by_this_report': False,
+        'cl_native_gate': 'optional make check-cl-port; separate pinned source checkout',
+        'cl_shen_adapter_correspondence_proved': False,
+        'coalton': 'optional tooling experiment; no proof contribution',
+    },
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 71,
+    'rejected_proof_mutations': 151,
     'rocq_regression_examples': 96,
     'orchestration_regressions': 22,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',

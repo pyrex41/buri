@@ -1,0 +1,6 @@
+(define buri-arm-add X Y -> (+ X Y))
+(print (buri-arm-add 1 2))
+(nl)
+(shen-cl.eval-lisp "(load c#34;sbcl-closure.lispc#34;)")
+(print (shen-cl.eval-lisp "(buri-closure 'shen::|buri-arm-add| '(sb-kernel:two-arg-+) c#34;sbcl-buri-arm-add.closurec#34;)"))
+(nl)

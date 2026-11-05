@@ -1,0 +1,5 @@
+.tools
+_build
+result
+result-*
+.git

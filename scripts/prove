@@ -6,7 +6,9 @@ mkdir -p _build/rocq
 rm -f _build/EquationBridge.v _build/NativeOutput.v _build/compiler-output.sexp \
  _build/native-capture.bits _build/native-capture.sexp _build/NativeCapture.v _build/EncoderSource.v \
  _build/encoder-kl.bits _build/encoder-kl.sexp _build/EncoderKLambda.v \
- _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v _build/StockDivisionInput.v _build/OrderCallInput.v _build/ObserverFormsInput.v _build/IOReadInput.v _build/io-read.bits _build/io-read.bits.source _build/io-read.bits.sexp _build/order-call.bits _build/order-call.bits.source _build/order-call.bits.sexp _build/EqualityCoreInput.v _build/EqualitySealInput.v _build/equality-core.bits _build/equality-core.bits.source _build/equality-core.bits.sexp _build/equality-core-for-seal.bits _build/equality-core-for-seal.bits.source _build/equality-core-for-seal.bits.sexp _build/equality-seal.bits _build/equality-seal.bits.source _build/equality-seal.bits.sexp
+ _build/observed-encoder.bits.source _build/observed-encoder.bits _build/observed-encoder.sexp _build/ObservedCapture.v _build/sealed.bits _build/sealed.bits.sexp _build/SealedInput.v _build/constructor.bits _build/constructor.bits.source _build/constructor.bits.sexp _build/ConstructorInput.v _build/adapter.bits _build/adapter.bits.source _build/adapter.bits.sexp _build/AdapterInput.v _build/bootstrap.bits _build/bootstrap.bits.source _build/bootstrap.bits.sexp _build/BootstrapInput.v _build/observer.bits _build/observer.bits.source _build/observer.bits.sexp _build/ObserverInput.v _build/compiler-pass.bits _build/compiler-pass.bits.source _build/compiler-pass.bits.sexp _build/CompilerPassInput.v _build/CheckedIOInput.v _build/StockDivisionInput.v _build/OrderCallInput.v _build/ObserverFormsInput.v _build/IOReadInput.v _build/io-read.bits _build/io-read.bits.source _build/io-read.bits.sexp _build/order-call.bits _build/order-call.bits.source _build/order-call.bits.sexp _build/KernelListInput.v _build/kernel-list.bits _build/kernel-list.bits.source _build/kernel-list.bits.sexp _build/EqualityCoreInput.v _build/EqualitySealInput.v _build/equality-core.bits _build/equality-core.bits.source _build/equality-core.bits.sexp _build/equality-core-for-seal.bits _build/equality-core-for-seal.bits.source _build/equality-core-for-seal.bits.sexp _build/equality-seal.bits _build/equality-seal.bits.source _build/equality-seal.bits.sexp \
+ _build/CompilerBranchesInput.v _build/compiler-branches.bits _build/compiler-branches.bits.source _build/compiler-branches.bits.sexp _build/KernelElementInput.v _build/kernel-element.bits _build/kernel-element.bits.source _build/kernel-element.bits.sexp _build/PrimitiveSources.v _build/KLambdaEvaluatorInput.v _build/e2e07-klambda.bits _build/e2e07-klambda.bits.source _build/e2e07-klambda.bits.sexp \
+ _build/CompilerBranchesPatchedInput.v _build/compiler-branches-patched.bits _build/compiler-branches-patched.bits.source _build/compiler-branches-patched.bits.sexp
 scripts/rocq coqc --version > _build/rocq-version.log
 grep -q 'version 8.18.0' _build/rocq-version.log || { cat _build/rocq-version.log; exit 1; }
 # Require a fresh image and regenerate the bridge from actual loaded equations.
@@ -75,15 +77,49 @@ python3 scripts/package-adapter.py _build/adapter.bits _build/AdapterInput.v
 python3 scripts/check-adapter-package.py _build/adapter.bits _build/AdapterInput.v
 diff -u rocq/AdapterInput.v _build/AdapterInput.v
 python3 scripts/check-upstream-pass.py
-for profile in bootstrap observer compiler_pass order_call io_read equality_core equality_seal; do
+# Port-fix lane: apply the pinned proposed upstream patches (packaging only:
+# patch sha256 and patched blobs pinned in package-patched.py), check the
+# patched extraction, and regenerate the patched captures. Acceptance is Rocq
+# (SchemePatched.v, CLLoweringPatch.v, CLMultiplyPatched.v).
+rm -rf _build/patched _build/CLLoweringPatchCapture.v _build/PatchedPrimitiveSources.v
+python3 scripts/package-patched.py apply _build/patched
+python3 scripts/package-patched.py check-branches _build/patched
+scripts/shen -l shen/cl-lowering-capture.shen -l shen/cl-lowering-patch-capture.shen \
+ -e '(buri.cllp-capture "ports/upstream/shen-cl/compiler.shen" "_build/patched/shen-cl/compiler.shen" "2d624377c02030f9513769f7bad11e84330b8c5a" "60522d0924b44a218161bced9771783192ae301d" "_build/CLLoweringPatchCapture.v")' > _build/cl-patch-capture.log 2>&1
+grep -qx captured _build/cl-patch-capture.log || { cat _build/cl-patch-capture.log; exit 1; }
+diff -u rocq/CLLoweringPatchCapture.v _build/CLLoweringPatchCapture.v
+python3 scripts/package-patched.py multiply _build/patched _build/PatchedPrimitiveSources.v
+python3 scripts/check-patched-package.py _build/patched _build/PatchedPrimitiveSources.v
+diff -u rocq/PatchedPrimitiveSources.v _build/PatchedPrimitiveSources.v
+# Wave-D primitives lane: exact stock/patched kl:intern and Shen-CL string,
+# vector-read and intern definition bytes (packaging only; Rocq admits them
+# in SchemeIntern.v and CLStrings.v).
+rm -f _build/Prims2Sources.v
+python3 scripts/package-prims2.py _build/patched _build/Prims2Sources.v
+python3 scripts/check-prims2-package.py _build/patched _build/Prims2Sources.v
+diff -u rocq/Prims2Sources.v _build/Prims2Sources.v
+for profile in bootstrap observer compiler_pass order_call kernel_list io_read equality_core equality_seal eq1_base eq1_equations eq1_theory eq1_kernel compiler_branches compiler_branches_patched kernel_element e2e07_klambda; do
  case "$profile" in
   bootstrap) source=shen/observe-constructor.shen; capture=bootstrap; module=BootstrapInput ;;
   observer) source=shen/observe-encoder.shen; capture=observer; module=ObserverInput ;;
   compiler_pass) source=ports/compiler-merge.shen; capture=compiler-pass; module=CompilerPassInput ;;
   order_call) source=ports/compiler-order.shen; capture=order-call; module=OrderCallInput ;;
+  kernel_list) source=ports/kernel-list.shen; capture=kernel-list; module=KernelListInput ;;
   io_read) source=ports/io-read.shen; capture=io-read; module=IOReadInput ;;
   equality_core) source=shen/equality-core.shen; capture=equality-core; module=EqualityCoreInput ;;
   equality_seal) source=shen/sealed-equality.shen; capture=equality-seal; module=EqualitySealInput ;;
+  # BURI/EQ-1 acceptance kernel and the helpers it calls, one capture per source file.
+  eq1_base) source=shen/base.shen; capture=eq1-base; module=EqualityInductionBaseInput ;;
+  eq1_equations) source=shen/equations.shen; capture=eq1-equations; module=EqualityInductionEquationsInput ;;
+  eq1_theory) source=spec/arithmetic.shen; capture=eq1-theory; module=EqualityInductionTheoryInput ;;
+  eq1_kernel) source=shen/kernel.shen; capture=eq1-kernel; module=EqualityInductionKernelInput ;;
+  # E2E-15 compiler branches (let/if/cond/equality emission) and kernel element?.
+  compiler_branches) source=ports/compiler-branches.shen; capture=compiler-branches; module=CompilerBranchesInput ;;
+  # Port-fix lane: the same branch defines from the PATCHED upstream compiler.shen.
+  compiler_branches_patched) source=ports/compiler-branches-patched.shen; capture=compiler-branches-patched; module=CompilerBranchesPatchedInput ;;
+  kernel_element) source=ports/kernel-element.shen; capture=kernel-element; module=KernelElementInput ;;
+  # E2E-07: the KL-PURE-1 reference evaluator, every definition in source order.
+  e2e07_klambda) source=shen/klambda.shen; capture=e2e07-klambda; module=KLambdaEvaluatorInput ;;
  esac
  if [ "$profile" = equality_seal ]; then
   # Build and activate from the same core records whose literal targets are checked.
@@ -118,19 +154,76 @@ diff -u rocq/ObserverFormsInput.v _build/ObserverFormsInput.v
 python3 scripts/package-implementation.py stock_division ports/stock-division.scm _build/StockDivisionInput.v
 python3 scripts/check-implementation-package.py stock_division ports/stock-division.scm _build/StockDivisionInput.v
 diff -u rocq/StockDivisionInput.v _build/StockDivisionInput.v
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests EncoderNames EncoderFrontend EncoderKLambda EncoderFrontendTests CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture ObservedTests BindingVersions Sealed Native NativeRuntime NativeSimulation NativeHelpers NativeTests SealedInput ConstructorInput NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO StockDivisionInput StockDivision OrderCallInput OrderCallCorrect ObserverFormsInput ObserverPipeline IOReadInput IOReadCorrect EffectContract CallRefinement PureEffectBridge NativeReverse StockDivisionGeneral ObserverTotal FreshSupply EqualityCoreInput EqualityCoreCorrect EqualityAdmission EqualitySealInput EqualitySealCorrect StageTests Audit; do
+# E2E-17: exact pinned primitive definition bytes (packaging only; Rocq admits them).
+python3 scripts/package-primitives.py _build/PrimitiveSources.v
+python3 scripts/check-primitives-package.py _build/PrimitiveSources.v
+diff -u rocq/PrimitiveSources.v _build/PrimitiveSources.v
+# E2E-21: pinned Chez/SBCL layout constants (packaging only; Rocq checks agreement).
+rm -rf _build/repr; mkdir -p _build/repr
+python3 -I scripts/package-repr-layout.py _build/repr
+diff -u rocq/ChezLayout.v _build/repr/ChezLayout.v
+diff -u rocq/SbclLayout.v _build/repr/SbclLayout.v
+# E2E-21 (SBCL native): captured arm64 type-test words and source type codes
+# (packaging only; Rocq decodes, runs and checks them in rocq/Sbcl*.v).
+python3 -I scripts/package-sbcl-type-tests.py _build/repr
+diff -u rocq/SbclTypeTests.v _build/repr/SbclTypeTests.v
+# E2E-22: Chez 10.3.0 nanopass grammar source and captured tarm64le IR trace
+# (packaging only; Rocq reads, resolves and checks them in rocq/ChezNp*.v).
+rm -f _build/ChezNpLanguagesInput.v _build/ChezNpSyntax.v _build/chez-np-languages.json _build/ChezNpCaptureInput.v
+(cd ports/chez-np && sha256sum -c --quiet SHA256SUMS)
+python3 scripts/package-chez-np.py languages ports/chez-np/upstream/np-languages.ss _build/ChezNpLanguagesInput.v _build/chez-np-languages.json _build/ChezNpSyntax.v
+python3 scripts/check-chez-np-package.py languages ports/chez-np/upstream/np-languages.ss _build/ChezNpLanguagesInput.v
+diff -u rocq/ChezNpLanguagesInput.v _build/ChezNpLanguagesInput.v
+diff -u rocq/ChezNpSyntax.v _build/ChezNpSyntax.v
+diff -u spec/chez-np-languages.json _build/chez-np-languages.json
+python3 scripts/package-chez-np.py capture ports/chez-np/tarm64le-buri-arm-add.np ports/arm/chez/chez1030-buri-arm-add.hex ports/arm/chez/chez1030-buri-arm-add.relocs _build/ChezNpCaptureInput.v
+python3 scripts/check-chez-np-package.py capture ports/chez-np/tarm64le-buri-arm-add.np ports/arm/chez/chez1030-buri-arm-add.hex ports/arm/chez/chez1030-buri-arm-add.relocs _build/ChezNpCaptureInput.v
+diff -u rocq/ChezNpCaptureInput.v _build/ChezNpCaptureInput.v
+# E2E-22 chezprim lane: the raw (info-carrying) capture, packaged as bytes only.
+rm -f _build/ChezPrimRawInput.v
+python3 scripts/package-chez-prim.py ports/chez-np/tarm64le-buri-arm-add.raw.np _build/ChezPrimRawInput.v
+python3 scripts/check-chez-prim-package.py ports/chez-np/tarm64le-buri-arm-add.raw.np _build/ChezPrimRawInput.v
+diff -u rocq/ChezPrimRawInput.v _build/ChezPrimRawInput.v
+# Module registration: each lane owns a file in rocq/modules.d (concatenated in
+# C-locale name order), and every audit module rocq/Audit*.v owns an explicit
+# expected count in rocq/audit.d/<module>.count. Every rocq/*.v must be
+# registered exactly once; audit modules always compile last.
+LC_ALL=C; export LC_ALL
+modules=$(cat rocq/modules.d/*.list | sed '/^[[:space:]]*$/d')
+audits=$(for f in rocq/audit.d/*.count; do basename "$f" .count; done)
+for m in $modules; do
+  case "$m" in Audit*) echo "Audit module registered in modules.d: $m" >&2; exit 1 ;; esac
+  [ -f "rocq/$m.v" ] || { echo "Registered module has no source: $m" >&2; exit 1; }
+done
+for a in $audits; do
+  case "$a" in Audit|Audit_*) ;; *) echo "Audit count for a non-audit module: $a" >&2; exit 1 ;; esac
+  [ -f "rocq/$a.v" ] || { echo "Audit count without module: $a" >&2; exit 1; }
+done
+all=$(printf '%s\n' $modules $audits)
+dups=$(printf '%s\n' $all | sort | uniq -d)
+[ -z "$dups" ] || { echo "Duplicate module registration: $dups" >&2; exit 1; }
+printf '%s\n' $all | sort > _build/registered-modules
+unregistered=$(for f in rocq/*.v; do basename "$f" .v; done | sort | comm -23 - _build/registered-modules)
+[ -z "$unregistered" ] || { echo "Unregistered Rocq modules: $unregistered" >&2; exit 1; }
+for module in $all; do
   cp "rocq/$module.v" "_build/rocq/$module.v"
   rm -f "_build/rocq/$module.vo" "_build/rocq/$module.vos" "_build/rocq/$module.vok"
 done
 cd _build/rocq
-for module in Arithmetic Equality Lambda EquationBridge NativeArithmetic NativeOutput Wire Resolve Normalize NativeValidation NativeCapture WireTests Encoder EncoderSource EncoderTests EncoderNames EncoderFrontend EncoderKLambda EncoderFrontendTests CaptureTag ByteDomain EncoderScheme ObservedEncoder ObservedCapture ObservedTests BindingVersions Sealed Native NativeRuntime NativeSimulation NativeHelpers NativeTests SealedInput ConstructorInput NativeApplications NativeComposition NativeCodec AdapterInput AdapterCorrect SourceReader CodecCorrespondence BootstrapInput BootstrapCorrect ObserverInput ObserverEffects ObserverIO CompilerPassInput CompilerPassCorrect CompilerBindings CheckedIOInput CheckedFileIO StockDivisionInput StockDivision OrderCallInput OrderCallCorrect ObserverFormsInput ObserverPipeline IOReadInput IOReadCorrect EffectContract CallRefinement PureEffectBridge NativeReverse StockDivisionGeneral ObserverTotal FreshSupply EqualityCoreInput EqualityCoreCorrect EqualityAdmission EqualitySealInput EqualitySealCorrect StageTests Audit; do
+for module in $all; do
   if ! "$root/scripts/rocq" coqc -Q . Buri "$module.v" > "$module.log" 2>&1; then
     cat "$module.log"; exit 1
   fi
 done
-if grep -q '^Axioms:' Audit.log; then cat Audit.log; exit 1; fi
-[ "$(grep -c '^Closed under the global context$' Audit.log)" = 347 ] || {
-  cat Audit.log; echo 'Unexpected theorem assumption inventory' >&2; exit 1;
-}
-"$root/scripts/rocq" coqchk -silent -Q . Buri Buri.Arithmetic Buri.Equality Buri.Lambda Buri.EquationBridge Buri.NativeArithmetic Buri.NativeOutput Buri.Wire Buri.Resolve Buri.Normalize Buri.NativeValidation Buri.NativeCapture Buri.WireTests Buri.Encoder Buri.EncoderSource Buri.EncoderTests Buri.EncoderNames Buri.EncoderFrontend Buri.EncoderKLambda Buri.EncoderFrontendTests Buri.CaptureTag Buri.ByteDomain Buri.EncoderScheme Buri.ObservedEncoder Buri.ObservedCapture Buri.ObservedTests Buri.BindingVersions Buri.Sealed Buri.Native Buri.NativeRuntime Buri.NativeSimulation Buri.NativeHelpers Buri.NativeTests Buri.SealedInput Buri.ConstructorInput Buri.NativeApplications Buri.NativeComposition Buri.NativeCodec Buri.AdapterInput Buri.AdapterCorrect Buri.SourceReader Buri.CodecCorrespondence Buri.BootstrapInput Buri.BootstrapCorrect Buri.ObserverInput Buri.ObserverEffects Buri.ObserverIO Buri.CompilerPassInput Buri.CompilerPassCorrect Buri.CompilerBindings Buri.CheckedIOInput Buri.CheckedFileIO Buri.StockDivisionInput Buri.StockDivision Buri.OrderCallInput Buri.OrderCallCorrect Buri.ObserverFormsInput Buri.ObserverPipeline Buri.IOReadInput Buri.IOReadCorrect Buri.EffectContract Buri.CallRefinement Buri.PureEffectBridge Buri.NativeReverse Buri.StockDivisionGeneral Buri.ObserverTotal Buri.FreshSupply Buri.EqualityCoreInput Buri.EqualityCoreCorrect Buri.EqualityAdmission Buri.EqualitySealInput Buri.EqualitySealCorrect Buri.StageTests Buri.Audit
-printf 'BURI_ROCQ_OK 347 audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n'
+total=0
+for a in $audits; do
+  if grep -q '^Axioms:' "$a.log"; then cat "$a.log"; exit 1; fi
+  expected=$(cat "$root/rocq/audit.d/$a.count")
+  case "$expected" in ''|*[!0-9]*) echo "Malformed audit count for $a" >&2; exit 1 ;; esac
+  [ "$(grep -c '^Closed under the global context$' "$a.log")" = "$expected" ] || {
+    cat "$a.log"; echo "Unexpected theorem assumption inventory in $a" >&2; exit 1;
+  }
+  total=$((total + expected))
+done
+"$root/scripts/rocq" coqchk -silent -Q . Buri $(for m in $all; do printf 'Buri.%s ' "$m"; done)
+printf 'BURI_ROCQ_OK %s audited theorems; 18 equation bridges; 12 native compiler schemas; raw capture validated; coqchk replay passed\n' "$total"

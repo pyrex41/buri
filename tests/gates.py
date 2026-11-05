@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='buri-gates-') as directory:
     for folder in ['rocq', 'ports']:
         shutil.copytree(root / folder, tree / folder)
     (tree / 'tests').mkdir()
-    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py','mutate-stages.py']:
+    for name in ['mutate-wire.py', 'mutate-frontend.py', 'mutate-observed.py', 'mutate-sealed.py', 'mutate-constructor.py', 'mutate-adapter.py', 'mutate-provenance.py', 'mutate-checkedio.py', 'mutate-correctness.py', 'mutate-stages.py', 'mutate-cl-lowering.py', 'mutate-order.py', 'mutate-compose.py', 'mutate-eq1.py', 'mutate-chez-np.py', 'mutate-termination.py', 'mutate-chezprim.py']:
         shutil.copy(root / 'tests' / name, tree / 'tests' / name)
     for name in ['proof-mutations', 'package-wire.py', 'package-frontend.py', 'package-observed.py', 'package-sealed.py', 'package-constructor.py', 'package-adapter.py', 'package-provenance.py']:
         shutil.copy(root / 'scripts' / name, tree / 'scripts' / name)
@@ -151,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='buri-adapter-gate-') as directory:
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
     count += 1
 
-for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read','equality_core','equality_seal']:
+for profile in ['bootstrap','observer','compiler_pass','checked_io','order_call','observer_forms','io_read','equality_core','equality_seal','eq1_base','eq1_equations','eq1_theory','eq1_kernel']:
     with tempfile.TemporaryDirectory(prefix='buri-provenance-gate-') as directory:
         capture, module = Path(directory)/'capture.bits', Path(directory)/'Capture.v'
         capture.write_bytes(b'00')
@@ -170,6 +170,30 @@ with tempfile.TemporaryDirectory(prefix='buri-source-literal-') as directory:
     module.write_text(module.read_text().replace('quoted text','changed text'))
     result = subprocess.run(['python3', str(root/'scripts/check-implementation-package.py'), 'stock_division', str(source), str(module)], capture_output=True, text=True)
     assert result.returncode != 0 and 'does not match source bytes' in result.stderr
+    count += 1
+
+with tempfile.TemporaryDirectory(prefix='buri-repr-pins-') as directory:
+    # E2E-21: the layout extractor refuses a changed pinned input, both when
+    # SHA256SUMS is left stale and when it is updated to match the change.
+    import hashlib
+    tree = Path(directory)
+    (tree / 'scripts').mkdir()
+    (tree / 'out').mkdir()
+    shutil.copy(root / 'scripts/package-repr-layout.py', tree / 'scripts/package-repr-layout.py')
+    shutil.copytree(root / 'ports/repr', tree / 'ports/repr')
+    equates = tree / 'ports/repr/chez/tarm64le-equates.h'
+    equates.write_text(equates.read_text().replace('#define fixnum_offset 0x3\n', '#define fixnum_offset 0x2\n'))
+    run = lambda: subprocess.run(['python3', '-I', str(tree / 'scripts/package-repr-layout.py'), str(tree / 'out')],
+                                 capture_output=True, text=True)
+    result = run()
+    assert result.returncode != 0 and 'pinned' in result.stderr and not (tree / 'out/ChezLayout.v').exists()
+    sums = tree / 'ports/repr/SHA256SUMS'
+    digest = hashlib.sha256(equates.read_bytes()).hexdigest()
+    sums.write_text('\n'.join(digest + '  ./chez/tarm64le-equates.h' if l.endswith('./chez/tarm64le-equates.h') else l
+                              for l in sums.read_text().splitlines()) + '\n')
+    result = run()
+    assert result.returncode != 0 and 'differs from the upstream pin' in result.stderr
+    assert not (tree / 'out/ChezLayout.v').exists()
     count += 1
 
 with tempfile.TemporaryDirectory(prefix='buri-report-log-') as directory:

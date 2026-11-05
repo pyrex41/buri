@@ -41,6 +41,9 @@ python3 tests/mutate-provenance.py
 python3 tests/mutate-checkedio.py
 python3 tests/mutate-correctness.py
 python3 tests/mutate-stages.py
+python3 tests/mutate-cl-lowering.py
+python3 tests/mutate-order.py
+python3 tests/mutate-compose.py
 for name in CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile; do
   python3 scripts/package-wire.py "_build/mutations/$name.bits" "_build/mutations/$name.v"
 done
@@ -56,10 +59,110 @@ done
 for name in CtorLambda CtorAuthority CtorBoolean CtorExecutor CtorEntry CtorAppendOrder CtorOmitted CtorExtra; do
   python3 scripts/package-constructor.py "_build/mutations/$name.bits" "_build/mutations/$name.v"
 done
-for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile WrongEncoderTag WrongEncoderBit FalseEncoderSource KLChangedDivisor KLChangedTag KLWrongBinder KLDuplicateParameters KLOmittedDefinition KLWrongCallee ObservedWrongTag ObservedWrongDivisor ObservedWrongCallee ObservedParallelLet ObservedChangedSource ObservedUnboundTemporary ObservedReorderedPairs ObservedOmittedPair SealedUnknown SealedEval SealedMutation SealedDifferentTarget SealedDifferentHelper SealedMissingHelper SealedExtraImport CtorLambda CtorAuthority CtorBoolean CtorExecutor CtorEntry CtorAppendOrder CtorOmitted CtorExtra AdapterWrongTag AdapterWrongTail AdapterWrongChild AdapterWrongType BootstrapBooleanTag BootstrapWrongChild ObserverWrongActivation ObserverWrongPublication CompilerPassWrongKeyword UncheckedSuccess UncheckedRead FreshGuardBypass OrderWrongDirection PipelineWrongFrontend StockWrongBranch ReadWrongPath EqUncheckedTrans EqWrongCongruence EqMissingSym EqExtraDefinition ReverseDroppedArgument LoaderFakeActivationSuccess SignedZeroHidden CallWrongCallee FreshBogusCount AdmissionNegativeAccepted SealWrongHelper SealAuthorityEscape SealWrongEntry SealExecutorBypass; do
+for name in WrongInstruction DroppedPush FalseEquation FalseNativeOutput CorruptCapture TruncatedCapture TrailingCapture OmittedCaptureRecord WrongCaptureProfile WrongEncoderTag WrongEncoderBit FalseEncoderSource KLChangedDivisor KLChangedTag KLWrongBinder KLDuplicateParameters KLOmittedDefinition KLWrongCallee ObservedWrongTag ObservedWrongDivisor ObservedWrongCallee ObservedParallelLet ObservedChangedSource ObservedUnboundTemporary ObservedReorderedPairs ObservedOmittedPair SealedUnknown SealedEval SealedMutation SealedDifferentTarget SealedDifferentHelper SealedMissingHelper SealedExtraImport CtorLambda CtorAuthority CtorBoolean CtorExecutor CtorEntry CtorAppendOrder CtorOmitted CtorExtra AdapterWrongTag AdapterWrongTail AdapterWrongChild AdapterWrongType BootstrapBooleanTag BootstrapWrongChild ObserverWrongActivation ObserverWrongPublication CompilerPassWrongKeyword UncheckedSuccess UncheckedRead FreshGuardBypass OrderWrongDirection PipelineWrongFrontend StockWrongBranch ReadWrongPath EqUncheckedTrans EqWrongCongruence EqMissingSym EqExtraDefinition ReverseDroppedArgument LoaderFakeActivationSuccess SignedZeroHidden CallWrongCallee FreshBogusCount AdmissionNegativeAccepted SealWrongHelper SealAuthorityEscape SealWrongEntry SealExecutorBypass CLLowDroppedGuard CLLowTruthiness CLLowSwappedBranches OrderSwappedKeep FreshAcceptsCollision OccurrenceDropsTail PreserveReversedArgs EmitIfTrueCompilesElse EmitLetBodyUnscoped CondClauseUnforced EqualityNumericEqual ComposeDroppedBinding StrictIfSwapped; do
   if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
     echo "Mutant incorrectly accepted: $name" >&2; exit 1
   fi
   grep -Eq 'Unable to unify|Not convertible|while it is expected to have type' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# BURI/EQ-1 reference-kernel and model mutants: each must be refused by Rocq.
+for name in $(python3 tests/mutate-eq1.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# E2E-21 representation mutants: a changed layout capture or a weakened
+# fixnum premise must be refused by Rocq with the named error.
+python3 tests/mutate-repr.py > _build/mutations/repr-names
+while read -r name pattern; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q "$(printf '%s' "$pattern" | tr _ ' ')" "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done < _build/mutations/repr-names
+# E2E-21 SBCL-native mutants: a changed captured instruction word, a changed
+# source-agreement claim and three false representation-level claims.
+python3 tests/mutate-sbclnative.py > _build/mutations/sbclnative-names
+while read -r name pattern; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q "$(printf '%s' "$pattern" | tr _ ' ')" "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done < _build/mutations/sbclnative-names
+# EQ1-TERM and order-call progress mutants: the unmutated control of the
+# member? inductive step must be accepted; each mutant must be refused.
+names=$(python3 tests/mutate-termination.py)
+scripts/rocq coqc -Q _build/rocq Buri _build/mutations/TermMemberControl.v > _build/mutations/TermMemberControl.log 2>&1 || {
+  cat _build/mutations/TermMemberControl.log; echo "Termination mutation control refused" >&2; exit 1; }
+for name in $names; do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# E2E-07 evaluator mutants: false ground claims about the captured
+# shen/klambda.shen (superseded behaviors and wrong global/currying results).
+for name in $(python3 tests/mutate-e2e07.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# E2E-17 primitive wrapper mutants: each changed pinned definition must fail
+# Rocq admission (computed equality with the reviewed AST).
+for name in $(python3 tests/mutate-primitives.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# E2E-16/17 CL contract restatements: each claim the captured bodies do not
+# justify must be refused as a type mismatch against the real theorem.
+for name in $(python3 tests/mutate-cl-contracts.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'while it is expected to have type' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# Port-fix lane: unpatched captures must fail the patched theorems.
+sh tests/run-portfix-mutations.sh
+# Wave-D primitives lane: changed intern/string bytes and unjustified restatements.
+sh tests/run-prims2-mutations.sh
+# E2E-22 Chez nanopass mutants: a changed captured byte, a changed printed
+# pass output and a changed generated grammar must each fail their Rocq check.
+for name in $(python3 tests/mutate-chez-np.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# E2E-08 contract-logic mutants: a dropped rule premise, an unmeasured total
+# recursion, a weakened currying or resource premise, a transported claim
+# without budget exhaustion, a checker without its measure test and a hidden
+# short write must each be refused by Rocq.
+for name in $(python3 tests/mutate-contracts.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -Eq '^Error' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
+  printf 'Rejected proof mutation: %s\n' "$name"
+done
+# E2E-22 chezprim mutants: a changed info field, tag mask, library entry,
+# condition flag or block field in the raw capture must each fail its check.
+for name in $(python3 tests/mutate-chezprim.py); do
+  if scripts/rocq coqc -Q _build/rocq Buri "_build/mutations/$name.v" > "_build/mutations/$name.log" 2>&1; then
+    echo "Mutant incorrectly accepted: $name" >&2; exit 1
+  fi
+  grep -q 'Unable to unify' "_build/mutations/$name.log" || { cat "_build/mutations/$name.log"; exit 1; }
   printf 'Rejected proof mutation: %s\n' "$name"
 done

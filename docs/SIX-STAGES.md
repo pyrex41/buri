@@ -1,5 +1,10 @@
 # Six-stage correctness program: checked progress and remaining boundary
 
+The [end-to-end plan](END-TO-END-PLAN.md) extends this programme through both host
+compilers/runtimes, ARM artifacts, deployment services and checker execution.
+Its new planning obligations do not change the checked status recorded here;
+the original six-stage scope deferred Chez internals.
+
 The full objective is still open. `spec/six-stages.json` is the machine-readable
 ledger: all six stages remain **partial**, with scoped theorem names and explicit
 remaining work. A successful report requires every cited theorem to be in the

@@ -1,0 +1,667 @@
+; Copyright (c) 2010-2015, Mark Tarver
+
+; All rights reserved.
+
+; Redistribution and use in source and binary forms, with or without
+; modification, are permitted provided that the following conditions are met:
+; 1. Redistributions of source code must retain the above copyright
+;    notice, this list of conditions and the following disclaimer.
+; 2. Redistributions in binary form must reproduce the above copyright
+;    notice, this list of conditions and the following disclaimer in the
+;    documentation and/or other materials provided with the distribution.
+; 3. The name of Mark Tarver may not be used to endorse or promote products
+;    derived from this software without specific prior written permission.
+
+; THIS SOFTWARE IS PROVIDED BY Mark Tarver ''AS IS'' AND ANY
+; EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+; WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+; DISCLAIMED. IN NO EVENT SHALL Mark Tarver BE LIABLE FOR ANY
+; DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+; (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+; ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+; SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+(in-package :shen)
+
+;;; S43.1 public character stream interfaces.
+;;; Character streams (e.g. *standard-input*) need read-char; binary streams
+;;; (e.g. file streams opened for bytes) use read-byte.
+(declaim (inline |shen-cl.character-stream-p|))
+(defun |shen-cl.character-stream-p| (stream)
+  ;; Native FD streams keep their current type in a slot. Preserve the
+  ;; normal protocol for closed streams and streams with other handlers.
+  (let ((type #+sbcl
+              (if (and (typep stream 'sb-sys:fd-stream)
+                       (eq (sb-impl::ansi-stream-misc stream)
+                           #'sb-impl::fd-stream-misc-routine))
+                  (sb-impl::fd-stream-element-type stream)
+                  (stream-element-type stream))
+              #-sbcl (stream-element-type stream)))
+    (cond ((eq type 'character) t)
+          ((equal type '(unsigned-byte 8)) nil)
+          (t (subtypep type 'character)))))
+
+(defun |char-stream?| (stream)
+  (if (|shen-cl.character-stream-p| stream)
+      '|true|
+      '|false|))
+
+;; The kernel's pr calls this on character output streams. On SBCL/CCL the
+;; native |pr| override below bypasses it; other implementations (CLisp,
+;; ECL) run the kernel's KL pr and need it defined.
+(defun |write-string| (string stream)
+  (write-string string stream)
+  (force-output stream)
+  string)
+
+(defun |read-unit-string| (stream)
+  (let ((c (read-char stream nil nil)))
+    (cond (c (string c))
+          ;; EOF on the REPL's standard input (character path used by SBCL/CCL):
+          ;; the session is over, so exit cleanly rather than returning "" -- the
+          ;; kernel reader chokes on "" and loops forever otherwise. Scoped to
+          ;; the REPL; a program's own char reads still get "" at EOF.
+          ((and |shen-cl.in-repl?| (eq stream |*stinput*|)) (|cl.exit| 0))
+          (t ""))))
+
+;; Kernel 42.1 requires `read`/`lineread` to process input at EOF without a
+;; trailing newline: shen.read-loop parses its buffered bytes when the stream
+;; yields -1. The kernel's shen.my-read-byte reads a character stream through
+;; (string->n (read-unit-string S)), and read-unit-string can only
+;; signal EOF with "", which string->n rejects ("" is not a unit string) before
+;; the read loop ever sees -1. Read the character directly and report EOF as
+;; -1, matching the byte path.
+;;
+;; REPL stdin: shen-cl exits cleanly when the REPL's stdin reaches EOF (see
+;; shen.repl below). It must still evaluate a final form that has no trailing
+;; newline, so the REPL's lineread counts the non-whitespace input it has
+;; buffered (shen-cl.repl-pending): EOF with pending input yields -1 so the
+;; kernel parses and evaluates it; EOF with nothing pending ends the session.
+(defvar |shen-cl.repl-pending| nil)
+
+(defun |shen-cl.repl-input?| (stream)
+  (and |shen-cl.in-repl?| (eq stream |*stinput*|)))
+
+(defun |shen-cl.note-repl-input| (stream code)
+  (when (and |shen-cl.repl-pending|
+             (|shen-cl.repl-input?| stream)
+             (not (member code '(9 10 12 13 32))))
+    (incf |shen-cl.repl-pending|))
+  code)
+
+(defun |shen-cl.input-eof| (stream)
+  (if (and (|shen-cl.repl-input?| stream)
+           (not (and |shen-cl.repl-pending| (plusp |shen-cl.repl-pending|))))
+      (|cl.exit| 0)
+      -1))
+
+(defun |shen.my-read-byte| (stream)
+  (if (|shen-cl.character-stream-p| stream)
+      (let ((c (read-char stream nil nil)))
+        (if c
+            (|shen-cl.note-repl-input| stream (char-code c))
+            (|shen-cl.input-eof| stream)))
+      (let ((b (read-byte stream nil -1)))
+        (if (eql b -1)
+            (|shen-cl.input-eof| stream)
+            (|shen-cl.note-repl-input| stream b)))))
+
+(setf (symbol-function '|shen-cl.kernel-lineread|) (symbol-function '|lineread|))
+(defun |lineread| (stream)
+  (if (|shen-cl.repl-input?| stream)
+      (let ((|shen-cl.repl-pending| 0))
+        (funcall (symbol-function '|shen-cl.kernel-lineread|) stream))
+      (funcall (symbol-function '|shen-cl.kernel-lineread|) stream)))
+
+;; Run the kernel REPL with shen-cl.in-repl? bound, so the input layer
+;; (read-byte / read-unit-string) can exit cleanly when the REPL's stdin
+;; reaches EOF (a closed pipe / Ctrl-D). Canonical Shen loops forever here;
+;; this is a deliberate, documented improvement, matching the other ports.
+(setf (symbol-function '|shen-cl.kernel-repl|) (symbol-function '|shen.repl|))
+(defun |shen.repl| ()
+  (let ((|shen-cl.in-repl?| t))
+    (funcall (symbol-function '|shen-cl.kernel-repl|))))
+
+;; Symbol equality is identity. Select the comparison before traversing;
+;; the local macro shares the checked loop without a per-element dispatch.
+(defun |element?| (value list)
+  (macrolet ((search-with (test)
+               `(loop
+                  (cond ((null list) (return '|false|))
+                        ((not (consp list))
+                         (return (|simple-error| "attempt to find an element in a non-list
+")))
+                        ((,test value (car list)) (return '|true|)))
+                  (setf list (cdr list)))))
+    (if (symbolp value)
+        (search-with eq)
+        (search-with |shen-cl.absequal|))))
+
+(defvar |shen-cl.kernel-sysfunc?| (fdefinition '|shen.sysfunc?|))
+
+(defun |shen.sysfunc?| (symbol)
+  (if (not (symbolp symbol))
+      '|false|
+      (|or|
+        (|shen-cl.lisp-prefixed?| symbol)
+        (apply |shen-cl.kernel-sysfunc?| (list symbol)))))
+
+(defun |shen.pvar?| (x)
+  (if (|shen-cl.pvar-p| x)
+      '|true|
+      '|false|))
+
+(defun |integer?| (x)
+  (if (|shen-cl.integral-p| x) '|true| '|false|))
+
+(defun |boolean?| (x)
+  (if (|shen-cl.boolean-p| x) '|true| '|false|))
+
+;; Since 41.3, source input+ is a macro. Its function value still names
+;; input+, so keep the two-place callable entry as well as the expansion.
+(defun |input+| (type stream)
+  (|shen.input-h+| type stream))
+
+(defun |shen.byte->digit| (code)
+  (- code 48))
+
+(defvar specials (coerce "=*/+-_?$!@~><&%{}:;`#'." 'list))
+
+(defun symbol-characterp (c)
+  (or (alphanumericp c)
+      (not (null (member c specials)))))
+
+(defun |shen.analyse-symbol?| (s)
+  (if (and (> (length s) 0)
+           (not (digit-char-p (char s 0)))
+           (loop for c across (the string s)
+                 always (symbol-characterp c)))
+      '|true|
+      '|false|))
+
+(defun |symbol?| (val)
+  (if (and (symbolp val)
+           (not (null val))
+           (not (eq t val))
+           (not (eq val '|true|))
+           (not (eq val '|false|)))
+      (|shen.analyse-symbol?| (|str| val))
+      '|false|))
+
+(defun |variable?| (val)
+  (if (and (symbolp val)
+           (not (null val))
+           (not (eq t val))
+           (not (eq val '|true|))
+           (not (eq val '|false|))
+           (upper-case-p (char (symbol-name val) 0))
+           (every #'symbol-characterp (symbol-name val)))
+      '|true|
+      '|false|))
+
+;;; Pattern factorization
+;;; Factorises multi-clause cond forms by grouping consecutive clauses
+;;; that share a stable leading parameter test. Operates on KL forms where
+;;; symbols are in the :SHEN package (|and|, |cond|, |defun|, |true|).
+
+(defun shen-cl.extract-first-test (test)
+  "Extract the first test from a KL (and X Y) chain, or return NIL if not."
+  (if (and (consp test)
+           (eq (car test) '|and|)
+           (consp (cdr test))
+           (consp (cddr test)))
+      (values (cadr test) (caddr test))
+      (values nil nil)))
+
+(defun shen-cl.stable-pattern-test-p (test args)
+  "Only share parameter tests unaffected by guards mutating their contents."
+  (flet ((literal-p (x)
+           (or (numberp x) (and (symbolp x) (not (member x args))))))
+    (and (consp test)
+         (case (car test)
+           ((|cons?| |number?| |string?| |empty?| |absvector?|)
+            (and (= (length test) 2) (member (cadr test) args)))
+           (|=|
+            (and (= (length test) 3)
+                 (or (and (member (cadr test) args) (literal-p (caddr test)))
+                     (and (literal-p (cadr test)) (member (caddr test) args)))))))))
+
+(defun shen-cl.has-lisp-escape-p (form)
+  ;; Inline Lisp can even reassign parameters; leave such functions alone.
+  (and (consp form)
+       (or (and (symbolp (car form))
+                (let ((name (symbol-name (car form))))
+                  (and (>= (length name) 5)
+                       (string= "lisp." name :end2 5))))
+           (some #'shen-cl.has-lisp-escape-p form))))
+
+(defvar shen-cl.*factorise-label-counter* 0)
+
+(defun shen-cl.fresh-factorise-label ()
+  (intern (format nil "shen-cl.label~D"
+                  (incf shen-cl.*factorise-label-counter*))
+          :shen))
+
+(defun shen-cl.factorise-case (case1 returnp)
+  "Wrap CASE1's body in %%return when RETURNP (see factorise-cases)."
+  (if returnp
+      (list (car case1) (list '|%%return| (cadr case1)))
+      case1))
+
+(defun shen-cl.factorise-cases (cases args)
+  "Group consecutive cond cases sharing a stable first AND test.
+   When a group has >1 case, emit a nested cond under the shared test.
+
+   The remaining cases are needed on two control paths: when the shared
+   test fails, and when it matches but no sub-test does. Splicing them
+   into both paths compounds across consecutive groups (each splice
+   contains the next group's two splices), so code size grew 2^groups: a
+   33-clause function with 16 two-clause groups exhausted SBCL's heap.
+   Instead the remaining cases are emitted ONCE as the label body of a
+   %%let-label join and both paths %%goto-label to it (a CL tagbody/go,
+   as the kernel's original factorise-defun extension did). Because a
+   tagbody discards values, every clause body from the first join onward
+   is wrapped in %%return, escaping through the (block nil ...) that
+   add-block wraps around every factorised defun; clause order and
+   test/body evaluation order are exactly those of the nested-cond
+   emission this replaces."
+  (shen-cl.factorise-cases-h cases nil args))
+
+(defun shen-cl.factorise-cases-h (cases returnp args)
+  (if (null cases)
+      nil
+      (let* ((case1 (car cases))
+             (test1 (car case1)))
+        (multiple-value-bind (first-test rest-test)
+            (shen-cl.extract-first-test test1)
+          (if (not (shen-cl.stable-pattern-test-p first-test args))
+              ;; Repeated guards and mutable selector tests must run again.
+              (cons (shen-cl.factorise-case case1 returnp)
+                    (shen-cl.factorise-cases-h (cdr cases) returnp args))
+              ;; Collect consecutive cases sharing this first-test
+              (let ((group nil)
+                    (remaining (cdr cases)))
+                ;; First case's rest-test + body
+                (push (list rest-test (cadr case1)) group)
+                ;; Collect more cases with same first-test
+                (loop while remaining
+                      do (multiple-value-bind (ft rt)
+                             (shen-cl.extract-first-test (caar remaining))
+                           (if (and ft (equal ft first-test))
+                               (progn
+                                 (push (list rt (cadar remaining)) group)
+                                 (setf remaining (cdr remaining)))
+                               (return))))
+                (setf group (nreverse group))
+                (if (= (length group) 1)
+                    ;; Only one case in group -- no benefit, keep original
+                    (cons (shen-cl.factorise-case case1 returnp)
+                          (shen-cl.factorise-cases-h remaining returnp args))
+                    ;; Multiple cases -- factor out shared first-test. Emit
+                    ;; the remaining cases once under a label; jump to it
+                    ;; when the shared test fails or no sub-test matches.
+                    (let* ((label (shen-cl.fresh-factorise-label))
+                           (fallthrough (shen-cl.factorise-cases-h remaining t args))
+                           (inner-cond
+                             (append
+                              (mapcar (lambda (c)
+                                        (shen-cl.factorise-case c t))
+                                      group)
+                              (list (list '|true|
+                                          (list '|%%goto-label| label)))))
+                           (dispatch
+                             (list '|cond|
+                                   (list first-test (cons '|cond| inner-cond))
+                                   (list '|true|
+                                         (list '|%%goto-label| label)))))
+                      (list (list '|true|
+                                  (list '|%%let-label| (list label)
+                                        (cons '|cond| fallthrough)
+                                        dispatch)))))))))))
+
+(defun |shen.x.factorise-defun.factorise-defun| (defun-form)
+  "Factorise a [defun Name Args [cond | Cases]] form by grouping
+   consecutive clauses that share a stable leading parameter test."
+  (if (and (consp defun-form)
+           (eq (car defun-form) '|defun|)
+           (consp (cdr defun-form))
+           (consp (cddr defun-form))
+           (consp (cdddr defun-form))
+           (null (cddddr defun-form)))
+      (let* ((name (cadr defun-form))
+             (args (caddr defun-form))
+             (body (cadddr defun-form)))
+        (if (and (consp body)
+                 (eq (car body) '|cond|)
+                 (> (length (cdr body)) 1)
+                 (not (shen-cl.has-lisp-escape-p body)))
+            (let* ((shen-cl.*factorise-label-counter* 0)
+                   (factored (shen-cl.factorise-cases (cdr body) args)))
+              (if (equal factored (cdr body))
+                  defun-form
+                  (list '|defun| name args (cons '|cond| factored))))
+            defun-form))
+      defun-form))
+
+(defun |vector->| (vector n x)
+  (if (zerop n)
+      (error "cannot access 0th element of a vector~%")
+      (|address->| vector n x)))
+
+(defun |<-vector| (vector n)
+  (if (zerop n)
+    (error "cannot access 0th element of a vector~%")
+    (let ((vector-element #+sbcl
+                          ;; Keep the native condition without entering a trap.
+                          (if (and (simple-vector-p vector)
+                                   (typep n '(integer 0 #.most-positive-fixnum))
+                                   (>= n (length vector)))
+                              (sb-int:invalid-array-index-error vector n (length vector))
+                              (svref vector n))
+                          #-sbcl (svref vector n)))
+      (if (eq vector-element (|fail|))
+          (error "vector element not found~%")
+          vector-element))))
+
+(defun |variable?| (x)
+  (if (and (symbolp x) (not (null x)) (upper-case-p (char (symbol-name x) 0)))
+      '|true|
+      '|false|))
+
+(defun |shen.+string?| (x)
+  (if (and (stringp x) (not (string-equal x "")))
+      '|true|
+      '|false|))
+
+(defun |thaw| (f)
+  (funcall f))
+
+;; hash: the kernel's own definition (sys.kl: shen.hashkey + shen.mod, never
+;; 0) is kept deliberately. The kernel property store is a
+;; shen.dict, which this file maps onto a CL hash-table below, so hash is not
+;; used for property lookup, and keeping the kernel version keeps `hash`
+;; identical across SBCL, CLISP and ECL. (Hash values are port-specific in
+;; Shen; e.g. shen-scheme overrides hash natively and returns other values.)
+
+(defun |shen.dict| (size)
+  (|shen-cl.make-dict| size))
+
+(defun |shen.dict?| (dict)
+  (if (hash-table-p dict) '|true| '|false|))
+
+(defun |shen.dict-count| (dict)
+  (|shen-cl.dict-size| dict))
+
+(defun |shen.dict->| (dict key value)
+  (|shen-cl.dict-store| dict key value))
+
+(defun |shen.<-dict| (dict key)
+  (multiple-value-bind (result found) (|shen-cl.dict-entry| dict key)
+    (if found
+        result
+        (error "value ~A not found in dict~%" key))))
+
+(defun |shen.dict-rm| (dict key)
+  (|shen-cl.dict-remove| dict key))
+
+(defun |shen.dict-fold| (f dict init)
+  (let ((acc init))
+    (|shen-cl.map-dict| #'(lambda (k v)
+                 (setf acc (funcall (funcall (funcall f k) v) acc))) dict)
+    acc))
+
+#+clisp
+(defun |cl.exit| (code)
+  (ext:exit code))
+
+#+(and ccl (not windows))
+(defun |cl.exit| (code)
+  (ccl:quit code))
+
+#+(and ccl windows)
+(ccl::eval (ccl::read-from-string "(defun |cl.exit| (code) (#__exit code))"))
+
+#+ecl
+(defun |cl.exit| (code)
+  (si:quit code))
+
+#+sbcl
+(defun |cl.exit| (code)
+  (alien-funcall (extern-alien "exit" (function void int)) code))
+
+(defun |shen-cl.exit| (code)
+  (|cl.exit| code))
+
+(defun |shen-cl.initialise| ()
+  (progn
+    (|shen-cl.initialise-compiler|)
+    (|shen-cl.initialise-arities|)
+    (|update-lambda-table| '|shen-cl.load-lisp| 1)
+    (|update-lambda-table| '|shen-cl.eval-lisp| 1)
+
+    (|put|      '|cl.exit| '|arity| 1 |*property-vector*|)
+    (|put| '|shen-cl.exit| '|arity| 1 |*property-vector*|)
+
+    (|declare|      '|cl.exit| (list '|number| '--> '|unit|))
+    (|declare| '|shen-cl.exit| (list '|number| '--> '|unit|))
+
+    (|shen-cl.read-eval| "(defmacro      cl.exit-macro      [cl.exit] -> [cl.exit 0])")
+    (|shen-cl.read-eval| "(defmacro shen-cl.exit-macro [shen-cl.exit] -> [cl.exit 0])")
+
+    ;; Register the threading natives (defined in native.lsp) so they have
+    ;; a known arity and can be passed around as first-class functions;
+    ;; mirrors (update-lambda-table 'thread 1) in the official S41.1 build.
+    #+sbcl (|update-lambda-table| '|thread| 1)
+    #+sbcl (|update-lambda-table| '|terminate| 1)))
+
+(defun |shen-cl.initialise-extensions| ()
+  (|shen.x.programmable-pattern-matching.initialise|)
+  (|shen.x.namespaces.initialise|)
+  (|update-lambda-table| '|shen.x.type-annotations.annotate-kl| 1))
+
+#+(or ccl sbcl)
+(defun |shen.read-char-code| (s)
+  (let ((c (read-char s nil -1)))
+    (if (eq c -1)
+      -1
+      (char-int c))))
+
+;; Native pr: write the string to the stream unconditionally, never
+;; consulting *hush*. The kernel's KL pr (writer.kl) returns early without
+;; writing whenever *hush* is true -- which wrongly silences pr to FILE
+;; streams under -q (e.g. `eval -q -e "(pr ... FileStream)"`), producing a
+;; zero-byte file. SBCL/CCL already bypassed the KL pr via this override;
+;; ECL ran the KL pr and so silenced pr to files under -q. Its file streams
+;; are character streams, so the same write-string override applies.
+;; Extending the override to ECL makes SBCL/CCL/ECL agree: pr writes to its
+;; target stream regardless of *hush* (Shen issue #2).
+#+(or ccl sbcl ecl)
+(defun |pr| (x s)
+  (write-string x s)
+  (when (or (eq s |*stoutput*|) (eq s |*stinput*|))
+    (force-output s))
+  x)
+
+;; CLisp file streams are opened with :element-type 'unsigned-byte (see
+;; |shen.openh| in primitives.lsp), so write-string is illegal on them; the
+;; kernel's KL pr dispatches such streams to a write-byte path. Mirror that
+;; dispatch here but, like the SBCL/CCL/ECL override, ignore *hush* so pr to
+;; a file stream is never silenced under -q (Shen issue #2). Character streams
+;; (e.g. *stoutput*) still take write-string.
+#+clisp
+(defun |pr| (x s)
+  (if (subtypep (stream-element-type s) 'character)
+      (progn
+        (write-string x s)
+        (when (or (eq s |*stoutput*|) (eq s |*stinput*|))
+          (force-output s)))
+      (loop for c across x do (write-byte (char-code c) s)))
+  x)
+
+;; file reading
+
+(defun |read-file-as-bytelist| (path)
+  (with-open-file (stream (format nil "~A~A" |*home-directory*| path) :direction :input :element-type 'unsigned-byte)
+    (let ((data (make-array (file-length stream) :element-type 'unsigned-byte :initial-element 0)))
+      (read-sequence data stream)
+      (coerce data 'list))))
+
+(defun |shen.read-file-as-charlist| (path)
+  (|read-file-as-bytelist| path))
+
+(defun |shen.read-file-as-string| (path)
+  (with-open-file (stream (format nil "~A~A" |*home-directory*| path) :direction :input)
+    (let ((data (make-string (file-length stream))))
+      (read-sequence data stream)
+      data)))
+
+;; tuples
+
+(defun |@p| (x y)
+  (vector '|shen.tuple| x y))
+
+;; Ordinary Shen tuples are simple vectors. Avoid the kernel's fallback
+;; machinery for those, retaining its checked address behavior for host arrays.
+;; Keep this global binding replaceable by interactive definitions.
+(defun |tuple?| (x)
+  (if (if (simple-vector-p x)
+          (and (plusp (length x)) (eq (svref x 0) '|shen.tuple|))
+          (and (arrayp x) (not (stringp x))
+               (eq '|shen.tuple|
+                   (|shen-cl.<-address/or| x 0 (lambda () '|shen.not-tuple|)))))
+      '|true| '|false|))
+
+;; Prolog variables have two initialized slots; avoid filling then replacing
+;; both through the general abstract-vector allocator. Keep the global binding.
+(defun |shen.make-prolog-variable| (ticket)
+  (vector '|shen.pvar| ticket))
+
+;; vectors
+
+(defun |vector| (n)
+  (let ((vec (make-array (1+ n) :initial-element (|fail|))))
+    (setf (svref vec 0) n)
+    vec))
+
+; Amend the REPL credits message to explain exit command
+(setf (symbol-function '|shen-cl.original-credits|) #'|shen.credits|)
+
+(defun |shen.credits| ()
+  (|shen-cl.original-credits|)
+  (format t "exit REPL with (cl.exit)"))
+
+;; Compiler functions
+
+(defun |shen-cl.cl| (symbol)
+  (let* ((str (symbol-name symbol))
+         (lispname (string-upcase str)))
+    (|intern| lispname)))
+
+(defun |shen-cl.lisp-prefixed?| (symbol)
+  (|shen-cl.lisp-true?|
+    (and (not (null symbol))
+         (symbolp symbol)
+         (|shen-cl.prefix?| (symbol-name symbol) "lisp."))))
+
+(defun |shen-cl.remove-lisp-prefix| (symbol)
+  (|intern| (subseq (symbol-name symbol) 5)))
+
+;;; --- Phase 1: Reader performance overrides ---
+
+;; The kernel constructs a fresh list of punctuation codes for every test.
+;; Keep the common integer case allocation-free, with numeric equality for
+;; other representations (including integral floats and complex numbers).
+;; This remains a global function so compiled readers see later redefinitions.
+(defun |shen.misc?| (x)
+  (if (if (integerp x)
+          (case x ((61 45 42 47 43 95 63 36 33 64 126 46 62 60 38 37 39 35 96) t))
+          (and (numberp x)
+               (member x '(61 45 42 47 43 95 63 36 33 64 126 46 62 60 38 37 39 35 96)
+                       :test #'=)))
+      '|true| '|false|))
+
+;;; shen.str->bytes: O(N) via char indexing instead of recursive tlstr
+(defun |shen.str->bytes| (s)
+  (declare (type string s))
+  (let ((len (length s)))
+    (if (zerop len)
+        nil
+        (let ((result nil))
+          (loop for i from (1- len) downto 0
+                do (push (char-code (char s i)) result))
+          result))))
+
+;;; shen.bytes->string: O(N) via string buffer instead of recursive cn
+(defun |shen.bytes->string| (bytes)
+  (if (null bytes)
+      ""
+      (with-output-to-string (out)
+        (dolist (b bytes)
+          (write-char (code-char b) out)))))
+
+;;; shen.rfas-h: O(N) string building via buffer instead of repeated cn
+(defun |shen.rfas-h| (stream byte acc)
+  (declare (ignore acc))
+  (if (eql byte -1)
+      (progn (|close| stream) "")
+      (let ((result (with-output-to-string (out)
+                      (loop for b = byte then (|read-byte| stream)
+                            until (eql b -1)
+                            do (write-char (code-char b) out)))))
+        (|close| stream)
+        result)))
+
+;;; shen.reader-error-message: O(N) via string buffer
+(defun |shen.reader-error-message| (max-len idx bytes)
+  (if (or (null bytes) (eql max-len idx))
+      ""
+      (with-output-to-string (out)
+        (loop for b-list on bytes
+              for i from idx
+              while (not (eql max-len i))
+              do (write-char (code-char (car b-list)) out)))))
+
+;;; --- Phase 2: Macro expansion performance overrides ---
+
+;;; macroexpand: extract macro functions once instead of mapping CDR each call.
+;;; Kernel 42.1+: source-form handlers (shen.*source-form-handlers*) are passed
+;;; as the fourth argument and run before ordinary macros, exactly as in
+;;; macros.kl's macroexpand.
+(defun |macroexpand| (expr)
+  (let ((fns (mapcar #'cdr |*macros*|)))
+    (|shen.macroexpand-h| expr fns fns
+                         (symbol-value '|shen.*source-form-handlers*|))))
+
+;;; shen.macroexpand-h: EQ fast-path before expensive absequal.
+;;; When a macro function doesn't match, it returns its argument unchanged
+;;; (same pointer), so EQ succeeds for the vast majority of non-matching cases.
+;;; Kernel 42.1 signature (4 args): HANDLERS is the source-form handler
+;;; registry; the walk is shen.source-macro-walk, which skips sub-forms owned
+;;; by a source-form handler and reduces to shen.walk when HANDLERS is ().
+(defun |shen.macroexpand-h| (expr macros all-macros handlers)
+  (if (null macros)
+      expr
+      (if (consp macros)
+          (let ((walked (if (null handlers)
+                            (|shen.walk| (car macros) expr)
+                            (|shen.source-macro-walk| (car macros) expr handlers))))
+            (if (eq expr walked)
+                ;; EQ means definitely unchanged -- skip absequal entirely
+                (|shen.macroexpand-h| expr (cdr macros) all-macros handlers)
+                ;; Pointers differ; check structural equality
+                (if (|shen-cl.absequal| expr walked)
+                    (|shen.macroexpand-h| expr (cdr macros) all-macros handlers)
+                    ;; Genuinely changed: restart from all macros
+                    (|shen.macroexpand-h| walked all-macros all-macros handlers))))
+          (|simple-error| "implementation error in shen.macroexpand-h"))))
+
+;;; Fix atom? to recognise CL T as a valid atom.
+;;; The kernel atom? uses (or (symbol? x) ...) but shen-cl's symbol?
+;;; excludes CL T (used for Shen variable T). This override uses CL
+;;; symbolp as a fallback so the prolog <hterm> parser can handle T.
+(defun |atom?| (x)
+  (if (or (symbolp x) (stringp x) (numberp x))
+      '|true|
+      '|false|))

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Stand-in for Islaris's bin/isla-footprint wrapper (which runs `cargo run`
+# inside an isla checkout).  Same interface: the first argument names the
+# snapshot file, looked up in ISLA_SNAP; the rest goes to isla-footprint.
+#   ISLA_BIN   built isla-footprint binary
+#   ISLA_SNAP  directory containing aarch64.ir (Islaris's name for the
+#              Armv8.5 snapshot; isla-snapshots d8b31014 armv8p5.ir)
+#   XBIN       aarch64-linux-gnu binutils (required on PATH by the config)
+ir=$1; shift
+export PATH="${XBIN:?}:$PATH"
+exec "${ISLA_BIN:?}" "$@" -A "${ISLA_SNAP:?}/$ir"

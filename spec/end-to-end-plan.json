@@ -1,0 +1,1475 @@
+{
+  "schema": "buri-end-to-end-plan-1",
+  "kind": "planning-ledger-not-proof-evidence",
+  "baseline_commit": "97b38751db00398621d0fb32e11068c0aa81864f",
+  "full_plan_complete": false,
+  "target": "closed-deployment-both-ports",
+  "ultimate_foundations": [
+    "chosen logic and ultimate checking root",
+    "specification meaning",
+    "bottom ISA and device models",
+    "physical correspondence"
+  ],
+  "work_packages": [
+    {
+      "id": "E2E-01",
+      "title": "Freeze the completion contract.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [],
+      "evidence": [
+        "spec/release-charter.json",
+        "docs/RELEASE-CHARTER.md",
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
+      "acceptance": "each\nrequired feature and claim has a named semantics and an owning work package;\neach provisional exclusion has an enforcement test and a scheduled closure step.\nRemoving a required feature changes the release charter rather than completing it.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-02",
+      "title": "Replace prose-only gaps with an obligation graph.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01"
+      ],
+      "evidence": [
+        "spec/obligations.json",
+        "docs/RELEASE-CHARTER.md",
+        "shen/ledger.shen",
+        "tests/ledger.shen"
+      ],
+      "acceptance": "every current gap\nmaps to a package below; no dependency cycles are discharged by assuming each\nother. Joint invariants or well-founded constructions must close such cycles.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-03",
+      "title": "Pin and reproduce the entire build.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01",
+        "E2E-02"
+      ],
+      "evidence": [
+        {
+          "kind": "build-recipe",
+          "artifact": "flake.nix",
+          "claim": "nixpkgs, Shen-Scheme v0.52 archive, PR 117 overlay and Coq debs pinned by hash; nix build .#gates runs make test and make prove in the no-network sandbox"
+        },
+        {
+          "kind": "build-recipe",
+          "artifact": "Earthfile",
+          "claim": "orchestrates the Nix and host routes; docs/BUILD.md records which targets were executed"
+        },
+        {
+          "kind": "identity-evidence",
+          "artifact": "scripts/build-manifest.py",
+          "claim": "manifest of sources, tool payloads, runtime libraries, commands, environment and outputs, plus a comparer that explains differences; identity evidence, not semantic evidence"
+        },
+        {
+          "kind": "identity-evidence",
+          "artifact": "docs/BUILD.md",
+          "claim": "host bootstrap and Nix sandbox builds of one commit gave byte-identical .vo/.glob/captures; .aux paths and timings and Shen run-time log lines are explained nondeterminism"
+        }
+      ],
+      "acceptance": "the\nrelease can be rebuilt and its differences explained. Reproducibility establishes\nidentity evidence, never semantic preservation; steps 20–32 discharge that gap.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-04",
+      "title": "Define observations, failures and external interaction.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01"
+      ],
+      "evidence": [
+        "rocq/Observation.v",
+        "shen/observation.shen",
+        "tests/observation.shen",
+        "docs/KLAMBDA-SEMANTICS.md"
+      ],
+      "acceptance": "no later pass can hide an error, failed write or infinite internal loop by\nchoosing a weaker observation vocabulary.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-05",
+      "title": "Complete the language value and store model.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04"
+      ],
+      "evidence": [
+        "rocq/KLValue.v",
+        "rocq/KLWellFormed.v",
+        "docs/VALUE-MODEL.md"
+      ],
+      "acceptance": "each primitive domain and every accepted boundary value has defined meaning.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-06",
+      "title": "Complete KLambda semantics.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-05"
+      ],
+      "evidence": [
+        "rocq/KLSyntax.v",
+        "rocq/KLSemantics.v",
+        "rocq/KLMetatheory.v",
+        "rocq/KLTail.v",
+        "rocq/KLBridge.v",
+        "rocq/KLExamples.v"
+      ],
+      "acceptance": "every\nrequired KLambda form and primitive has a semantic rule; no full-language claim\nis made from the existing first-order fragment alone.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-07",
+      "title": "Verify the executable Shen semantics.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06"
+      ],
+      "evidence": [
+        {
+          "kind": "capture",
+          "artifact": "ports/e2e07-klambda.bits",
+          "claim": "shen/klambda.shen as compiled and installed by the pinned image (all 33 definitions, profile e2e07_klambda); regenerated and diffed by make prove; decoded by rocq/KLambdaEvaluatorInput.v"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorRefinement.v",
+          "claim": "klambda_refines: for every program in the KL-PURE-1 subset (literal, var, lambda, apply, let, if, saturated + - * < = cons hd tl cons? number? string?, raise, trap), every definition table, budget and Native fuel, a value returned by the captured buri.eval is an evaluator verdict; [returned v] and [raised m] are found by KLMetatheory.run on the translated program (value tr_rv v, exception of the class of m) under every pinned profile; budget and unsupported verdicts make no claim"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorRefinement.v",
+          "claim": "klambda_decided_terminates: a decided verdict is a terminating KLambda behavior and excludes divergence; evaluate_shape/evaluate_body_refines: [unknown host-error] comes only from the guard handler, the admitted guard body is sound"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorEquations.v",
+          "claim": "one equation per captured evaluator body and input shape (eval, lookup-value, eval-let/-if/-function/-argument, apply-value, eval-args/-first/-rest, eval-primitive, eval-raise/-trap/-handler), proved by VM reduction of the decoded capture"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/KLambdaEvaluatorSamples.v",
+          "claim": "actual Native run of the captured evaluator on let, trap, non-Boolean if, application, budget exhaustion and closure equality; universal theorem instantiated; independent KLambda computation agrees on the let sample"
+        },
+        {
+          "kind": "implementation-change",
+          "artifact": "shen/klambda.shen",
+          "claim": "buri.equal implements KLValue.kl_eq (function values unequal to data, undefined between functions); thaw of a closure and application of a thunk raise arity, thaw of a partial application returns it; buri.fewer? replaces the uncaptured kl:length; [primitive Op Args] admitted only saturated. make conformance passes (sampled agreement with Shen-Scheme, including the new equality cases)"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorExtended.v",
+          "claim": "klambda_refines_ext: for every well-formed definition table (positive arity, subset bodies) and every term of the extended KL-PURE-1 subset (adds [global X], [function ...] values with currying, freeze, thaw), a value returned by the captured buri.eval is a verdict; [returned v]/[raised m] are found by KLMetatheory.run on the translated program under every pinned profile and every store holding the primitives and the translated definitions; [unsupported closure-equality] is the KLambda machine going wrong (equality of two function values undefined); budget makes no claim"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorComplete.v",
+          "claim": "klambda_complete (converse): if the KLambda run of tr e terminates silently within m steps with outcome o, then for every budget z > m the actual Native run of the captured buri.eval returns, for all large enough fuel, [returned v] with o = Normal (tr_rv v) or [raised msg] with o = Error x of the class of msg; never exhaustion or unsupported"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/KLambdaEvaluatorGlobal.v",
+          "claim": "per-body equations for [global X], [freeze E], [thaw E], buri.apply-global, buri.definition, buri.zip, buri.append, buri.fewer?; KLambdaEvaluatorForward: forward (termination) equations for the captured helpers"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/KLambdaEvaluatorSamples.v",
+          "claim": "sample_closure_data_eq: (= (lambda x x) 1) is [returned [bool false]] on the actual captured evaluator"
+        },
+        {
+          "kind": "open-obligation",
+          "artifact": "docs/E2E-07.md",
+          "claim": "E2E07-GUARD (Chez guard contract of buri.evaluate), E2E07-NATIVE (Chez-to-Native simulation) and E2E07-ADMISSION (buri.expression?/buri.definitions? not related to the subset predicates) remain open; E2E07-PRIM-ARITY is a recorded profile difference (charter kl-currying prim-partial-application), not a theorem"
+        }
+      ],
+      "acceptance": "every accepted\nexecution result has a formal witness, with the promised converse/completeness\nwithin the stated evaluator profile and sufficient resources.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-08",
+      "title": "Specify and prove the application contract logic.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-05",
+        "E2E-06"
+      ],
+      "evidence": [
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractLogic.v",
+          "claim": "soundness: every rule of the calculus (deriv/dargs/appj) is sound in the Partial, Total and Always I modes under policy_ok and context validity; rec_partial (step index) and rec_total (explicit nat measure); total_meaning/partial_meaning give the meaning in KLMetatheory maximal behaviors (terminating, diverging, reacting, going wrong; resource failure only as ResourceOut within the policy); total_run/partial_run in KLMetatheory.run"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractPrims.v",
+          "claim": "prim_spec_valid/io_spec_valid: primitive call contracts proved, host contracts stay premises; write_byte_visible: failed and partial writes are visible; if_nonbool_premise_needed and unmeasured_recursion_unsound: dropping a premise is unsound"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractExample.v",
+          "claim": "recursive higher-order map (the translated klambda.shen definition) with a total contract validated by rec_total; main_mut with a mutable global counter: every behavior terminates with the mapped list paired with the counter equal to the list length, or an admitted resource failure"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractTransport.v",
+          "claim": "the pure instance transported through klambda_refines_ext and klambda_complete: every returned value of the captured buri.eval is budget exhaustion or the doubled list, and beyond a budget bound it is the doubled list (Native model; E2E07-NATIVE open)"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ContractCert.v",
+          "claim": "certificate grammar BURI/KL-CONTRACT-1 and checker: acceptance binds theory, program fingerprint and evaluator, declares every host premise, carries measures in total certificates, and fits every skeleton to the program syntax"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ContractCertExample.v",
+          "claim": "the example certificate is accepted and stale, undeclared, unmeasured and misfitted mutants are rejected (single computed checker runs)"
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "tests/contracts.shen",
+          "claim": "shen/contract-cert.shen gives the same verdicts and fingerprints on 19 cases; the Shen-checker refinement is open (OB-CONTRACT-CERT-SHEN)"
+        },
+        {
+          "kind": "open-obligation",
+          "artifact": "docs/CONTRACT-LOGIC.md",
+          "claim": "OB-CONTRACT-RULES-COVERAGE, OB-CONTRACT-CERT-SEM, OB-CONTRACT-CERT-SHEN and mutable-state transport (OB-CONTRACT-TRANSPORT) remain open"
+        }
+      ],
+      "acceptance": "checked\nderivability entails the stated semantic property under exactly the recorded\npremises. This does not assert a terminating decision procedure for validity.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-09",
+      "title": "Close every certificate checker and admission path.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-07",
+        "E2E-08"
+      ],
+      "evidence": [
+        {
+          "kind": "capture",
+          "artifact": "ports/eq1-kernel.bits",
+          "claim": "shen/kernel.shen as compiled and activated by the pinned image; base/equations/theory captured alongside; regenerated and diffed by make prove"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionOracle.v",
+          "claim": "every value returned by the Native evaluator is the value of the oracle semantics of the same decoded program (eval_oracle)"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionSpecs.v",
+          "claim": "captured base/equations/theory helpers compute their reference functions on arbitrary raw input"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionHelpers.v",
+          "claim": "captured subst, context?, rule and kernel leaf helpers compute their reference functions; Native.run bridges"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionKernel.v",
+          "claim": "reference EQ-1 kernel is sound for the standard model including expr induction; stale theory rejected; no accepted false lemma"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/EqualityInductionSamples.v",
+          "claim": "captured acceptance call graph excludes search/eval; captured bundle-h rejects rule injection, forged accepted label and ill-sorted theorem; sampled agreement with the reference kernel"
+        },
+        {
+          "kind": "proof-mutation",
+          "artifact": "tests/mutate-eq1.py",
+          "claim": "five weakened reference kernels/models are refused by Rocq"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionDrivers.v",
+          "claim": "every captured driver body (check-bundle guarded body, bundle-h, bundle-next, goal?, check-theorem, check-cases, check-case-bound, check-steps, check-step-result, after-rewrite, instantiate, substitution?, replace, replace-arg) and the nat? spelling chain computes its reference function for every input under its callees' contracts"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionRefinement.v",
+          "claim": "by fuel induction the captured drivers refine the reference kernel under the Native evaluator (partial correctness); captured bundle-h acceptance and captured check-bundle acceptance under the stated guard_model imply validity of every output theorem in the standard model"
+        },
+        {
+          "kind": "proof-mutation",
+          "artifact": "tests/mutate-eq1.py",
+          "claim": "five modified captured driver bodies (no conclusion check, swapped rewrite direction, no freshness, no theory check, accepting guard handler) are refused by Rocq"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionTermination.v",
+          "claim": "EQ1-TERM: for every theory T, bundle B and budget N whose numbers are integers, the captured guarded check-bundle body under the actual Native evaluator returns exactly r_check_bundle T B N at some fuel and every larger fuel (native_guarded_body_total, captured_check_bundle_total, captured_check_bundle_decides); with the partial-correctness theorems this is total correctness of the captured checker under Native and the guard_model contract. Audited in rocq/Audit_Termination.v."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/EqualityInductionTotalTerms.v",
+          "claim": "every captured helper the acceptance path calls (base, equations, kernel leaf helpers, nat? spelling chain) terminates on its domain with its reference value (EqualityInductionTotalBase, EqualityInductionTotalTerms; generic traced-run lemma in EqualityInductionTrace)"
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/EqualityInductionTermination.v",
+          "claim": "fraction_budget_unsupported: one input (loaded theory, empty bundle, budget 1/2) on which the Native evaluation is Unsupported; the integer-only domain condition is needed for the Native statement"
+        },
+        {
+          "kind": "proof-mutation",
+          "artifact": "tests/mutate-termination.py",
+          "claim": "a captured member? with a non-decreasing recursive call (linked into the program) fails the inductive termination step whose unmutated control is accepted; dropping the integer budget condition is refused"
+        },
+        {
+          "kind": "open-obligation",
+          "artifact": "docs/EQ1.md",
+          "claim": "EQ1-GUARD (guard_model is a stated contract), numeric kl:= contract and Chez-to-Native simulation remain open; EQ1-DRIVERS is closed and EQ1-TERM is proved under the Native evaluator for integer-only inputs (existential fuel, not a closed bound)"
+        }
+      ],
+      "acceptance": "all acceptance routes imply the same soundness theorem; no alternate UI, cache,\nserializer or fast path bypasses it. Native checker execution is closed in 32.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-10",
+      "title": "Prove the Shen type/sequent and effect systems.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-07",
+        "E2E-08",
+        "E2E-09"
+      ],
+      "evidence": [],
+      "acceptance": "each advertised “correct by construction” guarantee names a proved judgment;\npost-check redefinition invalidates or revalidates dependent claims.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-11",
+      "title": "Verify bytes, readers, codecs and tagging.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-05",
+        "E2E-06",
+        "E2E-07",
+        "E2E-09"
+      ],
+      "evidence": [],
+      "acceptance": "the\nartifact actually checked denotes the exact admitted bytes and no hidden suffix,\nreader evaluation or metadata substitution can change their interpretation.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-12",
+      "title": "Prove the complete Shen frontend.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-07",
+        "E2E-10",
+        "E2E-11"
+      ],
+      "evidence": [],
+      "acceptance": "source properties reach\nKLambda without an unproved “the frontend did the right thing” premise, including\nerrors, partial installation and dynamic definitions.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-13",
+      "title": "Close the standard and application library surface.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-07",
+        "E2E-08",
+        "E2E-09",
+        "E2E-10",
+        "E2E-11",
+        "E2E-12"
+      ],
+      "evidence": [],
+      "acceptance": "no reachable helper is justified solely because it is “standard” or community code.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-14",
+      "title": "Complete the generated Scheme and CL semantics.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-05",
+        "E2E-06",
+        "E2E-11"
+      ],
+      "evidence": [],
+      "acceptance": "each\nrequired emitted form has a meaning and a port-level refinement obligation.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-15",
+      "title": "Finish the actual Shen-Scheme compiler.",
+      "lane": "scheme-port",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-12",
+        "E2E-14"
+      ],
+      "evidence": [
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/OrderCallPreserve.v",
+          "claim": "order_call_preserves/order_call_noncompletion: every successful run of the actual captured order-call pass (any gensym generator) yields syntax with identical completed outcomes, error payloads, state, trace and non-completion as the admitted input call",
+          "names": [
+            "order_call_preserves",
+            "order_call_noncompletion",
+            "dord_preserves",
+            "lift_one",
+            "decode_vars",
+            "ord_decode"
+          ]
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/OrderCallPass.v",
+          "claim": "every branch of the captured order-call-inputs and fresh-call-variable loops, linked with the captured kernel occurrences/reverse/not, follows the keep/lift structure with names of zero occurrence count",
+          "names": [
+            "order_call_success",
+            "inputs_success",
+            "fresh_success",
+            "occurrences_returns"
+          ]
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/DecodeFacts.v",
+          "claim": "decode is budget-monotone and reads every non-keyword-headed list as an application",
+          "names": [
+            "decode_monotone",
+            "decode_default",
+            "decode_call"
+          ]
+        },
+        {
+          "kind": "source-capture",
+          "artifact": "ports/kernel-list.shen",
+          "claim": "exact Shen kernel 43.1 occurrences/reverse/reverse-help/not (renamed only), compiled by the actual Shen-Scheme compiler and regenerated by make prove"
+        },
+        {
+          "kind": "sampled-regression",
+          "artifact": "tests/scheme-port-order.shen",
+          "claim": "twelve sampled checks of the actual imported pass and kernel helpers; not a proof"
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-order.py",
+          "claim": "swapped keep order, collision-accepting fresh loop, tail-dropping occurrence count and a reordered-argument restatement are rejected by Rocq"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeCompose.v",
+          "claim": "order_then_merge_preserves/let_clause_preserves: the captured merge-nested-lets on the let that the captured emit-let builds around any successful captured order-call output is read as a target with the same completed outcomes, error payloads, state and trace as the unordered, unmerged let (any generator, program, operations, environment, state)",
+          "names": [
+            "order_then_merge_preserves",
+            "let_clause_preserves",
+            "emit_let_success",
+            "order_target"
+          ]
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeBranches.v",
+          "claim": "exact denotations of the captured emit-let, emit-if, emit-cond, emit-cond-clauses and emit-equality-check (every completed outcome, state and compile-time trace, for arbitrary compile-expression, order-call and other uncaptured operations), plus the captured yields-boolean?, force-boolean, kernel element? and merge on order-call shapes",
+          "names": [
+            "emit_let_exact",
+            "emit_if_exact",
+            "emit_cond_exact",
+            "emit_cond_clauses_exact",
+            "emit_equality_exact",
+            "yields_returns",
+            "force_returns",
+            "kernel_element_returns",
+            "merge_shaped"
+          ]
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeCompose.v",
+          "claim": "strict_if: a forced condition keeps the boolean domain and branch laziness; cond_without_true_unread: emitted conds without a literal #t test are outside the reader; numeric_equality_preserves/eqv_exact_agrees: the eqv? lowering through the captured order-call matches (eqv? d1 d2) and KLambda = on exact integers only",
+          "names": [
+            "strict_if",
+            "cond_without_true_unread",
+            "numeric_equality_preserves",
+            "eqv_exact_agrees",
+            "eqv_mixed_unmodelled"
+          ]
+        },
+        {
+          "kind": "source-capture",
+          "artifact": "ports/compiler-branches.shen",
+          "claim": "exact upstream yields-boolean?, force-boolean, emit-symbol, emit-let, emit-if, emit-cond, emit-cond-clauses, emit-equality-check read inside the exact upstream package header, compiled by the actual Shen-Scheme compiler and regenerated by make prove"
+        },
+        {
+          "kind": "source-capture",
+          "artifact": "ports/kernel-element.shen",
+          "claim": "exact Shen kernel 43.1 element? (renamed only), compiled by the actual Shen-Scheme compiler and regenerated by make prove"
+        },
+        {
+          "kind": "counterexample",
+          "artifact": "tests/scheme-compose.shen",
+          "claim": "confirmed port disagreements: cond with no true clause returns #<void> (profile: XCondFail); = with a literal number lowers to eqv? and disagrees with kl:= on mixed exactness"
+        },
+        {
+          "kind": "sampled-regression",
+          "artifact": "tests/scheme-compose.shen",
+          "claim": "eighteen sampled checks of the composed let/order/merge pipeline and the captured emitters on the running compiler; not a proof"
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-compose.py",
+          "claim": "an else-compiling literal-true if, an unscoped let body, an unforced cond test, an equal?-lowered numeric = and two theorem restatements (dropped binding, swapped strict branches) are rejected by Rocq"
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/OrderCallProgress.v",
+          "claim": "with the counter-based gensym contract of pinned Shen kernel 43.1 sys.shen, the captured order-call pass returns on every application call from every counter value (order_call_progress; decimal-spelling injectivity spelling_inj, pigeonhole absent_candidate, fresh_progress, inputs_progress), and the composed preservation theorems hold without assuming a successful run (order_call_preserves_total, order_then_merge_total, let_clause_total). Audited in rocq/Audit_Termination.v.",
+          "names": [
+            "order_call_progress",
+            "fresh_progress",
+            "inputs_progress",
+            "absent_candidate",
+            "spelling_inj",
+            "order_call_preserves_total",
+            "order_then_merge_total",
+            "let_clause_total"
+          ]
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-termination.py",
+          "claim": "a gensym counter that does not advance is refused by the progress proof"
+        }
+      ],
+      "acceptance": "no required compiler branch remains an oracle or merely a sampled schema.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-16",
+      "title": "Finish the actual Shen-CL compiler.",
+      "lane": "cl-port",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-12",
+        "E2E-14"
+      ],
+      "evidence": [
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLLowering.v",
+          "names": [
+            "CLLowering.optimise_sound",
+            "CLLowering.emit_if_refines",
+            "CLLowering.admitted_emit_if_refines",
+            "CLLowering.emit_boolean_shape",
+            "CLLowering.generated_if"
+          ],
+          "premises": [
+            "primitive_contracts narrowed to the emitted arities and shapes (CLLowering.sem_pred1/sem_pred2; the former all-arity fields were a false requirement, CLContracts.CLContracts.all_arity_unjustified)",
+            "qsafe: no quoted non-symbol comparand of shen-cl.equal?",
+            "Boolean-error diagnostic text quotiented",
+            "compile-expression opaque",
+            "CL evaluation model, reader, printer and SBCL execution are contracts"
+          ],
+          "claim": "For every input datum, every CL world (state type, primitive and opaque-form relations) and every compile-expression function, interpreting the admitted Shen-CL 4844072 emit-if/optimise-boolean-check/optimise-boolean-sequence/emit-boolean sources yields a CL IF whose condition is evaluated once and whose branch selection, results, errors and state traces match Shen boolean semantics."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLLowering.v",
+          "names": [
+            "CLLowering.guard_rule_is_captured_guard"
+          ],
+          "claim": "The evaluator's shen-cl.true? rule equals running the captured primitives.lsp guard (CLPortCapture) in CLPortGuard's model."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLLowering.v",
+          "names": [
+            "CLLowering.model_contracts"
+          ],
+          "claim": "The narrowed primitive_contracts hypotheses are jointly satisfiable by a concrete world (anti-vacuity; not a model of SBCL)."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/CLLoweringCapture.v",
+          "names": [
+            "CLLoweringCapture.captured_lowering_admitted",
+            "CLLoweringCapture.captured_optimise_sound",
+            "CLLoweringCapture.captured_emit_if_refines"
+          ],
+          "claim": "Inert reader-level capture of src/compiler.shen (blob 2d624377c02030f9513769f7bad11e84330b8c5a, with byte spans) admitted by computed equality against the reviewed expected AST; corollaries instantiate the universal theorems."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLContracts.v",
+          "names": [
+            "CLContracts.CLContracts.captured_contracts",
+            "CLContracts.CLContracts.discharged_optimise_sound",
+            "CLContracts.CLContracts.discharged_emit_if_refines",
+            "CLContracts.CLContracts.all_arity_unjustified",
+            "CLContracts.CLContracts.captured_all_arity_false",
+            "CLContracts.CLContracts.model_world_contracts"
+          ],
+          "premises": [
+            "cl_host_ops: 16 individually named SBCL operation contracts (EQ, TYPEP, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, STRING=, NOT, NULL, EQUAL x2, EQL, = x2), owned by E2E-21/E2E-24",
+            "cl_kernel_ops: kernel not, empty? and fail as compiled by Shen-CL (E2E-16)",
+            "host operations are pure functions of their arguments; a raised host condition is a function of the arguments (fresh condition identity quotiented)",
+            "qsafe, quotiented Boolean-error text, opaque compile-expression, and the CL model/reader/printer/SBCL contracts as above"
+          ],
+          "claim": "For every state type, every relation for unmodeled forms, every host table satisfying cl_host_ops and every kernel relation satisfying cl_kernel_ops, the world that runs the admitted primitives.lsp wrapper bodies relationally and the absequal/numeric-equal bodies functionally satisfies every field of the narrowed primitive_contracts, so the captured optimise-boolean-check and emit-if theorems hold there with only those named host and kernel contracts left."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "rocq/CLLoweringSamples.v",
+          "claim": "34 outputs of the actual compiler.shen, executed on the Buri Shen host (not SBCL), equal the Rocq interpretation of the admitted capture."
+        },
+        {
+          "kind": "native-sample",
+          "artifact": "ports/shen-cl-contracts.lisp",
+          "claim": "Opt-in SBCL 2.6.8 samples of every named primitive contract and of the |and|/|or| macros, plus a sample showing the qsafe premise is necessary."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "scripts/check-cl-port.sh",
+          "claim": "Opt-in gate: fresh regeneration must be byte-identical; dropped-guard, cl-truthiness, swapped-branches and eq-for-equal captures are rejected by Rocq admission."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SbclHostOps.v",
+          "names": [
+            "SbclHostOps.SbclHostOps.sbcl_host_ops",
+            "SbclHostOps.SbclHostOps.sbcl_host_is_machine",
+            "SbclHostOps.SbclHostOps.sbcl_optimise_sound",
+            "SbclHostOps.SbclHostOps.sbcl_emit_if_refines",
+            "SbclHostOps.SbclHostOps.sbcl_optimise_sound_e24",
+            "SbclHostOps.SbclHostOps.sbcl_emit_if_refines_e24",
+            "SbclHostOps.SbclHostOps.e24_satisfiable"
+          ],
+          "premises": [
+            "cl_e2e24_ops: STRING=, EQUAL (string), EQUAL (object), EQL vs = on integers, = symmetric, = reflexive (full calls in the pinned image, E2E-24)",
+            "cl_kernel_ops: kernel not, empty? and fail as compiled by Shen-CL (E2E-16)",
+            "qsafe and the remaining CLContracts modeling boundary",
+            "the E2E-21 entries are the captured untyped inline code under the A64 transcription of rocq/SbclA64.v, on values represented in a well-formed snapshot"
+          ],
+          "claim": "CLContracts.discharged_optimise_sound / discharged_emit_if_refines restated for the host sbcl_host whose ten E2E-21 entries are the captured SBCL 2.6.8 arm64 answers (sbcl_host_is_machine) and whose other entries satisfy only the six E2E-24 contracts; the EQ entry may be any admissible answer (the _e24 corollaries fix one)."
+        }
+      ],
+      "acceptance": "the same Shen\ncontract can be transported through either port, with explicit port-specific\nrepresentation and platform premises and no missing compiler branch.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-17",
+      "title": "Discharge every primitive and helper wrapper.",
+      "lane": "shared-shen-semantics",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-05",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16"
+      ],
+      "evidence": [
+        {
+          "kind": "review",
+          "artifact": "spec/primitives.json",
+          "claim": "Generated per-port matrix: every KLSyntax primitive and every registered Shen-Scheme/Shen-CL port primitive with its pinned implementation (definition byte span or inlining compiler clause), computed dependency closure down to individually named host operations with owning packages E2E-21..27, reviewed evidence label, and every named primitive contract in the repository. Bookkeeping, not proof."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeWrappers.v",
+          "names": [
+            "SchemeWrappers.SchemeWrappers.kl_eq_data",
+            "SchemeWrappers.SchemeWrappers.stock_equality_refines_rule",
+            "SchemeWrappers.SchemeWrappers.assert_boolean_body",
+            "SchemeWrappers.SchemeWrappers.guarded_if",
+            "SchemeWrappers.SchemeWrappers.stock_matches_replacement",
+            "SchemeWrappers.SchemeWrappers.stock_mixed_exactness",
+            "SchemeWrappers.SchemeWrappers.model_ops_satisfiable"
+          ],
+          "premises": [
+            "chez_equality_ops / chez_assert_ops: individually named Chez operation contracts (E2E-21/24)",
+            "first-order data domain: exact integers, ASCII symbols and strings, Booleans, (), pairs"
+          ],
+          "claim": "For every Chez operation table satisfying the named contracts, the actual pinned kl:= body returns rule_equal's answer on represented first-order data, and kl:_scm.assert-boolean makes (if (kl:_scm.assert-boolean T) A B) the KLambda if rule."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLWrappers.v",
+          "names": [
+            "CLWrappers.CLWrappers.cons_wrapper",
+            "CLWrappers.CLWrappers.string_wrapper",
+            "CLWrappers.CLWrappers.number_wrapper",
+            "CLWrappers.CLWrappers.equal_wrapper",
+            "CLWrappers.CLWrappers.comparison_wrappers",
+            "CLWrappers.CLWrappers.absequal_data",
+            "CLWrappers.CLWrappers.eq_rewrite_safe",
+            "CLWrappers.CLWrappers.eq_rewrite_unsafe",
+            "CLWrappers.CLWrappers.arith_refines_rules",
+            "CLWrappers.CLWrappers.multiply_zero_absorbs_symbol"
+          ],
+          "premises": [
+            "sbcl_equality_ops / sbcl_arith_ops: individually named SBCL operation contracts (E2E-21/24)",
+            "Boolean wrappers at the arity the optimizer emits (now exactly the narrowed CLLowering record); first-order data for absequal_data"
+          ],
+          "claim": "The actual pinned Shen-CL Boolean wrappers prove CLLowering.primitive_contracts pc_cons/pc_string/pc_number/pc_greater*/pc_less*/pc_absequal (stated at the emitted arity); absequal is structural equality on data; the optimizer EQ rewrite is exact iff the quoted comparand is a symbol or NIL; the arithmetic wrappers are exact on all integers, divide never lets a ratio escape, and (* 0 non-number) answers 0 (a divergence)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLContracts.v",
+          "names": [
+            "CLContracts.CLContracts.abs_symbolic_right",
+            "CLContracts.CLContracts.abs_symbolic_left",
+            "CLContracts.CLContracts.abs_string_right",
+            "CLContracts.CLContracts.abs_string_left",
+            "CLContracts.CLContracts.abs_numeric_right",
+            "CLContracts.CLContracts.abs_numeric_left",
+            "CLContracts.CLContracts.numeric_equal_value",
+            "CLContracts.CLContracts.captured_contracts",
+            "CLContracts.CLContracts.model_host_ops",
+            "CLContracts.CLContracts.increment_int",
+            "CLContracts.CLContracts.decrement_int",
+            "CLContracts.CLContracts.step_refines_rules",
+            "CLContracts.CLContracts.model_step_ops"
+          ],
+          "premises": [
+            "cl_host_ops: individually named SBCL operation contracts over every value (E2E-21/24)",
+            "cl_kernel_ops: compiled kernel not, empty?, fail (E2E-16)",
+            "cl_step_ops: TYPEP FIXNUM, 1+ and 1- on integers (E2E-21/24)"
+          ],
+          "claim": "For every value (not only first-order data) the captured shen-cl.absequal against a symbol, NIL, string or numeric literal, in either operand order, answers exactly what the optimizer's replacement (NULL, EQ, EQUAL, shen-cl.numeric-equal) answers; the captured numeric-equal agrees with absequal against every numeric literal. These discharge the pc_null_*, pc_fail, pc_string_equal, pc_numeric and pc_symbol_eq fields through the relational/functional bridge. The captured shen-cl.increment/decrement (now packaged and admitted) return z+1 and z-1 for every integer, as rule_arith does for the (+ 1 X), (+ X 1) and (- X 1) they replace."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/PrimitiveSources.v",
+          "names": [
+            "SchemeWrappers.SchemeWrappers.scheme_wrappers_admitted",
+            "CLWrappers.CLWrappers.cl_wrappers_admitted"
+          ],
+          "claim": "Exact definition bytes of the pinned primitives.scm/chez-prelude.scm and primitives.lsp (blob-checked, byte spans recorded) are read by an independent Rocq reader and admitted by computed equality with the reviewed AST; make prove regenerates and diffs the package."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "tests/primitives.shen",
+          "claim": "Shen-Scheme host samples: the compiled literal = path (eqv?) answers false for the inexact 1.0 against 1 while the generic kl:= path answers true; (* 0 true) raises on Shen-Scheme. Sampled, not proof."
+        },
+        {
+          "kind": "native-sample",
+          "artifact": "ports/shen-cl-primitive-samples.lisp",
+          "claim": "Opt-in SBCL 2.6.8 samples of the selected pinned primitives.lsp definitions: exact bignum arithmetic, divide-by-zero, no ratio escape, (* 0 true) = 0, EQ versus absequal on lists, strings and mixed numbers."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-primitives.py",
+          "claim": "Nine altered copies of the pinned wrapper bytes (eqv? for numbers, wrong assert predicate, dropped tail comparison, swapped Boolean, EQ for numbers, ratio escape, wrong zero product, EQ in numeric-equal, 1- in increment) are refused by Rocq admission in make prove."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-cl-contracts.py",
+          "claim": "Three restated claims are refused by Rocq in make prove: the all-arity cons? field for the captured world, numeric-equal without the operand swap the optimizer performs, and EQ in place of EQUAL against a string literal."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SchemeIntern.v",
+          "names": [
+            "SchemeIntern.SchemeIntern.patched_intern_body",
+            "SchemeIntern.SchemeIntern.patched_intern_symbol",
+            "SchemeIntern.SchemeIntern.patched_intern_refines_rule",
+            "SchemeIntern.SchemeIntern.stock_intern_body",
+            "SchemeIntern.SchemeIntern.stock_intern_digit_led",
+            "SchemeIntern.SchemeIntern.stock_intern_twelve",
+            "SchemeIntern.SchemeIntern.stock_patched_agree",
+            "SchemeIntern.SchemeIntern.model_intern_ops"
+          ],
+          "premises": [
+            "chez_intern_ops: individually named Chez operation contracts (E2E-21/24)",
+            "ASCII names (SchemeWrappers.rep_s)"
+          ],
+          "claim": "Stock Shen-Scheme kl:intern (8d261518, identical at the v0.52 tag) has an exact denotation: on a digit-led name of length > 1 it returns the host string->number answer when that is a number, so it diverges from rule_intern there (OB-SCHEME-INTERN-NUMERIC stays refuted) and agrees with the patched body elsewhere. The proposed patch ports/patches/shen-scheme-primitives.diff is proved to return a symbol for every string other than true/false and to refine rule_intern (OB-SCHEME-INTERN-PATCH)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/CLStrings.v",
+          "names": [
+            "CLStrings.CLStrings.tlstr_body_spec",
+            "CLStrings.CLStrings.tlstr_refines",
+            "CLStrings.CLStrings.string_to_n_body_spec",
+            "CLStrings.CLStrings.string_to_n_refines",
+            "CLStrings.CLStrings.string_to_n_long",
+            "CLStrings.CLStrings.pos_refines",
+            "CLStrings.CLStrings.n_to_string_int",
+            "CLStrings.CLStrings.n_to_string_nonnum",
+            "CLStrings.CLStrings.n_to_string_refines",
+            "CLStrings.CLStrings.n_to_string_scalar",
+            "CLStrings.CLStrings.n_to_string_surrogate",
+            "CLStrings.CLStrings.get_address_svref",
+            "CLStrings.CLStrings.get_address_refines",
+            "CLStrings.CLStrings.intern_body_plain",
+            "CLStrings.CLStrings.intern_refines",
+            "CLStrings.CLStrings.model_strings_ops"
+          ],
+          "premises": [
+            "cl_host_ops plus cl_string_ops / cl_vector_ops / cl_intern_ops: individually named SBCL operation contracts (E2E-21/24/25), and the uncaptured shen-cl.process-intern LOOP body (cl_intern_ops.process_plain, E2E-17)",
+            "CL constants :INITIAL-ELEMENT and CHAR-CODE-LIMIT = 1114112 bound in the environment; raised conditions quotiented; ASCII strings"
+          ],
+          "claim": "The captured Shen-CL |pos|, |tlstr|, |n->string|, |string->n|, |<-address| and |intern| refine their KLambda rules on the stated domains (OB-CL-STRING-PRIMS), including bounds and out-of-range behaviour (raise where the rule throws). Two divergences are proved for every contract-satisfying host: string->n raises on strings of length >= 2 (OB-CL-STRING-TO-N-UNIT) and n->string returns a string on surrogates (OB-CL-N-TO-STRING-SURROGATE)."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/Prims2Sources.v",
+          "names": [
+            "SchemeIntern.SchemeIntern.intern_admitted",
+            "CLStrings.CLStrings.cl_strings_admitted"
+          ],
+          "claim": "Exact bytes of stock and patched kl:intern and of the six Shen-CL definitions (blob-checked, spans recorded by scripts/package-prims2.py, re-checked by scripts/check-prims2-package.py) are read by PortReader and admitted by computed equality with the reviewed ASTs; make prove regenerates and diffs the package."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/prims2-native-samples.shen",
+          "claim": "Native runs on the v0.52 Shen-Scheme binary and a Shen-CL 4844072d image on SBCL 2.6.8 (outputs in docs/PRIMITIVES.md and docs/UPSTREAM-ISSUES-INTERN.md): intern of digit-led names, the Shen-CL intern collision, string->n of a two-character string, n->string of a surrogate, pos/tlstr/<-address bounds. Sampled, not proof."
+        },
+        {
+          "kind": "rejected-mutations",
+          "artifact": "tests/mutate-prims2.py",
+          "claim": "Seven mutants refused by Rocq: the numeric branch put back into the patched intern bytes, the patched AST restated as stock, stock intern claimed to return the symbol 12, (plusp n) for (minusp n) in |pos|, |tlstr| without its non-empty guard, and string->n and n->string claimed to refine their rules on every argument."
+        }
+      ],
+      "acceptance": "no root is\nhidden behind an aggregate “runtime behaves correctly” assumption.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-18",
+      "title": "Verify the whole observer and provenance pipeline.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-09",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17"
+      ],
+      "evidence": [],
+      "acceptance": "successful evidence describes exactly the code installed, while\nnative IO and deployment identity obligations flow explicitly to 26–31.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-19",
+      "title": "Verify dynamic eval, loading and redefinition.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-10",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17",
+        "E2E-18"
+      ],
+      "evidence": [],
+      "acceptance": "all execution entry points, including REPL/FFI callbacks and mutable code objects,\nare covered. A sealed-only milestone is not full dynamic Shen coverage.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-20",
+      "title": "Establish the authoritative ARM proof foundation.",
+      "lane": "arm-foundation",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01",
+        "E2E-03",
+        "E2E-04"
+      ],
+      "evidence": [
+        {
+          "kind": "research-report",
+          "artifact": "docs/ARM-FOUNDATION.md",
+          "claim": "Exact tool pins, compatibility results, trust-boundary audit draft and a provisional ISA/toolchain pin (sections 1-9, Wave A); section 10 records the Wave B proofs below and what they trust; section 11 records the Wave C decode coverage, bridge, EL0 attempt and coqchk; section 12 records the Wave D sequential semantics, eight model IFFs, the PC step, eight trace-to-model bridges (both directions) and the EL0 ldur retry. The exit criterion (branch, call, load/store, fault, allocation stub and atomic checked against the selected model) is unmet."
+        },
+        {
+          "kind": "byte-capture-and-emulated-run",
+          "artifact": "ports/arm/chez/chez1030-buri-arm-add.bin",
+          "claim": "Exact 152-byte tarm64le code object from plain Chez 10.3.0 for Shen-Scheme v0.52's generated form of (define buri-arm-add X Y -> (+ X Y)); one relocated instance; executed under qemu-aarch64 only."
+        },
+        {
+          "kind": "byte-capture-and-emulated-run",
+          "artifact": "ports/arm/sbcl/sbcl-buri-arm-add.bin",
+          "claim": "Exact 680-byte code component produced inside Shen-CL 4844072d on aarch64 SBCL 2.6.8; executed under qemu-aarch64 only."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/arm/chez/shen-scheme-ta6le-buri-arm-add.hex",
+          "claim": "x86_64 only: in-process Shen-Scheme v0.52 code equals plain Chez 10.3.0 code modulo three relocated addresses, for one function."
+        },
+        {
+          "kind": "isla-trace-unchecked",
+          "artifact": "ports/arm/isla/STATUS",
+          "claim": "isla e9b5d945 symbolic execution of the Sail Armv9.4-A IR on the exact opcode bytes; trusts isla, z3 and the Sail-to-IR translation; not checked by Rocq."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmAdds.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh (Coq 8.18.0, stdpp 1.10.0, coq-sail 0.19, sail-arm 7d058164 Armv9.4 Coq model; not in scripts/prove). Universal over pc: the model's __DecodeA64 on the captured Chez word 0xab010017 (+0x14) equals read SEE; if SEE < 15 then write SEE 15 and execute ADDS X23,X0,X1 else throw Error_Undefined; that execute equals an explicit register-transfer program; under SEE < 15 the decoder admits the sequential trace writing PSTATE.NZCV and X23 := (X0+X1) mod 2^64. Decoder statements inherit the model's three Coq-stdlib Reals axioms; execute and sum lemmas are closed. One data-processing word only."
+        },
+        {
+          "kind": "toolchain-build",
+          "artifact": "nix/arm/islaris.nix",
+          "claim": "Separate Coq 8.19.0 environment with stdpp a1a12e00, Iris 6f24ed4b, Lithium 7945a29d, record-update 0.3.3, isla-lang bda86c9f and Islaris c978e10f, fetched by exact git commit from GitHub mirrors; built here, and Islaris's own examples/example.v checks in it. Deviations: dune 3.23.1, ott 0.34."
+        },
+        {
+          "kind": "islaris-theorem-over-isla-traces",
+          "artifact": "ports/arm/islaris/buri_chez_add.v",
+          "claim": "Checked by ports/arm/islaris/check-islaris.sh in the Coq 8.19.0 environment; closed under the global context. For all fixnum-tagged a, b without signed overflow, with X23 = 2 and an aligned frame slot holding ra, the Chez fast path +0x00..+0x23 (captured bytes) reaches ra with X23 = a+b, X30 = a|b, X10 = ra; slow paths proved infeasible. Relative to Islaris's semantics of isla b8e614bd (and e9b5d945) traces of the Armv8.5 IR under Islaris's EL2/MMU-off constraints, not the Armv9.4 Coq model and not EL0 Linux; trace = architecture is trusted to isla and z3."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmDecode.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B (Coq 8.19.0 Islaris env, coq-sail 0.19, sail-arm 7d058164 Armv9.4 Coq model rebuilt in 8.19.0; not in scripts/prove). Universal over pc: exact iMon equations for __DecodeA64 on twelve captured words, each bound to the stored bytes: Chez +0x00 cmp, +0x04/+0x10 b.ne, +0x08 orr, +0x0c tst, +0x18 b.vs, +0x1c ldur (load), +0x20 br, +0x2c str (store); SBCL +0x210 ret (return), +0x2a0 blr x10 (call to ALLOC-TRAMP), +0x264 brk #15 (trap). Each fixes encoding, SEE guard, decoder register reads and exact execute arguments; execute-side behaviour (memory, BranchTo, exception entry) is NOT covered. Decoder statements inherit the model's three Coq-stdlib Reals axioms; three auxiliary equations are closed. A modified word (b.eq) is rejected."
+        },
+        {
+          "kind": "model-theorem-relating-isla-trace",
+          "artifact": "ports/arm/coq/BuriArmBridge.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B in one Coq 8.19.0 with both Islaris opsem and the Armv9.4 model. chez_0014_bridge (universal over pc, SEE<15, X0, X1, PSTATE, prior PC/R23): the model's decoder on 0xab010017 admits its unique register trace AND the Islaris trace a14.v used by buri_chez_add_fast_path (isla b8e614bd, Armv8.5 IR) runs to completion under Islaris's seq_step, never blocking, to the map with R23 = the model's AddWithCarry result, PSTATE.NZCV = the model's flags and _PC += 4 (a14_run and the bit lemmas closed under the global context). Covers one word only; the trace's PC step versus the model's __InstructionExecute PC advance, the converse direction, and the other eight fast-path words are not bridged. A trace with bvadd replaced by bvxor is rejected."
+        },
+        {
+          "kind": "isla-trace-unchecked",
+          "artifact": "ports/arm/islaris/el0/STATUS",
+          "claim": "EL0/stage-1-MMU-on (Linux non-VHE) isla b8e614bd footprints of the Chez fast path: 8 of 9 words traced (data-processing identical to EL2; branches add a TBI0 top-byte split), ldur resource-exhausted (killed twice, 7 GiB cap on the second run; no trace). No EL0 Islaris proof exists. Unchecked isla output, not a theorem."
+        },
+        {
+          "kind": "kernel-recheck",
+          "artifact": "docs/ARM-FOUNDATION.md",
+          "claim": "Section 11.5: coqchk -o of SailArm.armv9 (Coq 8.19.0 build, all dependencies) passes in 3 min 18 s at 1.0 GB; context axioms are the model's six external memory/sleep primitives and five Coq-stdlib axioms, none from Buri. check-arm.sh Part B re-runs coqchk over BuriArmDecode and BuriArmBridge."
+        },
+        {
+          "kind": "toolchain-build",
+          "artifact": "nix/arm/sail-model.nix",
+          "claim": "coq-sail 0.19 (by commit) and the sail-arm 7d058164 arm-v9.4-a Coq snapshot (three files by sha256) compiled with the Islaris Coq 8.19.0 + stdpp; armv9.v 7 min, 6.4 GB peak."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmSeq.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B (Coq 8.19.0; not in scripts/prove). Universal and closed under the global context: sexec_sound/sexec_complete prove that the sequential register-record reading sexec of a sail-arm iMon tree is equivalent to coq-sail's own Interface.iTrace_match restricted to pure traces consistent with a single-threaded register file (seq_ok). Defines the semantics the Wave D model theorems are stated in; adds no axiom."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmFastPath.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B. Universal over pc and the register record: for the eight captured Chez fast-path words other than the load (+0x00 cmp, +0x04/+0x10 b.ne, +0x08 orr, +0x0c tst, +0x14 adds, +0x18 b.vs, +0x20 br x10), chez_XXXX_model is an IFF: sexec rs (__DecodeA64 pc w) rs' a <-> rs' = chez_XXXX_final rs /\\ a = tt (the model's own write sequence), under SEE below the decoder guard and, for branches, the stated EL2 configuration el2_cfg (FEAT_AA64EL0 on; VHE, BRBE, SPE off; nRW = 0; EL = 2; TCR_EL2.TBI = 0; both FEAT_PAuth values covered); br also InGuardedPage = false. Left-to-right is the model-side converse (no other behaviour). Each carries exactly the decoder's three Coq-stdlib Reals axioms. The load (+0x1c) is not covered."
+        },
+        {
+          "kind": "model-theorem-separate-toolchain",
+          "artifact": "ports/arm/coq/BuriArmPC.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B. InstructionExecute_pc_part: __InstructionExecute is by conversion a verbatim copy applied to pc_part, the model's PC-advance code after __DecodeExecute; pc_part_not_taken/pc_part_after (closed IFFs): with an A64 encoding the step writes _PC := _PC + 4 when __BranchTaken is false and nothing when it is true; pc_next_bv: the value is the bit-vector sum isla's wrapper writes. The rest of __InstructionExecute (fetch, the __BranchTaken := false write, encoding source, debug/PMU/SPE/single-step) is not proved; the bridges state __BranchTaken = false and A64 as premises."
+        },
+        {
+          "kind": "model-theorem-relating-isla-trace",
+          "artifact": "ports/arm/coq/BuriArmFastPathBridge.v",
+          "claim": "Checked by opt-in scripts/check-arm.sh Part B with Islaris opsem and the Armv9.4 model in one Coq 8.19.0; closed under the global context. For the eight words above and their exact Islaris traces (a0 a4 a8 ac a10 a14 a18 a20, hash-checked), for every model record and isla register map that agree on R0..R30, _PC and PSTATE.NZCV and every memory: the trace has a complete never-blocking seq_step run, and EVERY complete run ends agreeing with chez_XXXX_final followed by the model's PC step (pc_next, or pc_after for branches). Branch traces need the isla-side AssumeReg configuration isla_el2_cfg; b.cond needs __BranchTaken = false; br needs InGuardedPage = false. With the model IFFs this relates all model behaviours to all trace runs in both directions (chez_0014_exact states it for ADDS). The Islaris fast-path theorem still trusts isla for the load at +0x1c, the rest of __InstructionExecute, and the stated configuration premises. Mutants rejected: ORR final with AND; a8 trace with bvand for bvor."
+        },
+        {
+          "kind": "isla-trace-unchecked",
+          "artifact": "ports/arm/islaris/el0/STATUS",
+          "claim": "Wave D EL0 ldur retry with Islaris's own R20 reset-constraint under flock and a 7 GiB cap: resource-exhausted (SIGSEGV at the cap after 38 s, measured peak RSS 7,100,404 kB; with -T 1, SIGABRT at the cap after 83 s, peak 7,148,272 kB), no trace. Unchecked isla output, not a theorem; no EL0 proof exists. An EL0 statement needs the stated premise ra[63:56] = 0 (top-byte-ignore, TCR_EL1.TBI0 = 1)."
+        }
+      ],
+      "acceptance": "exact\ninstructions are checked against the selected ISA model; no disassembly-text or\ntoy-ISA agreement is substituted. Tool compatibility and missing mechanisms are\nresearch deliverables, not assumed available integrations.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-21",
+      "title": "Prove both native representation relations.",
+      "lane": "native-representations",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-05",
+        "E2E-14",
+        "E2E-20"
+      ],
+      "evidence": [
+        {
+          "kind": "research-report",
+          "artifact": "docs/REPRESENTATION.md",
+          "claim": "Source-bound specification of the Chez 10.3.0 tarm64le object representation for every Shen value kind, plus TC/frame/argument registers; SBCL 2.6.8 arm64 representation relations (KLValue and the CL-model sv values) with the E2E-21 host operations discharged against the captured inline type-test code; open items with owners. Exit criterion unmet."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezLayout.v",
+          "claim": "Generated by scripts/package-repr-layout.py from pinned cmacros.ss/arm64.ss/arm64.def/types.h (tag v10.3.0 adfaf9e6) and the build-time tarm64le equates.h/machine.def; regenerated and diffed by scripts/prove. ChezRepr.chez_sources_agree, chez_object_layout, chez_register_layout and ChezWord.chez_fixnum_layout check cross-source agreement by computation."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezWord.v",
+          "claim": "Fixnum encode/decode round trip and injectivity on [-2^60, 2^60-1]; every tag-0 word is a fixnum; (fx x + fx y) mod 2^64 = fx (x+y); for fixnums, signed 64-bit addition of their words does not overflow iff x+y is a fixnum; (a|b)&7=0 iff both fixnum-tagged. Closed (rocq/Audit_Repr.v)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezRepr.v",
+          "claim": "Representation relation rv between KLValue values and words over one byte-memory snapshot and a vector-location map; total tag decoder agreeing with rv; kind uniqueness; pointer/immediate/fixnum disjointness; void/unbound/eof/bwp/GC markers represent no value; decoding is a function on first-order data given injective locations; aligned fields; car/cdr, string-ref/length, vector-ref/length read the abstract components; shen_int_add_fast_path. Closures, ports and conditions are related only by shape plus meaning parameters (E2E-22/27/17). Closed."
+        },
+        {
+          "kind": "islaris-theorem-over-isla-traces",
+          "artifact": "ports/arm/islaris/buri_chez_add_shen.v",
+          "claim": "Checked by ports/arm/islaris/check-islaris-shen.sh in the separate Coq 8.19.0 Islaris environment (not scripts/prove), compiling the same rocq/ChezLayout.v and rocq/ChezWord.v: for Shen integers x, y with x, y, x+y fixnums in X0/X1, X23=2 and the X20 frame slot, the captured Chez fast path returns X23 = fixnum word of x+y; the (a|b)&7=0 and no-overflow premises of buri_chez_add_fast_path are discharged. Closed. Still assumes EL2/MMU-off, the Armv8.5 isla traces, the base address, the X20 premises and the continuation."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/repr/chez/chez-10.3.0-tarm64le-sample.capture",
+          "claim": "One qemu-aarch64 run of the built tarm64le scheme: object words and pointer residues equal the encodings (ChezRepr.chez_sample_agrees). A sample, not evidence for the relation."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/SbclRepr.v",
+          "claim": "SBCL 2.6.8 arm64 layout: lowtags/widetags evaluated from pinned early-objdef.lisp under the image's features, registers from arm64/vm.lisp, equal to the constants captured from the pinned aarch64 image; layout facts (1-bit fixnum tag, 4-bit lowtags, NIL list pointer, char-code-limit #x110000). The relation itself is in rocq/SbclValues.v and rocq/SbclHostOps.v."
+        },
+        {
+          "kind": "counterexample",
+          "artifact": "tests/representation.shen",
+          "claim": "Sampled on host Shen-Scheme v0.52: (intern \"12\") is the integer 12, not VSym \"12\" as rule_intern prescribes (OB-SCHEME-INTERN-NUMERIC)."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/SbclTypeTests.v",
+          "claim": "Generated by scripts/package-sbcl-type-tests.py (regenerated and diffed by scripts/prove) from the image capture ports/repr/sbcl/sbcl-2.6.8-arm64-type-tests.capture (raw 32-bit instruction words read from the code objects the pinned aarch64 SBCL 2.6.8 compiles for (lambda (x) (op x)), qemu-aarch64) and from the pinned SBCL sources arm64/type-vops.lisp, arm64/pred.lisp, generic/type-vops.lisp, type-vop-macros.lisp, genesis.lisp. SbclTests.frame_ground, full_calls, sbcl_source_flags, header_widetags_source and tests_match_sources check by computation the entry/return frame of each function, that STRING=/EQUAL/EQL/= are tail calls, and that each captured header test agrees with the define-type-vop type codes on every header widetag. The capture of the emitted code for an untyped argument is one compile run (sampled provenance); the checks on it are ground."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SbclWord.v",
+          "claim": "SBCL arm64 fixnums: one tag bit, encode/decode round trip and injectivity on [-2^62, 2^62-1]; every even word is a fixnum; tagged addition wraps; signed 64-bit addition of fixnum words does not overflow iff the sum is a fixnum; (a|b)&1=0 iff both are fixnums; slot alignment. Closed (rocq/Audit_Sbclnative.v)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SbclTests.v",
+          "claim": "For every register file (argument word in the register the window reads, NIL in the NULL register) and every memory, the decoded captured windows of EQ, TYPEP FIXNUM, INTEGERP, NUMBERP, CONSP, STRINGP, ARRAYP, SYMBOLP, NOT and NULL reach their end with R0 = T or NIL exactly as the word-level tests t_* say (SbclTests.*_window). Relative to the A64 decoder/semantics transcription in rocq/SbclA64.v (trust boundary), the captured untyped variants only (typed variants not covered), and the calling convention (frames, E2E-22). Closed."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SbclValues.v",
+          "claim": "Representation relation kv between KLValue values and SBCL words over one memory snapshot, a vector-location map and an interned-symbol table; NIL's list/symbol duality from genesis.lisp (nil_dual); on every represented value the captured tests compute kl_cons/kl_nil/kl_cl_symbol/... (kl_tests, kl_machine_tests): SYMBOLP is true on Shen [] and both Shen booleans; Shen false is CL true (kl_false_is_cl_true); VBool b and VSym of its name share a word (kl_bool_symbol_collision), so the relation is not a function on words; immediate/pointer disjointness; car/cdr and vector-ref read the components. Closed."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/SbclHostOps.v",
+          "claim": "Relation cv between the CL-model values sv and SBCL words in a well-formed snapshot (injective interning, object identity and float spellings; T at NIL+56; genesis NIL layout); cv is a function on words (cv_functional); for every represented argument the captured code returns the representation of the cl_host_ops answer for CONSP, NULL, NOT, SYMBOLP, STRINGP, NUMBERP, INTEGERP, TYPEP FIXNUM and ARRAYP (e2e21_machine), and EQ's word comparison is sound and complete on symbols/NIL (eq_machine). A well-formed snapshot exists (ex_snap_wf). Closed."
+        }
+      ],
+      "acceptance": "all native values and\nmemory accesses used by the admitted execution paths have justified meanings.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-22",
+      "title": "Close Chez compilation to ARM.",
+      "lane": "chez-native",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-14",
+        "E2E-15",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [
+        {
+          "kind": "research-report",
+          "artifact": "docs/CHEZ-NANOPASS.md",
+          "claim": "Inventory of the Chez 10.3.0 tarm64le eval/compile pipeline actually run for Shen-Scheme v0.52 parameters (front end, 40 nanopass passes, 13 register-allocator sub-passes run per lambda, conditional passes), per-pass difficulty classes, effort estimate and the bridge to the E2E-20 ARM theorems. Exit criterion unmet."
+        },
+        {
+          "kind": "review",
+          "artifact": "spec/chez-passes.json",
+          "claim": "Machine-readable pass inventory with source line ranges, languages, conditions and whether each ran for the captured function. Reading aid; the trace order is re-derived in Rocq."
+        },
+        {
+          "kind": "capture",
+          "artifact": "ports/chez-np/tarm64le-buri-arm-add.np",
+          "claim": "Every traced pass output of real Chez 10.3.0 tarm64le (qemu-user) compiling the exact Shen-Scheme output of buri-arm-add with Shen-Scheme parameters; reproducible byte for byte (ports/chez-np/scripts/run-np-dump.sh); hash-pinned, packaged and diffed by make prove."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/chez-np/ta6le-buri-arm-add.np",
+          "claim": "The x86_64 ta6le trace equals the tarm64le trace for the front end and the first 18 nanopass outputs and first differs at $np-expand-primitives. One function; not a machine-independence theorem."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezNpGrammarCheck.v",
+          "claim": "np_languages_resolved: Rocq reads the 28 define-language forms of the pinned np-languages.ss, resolves every extends delta and obtains exactly the grammars behind the generated inductive syntax rocq/ChezNpSyntax.v (audited in rocq/Audit_Nanopass.v)."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezNpCore.v",
+          "claim": "check_recognize_mrvs_sound: for all printed L4/L4.5 terms, acceptance implies equal core denotation and equal results under every primitive semantics, world type, truthiness and argument-evaluation-order policy; info fields the unparser omits are outside the semantics."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezNpReloc.v",
+          "claim": "check_code_object_sound: acceptance implies the captured bytes are the np-generate-code template with each relocation window rewritten by arm64_set_abs, template windows hold item 0, and relocation offsets/targets equal the code object table."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezNpValidate.v",
+          "claim": "For kl:buri-arm-add only: np-recognize-mrvs validated; 10 same-language passes print identically; the 152 captured tarm64le bytes are the relocation instance of np-generate-code output (codegen_buri_arm_add_instance); tampering rejected. Not a theorem about other programs."
+        },
+        {
+          "kind": "capture",
+          "artifact": "ports/chez-np/tarm64le-buri-arm-add.raw.np",
+          "claim": "Raw, info-carrying trace of the same compilation from Chez 10.3.0 with the printing-only patch ports/chez-np/patches/np-trace-raw.patch (trusted dumping tool, OB-CHEZ-NP-RAW-DUMP). Rerun byte-identical on the same boot files; a fresh patched build reproduces it except the block record-type uid."
+        },
+        {
+          "kind": "sampled-agreement",
+          "artifact": "ports/chez-np/scripts/build-patched-chez.sh",
+          "claim": "With BURI_NP_RAW unset, the patched build's dump equals the stock capture except the block record-type uid, exactly as an unpatched rebuild does. One function; not a proof that the patch changes printing only."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezPrimRaw.v",
+          "claim": "check_raw_sound: raw L4/L4.5 terms read with their info-call and info-lambda fields (check? #f only on primref operators, no attachment shifting, interface* = clause interfaces); acceptance implies equal results under every primitive semantics, world, truthiness and order policy."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezPrimExpand.v",
+          "claim": "check_expand_plus_sound: for every L7 + call and L9 term the validator accepts, equal value and world under any primitive/library semantics meeting H_fix and H_lib (OB-CHEZ-LIB-PLUS), over a stated word-level semantics of the fixnum fast path (log!test tag check, +/ovfl, overflow condition code, label/goto fallback to library +). plus_expansion_fast needs no premise on primitives."
+        },
+        {
+          "kind": "universal-theorem",
+          "artifact": "rocq/ChezPrimBlocks.v",
+          "claim": "check_block_order_sound: accepted L16 pairs differ only in block-list order (sort_refs_perm), so every order-independent L16 meaning agrees. Says nothing about np-generate-code layout."
+        },
+        {
+          "kind": "ground-derivation",
+          "artifact": "rocq/ChezPrimValidate.v",
+          "claim": "For kl:buri-arm-add only: $np-expand-primitives validated (expand_plus_buri_arm_add_preserves); the L9 fast path yields ChezWord.fx_enc (x + y) (expanded_fast_path_shen), the value buri_chez_add_shen proves at the byte level; np-suppress-procedure-checks validated with info fields; np-optimize-block-order! validated; 5 mutants rejected (audited in rocq/Audit_Chezprim.v)."
+        }
+      ],
+      "acceptance": "every required code\npath/configuration is handled, or a universal compiler proof supplies the result.\nA validator may reject an output safely, but cannot then claim universal coverage\nof that unsupported required output. Generic closure uses compositional schemas,\nnot a test corpus. Proving outputs does not claim all unrelated Chez programs or\nall possible compiler invocations are correct.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-23",
+      "title": "Close SBCL compilation to ARM.",
+      "lane": "sbcl-native",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-14",
+        "E2E-16",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "the SBCL execution path has\nthe same coverage standard as Chez, without treating SBCL as a trusted oracle.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-24",
+      "title": "Verify native runtime code and support libraries.",
+      "lane": "native-runtime",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-17",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "no opaque native call remains in a required path. Replacing a dependency\nwith smaller code requires a proved API refinement and an explicit version change.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-25",
+      "title": "Verify allocation and garbage collection.",
+      "lane": "native-runtime",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-21",
+        "E2E-24"
+      ],
+      "evidence": [],
+      "acceptance": "successful collections and all modeled failure paths preserve the runtime\ninvariant; there is no implicit “GC works” premise.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-26",
+      "title": "Verify the executable lifecycle and exact loaded bytes.",
+      "lane": "native-lifecycle",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-19",
+        "E2E-22",
+        "E2E-23",
+        "E2E-24",
+        "E2E-25"
+      ],
+      "evidence": [],
+      "acceptance": "no gap remains between proved binary contents and modeled loaded code;\nsecure boot/physical identity roots are separately recorded in 31–32.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-27",
+      "title": "Prove OS/ABI and IO boundary implementations.",
+      "lane": "system",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-04",
+        "E2E-17",
+        "E2E-20",
+        "E2E-21"
+      ],
+      "evidence": [],
+      "acceptance": "every interaction is explicit and wrapper correctness is discharged.\nThe remaining OS implementation relations are mandatory inputs to step 31,\nnot a declaration that the whole deployment is finished.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-28",
+      "title": "Close concurrency, scheduling and ARM weak memory.",
+      "lane": "concurrency",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-06",
+        "E2E-19",
+        "E2E-21",
+        "E2E-24",
+        "E2E-25",
+        "E2E-26",
+        "E2E-27"
+      ],
+      "evidence": [],
+      "acceptance": "all admitted interleavings and actual\nruntime threads are covered; a sequential test cannot close this package.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-29",
+      "title": "Connect TLA+ and distributed behavior.",
+      "lane": "temporal",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-08",
+        "E2E-19",
+        "E2E-27",
+        "E2E-28"
+      ],
+      "evidence": [],
+      "acceptance": "safety and conditional liveness are proved under\nthe exact fault/environment model; arbitrary permanent partition or hardware\nfailure is not hidden behind an unconditional availability claim.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-30",
+      "title": "Prove security and resource claims separately.",
+      "lane": "security-resources",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-08",
+        "E2E-10",
+        "E2E-21",
+        "E2E-25",
+        "E2E-28",
+        "E2E-29"
+      ],
+      "evidence": [],
+      "acceptance": "each\nadvertised guarantee has the right theorem, with environmental liveness and\nphysical side-channel assumptions exposed. No claim of universal termination.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-31",
+      "title": "Close the deployment software below the process.",
+      "lane": "system",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-20",
+        "E2E-26",
+        "E2E-27",
+        "E2E-28",
+        "E2E-29",
+        "E2E-30"
+      ],
+      "evidence": [],
+      "acceptance": "no required software component is an unproved OS oracle.\nExisting kernel proofs must be bridged into the checking trust story; assumptions\nabout unverified configurations, assembly or initialization are not inherited\nsilently. Hardware/device behavior remains an explicit physical foundation.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-32",
+      "title": "Close checker execution and bootstrap trust.",
+      "lane": "checker-bootstrap",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-09",
+        "E2E-20",
+        "E2E-26",
+        "E2E-31"
+      ],
+      "evidence": [],
+      "acceptance": "neither Shen execution nor an unproved extraction/compiler silently\ndecides theorem validity in the final acceptance route.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-33",
+      "title": "Prove complete application examples on both ports.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-08",
+        "E2E-09",
+        "E2E-10",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17",
+        "E2E-18",
+        "E2E-19",
+        "E2E-26",
+        "E2E-27",
+        "E2E-28",
+        "E2E-29",
+        "E2E-30",
+        "E2E-32"
+      ],
+      "evidence": [],
+      "acceptance": "each example is end to end; finite examples demonstrate integration, while the\ngeneric language/compiler results establish coverage beyond those examples.\nFuture applications still require their own contracts and certificates.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-34",
+      "title": "Prove the composition theorem and close every premise.",
+      "lane": "shared-shen-semantics",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-01",
+        "E2E-02",
+        "E2E-03",
+        "E2E-04",
+        "E2E-05",
+        "E2E-06",
+        "E2E-07",
+        "E2E-08",
+        "E2E-09",
+        "E2E-10",
+        "E2E-11",
+        "E2E-12",
+        "E2E-13",
+        "E2E-14",
+        "E2E-15",
+        "E2E-16",
+        "E2E-17",
+        "E2E-18",
+        "E2E-19",
+        "E2E-20",
+        "E2E-21",
+        "E2E-22",
+        "E2E-23",
+        "E2E-24",
+        "E2E-25",
+        "E2E-26",
+        "E2E-27",
+        "E2E-28",
+        "E2E-29",
+        "E2E-30",
+        "E2E-31",
+        "E2E-32",
+        "E2E-33"
+      ],
+      "evidence": [],
+      "acceptance": "zero unproved software premises outside the declared ultimate checking root for\nthe closed endpoint and\nzero required coverage holes. Unsupported output safely rejected by a validator\nremains a coverage failure until its required case is implemented and proved.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-35",
+      "title": "Make closure enforceable in CI and deployment.",
+      "lane": "release-engineering",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-02",
+        "E2E-03",
+        "E2E-34"
+      ],
+      "evidence": [
+        "shen/ledger.shen",
+        "tests/ledger.shen",
+        {
+          "kind": "seed",
+          "artifact": "scripts/build-manifest.py",
+          "claim": "build manifests bind source, tool-payload, runtime-library, flag and proof-object hashes; not yet a signed bundle or deploy-time admission protocol"
+        }
+      ],
+      "acceptance": "modifying\nany correctness-relevant input invalidates the old proof bundle, and no mutable\nlabel or forgeable success token authorizes execution. Nix/Earthbuild repeatability\nand signed provenance support this process but do not replace semantic checks.",
+      "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-36",
+      "title": "Perform independent closure review and release.",
+      "lane": "independent-review",
+      "status": "planned",
+      "mandatory_for_closed_deployment": true,
+      "depends_on": [
+        "E2E-32",
+        "E2E-33",
+        "E2E-34",
+        "E2E-35"
+      ],
+      "evidence": [],
+      "acceptance": "every mandatory package\nhas its acceptance evidence and the final theorem applies to the bytes deployed.\nSubsequent upgrades reopen affected obligations automatically. The release can\nbe complete even though future programs, platforms and hardware require new work.",
+      "details": "docs/END-TO-END-PLAN.md"
+    }
+  ]
+}

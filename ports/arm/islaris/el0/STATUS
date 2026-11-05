@@ -1,0 +1,29 @@
+# EL0 / stage-1-MMU-on isla footprints of the Chez fast path (E2E-20 Wave C)
+# isla b8e614bd isla-footprint -A armv8p5.ir (isla-snapshots d8b31014)
+#   -f isla_footprint_no_init -C ../etc/aarch64_isla_coq_el0_linux.toml
+#   --simplify-registers --tree -s -x -i <bytes>        (ports/arm/islaris/gen-el0-traces.sh)
+# Each line: offset, bytes in memory order, outcome.  isla output is
+# untrusted symbolic-execution data, not evidence by itself.
+0x00 ff0a00f1 cmp    trace; byte-identical to the EL2 (Islaris config) trace
+0x04 01040054 b.ne   trace; differs from EL2 (a4.el2-to-el0.diff): reads TCR_EL1, and the
+                     taken branch splits on target bit 55: with TBI0=1 a target with
+                     bit55=0 is written as 0x00:target[55:0] (top byte cleared)
+0x08 1e0001aa orr    trace; byte-identical to EL2
+0x0c df0b40f2 tst    trace; byte-identical to EL2
+0x10 a1000054 b.ne   trace; differs from EL2 as at 0x04
+0x14 170001ab adds   trace; byte-identical to EL2
+0x18 66000054 b.vs   trace; differs from EL2 as at 0x04
+0x1c 8a0240f8 ldur   NO TRACE: resource-exhausted.  isla was killed twice (SIGKILL, rc 137)
+                     after 167 s and 103 s; the coordinator observed 9.8 GB RSS on the
+                     first run.  The second run had a 7 GiB address-space cap.  With
+                     SCTLR_EL1.M=1 and TTBR0_EL1/MAIR_EL1/descriptors unconstrained, the
+                     load goes through the stage-1 translation-table walk over symbolic
+                     memory.  Not retried (shared-machine memory policy).
+0x20 40011fd6 br x10 trace; differs from EL2 (a20.el2-to-el0.diff): same TBI split as 0x04
+# Wave D retry of 0x1c (ARM-FOUNDATION 12.5): same isla, IR and EL0 config, plus Islaris's own
+# dump constraint as --reset-constraint '= (bvand R20 0xfff0000000000007) 0x0000000000000000',
+# under flock /tmp/buri-heavy.lock and prlimit --as=7 GiB (ports/arm/islaris/gen-el0-ldur.sh).
+0x1c 8a0240f8 ldur   NO TRACE: resource-exhausted again.  Default threads: SIGSEGV (rc 139) at the
+                     7 GiB address-space cap after 38 s, measured peak RSS 7100404 kB.
+                     -T 1 (one worker thread): SIGABRT (rc 134) at the cap after 83 s of run
+                     time, measured peak RSS 7148272 kB.  No trace from either run.

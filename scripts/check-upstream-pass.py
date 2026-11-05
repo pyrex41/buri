@@ -52,3 +52,59 @@ if override.decode().count(read_body) != override.decode().count('(define read-f
 expected = '(tc -)\n' + read_body + '\n'
 if Path('ports/io-read.shen').read_text() != expected:
     raise SystemExit('Extracted read wrapper differs from upstream')
+
+# Kernel list helpers used by the order pass: exact bodies from the pinned
+# Shen 43.1 sources/sys.shen; only defined names and self-references renamed.
+kernel = Path('ports/upstream/sys.shen').read_bytes()
+if hashlib.sha1(b'blob ' + str(len(kernel)).encode() + b'\0' + kernel).hexdigest() != '92aab80f04afe0b91a8f37eb835c245441b7ef09':
+    raise SystemExit('Pinned Shen kernel sys.shen blob mismatch')
+kt = kernel.decode()
+kernel_helpers = ['occurrences', 'reverse', 'reverse-help', 'not']
+kernel_forms = []
+for name in kernel_helpers:
+    if kt.count('(define ' + name + '\n') != 1:
+        raise SystemExit('Kernel helper is not uniquely defined: ' + name)
+    form = extract(kt, name)
+    form = re.sub(r'(?<=\()(' + '|'.join(re.escape(n) for n in kernel_helpers) + r')(?=[\s)])', r'buri.kernel.\1', form)
+    form = form.replace('(define ' + name + '\n', '(define buri.kernel.' + name + '\n', 1)
+    kernel_forms.append(form)
+if Path('ports/kernel-list.shen').read_text().split('(tc -)\n', 1)[1] != '\n\n'.join(kernel_forms) + '\n':
+    raise SystemExit('Extracted kernel list helpers differ beyond buri.kernel. renaming')
+
+# E2E-17: vendored pinned port sources read by the primitive inventory.
+for path, expected in [
+    ('ports/upstream/chez-prelude.scm', '18d1ce9a8dc7073ec2be69fd9c53b9fb70d77ef3'),
+    ('ports/upstream/shen-cl/primitives.lsp', 'f9b11c8a0b57c8492e66094d5e236a8711983e7a'),
+    ('ports/upstream/shen-cl/overwrite.lsp', '8108c9d4a70c61fb2e9d5ab6a59df08a9c9c5096'),
+    ('ports/upstream/shen-cl/compiler.shen', '2d624377c02030f9513769f7bad11e84330b8c5a')]:
+    data = Path(path).read_bytes()
+    if hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest() != expected:
+        raise SystemExit('Pinned vendored source blob mismatch: ' + path)
+# E2E-15 compiler branches: exact upstream defines, read inside the exact
+# upstream package header so that Shen's own reader performs the _scm.
+# qualification (no hand renaming at all).
+header_start = text.index('(package _scm')
+header = text[header_start:text.index('\n\n', header_start)]
+branch_helpers = ['yields-boolean?', 'force-boolean', 'emit-symbol', 'emit-let', 'emit-if',
+                  'emit-cond', 'emit-cond-clauses', 'emit-equality-check']
+for name in branch_helpers:
+    if text.count('(define ' + name + '\n') != 1:
+        raise SystemExit('Compiler branch is not uniquely defined: ' + name)
+expected = '(tc -)\n' + header + '\n\n' + '\n\n'.join(extract(text, n) for n in branch_helpers) + '\n\n)\n'
+branches = Path('ports/compiler-branches.shen').read_text()
+comment, _, body = branches.partition('(tc -)\n')
+if not comment or any(not line.startswith('\\\\ ') for line in comment.splitlines()):
+    raise SystemExit('Compiler branches capture has a non-comment prefix')
+if '(tc -)\n' + body != expected:
+    raise SystemExit('Extracted compiler branches differ from upstream')
+# The composition the theorems use is the literal let clause of compile-expression.
+if text.count('  [let Var Value Body] Scope -> (merge-nested-lets\n'
+              '                                 (emit-let Var Value Body Scope))\n') != 1:
+    raise SystemExit('compile-expression let clause is not merge-nested-lets of emit-let')
+element = extract(kt, 'element?')
+if kt.count('(define element?\n') != 1:
+    raise SystemExit('Kernel element? is not uniquely defined')
+element = re.sub(r'(?<=\()element\?(?=[\s)])', 'buri.kernel.element?', element)
+element = element.replace('(define element?\n', '(define buri.kernel.element?\n', 1)
+if Path('ports/kernel-element.shen').read_text().split('(tc -)\n', 1)[1] != element + '\n':
+    raise SystemExit('Extracted kernel element? differs beyond buri.kernel. renaming')
