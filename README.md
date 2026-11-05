@@ -2,13 +2,80 @@
 
 Formal semantics and machine-checked implementation correctness for Shen.
 
-Búri defines what a supported Shen/KLambda fragment means, checks proof
-certificates, and compares real ports against that meaning. **The current
-release has checked proofs about reference models; no Shen port is yet verified.**
+## Goal
+
+Define what Shen programs mean, then prove that real implementations preserve
+that meaning, all the way down to the exact ARM binaries that run. The target
+covers two paths: Shen-Scheme on Chez Scheme and Shen-CL on SBCL.
+
+The [end-to-end plan](docs/END-TO-END-PLAN.md) has three named endpoints:
+
+1. **Language/port:** Shen through generated Scheme or Common Lisp, under
+   explicit host contracts.
+2. **Hosted ARM process:** the exact executable and runtime through AArch64,
+   under a specified OS and device environment.
+3. **Closed deployment (the final goal):** both execution paths plus the
+   supervisor and OS services they need, down to the declared hardware interface.
+
+Even at the final goal, four foundations stay trusted: the chosen logic and
+checking root, the meaning of the specification, the bottom ISA and device
+model, and the correspondence between that model and physical hardware.
 
 Vör asks whether a business program satisfies its contract. Búri supplies the
-language/runtime semantics and preservation obligations that such a claim
-ultimately depends on.
+language and runtime semantics, and the preservation obligations, that such a
+claim ultimately depends on.
+
+## Current state
+
+**No Shen port is verified yet, and none of the three endpoints has been
+reached.** The proofs so far cover reference models and specific pieces of the
+real compilers. Figures below are as of commit `84e7852` (5 November 2026).
+
+| Ledger | Status |
+|---|---|
+| [End-to-end work packages](spec/end-to-end-plan.json) | 0 of 36 done: 16 in progress, 20 planned |
+| [Six-stage plan](spec/six-stages.json) | 0 of 6 done: all 6 partial |
+| [Obligations](spec/obligations.json) | 143 total: 17 discharged, 36 partial, 58 open, 16 assumed, 11 refuted, 4 foundation, 1 superseded |
+| [Semantics targets](spec/release-charter.json) | 26 total: 6 partial, 20 planned |
+| [Required features](spec/release-charter.json) | 74 total: 58 in scope, 16 provisionally excluded |
+| [Release pins](spec/release-charter.json) | 14 total: 5 pinned, 2 identity-only, 7 unpinned |
+
+**Proved in Rocq so far:**
+
+- Preservation for the small reference arithmetic compiler, for every input.
+- Equivalence of 12 arithmetic schemas captured from the real Shen-Scheme
+  compiler's output.
+- A correct program matching the exact source of Búri's own Shen encoder.
+- Preservation through one captured Shen-Scheme compiler pass, for admitted
+  binding tails.
+- A restricted semantics result for Shen-CL's strict boolean admission.
+
+**Not proved yet:** a whole port, the complete primitive set, Chez Scheme or SBCL
+internals, the runtime and garbage collector, ARM code generation, or the OS.
+
+**Last full gate run:** `make report` passed on 5 November 2026 at `ccc1cd4`, the
+tree merged as `84e7852`, in a Linux x86-64 container. Reports are unsigned, and
+this is a local run: GitHub Actions jobs are not currently starting because of an
+account billing limit, so run `make report` yourself for current evidence.
+
+| Gate | Result |
+|---|---|
+| Rocq audit | 961 audited theorems, with `coqchk` replay |
+| Proof mutations | 151 deliberately broken variants rejected |
+| Shen test suites | 1,018 checks across 26 suites |
+| Shen-Scheme comparisons | 108 native cases (tests, not proof) |
+| Orchestration checks | 27 |
+
+**Upstream bugs found:** eight issues filed so far, and upstream has closed six
+of them after merging fixes on 5 November 2026. Búri's pinned sources predate
+those fixes, and its gates have not been rerun against them.
+
+| Project | Closed | Open |
+|---|---|---|
+| Shen-Scheme | [#46](https://github.com/tizoc/shen-scheme/issues/46), [#47](https://github.com/tizoc/shen-scheme/issues/47), [#48](https://github.com/tizoc/shen-scheme/issues/48) | None |
+| Shen-CL | [#68](https://github.com/Shen-Language/shen-cl/issues/68), [#69](https://github.com/Shen-Language/shen-cl/issues/69) | [#70](https://github.com/Shen-Language/shen-cl/issues/70) |
+| `shen-sources` | [#118](https://github.com/Shen-Language/shen-sources/issues/118) | None |
+| Shen/JIT | None | [#1](https://github.com/tizoc/shen-jit/issues/1) |
 
 ## Parallel port verification
 
@@ -58,12 +125,13 @@ tooling, with a reproducible experiment and no mandatory dependency.
   captured from the loaded image and checked against that proved program. A
   generic theorem preserves named bindings, shadowing, and recursive calls.
   See [the front-end boundary](docs/FRONTEND.md).
-- **Real Shen-Scheme comparisons:** 105 native cases, including evaluation
+- **Real Shen-Scheme comparisons:** 108 native cases, including evaluation
   order, lexical capture, lazy branches, currying, exceptions, large integers,
   and freeze/thaw. These are tests, not a preservation proof.
-- **Adversarial gates:** 105 Shen kernel/evaluator/encoder/adapter checks, 96 additional Rocq regression examples,
-  twenty-two orchestration checks, and seventy-one compiler, capture, encoder, or capsule mutations rejected by Rocq. Claim reports keep proofs, ground replay,
-  tests, open obligations, and assumptions distinct.
+- **Adversarial gates:** Shen checks, Rocq regression examples, orchestration
+  checks, and compiler, capture, encoder, and capsule mutations rejected by Rocq.
+  Claim reports keep proofs, ground replay, tests, open obligations, and
+  assumptions distinct.
 
 Read [STATUS](docs/STATUS.md) and [TRUST](docs/TRUST.md) before interpreting any
 result. A theorem about the arithmetic reference compiler does not verify the
@@ -89,7 +157,7 @@ release. Shen bootstrap also supports macOS arm64, but that combination has not
 been tested here. See [toolchain provenance](toolchain.lock.json).
 
 `make test` runs the Shen tests. `make prove` regenerates the equation bridge,
-checks all proofs, audits 347 theorem dependencies for custom axioms, independently
+checks all proofs, audits theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
 
