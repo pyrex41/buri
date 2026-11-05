@@ -1,0 +1,1 @@
+(defun sl.f (code sl.f 2 6 () ((prim 4 hd 2) (prim 5 cons 4 3) (return 5)) () ()))
