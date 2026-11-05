@@ -1,0 +1,161 @@
+diff --git a/local.mk b/local.mk
+new file mode 100644
+index 0000000..c8e6192
+--- /dev/null
++++ b/local.mk
+@@ -0,0 +1,7 @@
++# Spike: picked up by the Makefile's own -include local.mk, so the Makefile is unchanged.
++OVERLAY := spikes-overlay
++SLJIT_FLAGS += -include $(OVERLAY)/arena.h
++LDLIBS := $(OVERLAY)/arena.o -static -lm -ldl -lpthread -Wl,-T,$(OVERLAY)/arena.lds
++# STATIC=1 would overwrite LDLIBS after this file, so its other effect is repeated here.
++$(BUILD)/ffi.o: CFLAGS += -DSHEN_JIT_STATIC
++$(BUILD)/heap.o: CFLAGS += -DSPIKE_NO_THP
+diff --git a/spikes-overlay/arena.c b/spikes-overlay/arena.c
+new file mode 100644
+index 0000000..eb0469d
+--- /dev/null
++++ b/spikes-overlay/arena.c
+@@ -0,0 +1,84 @@
++/* First-fit, address-ordered free list with a header before each block. The arena is
++   one zero-initialised array in the binary's only LOAD segment, which is RWX (arena.lds). */
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#ifndef SPIKE_ARENA_BYTES
++#define SPIKE_ARENA_BYTES (64u * 1024 * 1024)
++#endif
++
++struct block {
++    size_t size; /* Bytes, header included. */
++    struct block *next;
++};
++
++static unsigned char arena[SPIKE_ARENA_BYTES]
++    __attribute__((aligned(4096), section(".bss.spike_arena")));
++static struct block *free_list;
++static size_t bump, peak;
++
++#ifdef SPIKE_ARENA_TRACE
++static void report(void)
++{
++    fprintf(stderr, "spike-arena: peak %zu bytes, bump %zu of %zu\n", peak, bump, (size_t)SPIKE_ARENA_BYTES);
++}
++#endif
++
++void *spike_arena_alloc(size_t size)
++{
++#ifdef SPIKE_ARENA_TRACE
++    static int registered;
++    if (!registered) {
++        registered = 1;
++        atexit(report);
++    }
++#endif
++    size = ((size + 15) & ~(size_t)15) + sizeof(struct block);
++    for (struct block **p = &free_list; *p; p = &(*p)->next) {
++        struct block *b = *p;
++        if (b->size < size)
++            continue;
++        if (b->size >= size + 64) {
++            struct block *rest = (struct block *)((unsigned char *)b + size);
++            rest->size = b->size - size;
++            rest->next = b->next;
++            *p = rest;
++            b->size = size;
++        } else {
++            *p = b->next;
++        }
++        return b + 1;
++    }
++    if (size > sizeof arena - bump)
++        return NULL;
++    struct block *b = (struct block *)(arena + bump);
++    bump += size;
++    if (bump > peak)
++        peak = bump;
++    b->size = size;
++    return b + 1;
++}
++
++void spike_arena_free(void *ptr)
++{
++    if (!ptr)
++        return;
++    struct block *b = (struct block *)ptr - 1;
++    struct block **p = &free_list;
++    while (*p && *p < b)
++        p = &(*p)->next;
++    b->next = *p;
++    *p = b;
++    if (b->next && (unsigned char *)b + b->size == (unsigned char *)b->next) {
++        b->size += b->next->size;
++        b->next = b->next->next;
++    }
++    /* The previous block, if any, is found on the way in only by address, so join it here. */
++    for (struct block *q = free_list; q && q != b; q = q->next)
++        if (q->next == b && (unsigned char *)q + q->size == (unsigned char *)b) {
++            q->size += b->size;
++            q->next = b->next;
++            break;
++        }
++}
+diff --git a/spikes-overlay/arena.h b/spikes-overlay/arena.h
+new file mode 100644
+index 0000000..f17794b
+--- /dev/null
++++ b/spikes-overlay/arena.h
+@@ -0,0 +1,13 @@
++/* Shen/JIT Phase 0 spike: a static code arena for SLJIT, in place of mmap(PROT_EXEC).
++   Force-included for every translation unit by local.mk. */
++#ifndef SHEN_JIT_SPIKE_ARENA_H
++#define SHEN_JIT_SPIKE_ARENA_H
++#include <stddef.h>
++void *spike_arena_alloc(size_t size);
++void spike_arena_free(void *ptr);
++#define SLJIT_EXECUTABLE_ALLOCATOR 0
++#define SLJIT_MALLOC_EXEC(size, data) spike_arena_alloc((size_t)(size))
++#define SLJIT_FREE_EXEC(ptr, data) spike_arena_free((ptr))
++/* One hart in the model; see RESULTS.md for what this assumes on real Linux. */
++#define SLJIT_CACHE_FLUSH(from, to) __asm__ volatile("fence.i")
++#endif
+diff --git a/spikes-overlay/arena.lds b/spikes-overlay/arena.lds
+new file mode 100644
+index 0000000..007d4db
+--- /dev/null
++++ b/spikes-overlay/arena.lds
+@@ -0,0 +1,20 @@
++/* One RWX LOAD segment holding ELF headers, code, data, and the code arena last.
++   Adapted from Theorem's theories/Examples/rwx_flag_ns/source/rwx.lds. */
++PHDRS { seg PT_LOAD FLAGS(7) FILEHDR PHDRS; }
++ENTRY(_start)
++SECTIONS {
++  . = 0x10000 + SIZEOF_HEADERS;
++  . = ALIGN(16);
++  .text : { *(.text*) } :seg
++  .rodata : { *(.rodata*) *(.srodata*) }
++  .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(.init_array*)) PROVIDE_HIDDEN(__init_array_end = .); }
++  .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); }
++  .data : { *(.data*) }
++  .got : { *(.got*) }
++  .sdata : { __global_pointer$ = . + 0x800; *(.sdata*) }
++  .bss : { *(.sbss*) *(EXCLUDE_FILE(*arena.o) .bss*) *(COMMON) }
++  . = ALIGN(4096);
++  .arena (NOLOAD) : { *(.bss.spike_arena) }
++  _end = .;
++  /DISCARD/ : { *(.comment) *(.note*) *(.riscv.attributes) *(.eh_frame*) }
++}
+diff --git a/src/runtime/heap.c b/src/runtime/heap.c
+index 5d5ca65..9e61292 100644
+--- a/src/runtime/heap.c
++++ b/src/runtime/heap.c
+@@ -51,7 +51,7 @@ static uint64_t *reserve_heap(size_t min_words, size_t *words)
+         void *p = mmap(NULL, (2 * *words + STAGGER_WORDS) * sizeof(uint64_t), PROT_NONE,
+                        MAP_PRIVATE | MAP_ANON, -1, 0);
+         if (p != MAP_FAILED) {
+-#ifdef MADV_HUGEPAGE
++#if defined(MADV_HUGEPAGE) && !defined(SPIKE_NO_THP) /* The model answers only MADV_DONTNEED. */
+             /* Touching fresh small pages costs about as much as allocating
+                on them. Without this, Linux may not give huge pages at all. */
+             madvise(p, (2 * *words + STAGGER_WORDS) * sizeof(uint64_t), MADV_HUGEPAGE);
