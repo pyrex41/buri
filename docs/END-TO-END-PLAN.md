@@ -6,6 +6,9 @@ completion claim. All 36 work packages below require their acceptance evidence.
 Existing component proofs can satisfy parts of them; none is marked complete
 merely because the repository has 357 audited statements.
 
+**Update, 6 November 2026.** Five further packages, E2E-37 to E2E-41, form the optional Shen/JIT lane in
+[SHEN-JIT](SHEN-JIT.md). They are not mandatory for closed deployment, and the 36 packages below are unchanged.
+
 **Objective.** Keep Shen as the application, specification, and executable
 semantic language. Establish checked preservation through both Shen-Scheme/Chez
 and Shen-CL/SBCL to exact AArch64 deployment artifacts. Include the complete

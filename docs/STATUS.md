@@ -1236,3 +1236,9 @@ translation and `MemRead`) and the store; the rest of
 `__InstructionExecute`; an EL0 trace and proof; the allocation stub, an
 atomic, and the SBCL fast path. The Islaris theorem still trusts isla for
 the load and for the configuration premises. E2E-20 is not complete.
+
+## Shen/JIT lane (E2E-37, in progress)
+
+[SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one pinned RV64 build.
+Eighteen statements join the assumption audit in `rocq/Audit_Jit.v`, all about the model. They do not relate
+it to KLambda or to machine code. Comparison with the binary is test evidence. Shen/JIT is not verified.

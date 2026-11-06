@@ -1,4 +1,4 @@
-.PHONY: bootstrap test prove conformance check report demo check-cl-port check-arm manifest manifest-compare manifest-test
+.PHONY: bootstrap test prove conformance check report demo check-cl-port check-arm check-shen-jit manifest manifest-compare manifest-test
 bootstrap:
 	./scripts/bootstrap
 	./scripts/bootstrap-rocq
@@ -67,3 +67,7 @@ check-cl-port:
 # Opt-in ARM model proof (E2E-20); needs SAIL_ARM_COQ and COQ_SAIL (docs/ARM-FOUNDATION.md section 10).
 check-arm:
 	./scripts/check-arm.sh
+
+# Opt-in Shen/JIT lane (E2E-37); runs in the container from spikes/jit-in-model/setup.sh (docs/SHEN-JIT.md).
+check-shen-jit:
+	./scripts/check-shen-jit.sh

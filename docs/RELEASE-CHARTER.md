@@ -7,13 +7,17 @@ accept any theorem. Only `make prove` decides theorem validity.
 
 | File | Content |
 |---|---|
-| `spec/release-charter.json` | Charter v1: pins, endpoints, threat model, semantics targets, property definitions, required features, excluded extensions, version history |
+| `spec/release-charter.json` | Charter v2: pins, endpoints, threat model, semantics targets, property definitions, required features, excluded extensions, version history |
 | `spec/obligations.json` | Obligation graph: 97 obligations with stable IDs, two joint invariants, and a map from the older `buri.obligations` inventory |
 | `spec/end-to-end-plan.json` | The existing 36-package plan. Its package IDs are the only valid owners |
 | `shen/ledger.shen` | Inert JSON reader, coverage/closure rules, and the frozen charter fingerprint registry |
 | `tests/ledger.shen` | Enforcement tests for provisional exclusions, the real-ledger check, and hostile variants (`make test`) |
 
-## Charter v1 (frozen 2026-11-01)
+## Charter v2 (2026-11-06)
+
+V2 adds six pins for the Shen/JIT lane ([SHEN-JIT](SHEN-JIT.md)) and the `SEM-JIT` target. It removes nothing, and the target below is unchanged. V1, frozen 2026-11-01, had fingerprint `lh61:95:414996911908889189`.
+
+## Charter v1 content (frozen 2026-11-01)
 
 **Target endpoint:** closed deployment on both ports. The plan's three endpoints
 (language/port, hosted ARM process, closed deployment) are recorded separately.
@@ -70,8 +74,8 @@ Each one names either enforcement tests or a tracked enforcement-gap obligation.
 
 The required set is the list of `feature:`, `property:` and `pin:` IDs. Its
 fingerprint is an order-independent sum, modulo 2^61−1, of polynomial byte
-hashes, computed in Shen using exact integer arithmetic. Charter v1 has the
-fingerprint `lh61:95:414996911908889189`. The checker rejects the charter when:
+hashes, computed in Shen using exact integer arithmetic. Charter v2 has the
+fingerprint `lh61:101:1024106398921574246`. The checker rejects the charter when:
 
 - the recorded fingerprint differs from the computed one;
 - the current required set differs from the latest history entry;

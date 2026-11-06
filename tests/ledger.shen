@@ -37,8 +37,8 @@
 (define buri.lt-head [ledger-consistent | Rest] -> [ledger-consistent (hd Rest) (hd (tl Rest))]
   V -> (buri.lt-show V))
 (buri.test real-ledger-consistent (buri.lt-head (buri.ledger-check))
- [ledger-consistent [charter-version 1] [fingerprint "lh61:95:414996911908889189"]])
-(buri.test real-fingerprint-frozen (buri.ledger-fingerprint (buri.lcharter-required-ids (value buri.lt-charter))) "lh61:95:414996911908889189")
+ [ledger-consistent [charter-version 2] [fingerprint "lh61:101:1024106398921574246"]])
+(buri.test real-fingerprint-frozen (buri.ledger-fingerprint (buri.lcharter-required-ids (value buri.lt-charter))) "lh61:101:1024106398921574246")
 
 \\ Tree editing helpers for hostile variants.
 (define buri.lt-put Key V [obj Pairs] -> [obj (buri.lt-put-h Key V Pairs)])
@@ -164,6 +164,8 @@
 (set buri.lt-forged-history
  (buri.lt-put "required_feature_fingerprint" [str (value buri.lt-dropped-fp)]
   (buri.lt-put "history" [arr [[obj [["version" [int 1]] ["removed" [arr []]]
+     ["required" (buri.lt-strs (buri.lcharter-required-ids (value buri.lt-dropped)))]]]
+    [obj [["version" [int 2]] ["removed" [arr []]]
      ["required" (buri.lt-strs (buri.lcharter-required-ids (value buri.lt-dropped)))]]]]] (value buri.lt-dropped))))
 (buri.test hostile-feature-dropped-with-forged-history
  (buri.lt-has? [required-feature-set-changed-without-version-change (value buri.lt-dropped-fp)]
@@ -175,17 +177,17 @@
 (buri.test hostile-version-bump-without-removal-record
  (buri.lt-has? [silent-feature-removal "feature:prim-vectors"]
   (buri.lt-charter-verdict
-   (buri.lt-put "charter_version" [int 2]
-    (buri.lt-put "history" [arr [(hd (buri.la (buri.lf "history" (value buri.lt-charter))))
-       [obj [["version" [int 2]] ["removed" [arr []]] ["required" (buri.lt-strs (buri.lcharter-required-ids (value buri.lt-dropped)))]]]]]
+   (buri.lt-put "charter_version" [int 3]
+    (buri.lt-put "history" [arr [(hd (buri.la (buri.lf "history" (value buri.lt-charter)))) (hd (tl (buri.la (buri.lf "history" (value buri.lt-charter)))))
+       [obj [["version" [int 3]] ["removed" [arr []]] ["required" (buri.lt-strs (buri.lcharter-required-ids (value buri.lt-dropped)))]]]]]
      (value buri.lt-dropped))))) true)
 \\ Even a recorded removal is a charter change: it needs a new frozen row in shen/ledger.shen.
 (buri.test version-bump-with-removal-record-needs-frozen-row
  (buri.lt-charter-verdict
   (buri.lt-put "required_feature_fingerprint" [str (value buri.lt-dropped-fp)]
-   (buri.lt-put "charter_version" [int 2]
-    (buri.lt-put "history" [arr [(hd (buri.la (buri.lf "history" (value buri.lt-charter))))
-       [obj [["version" [int 2]] ["removed" [arr [[obj [["id" [str "feature:prim-vectors"]] ["reason" [str "test"]]]]]]]
+   (buri.lt-put "charter_version" [int 3]
+    (buri.lt-put "history" [arr [(hd (buri.la (buri.lf "history" (value buri.lt-charter)))) (hd (tl (buri.la (buri.lf "history" (value buri.lt-charter)))))
+       [obj [["version" [int 3]] ["removed" [arr [[obj [["id" [str "feature:prim-vectors"]] ["reason" [str "test"]]]]]]]
              ["required" (buri.lt-strs (buri.lcharter-required-ids (value buri.lt-dropped)))]]]]]
      (value buri.lt-dropped)))))
  [rejected [[required-feature-set-changed-without-version-change (value buri.lt-dropped-fp)]
@@ -218,7 +220,7 @@
      [arr [[obj [["file" [str "tests/evaluator.shen"]] ["test" [str "no-such-test"]]]]]] (buri.lf "exclusion" F)) F)) (value buri.lt-charter)))) true)
 (buri.test hostile-stale-charter-reference
  (buri.lt-has? [stale-charter-reference "obligation graph"]
-  (buri.lt-graph-verdict (buri.lt-put "charter_version" [int 2] (value buri.lt-graph)))) true)
+  (buri.lt-graph-verdict (buri.lt-put "charter_version" [int 3] (value buri.lt-graph)))) true)
 
 \\ Distinct non-policy outcomes.
 (buri.test hostile-unsupported-schema

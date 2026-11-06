@@ -1,7 +1,7 @@
 {
  "schema": "buri-obligation-graph-1",
  "kind": "obligation-ledger-not-proof-evidence",
- "charter_version": 1,
+ "charter_version": 2,
  "charter": "spec/release-charter.json",
  "plan": "spec/end-to-end-plan.json",
  "audit": "rocq/Audit.v",
@@ -4497,6 +4497,994 @@
     "docs/PRIMITIVES.md"
    ],
    "history": []
+  },
+  {
+   "id": "OB-JIT-NAMED-BUILD",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Shen/JIT named build",
+   "identity": "",
+   "statement": "Every Shen/JIT claim names one exact static RV64 build with a code arena, and its exclusions.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spikes/riscv-build/RESULTS.md",
+     "establishes": "deployment-identity",
+     "note": "spike patch; exclusions not removed from the binary yet"
+    }
+   ],
+   "completion_evidence": "The exact build is reproducible from pins, its exclusions are enforced rather than only stated, and the claim wording is reviewed.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-EXCLUSIONS-ENFORCED",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Excluded features",
+   "identity": "",
+   "statement": "Threads, FFI, hand-written native code, the profiler and Ctrl-C handling cannot be reached in the named build, or the claim excludes the inputs that reach them.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A build without the code, or a theorem that no admitted input reaches it.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-INPUT-BOUNDARY",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Bytes into a run",
+   "identity": "",
+   "statement": "The bytes a run takes (argv, script file, stdin) are related to an admitted KLambda program, within the process model's input limits.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A stated mapping used in the top theorem.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-IMAGE",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Heap image",
+   "identity": "",
+   "statement": "The heap image in the binary denotes the KLambda store reached after stage 0 and initialisation.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Image bytes decoded in Rocq and related to that store, or stage 1 proved an instance of the main theorem.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-IMAGE-FILE",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Reading the image",
+   "identity": "",
+   "statement": "The run reads its image from its own executable file, which the process model's file system does not relate to the loaded binary.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "The image embedded in the ELF, or a stated premise that the file holds those bytes.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "spikes/riscv-build/RESULTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-BYTECODE-SEMANTICS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Bytecode semantics",
+   "identity": "",
+   "statement": "rocq/JitBytecode.v states what the pinned implementation does with every bytecode instruction and primitive in the named build.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitMeta.JitMeta.step_deterministic_tau",
+     "establishes": "model-proof",
+     "note": "about the model only"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitMeta.JitMeta.move_classification",
+     "establishes": "model-proof",
+     "note": "about the model only"
+    },
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/shen-jit/known-differences.txt",
+     "establishes": "implementation-correspondence",
+     "note": "differential samples against the pinned binary under qemu; tests, not proof"
+    }
+   ],
+   "completion_evidence": "Reviewed against the source, with differential differences explained; correspondence to machine code is OB-JIT-EMITTER.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitBytecode.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-LOWERING",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to bytecode",
+   "identity": "",
+   "statement": "Bytecode produced by the actual lowerer preserves the KLambda semantics under the Shen/JIT profile.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-BYTECODE-SEMANTICS",
+    "OB-JIT-DEV-FIXNUM",
+    "OB-JIT-DEV-ARITY"
+   ],
+   "evidence": [],
+   "completion_evidence": "Universal theorem over a source-linked lowerer model.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-STAGE0",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "Stage 0 files",
+   "identity": "",
+   "statement": "The exact stage 0 files are correct lowerings of kernel KLambda, so that no host is trusted.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-EMITTER",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-39",
+   "packages": [],
+   "status": "open",
+   "boundary": "Bytecode to machine code",
+   "identity": "",
+   "statement": "Everything that runs from emitted code simulates its bytecode, for every accepted code object.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-BYTECODE-SEMANTICS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Theorem on the emitter or on a proved output checker.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-REPRESENTATION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-39",
+   "packages": [],
+   "status": "open",
+   "boundary": "Values and frames",
+   "identity": "",
+   "statement": "The machine state relates to the model: tagged words to val, the heap to obj, frames to the stack map and continuations.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A relation used by the emitter and runtime theorems, including that collection preserves it.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-CODE-REUSE",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-39",
+   "packages": [],
+   "status": "open",
+   "boundary": "Reusing code memory",
+   "identity": "",
+   "statement": "Code memory freed by a collection and reused is never fetched as stale code.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "An invariant over the arena in the emitter and collector theorems.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-CACHE-SYNC",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-39",
+   "packages": [],
+   "status": "open",
+   "boundary": "Instruction cache",
+   "identity": "",
+   "statement": "Generated code is synchronized before it runs on real hardware; the process model treats fence.i as a no-op and cannot see this.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A model or separate argument that sees coherence, and a safe flush path for multi-hart Linux.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "spikes/jit-in-model/RESULTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-RUNTIME",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-40",
+   "packages": [],
+   "status": "open",
+   "boundary": "Runtime on the binary",
+   "identity": "",
+   "statement": "Collector, primitives, loader and stream code on the exact binary meet the contracts the model assumes.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Function contracts on the exact binary with premises discharged.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "spikes/gc-rate/RESULTS.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-LIBC",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-40",
+   "packages": [],
+   "status": "open",
+   "boundary": "musl",
+   "identity": "",
+   "statement": "The musl code the binary links behaves as the runtime assumes, or is a named premise.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Proved on the binary, or named in the trust base.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-PROCESS-MODEL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Linux process model",
+   "identity": "",
+   "statement": "Theorem's rocq-linux-process-semantics describes the run, on riscv64 Linux 6.18.46 or QEMU user mode, within its stated scope.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "docs/SHEN-JIT.md",
+     "establishes": "model-proof",
+     "note": "pinned at 5e13f6b"
+    }
+   ],
+   "completion_evidence": "Remains an assumption of the claim, named in the trust base; narrowed only by review.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-COMPOSITION",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Top theorem",
+   "identity": "",
+   "statement": "One theorem from the exact binary to the KLambda semantics, refining with named resource stops.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-LOWERING",
+    "OB-JIT-EMITTER",
+    "OB-JIT-RUNTIME",
+    "OB-JIT-IMAGE",
+    "OB-JIT-INPUT-BOUNDARY"
+   ],
+   "evidence": [],
+   "completion_evidence": "A closed theorem with every premise discharged or named.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-KERNEL-43-2",
+   "kind": "deployment-identity",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Kernel version",
+   "identity": "",
+   "statement": "Shen/JIT is pinned to kernel 43.2 and Buri's shared lanes to 43.1 with PR117; results at one are not results at the other.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "One kernel pin across the lanes, or per-lane statements of which applies.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-FLOAT-MODEL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "IEEE model",
+   "identity": "",
+   "statement": "rocq/JitFloat.v computes what the machine's floating point computes: unrelated so far to Flocq or to the process model's Fpu.v.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "sampled-agreement",
+     "ref": "tests/shen-jit/known-differences.txt",
+     "establishes": "model-proof",
+     "note": "arithmetic and printing samples"
+    }
+   ],
+   "completion_evidence": "Proved equal to the process model's floating point on these operations.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitFloat.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-XXH3",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Name hash",
+   "identity": "",
+   "statement": "e_hash is XXH3_64bits: a parameter of the model, so hash values and dictionary order are not determined by it.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "XXH3 modeled and related to the vendored code, or kept as a named parameter of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-RESOURCES",
+   "kind": "implementation-correspondence",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Memory and stack limits",
+   "identity": "",
+   "statement": "e_oom and e_stack describe what the real allocator and stack growth can refuse, including the C stack.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "The real limits shown to be instances of these parameters.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-IDENTITY-MODEL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Object identity",
+   "identity": "",
+   "statement": "Pairs, strings and reals have no identity in the model, so shen-jit.same?, shen-jit.tagged? and shen-jit.deref on them stop with RIdentity.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Identity added to the model, or a theorem that admitted programs never reach it.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-SEALED-SLOTS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Sealed call binding",
+   "identity": "",
+   "statement": "The model reads the current function cell for a sealed call, where the implementation binds a slot once; they differ only if sealing is turned off and a name defined after a sealed call bound it.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A per-slot model, or a theorem that excludes that sequence.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DICT-ALIAS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Dictionary entries",
+   "identity": "",
+   "statement": "dict-put changes an entry pair in place in C; the model replaces it, so a program holding an entry across a put could tell.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Mutable entries in the model, or a theorem that the port never holds one.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ERROR-TEXT",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Error messages",
+   "identity": "",
+   "statement": "Exception text in the model follows prims.c, and the shared KLambda semantics has no value-bearing error class.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Message text either in the claim, with show proved, or excluded from observations by the refinement.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-FIXNUM",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Integers are 62-bit: a result out of range raises integer overflow. KLValue fixes unbounded integers, so this needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-DIVISION",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Integer division is exact or real, and any zero divisor raises. The profile states the real-divisor case.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-NAN-IDENTITY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "= of two NaNs depends on whether they are one object: the source tests the two words first, while docs/semantics.md says NaN equals nothing.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-LITERALS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Reader overrides make out-of-range literals reals, and the smallest fixnum reads as a real. Not stated by any rule here: this is frontend behavior.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-PRINTING",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Reals print with the shortest round-trip digits. The profile states this through format_real.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-BYTES",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Strings are bytes and n->string takes 0 to 255; rule_n_to_string in KLSemantics takes any scalar. Needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-HASH",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "hash is consistent with =, so 8 and 8.0 agree. hash is not a KLambda primitive; JitBytecode.v states it. docs/semantics.md and docs/bytecode.md disagree on its range.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-IDENTITY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Closures, streams and exceptions compare by identity. kl_eq leaves closures and exceptions undefined and closures have no identity. Needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-ETS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "error-to-string of a non-exception raises. JitBytecode.v states it.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-COND",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "cond with no true clause raises. XCondFail expresses it.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-ARITY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "A named call with the wrong argument count raises; KLSemantics curries through VPartial. Needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-APPLY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Applying a symbol raises. JitBytecode.v states it.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-DEFUN",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "A malformed defun raises at definition, from the lowerer. Stated by no rule until the lowerer model exists.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-SEALING",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "defun of a fixed or sealed name raises and leaves the binding. KLSemantics has no such error. Needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-LAZY-FORM",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "A lambda form is made on first fn, and shen.lambda-form reads as a placeholder before. Kernel-level behavior, stated by no rule here.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-TIME",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "get-time takes run and unix only and returns a real; QTime responses are integers. Needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-WRITE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "A failed write-byte is not an error, since fputc's result is unchecked; rule_write_byte raises. Needs a semantics change or a fix upstream.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-CHAR",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "char-stream? is false, and read-unit-string and write-string raise. JitBytecode.v states it.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-DEV-RESOURCES",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "Stack overflow and out of memory are catchable errors; the KLambda semantics treats resource failure as final. Needs a semantics change.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitProfile.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ISSUE-1",
+   "kind": "implementation-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Upstream issue",
+   "identity": "",
+   "statement": "define fails on a cond with no true clause (kernel shen.factor-recognisors), by default in Shen/JIT. tizoc/shen-jit#1; the kernel fix is shen-sources #119.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Upstream fix adopted at a new pin, or a limit named in the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ISSUE-2",
+   "kind": "implementation-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Upstream issue",
+   "identity": "",
+   "statement": "= and comparisons with a real convert the fixnum to a double, so they round past 2^53, against docs/semantics.md. tizoc/shen-jit#2. The model states the code's behavior.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Upstream fix adopted at a new pin, or a limit named in the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ISSUE-3",
+   "kind": "implementation-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Upstream issue",
+   "identity": "",
+   "statement": "= on a deep term overflows the C stack and kills the process past trap-error. tizoc/shen-jit#3. The model gives a value here, so the binary does not refine it on such inputs.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Upstream fix adopted at a new pin, or a limit named in the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ISSUE-4",
+   "kind": "implementation-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Upstream issue",
+   "identity": "",
+   "statement": "get-time interns two symbols on every call. tizoc/shen-jit#4. No observable effect in the model.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Upstream fix adopted at a new pin, or a limit named in the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ISSUE-5",
+   "kind": "implementation-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Upstream issue",
+   "identity": "",
+   "statement": "No test checks what a prover computes. tizoc/shen-jit#5. A gap in upstream testing, recorded so results are not overread.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Upstream fix adopted at a new pin, or a limit named in the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
   }
  ],
  "legacy_inventory_map": [
@@ -4632,6 +5620,7 @@
   "rocq/Audit_Clcontracts.v",
   "rocq/Audit_Contracts.v",
   "rocq/Audit_E2e07b.v",
+  "rocq/Audit_Jit.v",
   "rocq/Audit_Nanopass.v",
   "rocq/Audit_Portfix.v",
   "rocq/Audit_Prims2.v",

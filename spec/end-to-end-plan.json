@@ -1470,6 +1470,81 @@
       "evidence": [],
       "acceptance": "every mandatory package\nhas its acceptance evidence and the final theorem applies to the bytes deployed.\nSubsequent upgrades reopen affected obligations automatically. The release can\nbe complete even though future programs, platforms and hardware require new work.",
       "details": "docs/END-TO-END-PLAN.md"
+    },
+    {
+      "id": "E2E-37",
+      "title": "Freeze the Shen/JIT named build, profile and bytecode semantics.",
+      "lane": "shen-jit",
+      "status": "in-progress",
+      "mandatory_for_closed_deployment": false,
+      "depends_on": [],
+      "evidence": [
+        "docs/SHEN-JIT.md",
+        "rocq/JitFloat.v",
+        "rocq/JitBytecode.v",
+        "rocq/JitMeta.v",
+        "rocq/JitProfile.v",
+        "tests/shen-jit/known-differences.txt"
+      ],
+      "acceptance": "the named build, its exclusions, trusted base and input boundary are written; a Rocq profile and executable bytecode semantics exist with stated metatheory; every deviation and open issue has a ledger entry; each gap in the shared KLambda semantics is resolved by a reviewed change or named as a limit of the claim.",
+      "details": "docs/SHEN-JIT.md"
+    },
+    {
+      "id": "E2E-38",
+      "title": "Prove KLambda to bytecode preservation for the actual Shen/JIT lowerer.",
+      "lane": "shen-jit",
+      "status": "planned",
+      "mandatory_for_closed_deployment": false,
+      "depends_on": [
+        "E2E-37",
+        "E2E-06"
+      ],
+      "evidence": [],
+      "acceptance": "a universally quantified preservation theorem for a source-linked model of src/lowerer/lower.shen, plus validation of the exact stage 0 files against kernel KLambda.",
+      "details": "docs/SHEN-JIT.md"
+    },
+    {
+      "id": "E2E-39",
+      "title": "Prove bytecode to machine code for the Shen/JIT emitter.",
+      "lane": "shen-jit",
+      "status": "planned",
+      "mandatory_for_closed_deployment": false,
+      "depends_on": [
+        "E2E-37"
+      ],
+      "evidence": [],
+      "acceptance": "for every bytecode object the build accepts, the code that runs simulates its bytecode under a value, heap and frame relation, by proving the emitter or a checker of its output, chosen from the measured emitter spike.",
+      "details": "docs/SHEN-JIT.md"
+    },
+    {
+      "id": "E2E-40",
+      "title": "Prove the Shen/JIT runtime on the exact binary.",
+      "lane": "shen-jit",
+      "status": "planned",
+      "mandatory_for_closed_deployment": false,
+      "depends_on": [
+        "E2E-37",
+        "E2E-39"
+      ],
+      "evidence": [],
+      "acceptance": "function contracts on the exact binary for the collector, primitives, loader, errors and streams, with every premise discharged or named.",
+      "details": "docs/SHEN-JIT.md"
+    },
+    {
+      "id": "E2E-41",
+      "title": "Compose the Shen/JIT theorem and close the Shen frontend on it.",
+      "lane": "shen-jit",
+      "status": "planned",
+      "mandatory_for_closed_deployment": false,
+      "depends_on": [
+        "E2E-38",
+        "E2E-39",
+        "E2E-40",
+        "E2E-12"
+      ],
+      "evidence": [],
+      "acceptance": "one theorem from the exact binary and its image, under the process model, to the KLambda semantics, with the input boundary stated, then connected to Shen source through the shared frontend packages.",
+      "details": "docs/SHEN-JIT.md"
     }
   ]
 }

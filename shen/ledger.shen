@@ -132,7 +132,8 @@
 
 \\ Frozen charter registry. Changing the required set needs a new version row
 \\ here and in the charter history; editing data alone cannot keep a version.
-(define buri.ledger-frozen-charters -> [[1 "lh61:95:414996911908889189"]])
+(define buri.ledger-frozen-charters ->
+  [[1 "lh61:95:414996911908889189"] [2 "lh61:101:1024106398921574246"]])
 
 \\ ---------------------------------------------------------------------------
 \\ Fixed vocabularies.
