@@ -1,7 +1,7 @@
 # Findings against Shen/JIT at 0.3
 
 Checked at `tizoc/shen-jit` `b4ccf2dff97031ee624692bb32d2addd18cacb39` ("Prepare 0.3"), on the named RV64
-binary (SHA-256 `2d444d92...7a5a`) under `qemu-riscv64`. **Nothing here has been filed.** Upstream issues were
+binary (SHA-256 `2d444d92...7a5a`) under `qemu-riscv64`. **Finding 2 was filed as [tizoc/shen-jit#12](https://github.com/tizoc/shen-jit/issues/12) on 6 November 2026.** Upstream issues were
 searched on 6 November 2026 for "NaN", "write-byte" and "fputc"; none matched.
 
 ## 1. NaN equality: no longer a finding
@@ -66,7 +66,7 @@ Output, exit status 0:
 > Tested on 0.3 (`b4ccf2d`), a static RV64 build under `qemu-riscv64`. I read the `fputc` call on the shared
 > source, but haven't run this on the release binaries.
 
-Before filing, confirm `close`'s path in `prims.c` and test a release binary.
+Reproduced on the `shen-jit-0.3-linux-arm64-static` release (hash checked against `SHA256SUMS`), with the same output and exit status 0. `fputc` and `fclose` were still unchecked at upstream `cb442cf` when filed, read from source. The filed text is in the issue.
 
 ## Smaller prose points
 
