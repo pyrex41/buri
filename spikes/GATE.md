@@ -81,3 +81,14 @@ willing to pay.
 - Whether to ask Bruno Deferrari now. A checker route changes what we'd ask, so I'd wait for spike 7.
 - AArch64 stays a later decision. It would multiply binary-level cost, so it should follow the
   emitter measurement.
+
+## Spike 7 result
+
+On `move`, an easy opcode with no branch, slow path or allocation, the checker route finished 150 of 150
+instructions with an end-to-end contract. Proving the emitter stopped at 45 of roughly 10,000 reachable.
+Per-opcode floors are about 41k-124k lines for the checker and 280k-880k for the emitter. This separates
+the routes on per-opcode cost only.
+
+The checker route's unmeasured risks are the unproved emitter sharing an address space with what it
+claims to protect, inputs taken from the emitter, and whole-function layout. Phase 3 stays unfunded until
+those are measured. See `spikes/emitter/RESULTS.md`.
