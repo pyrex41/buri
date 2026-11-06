@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import JitMeta JitProfile.
+From Buri Require Import KLPort JitMeta JitProfile.
 Print Assumptions JitMeta.JitMeta.step_deterministic_tau.
 Print Assumptions JitMeta.JitMeta.step_deterministic_io.
 Print Assumptions JitMeta.JitMeta.step_tau_excludes_io.
@@ -18,3 +18,19 @@ Print Assumptions JitMeta.JitMeta.raise_no_handler_final.
 Print Assumptions JitMeta.JitMeta.install_sealed_refused.
 Print Assumptions JitProfile.JitProfile.jit_division_by_zero_real.
 Print Assumptions JitProfile.JitProfile.jit_absvector_fill.
+Print Assumptions KLPort.KLPort.next_r_agreed.
+Print Assumptions KLPort.KLPort.step_r_agreed.
+Print Assumptions KLPort.KLPort.range_raises.
+Print Assumptions KLPort.KLPort.no_partial_application.
+Print Assumptions KLPort.KLPort.defun_refused.
+Print Assumptions KLPort.KLPort.unchecked_write_returns.
+Print Assumptions KLPort.KLPort.catchable_resource.
+Print Assumptions KLPort.KLPort.closure_identity.
+Print Assumptions KLPort.KLPort.step_r_deterministic_tau.
+Print Assumptions JitProfile.JitProfile.jit_overflow_raises.
+Print Assumptions JitProfile.JitProfile.jit_compare_exact.
+Print Assumptions JitProfile.JitProfile.jit_byte_strings.
+Print Assumptions JitProfile.JitProfile.jit_no_partial.
+Print Assumptions JitProfile.JitProfile.jit_resources_catchable.
+Print Assumptions JitProfile.JitProfile.jit_defun_fixed_refused.
+Print Assumptions JitProfile.JitProfile.jit_defun_sealed_refused.

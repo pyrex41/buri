@@ -16,8 +16,13 @@ if m[:-1] != c:
 if m[-1] != ('raise-cond', '0'):
     print('PRIM_TABLE_DRIFT raise-cond'); bad = 1
 cops = re.findall(r'X\(OP_\w+, "([^"]+)", \d+\)', ops)
+ex = model[model.index('Definition excluded_ops'):]
+excluded = re.findall(r'"([^"]+)"', ex[:ex.index('%string')])
 for op in cops:
-    if not re.search(r'S_' + re.sub(r'[^a-z0-9]', '_', op) + r'\b', model):
+    if op not in excluded and not re.search(r'S_' + re.sub(r'[^a-z0-9]', '_', op) + r'\b', model):
         print('OPCODE_DRIFT', op); bad = 1
-print('tables: %d primitives, %d opcodes, %s' % (len(c), len(cops), 'DRIFT' if bad else 'match'))
+for op in excluded:
+    if op not in cops:
+        print('OPCODE_DRIFT excluded but not in ops.h:', op); bad = 1
+print('tables: %d primitives, %d opcodes (%d excluded), %s' % (len(c), len(cops), len(excluded), 'DRIFT' if bad else 'match'))
 sys.exit(bad)

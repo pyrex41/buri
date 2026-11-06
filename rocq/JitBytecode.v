@@ -1,5 +1,5 @@
 (* Shen/JIT Phase 1: an executable semantics of Shen/JIT's register bytecode, at
-   pin 715bf60 (docs/bytecode.md, src/runtime/ops.h, loader.c, jit.c, prims.c,
+   pin b4ccf2d (0.3) (docs/bytecode.md, src/runtime/ops.h, loader.c, jit.c, prims.c,
    dict.c). This is a specification of the bytecode level. Nothing here relates
    it to the emitted machine code or to KLambda: those are open obligations in
    spec/obligations.json. `next` is a function, so one state has one move;
@@ -106,6 +106,9 @@ Inductive prim :=
  | PPvar | PPvarp | PPvarOffset | PDeref | PSamep
  | PThread | PForeign | PPointerp | PPointerKind | PPointerAddress | PBytesPointer
  | PPointerString | PPointerBytes | PErrno | PCErrno | PPointerKill
+ | PS32 | PS64 | PF32 | PF64 | PSetS32 | PSetS64 | PSetF32 | PSetF64
+ | PPointerSized | PSetPointer | PPointerGuard | PPointerOwner | PPointersDead | PPointerReadOnly
+ | PCollect
  | PRaiseCond.
 
 (* The primitive table in the order of primitive_table in prims.c. A gate compares
@@ -134,6 +137,8 @@ Definition prim_table : list (string * prim * nat) :=
  ;("shen-jit.save-executable",PSaveExecutable,2);("shen-jit.bytes",PBytesNew,1);("shen-jit.bytes?",PBytesp,1)
  ;("shen-jit.bytes-length",PBytesLength,1);("shen-jit.u8",PU8,2);("shen-jit.u16",PU16,2);("shen-jit.u32",PU32,2)
  ;("shen-jit.u8!",PSetU8,3);("shen-jit.u16!",PSetU16,3);("shen-jit.u32!",PSetU32,3)
+ ;("shen-jit.s32",PS32,2);("shen-jit.s64",PS64,2);("shen-jit.f32",PF32,2);("shen-jit.f64",PF64,2)
+ ;("shen-jit.s32!",PSetS32,3);("shen-jit.s64!",PSetS64,3);("shen-jit.f32!",PSetF32,3);("shen-jit.f64!",PSetF64,3)
  ;("shen-jit.string->bytes",PStringBytes,1);("shen-jit.bytes->string",PBytesString,3)
  ;("shen-jit.copy-bytes",PCopyBytes,5);("shen-jit.bit-and",PBitAnd,2);("shen-jit.bit-or",PBitOr,2)
  ;("shen-jit.bit-xor",PBitXor,2);("shen-jit.bit-not",PBitNot,1);("shen-jit.shift-left",PShiftLeft,2)
@@ -145,6 +150,10 @@ Definition prim_table : list (string * prim * nat) :=
  ;("shen-jit.pointer-address",PPointerAddress,1);("shen-jit.bytes->pointer",PBytesPointer,3)
  ;("shen-jit.pointer->string",PPointerString,1);("shen-jit.pointer->bytes",PPointerBytes,3)
  ;("shen-jit.errno",PErrno,0);("shen-jit.c-errno",PCErrno,0);("shen-jit.pointer-kill",PPointerKill,1)
+ ;("shen-jit.pointer-sized",PPointerSized,2);("shen-jit.pointer!",PSetPointer,3)
+ ;("shen-jit.pointer-guard",PPointerGuard,2);("shen-jit.pointer-owner",PPointerOwner,1)
+ ;("shen-jit.pointers-dead",PPointersDead,0);("shen-jit.pointer-read-only",PPointerReadOnly,1)
+ ;("shen-jit.collect",PCollect,0)
  ;("raise-cond",PRaiseCond,0)].
 Local Open Scope N_scope.
 
@@ -272,6 +281,16 @@ Definition fix_fits (z : Z) : bool := (Z.leb fix_min z && Z.leb z fix_max)%bool.
 Definition is_number (v : val) := match v with VFix _ | VReal _ => true | _ => false end.
 Definition number (v : val) : N := match v with VFix z => of_Z z | VReal b => b | _ => 0 end.
 
+(* compare_fix_real (prims.c): where a fixnum lies against a real, exactly, with no rounding of
+   the integer. None for NaN. An infinity lies past every fixnum. *)
+Definition compare_fix_real (i : Z) (b : N) : option comparison :=
+ match classify b with
+ | CNan => None
+ | CInf neg => Some (if neg then Gt else Lt)
+ | _ => match ratio b with
+   | Some (neg, n, den) => Some (Z.compare (i * den) (if neg then - n else n))
+   | None => None end end.
+
 (* ---------- identity ---------- *)
 (* Whether two values are one word. Immediates and objects with a location are
    exact. Pairs, strings and reals are heap objects whose identity this model does
@@ -301,8 +320,8 @@ Fixpoint eq_val (h : tree obj) (fuel : nat) {struct fuel} : val -> val -> eqr :=
    match a, b with
    | VPair a1 a2, VPair b1 b2 => match go a1 b1 with EqT => go a2 b2 | r => r end
    | VFix x, VFix y => if Z.eqb x y then EqT else EqF
-   | VFix x, VReal y => if eqv (of_Z x) y then EqT else EqF
-   | VReal x, VFix y => if eqv x (of_Z y) then EqT else EqF
+   | VFix x, VReal y => match compare_fix_real x y with Some Eq => EqT | _ => EqF end
+   | VReal x, VFix y => match compare_fix_real y x with Some Eq => EqT | _ => EqF end
    | VReal x, VReal y =>
      (* C tests the two words first, so a NaN equals itself when it is the same
         object and nothing otherwise. The model does not track that. *)
@@ -581,6 +600,18 @@ Definition encode (ptab : tree (prim * nat)) (insn : val) (frame nconst ncode : 
    else LErr "unknown instruction"
  | Some _ => LErr "unknown instruction" end.
 
+(* The instructions of code written by hand (real and word registers, loops): outside the named
+   build. A gate compares this list with ops.h. The lowerer does not emit them, and the model refuses
+   them when loading, where the real loader accepts them. *)
+Definition excluded_ops : list string :=
+ ["loop";"again";"real-number";"real-box";"real-move";"real-neg";"real-abs";"real-sqrt";"real+";"real-";"real*";"real/"
+ ;"real-unless<";"real-unless>";"real-unless<=";"real-unless>=";"real-unless=";"real-load";"real-store"
+ ;"real-load-at";"real-store-at";"real-from-word";"word-from-real";"word-number";"word-box";"word-move"
+ ;"word+";"word-";"word*";"word-and";"word-or";"word-xor";"word-shl";"word-shr";"word-sar";"word-rotl";"word-rotr"
+ ;"word-unless<";"word-unless>";"word-unless<=";"word-unless>=";"word-unless=";"word-unless-u<";"word-unless-u>"
+ ;"word-unless-u<=";"word-unless-u>=";"word-load8";"word-load16";"word-load32";"word-load-s32";"word-load64"
+ ;"word-store8";"word-store16";"word-store32";"word-store64"]%string.
+
 (* check_control: labels defined once, targets defined, entry first, ends in a transfer. *)
 Definition target_of (i : instr) : option N := match i with
  | IJump l | IPushHandler l | IJumpIfFalse _ l | IEntry _ l | IJumpUnlessEntry _ _ l => Some l
@@ -742,7 +773,9 @@ Definition allocates (p : prim) : bool := match p with
 Definition is_excluded (p : prim) : bool := match p with
  | PMarkToplevel | PTraceText | PBacktrace | PSaveExecutable | PThread | PForeign
  | PPointerKind | PPointerAddress | PBytesPointer | PPointerString | PPointerBytes | PErrno | PCErrno
- | PPointerKill => true
+ | PPointerKill
+ | PS32 | PS64 | PF32 | PF64 | PSetS32 | PSetS64 | PSetF32 | PSetF64
+ | PPointerSized | PSetPointer | PPointerGuard | PPointerOwner | PPointersDead | PPointerReadOnly => true
  | _ => false end.
 
 Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) (p : prim) (args : list val) : move :=
@@ -773,15 +806,18 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
    else match a, b with
    | VFix x, VFix y => isb (match p with
        | PLt => Z.ltb x y | PGt => Z.gtb x y | PLe => Z.leb x y | _ => Z.geb x y end)
+   | VFix x, VReal r => isb (match compare_fix_real x r, p with
+       | Some Lt, (PLt | PLe) | Some Gt, (PGt | PGe) | Some Eq, (PLe | PGe) => true | _, _ => false end)
+   | VReal r, VFix y => isb (match compare_fix_real y r, p with
+       | Some Gt, (PLt | PLe) | Some Lt, (PGt | PGe) | Some Eq, (PLe | PGe) => true | _, _ => false end)
    | _, _ =>
-     (* Implementation behavior (issue tizoc/shen-jit#2): a fixnum converts to a
-        double, so the comparison is not of mathematical values past 2^53. *)
      let x := number a in let y := number b in
      isb (match p with PLt => lt x y | PGt => gt x y | PLe => le x y | _ => ge x y end) end
  | PEq, [a; b] => match eq_val (m_heap m) eq_fuel a b with
    | EqT => isb true | EqF => isb false
    | EqIdentity => MStuck RIdentity | EqCycle => MStuck RCyclic end
  | PNumberp, [a] => isb (is_number a)
+ | PCollect, [] => isb true
  | PCons, [a; b] => ret (VPair a b)
  | PHd, [v] => match v with VPair a _ => ret a | _ => raise_v m "hd: ~S is not a pair" v end
  | PTl, [v] => match v with VPair _ b => ret b | _ => raise_v m "tl: ~S is not a pair" v end

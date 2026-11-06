@@ -1,5 +1,5 @@
 #!/bin/bash
-# Opt-in Shen/JIT lane gate (E2E-37). NOT part of `make prove`, whose 8.18 run compiles the
+# Opt-in Shen/JIT lane gate (E2E-37), at the frozen pin; ports/shen-jit/build.sh makes the binary. NOT part of `make prove`, whose 8.18 run compiles the
 # same rocq/Jit*.v sources. This run needs the Rocq in toolchain.lock.json's shen_jit entry
 # and qemu-riscv64, so it runs in the container from spikes/jit-in-model/setup.sh.
 #
@@ -11,8 +11,8 @@
 # verify Shen/JIT.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-src=${SHEN_JIT_SRC:-/lps/s4/sj}
-bin=${SHEN_JIT_BIN:-/lps/shen-jit}
+src=${SHEN_JIT_SRC:-/lps/p2/sj}
+bin=${SHEN_JIT_BIN:-/lps/p2/sj/build/shen-jit}
 out=${JIT_OUT:-/tmp/p1}; export JIT_OUT="$out"
 want=$(python3 -c "import json;print(json.load(open('$root/toolchain.lock.json'))['shen_jit']['binary_sha256'])")
 got=$(sha256sum "$bin" | cut -d' ' -f1)
@@ -20,7 +20,7 @@ got=$(sha256sum "$bin" | cut -d' ' -f1)
 python3 "$root/tests/shen-jit/check_tables.py" "$root" "$src" || exit 4
 eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
 mkdir -p "$out"; cd "$out"
-FILES="Observation KLSyntax KLValue JitFloat JitBytecode JitMeta JitProfile Audit_Jit"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile Audit_Jit"
 for f in $FILES; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
   d=$(diff "$root/rocq/$f.v" "$f.v" || true)   # diff exits 1 when the files differ

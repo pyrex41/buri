@@ -1,4 +1,4 @@
-# Differential differences at pin 715bf60: set index | kind | why. Tests, not proof.
+# Differential differences at pin b4ccf2d: set index | kind | why. Tests, not proof.
 ev 118 | io | needs IO responses; the harness has no IO oracle, so not compared
 ev 119 | io | needs IO responses; not compared
 ev 120 | io | needs IO responses; not compared
@@ -7,8 +7,8 @@ ev 122 | io | needs IO responses; not compared
 ev 124 | io | needs IO responses; not compared
 ev 129 | io | needs IO responses; not compared
 ev 130 | io | needs IO responses; not compared
-ev 429 | stuck excluded | save-executable is excluded from the named build
-ev 430 | stuck excluded | save-executable is excluded from the named build
+ev 437 | stuck excluded | save-executable is excluded from the named build
+ev 438 | stuck excluded | save-executable is excluded from the named build
 ct 101 | io | needs IO responses; not compared
 ct 102 | io | needs IO responses; not compared
 ct 103 | io | needs IO responses; not compared

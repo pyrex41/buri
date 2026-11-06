@@ -1239,6 +1239,8 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 ## Shen/JIT lane (E2E-37, in progress)
 
-[SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one pinned RV64 build.
-Eighteen statements join the assumption audit in `rocq/Audit_Jit.v`, all about the model. They do not relate
-it to KLambda or to machine code. Comparison with the binary is test evidence. Shen/JIT is not verified.
+[SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
+release 0.3, and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Thirty-four statements are in the assumption audit
+in `rocq/Audit_Jit.v`, all about the models. They do not relate the bytecode to KLambda or to machine code. Comparison
+with the binary is test evidence. Shen/JIT is not verified.

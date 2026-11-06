@@ -4507,15 +4507,15 @@
    "status": "partial",
    "boundary": "Shen/JIT named build",
    "identity": "",
-   "statement": "Every Shen/JIT claim names one exact static RV64 build with a code arena, and its exclusions.",
+   "statement": "Every Shen/JIT claim names one exact static RV64 build at 0.3 with a code arena, and its exclusions.",
    "premises": [],
    "depends_on": [],
    "evidence": [
     {
      "kind": "review",
-     "ref": "spikes/riscv-build/RESULTS.md",
+     "ref": "ports/shen-jit/build.sh",
      "establishes": "deployment-identity",
-     "note": "spike patch; exclusions not removed from the binary yet"
+     "note": "patched build; exclusions not removed from the binary yet"
     }
    ],
    "completion_evidence": "The exact build is reproducible from pins, its exclusions are enforced rather than only stated, and the claim wording is reviewed.",
@@ -4533,7 +4533,7 @@
    "status": "open",
    "boundary": "Excluded features",
    "identity": "",
-   "statement": "Threads, FFI, hand-written native code, the profiler and Ctrl-C handling cannot be reached in the named build, or the claim excludes the inputs that reach them.",
+   "statement": "Threads, FFI and pointers, hand-written native code with its real and word registers, wide byte-buffer accessors, the profiler and Ctrl-C handling cannot be reached in the named build, or the claim excludes the inputs that reach them.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
@@ -4925,7 +4925,7 @@
    "status": "open",
    "boundary": "Memory and stack limits",
    "identity": "",
-   "statement": "e_oom and e_stack describe what the real allocator and stack growth can refuse, including the C stack.",
+   "statement": "e_oom and e_stack describe what the real allocator and stack growth can refuse, including the C stack. KLPort's step_r_resource allows these at any evaluation or return; narrowing that to allocation and call points is part of this.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
@@ -5017,19 +5017,38 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "Integers are 62-bit: a result out of range raises integer overflow. KLValue fixes unbounded integers, so this needs a semantics change.",
+   "statement": "Integers are 62-bit: a result out of range raises integer overflow. KLPort's int_range states it; relating it to the binary is open.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_overflow_raises",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.range_raises",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-DIVISION",
@@ -5060,7 +5079,7 @@
    "status": "open",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "= of two NaNs depends on whether they are one object: the source tests the two words first, while docs/semantics.md says NaN equals nothing.",
+   "statement": "= of two NaNs depends on whether they are one object, as the source tests the two words first and docs/semantics.md says at 0.3. A real has no identity in the KLambda semantics or the bytecode model.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
@@ -5117,19 +5136,32 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "Strings are bytes and n->string takes 0 to 255; rule_n_to_string in KLSemantics takes any scalar. Needs a semantics change.",
+   "statement": "Strings are bytes and n->string takes 0 to 255. KLPort's char_ok states it; relating it to the binary is open.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_byte_strings",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-HASH",
@@ -5157,19 +5189,32 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "Closures, streams and exceptions compare by identity. kl_eq leaves closures and exceptions undefined and closures have no identity. Needs a semantics change.",
+   "statement": "Closures compare by identity through a location in KLPort, and streams by handle. Two exceptions stay undefined under =, since exn has no room for a location and adding a constructor breaks existing case splits: on those inputs the source semantics makes no claim.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.closure_identity",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-ETS",
@@ -5217,19 +5262,38 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "A named call with the wrong argument count raises; KLSemantics curries through VPartial. Needs a semantics change.",
+   "statement": "A named call with the wrong argument count raises. KLPort's arity_errors states it; relating it to the binary is open.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_no_partial",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.no_partial_application",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-APPLY",
@@ -5277,19 +5341,44 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "defun of a fixed or sealed name raises and leaves the binding. KLSemantics has no such error. Needs a semantics change.",
+   "statement": "defun of a fixed or sealed name raises and leaves the binding. KLPort's defun_allowed states it, with the sealed set as a parameter; relating that set to the image is open.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_defun_fixed_refused",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_defun_sealed_refused",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.defun_refused",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-LAZY-FORM",
@@ -5320,16 +5409,26 @@
    "status": "open",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "get-time takes run and unix only and returns a real; QTime responses are integers. Needs a semantics change.",
+   "statement": "get-time takes run and unix only and returns a real. KLPort's time_kind_ok states the domain, and jit_time reads RTime's integer as the bit pattern; relating it to the binary is open.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    },
+    {
+     "date": "2026-11-06",
+     "note": "Stated by definition in jit_rules and jit_time; no theorem yet, so it stays open."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-WRITE",
@@ -5337,19 +5436,32 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "A failed write-byte is not an error, since fputc's result is unchecked; rule_write_byte raises. Needs a semantics change or a fix upstream.",
+   "statement": "A failed write-byte is not an error, since fputc's result is unchecked. KLPort's unchecked_writes states it; relating it to the binary is open, and upstream may change it (docs/upstream/shen-jit-findings.md).",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.unchecked_write_returns",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-CHAR",
@@ -5377,19 +5489,38 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "Stack overflow and out of memory are catchable errors; the KLambda semantics treats resource failure as final. Needs a semantics change.",
+   "statement": "Stack overflow and out of memory are catchable errors. KLPort's resource_exn states it, and step_r_resource lets them happen at any evaluation or return, which is broader than the binary.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_resources_catchable",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.catchable_resource",
+     "establishes": "model-proof",
+     "note": "about the semantics only, not the binary"
+    }
+   ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "rocq/KLPort.v"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    }
+   ]
   },
   {
    "id": "OB-JIT-ISSUE-1",
@@ -5416,7 +5547,7 @@
    "scope": "instance",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "superseded",
    "boundary": "Upstream issue",
    "identity": "",
    "statement": "= and comparisons with a real convert the fixnum to a double, so they round past 2^53, against docs/semantics.md. tizoc/shen-jit#2. The model states the code's behavior.",
@@ -5427,7 +5558,13 @@
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "tizoc/shen-jit#2 is fixed at the 0.3 pin, and the model states exact comparison (compare_fix_real)."
+    }
+   ],
+   "superseded_by": "OB-JIT-BYTECODE-SEMANTICS"
   },
   {
    "id": "OB-JIT-ISSUE-3",
@@ -5435,7 +5572,7 @@
    "scope": "instance",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "superseded",
    "boundary": "Upstream issue",
    "identity": "",
    "statement": "= on a deep term overflows the C stack and kills the process past trap-error. tizoc/shen-jit#3. The model gives a value here, so the binary does not refine it on such inputs.",
@@ -5446,7 +5583,13 @@
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "tizoc/shen-jit#3 is fixed at the 0.3 pin; what remains is the cyclic case."
+    }
+   ],
+   "superseded_by": "OB-JIT-EQ-CYCLE"
   },
   {
    "id": "OB-JIT-ISSUE-4",
@@ -5454,7 +5597,7 @@
    "scope": "instance",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "superseded",
    "boundary": "Upstream issue",
    "identity": "",
    "statement": "get-time interns two symbols on every call. tizoc/shen-jit#4. No observable effect in the model.",
@@ -5465,7 +5608,13 @@
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "tizoc/shen-jit#4 is fixed at the 0.3 pin, and it had no effect on the model."
+    }
+   ],
+   "superseded_by": "OB-JIT-BYTECODE-SEMANTICS"
   },
   {
    "id": "OB-JIT-ISSUE-5",
@@ -5473,7 +5622,7 @@
    "scope": "instance",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "superseded",
    "boundary": "Upstream issue",
    "identity": "",
    "statement": "No test checks what a prover computes. tizoc/shen-jit#5. A gap in upstream testing, recorded so results are not overread.",
@@ -5483,6 +5632,83 @@
    "completion_evidence": "Upstream fix adopted at a new pin, or a limit named in the claim.",
    "sources": [
     "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "date": "2026-11-06",
+     "note": "tizoc/shen-jit#5 is closed at the 0.3 pin with a test of what a prover computes."
+    }
+   ],
+   "superseded_by": "OB-JIT-RUNTIME"
+  },
+  {
+   "id": "OB-JIT-PORT-OPTIONS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "KLPort options on the KLambda semantics",
+   "identity": "rocq/KLPort.v",
+   "statement": "The agreed options of KLPort.next_r are exactly KLSemantics.next and step, for every profile and configuration, so the options do not change what the Scheme and CL lanes rely on.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.next_r_agreed",
+     "establishes": "model-proof",
+     "note": "for every profile and configuration"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "KLPort.KLPort.step_r_agreed",
+     "establishes": "model-proof",
+     "note": "for every profile and configuration"
+    }
+   ],
+   "completion_evidence": "next_r_agreed and step_r_agreed.",
+   "sources": [
+    "rocq/KLPort.v"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-EQ-CYCLE",
+   "kind": "implementation-correspondence",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT equality budgets",
+   "identity": "",
+   "statement": "On a cyclic term, or past about 1 GB of pending comparisons or 2^31 steps, = ends the process rather than answering. The model stops with RCyclic and the source semantics is undefined there.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A named limit in the claim, or a rule for it.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
+   "id": "OB-JIT-ROCQ-ONLY",
+   "kind": "model-proof",
+   "scope": "instance",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "AGENTS.md exception",
+   "identity": "rocq/JitBytecode.v",
+   "statement": "Reuben chose to keep the Shen/JIT bytecode semantics in Rocq with no Shen counterpart, as a recorded exception to AGENTS.md's usual split. No Shen code checks or runs it, so it has only differential tests against the binary.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A Shen counterpart if a later phase needs one, or this exception kept in the claim.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "AGENTS.md"
    ],
    "history": []
   }

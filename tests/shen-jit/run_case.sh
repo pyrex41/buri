@@ -10,9 +10,9 @@ cat > run_$name.shen <<S
 (load "$here/capture.shen")
 (sj.cap.$kind-file "$file")
 S
-timeout 600 qemu-riscv64 "${SJ_BIN:-/lps/shen-jit}" script run_$name.shen > cap_$name.txt 2> cap_$name.err
+timeout 600 qemu-riscv64 "${SJ_BIN:-/lps/p2/sj/build/shen-jit}" script run_$name.shen > cap_$name.txt 2> cap_$name.err
 echo "capture_rc=$?"
-python3 $here/gen_diff.py cap_$name.txt "${STAGE0:-/lps/s4/sj/build/stage0}" Gen_$name.v
+python3 $here/gen_diff.py cap_$name.txt "${STAGE0:-/lps/p2/sj/build/stage0}" Gen_$name.v
 sed -i 's/^From Coq Require/From Stdlib Require/' Gen_$name.v
 s=$(date +%s); timeout 900 rocq compile -Q $base Buri -Q . JitDiff Gen_$name.v > gen_$name.log 2>&1; echo "gen_rc=$? $(( $(date +%s)-s ))s"; grep -m3 -A6 'Error' gen_$name.log | cut -c1-200
 cat > Run_$name.v <<S

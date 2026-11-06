@@ -20,6 +20,7 @@ here is a theorem about this formal semantics only.
 | `rocq/KLTail.v` | Tail-position rules, stack-bound enforcement, bounded-space divergence of a tail loop |
 | `rocq/KLBridge.v` | Embedding of the `Lambda.v` lexical fragment |
 | `rocq/KLExamples.v` | Ground derivations under one concrete profile |
+| `rocq/KLPort.v` | Per-port options on this machine; `next_r_agreed` proves the agreed options are exactly `next` |
 | `shen/observation.shen`, `tests/observation.shen` | Executable Shen observation vocabulary and ground refinement checks |
 
 ## Observations (E2E-04)
@@ -174,3 +175,12 @@ input-availability premises; correspondence of `shen/observation.shen` to
 exact primitive inventory of the pinned Shen 43.1 kernel and port extensions
 (`do`, `thaw`, `fn`, `$`, `scm.` escapes, `*stinput*`/`*stoutput*`/`*sterror*`
 and other port globals), which belongs with E2E-01/E2E-17.
+
+## Port options
+
+`rocq/KLPort.v` leaves `KLSemantics.next` and every theorem about it unchanged, and defines `next_r R` and `step_r R`, the
+same machine with eight points open to a port: integer range, which integers `n->string` takes, closure identity, arity
+errors in place of currying, refusing `defun`, the clock's domain, unchecked writes, and catchable resource failures.
+`next_r_agreed` and `step_r_agreed` prove that `agreed_rules` gives exactly `next` and `step` for every profile and
+configuration. The Scheme and CL lanes use `next` directly. Only the Shen/JIT lane uses `next_r`
+([SHEN-JIT](SHEN-JIT.md)), and two exceptions stay undefined under `=` there.
