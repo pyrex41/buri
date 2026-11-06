@@ -1,98 +1,130 @@
 # Búri
 
-Formal semantics and machine-checked implementation correctness for Shen.
+Búri is an attempt to prove, with machine-checked proofs, that real implementations of the
+[Shen](https://shenlanguage.org) programming language run programs the way the language says they
+should, all the way down to the machine code that actually executes.
 
-## Goal
+It is not a test suite. Tests show that a program behaved correctly on the inputs someone tried. A proof
+shows it behaves correctly on every input, and a proof checker, not a person, decides whether the proof
+holds.
 
-Define what Shen programs mean, then prove that real implementations preserve
-that meaning, all the way down to the exact ARM binaries that run. The target
-covers two paths: Shen-Scheme on Chez Scheme and Shen-CL on SBCL.
+## Why now
 
-The [end-to-end plan](docs/END-TO-END-PLAN.md) has three named endpoints:
+Anthropic's research post [Formal verification](https://www.anthropic.com/research/formal-verification)
+describes using Claude to write proofs about the compiled binaries of real open-source libraries, checked
+by the [Rocq](https://rocq-prover.org) proof assistant. Proofs like these used to need a lot of
+specialist time, so they were rare for real code. If they can now be written for existing code, it should
+be possible to verify a whole programming language implementation, not only individual libraries.
 
-1. **Language/port:** Shen through generated Scheme or Common Lisp, under
-   explicit host contracts.
-2. **Hosted ARM process:** the exact executable and runtime through AArch64,
-   under a specified OS and device environment.
-3. **Closed deployment (the final goal):** both execution paths plus the
-   supervisor and OS services they need, down to the declared hardware interface.
+Búri applies that idea to Shen. AI agents write the proofs, Rocq checks every one, and a second independent
+checker (`coqchk` or `rocqchk`) replays them. Nothing counts because an AI says it is correct.
 
-Even at the final goal, four foundations stay trusted: the chosen logic and
-checking root, the meaning of the specification, the bottom ISA and device
-model, and the correspondence between that model and physical hardware.
+## What it aims for
 
-Vör asks whether a business program satisfies its contract. Búri supplies the
-language and runtime semantics, and the preservation obligations, that such a
-claim ultimately depends on.
+The goal is a checked theorem that says: for every Shen program, running it on a specific, pinned
+implementation produces exactly the behavior Shen's semantics allows, or stops with a named resource error
+such as running out of memory.
 
-## Current state
+That claim has to hold for the actual bytes that run, not for a simplified model of them. The
+[end-to-end plan](docs/END-TO-END-PLAN.md) works towards it in three stages:
 
-**No Shen port is verified yet, and none of the three endpoints has been
-reached.** The proofs so far cover reference models and specific pieces of the
-real compilers. Figures below are as of commit `84e7852` (5 November 2026).
+1. **Language and port:** Shen through a host language such as Scheme or Common Lisp, under stated
+   assumptions about that host.
+2. **Hosted process:** the exact executable, including its runtime and garbage collector, under a formal
+   model of the operating system.
+3. **Closed deployment:** everything the program depends on, down to a declared hardware interface.
+
+Some things can never be proved, and stay as stated trust assumptions even at the end: the logic and proof
+checker themselves, whether the specification says what people meant, the model of the processor, and
+whether the physical chip matches that model.
+
+Búri also supplies the language-level guarantees that [Vör](https://github.com/pyrex41/vor) needs, since a
+proof that a business program meets its contract is only as good as the language it runs on.
+
+## Where it is now
+
+**No Shen implementation is verified yet.** What exists are checked proofs about pieces of three real
+implementations, plus a formal model of what Shen means.
+
+| Implementation | Checked so far | Not yet |
+|---|---|---|
+| Shen-Scheme, on Chez Scheme | Real compiler output for 12 arithmetic forms; one real compiler pass, for the programs it admits | The whole compiler, its primitives, Chez itself |
+| Shen-CL, on SBCL | A restricted result about how it compiles boolean tests | Almost everything |
+| [Shen/JIT](https://github.com/tizoc/shen-jit) 0.3, a small native JIT | A formal model of its bytecode, compared with the real binary on 732 cases; small pieces of the real RISC-V binary proved in a formal Linux model | The proof from Shen to bytecode is in progress; the code generator, runtime and collector |
+
+**Shen/JIT is now the lead track.** It is far smaller than Chez Scheme or SBCL, which makes a proof about
+its exact binary look reachable. Its proofs use the same formal model of a RISC-V Linux process that the
+Anthropic work used, from [Theorem](https://github.com/theorem-labs/rocq-linux-process-semantics), and they
+cover one specially built static RISC-V binary rather than the releases people download. See
+[the Shen/JIT scope](docs/SHEN-JIT.md) and the [feasibility results](spikes/GATE.md), which estimate the
+remaining cost and say where it is still unknown.
+
+### The ledgers
+
+As of commit `7b0eaaa` (6 November 2026):
 
 | Ledger | Status |
 |---|---|
-| [End-to-end work packages](spec/end-to-end-plan.json) | 0 of 36 done: 16 in progress, 20 planned |
-| [Six-stage plan](spec/six-stages.json) | 0 of 6 done: all 6 partial |
-| [Obligations](spec/obligations.json) | 143 total: 17 discharged, 36 partial, 58 open, 16 assumed, 11 refuted, 4 foundation, 1 superseded |
-| [Semantics targets](spec/release-charter.json) | 26 total: 6 partial, 20 planned |
-| [Required features](spec/release-charter.json) | 74 total: 58 in scope, 16 provisionally excluded |
-| [Release pins](spec/release-charter.json) | 14 total: 5 pinned, 2 identity-only, 7 unpinned |
+| [Work packages](spec/end-to-end-plan.json) | 0 of 41 done: 17 in progress, 24 planned |
+| [Six-stage plan](spec/six-stages.json) | 0 of 6 done: all partial |
+| [Obligations](spec/obligations.json) | 194 total: 18 discharged, 45 partial, 93 open, 18 assumed, 11 refuted, 5 superseded, 4 foundation |
+| [Semantics targets](spec/release-charter.json) | 27 total: 7 partial, 20 planned |
+| [Release pins](spec/release-charter.json) | 20 total: 11 pinned, 2 identity-only, 7 unpinned |
 
-**Proved in Rocq so far:**
+### The last full check
 
-- Preservation for the small reference arithmetic compiler, for every input.
-- Equivalence of 12 arithmetic schemas captured from the real Shen-Scheme
-  compiler's output.
-- A correct program matching the exact source of Búri's own Shen encoder.
-- Preservation through one captured Shen-Scheme compiler pass, for admitted
-  binding tails.
-- A restricted semantics result for Shen-CL's strict boolean admission.
-
-**Not proved yet:** a whole port, the complete primitive set, Chez Scheme or SBCL
-internals, the runtime and garbage collector, ARM code generation, or the OS.
-
-**Last full gate run:** `make report` passed on 5 November 2026 at `ccc1cd4`, the
-tree merged as `84e7852`, in a Linux x86-64 container. Reports are unsigned, and
-this is a local run: GitHub Actions jobs are not currently starting because of an
-account billing limit, so run `make report` yourself for current evidence.
+`make report` passed on 6 November 2026, on the tree committed as `7b0eaaa`, in a Linux x86-64 container.
+Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
+for current evidence run `make report` yourself.
 
 | Gate | Result |
 |---|---|
-| Rocq audit | 961 audited theorems, with `coqchk` replay |
-| Proof mutations | 151 deliberately broken variants rejected |
+| Rocq audit | 995 audited theorems, replayed with `coqchk` |
+| Proof mutations | 160 deliberately broken variants, all rejected |
 | Shen test suites | 1,018 checks across 26 suites |
-| Shen-Scheme comparisons | 108 native cases (tests, not proof) |
+| Shen-Scheme comparisons | 108 cases (tests, not proof) |
 | Orchestration checks | 27 |
 
-**Upstream bugs found:** eight issues filed so far, and upstream has closed six
-of them after merging fixes on 5 November 2026. Búri's pinned sources predate
-those fixes, and its gates have not been rerun against them.
+### Bugs found upstream
 
-| Project | Closed | Open |
+Writing precise semantics turns up real bugs. Nine issues have been filed so far, and upstream has closed
+eight as fixed. Búri's pinned sources may predate those fixes.
+
+| Project | Fixed | Open |
 |---|---|---|
 | Shen-Scheme | [#46](https://github.com/tizoc/shen-scheme/issues/46), [#47](https://github.com/tizoc/shen-scheme/issues/47), [#48](https://github.com/tizoc/shen-scheme/issues/48) | None |
 | Shen-CL | [#68](https://github.com/Shen-Language/shen-cl/issues/68), [#69](https://github.com/Shen-Language/shen-cl/issues/69) | [#70](https://github.com/Shen-Language/shen-cl/issues/70) |
 | `shen-sources` | [#118](https://github.com/Shen-Language/shen-sources/issues/118) | None |
-| Shen/JIT | None | [#1](https://github.com/tizoc/shen-jit/issues/1) |
+| Shen/JIT | [#1](https://github.com/tizoc/shen-jit/issues/1), [#12](https://github.com/tizoc/shen-jit/issues/12) | None |
 
-## Parallel port verification
+## How it works
 
-The [complete end-to-end plan](docs/END-TO-END-PLAN.md) specifies 36 work packages
-from Shen semantics through both host runtimes, exact ARM artifacts and deployment
-software, with dependencies and acceptance criteria in the
-[planning ledger](spec/end-to-end-plan.json). These are planned obligations, not
-new proof-completion claims.
+- **A precise meaning for Shen.** Shen compiles to a small core language, KLambda. Búri defines what KLambda
+  programs mean as an executable semantics in Rocq, with the executable checking and certificate code in
+  Shen.
+- **Compare against the real thing.** Each implementation's actual compiler output is captured and checked
+  against that meaning, instead of trusting a hand-written description of the compiler.
+- **Machine-checked proofs.** Rocq checks every proof, an independent checker replays it, and an audit
+  lists exactly which assumptions each theorem uses. No new axioms are allowed.
+- **Proofs that can fail.** Deliberately broken compilers, captures and models are checked on every run, and
+  each must be rejected. A gate that never fails proves nothing.
+- **Honest reporting.** Proofs, tests, sampled agreement, open obligations and assumptions are kept
+  apart in every report, and nothing is called verified without acceptance evidence.
 
-The [Scheme track](docs/SCHEME-PORT.md) now proves preservation for arbitrary
-admitted binding tails through an actual captured compiler pass. The
-[Common Lisp track](docs/CL-PORT.md) starts with source-bound strict boolean
-admission and a restricted semantics proof. `make test` and `make prove` cover
-both stored proof tracks; `make check-cl-port` additionally regenerates CL source
-captures using the pinned checkout and SBCL described in its documentation.
-[Coalton](docs/COALTON-ASSESSMENT.md) is assessed separately as optional typed
-tooling, with a reproducible experiment and no mandatory dependency.
+## The tracks in more detail
+
+The [complete end-to-end plan](docs/END-TO-END-PLAN.md) specifies 41 work packages, from Shen semantics
+through each host runtime, exact machine code and deployment software, with dependencies and acceptance
+criteria in the [planning ledger](spec/end-to-end-plan.json). These are planned obligations, not
+completed proofs.
+
+The [Scheme track](docs/SCHEME-PORT.md) proves preservation for arbitrary admitted binding tails through an
+actual captured compiler pass. The [Common Lisp track](docs/CL-PORT.md) starts with source-bound strict
+boolean admission and a restricted semantics proof. The [Shen/JIT track](docs/SHEN-JIT.md) has a Rocq model
+of its bytecode and the results of six feasibility spikes. The [ARM foundation](docs/ARM-FOUNDATION.md)
+has first theorems against the Sail model of Arm's
+architecture specification. [Coalton](docs/COALTON-ASSESSMENT.md) is assessed
+separately as optional typed tooling.
 
 ## What works now
 
@@ -160,6 +192,10 @@ been tested here. See [toolchain provenance](toolchain.lock.json).
 checks all proofs, audits theorem dependencies for custom axioms, independently
 replays compiled proof objects with `coqchk`, and rejects broken variants.
 `make conformance` executes the Shen-Scheme comparison corpus.
+
+`make check-shen-jit` runs the opt-in Shen/JIT lane: its Rocq 9 proofs and the comparison with the named
+binary. It needs the Rocq 9 and `qemu-riscv64` container set up by `spikes/jit-in-model/setup.sh`, and the
+binary built by `ports/shen-jit/build.sh`; its paths still assume that container.
 
 `make report` reruns every gate and emits `_build/report.json`, exact source and
 host hashes, theorem signatures, assumption inventories, and logs. This is an
