@@ -1,0 +1,1 @@
+(defun shen.invoke (code shen.invoke 2 6 (() thaw) ((prim 4 = (const 0) 3) (jump-if-false 4 0) (prim 5 cons 2 (const 0)) (prim 4 cons (const 1) 5) (return 4) (label 0) (prim 4 cons 2 3) (return 4)) () ()))

@@ -1,0 +1,265 @@
+diff --git a/spikes-overlay/arena.c b/spikes-overlay/arena.c
+new file mode 100644
+index 0000000..eb0469d
+--- /dev/null
++++ b/spikes-overlay/arena.c
+@@ -0,0 +1,84 @@
++/* First-fit, address-ordered free list with a header before each block. The arena is
++   one zero-initialised array in the binary's only LOAD segment, which is RWX (arena.lds). */
++#include <stdint.h>
++#include <stdio.h>
++#include <stdlib.h>
++
++#ifndef SPIKE_ARENA_BYTES
++#define SPIKE_ARENA_BYTES (64u * 1024 * 1024)
++#endif
++
++struct block {
++    size_t size; /* Bytes, header included. */
++    struct block *next;
++};
++
++static unsigned char arena[SPIKE_ARENA_BYTES]
++    __attribute__((aligned(4096), section(".bss.spike_arena")));
++static struct block *free_list;
++static size_t bump, peak;
++
++#ifdef SPIKE_ARENA_TRACE
++static void report(void)
++{
++    fprintf(stderr, "spike-arena: peak %zu bytes, bump %zu of %zu\n", peak, bump, (size_t)SPIKE_ARENA_BYTES);
++}
++#endif
++
++void *spike_arena_alloc(size_t size)
++{
++#ifdef SPIKE_ARENA_TRACE
++    static int registered;
++    if (!registered) {
++        registered = 1;
++        atexit(report);
++    }
++#endif
++    size = ((size + 15) & ~(size_t)15) + sizeof(struct block);
++    for (struct block **p = &free_list; *p; p = &(*p)->next) {
++        struct block *b = *p;
++        if (b->size < size)
++            continue;
++        if (b->size >= size + 64) {
++            struct block *rest = (struct block *)((unsigned char *)b + size);
++            rest->size = b->size - size;
++            rest->next = b->next;
++            *p = rest;
++            b->size = size;
++        } else {
++            *p = b->next;
++        }
++        return b + 1;
++    }
++    if (size > sizeof arena - bump)
++        return NULL;
++    struct block *b = (struct block *)(arena + bump);
++    bump += size;
++    if (bump > peak)
++        peak = bump;
++    b->size = size;
++    return b + 1;
++}
++
++void spike_arena_free(void *ptr)
++{
++    if (!ptr)
++        return;
++    struct block *b = (struct block *)ptr - 1;
++    struct block **p = &free_list;
++    while (*p && *p < b)
++        p = &(*p)->next;
++    b->next = *p;
++    *p = b;
++    if (b->next && (unsigned char *)b + b->size == (unsigned char *)b->next) {
++        b->size += b->next->size;
++        b->next = b->next->next;
++    }
++    /* The previous block, if any, is found on the way in only by address, so join it here. */
++    for (struct block *q = free_list; q && q != b; q = q->next)
++        if (q->next == b && (unsigned char *)q + q->size == (unsigned char *)b) {
++            q->size += b->size;
++            q->next = b->next;
++            break;
++        }
++}
+diff --git a/spikes-overlay/arena.h b/spikes-overlay/arena.h
+new file mode 100644
+index 0000000..f17794b
+--- /dev/null
++++ b/spikes-overlay/arena.h
+@@ -0,0 +1,13 @@
++/* Shen/JIT Phase 0 spike: a static code arena for SLJIT, in place of mmap(PROT_EXEC).
++   Force-included for every translation unit by local.mk. */
++#ifndef SHEN_JIT_SPIKE_ARENA_H
++#define SHEN_JIT_SPIKE_ARENA_H
++#include <stddef.h>
++void *spike_arena_alloc(size_t size);
++void spike_arena_free(void *ptr);
++#define SLJIT_EXECUTABLE_ALLOCATOR 0
++#define SLJIT_MALLOC_EXEC(size, data) spike_arena_alloc((size_t)(size))
++#define SLJIT_FREE_EXEC(ptr, data) spike_arena_free((ptr))
++/* One hart in the model; see RESULTS.md for what this assumes on real Linux. */
++#define SLJIT_CACHE_FLUSH(from, to) __asm__ volatile("fence.i")
++#endif
+diff --git a/spikes-overlay/arena.lds b/spikes-overlay/arena.lds
+new file mode 100644
+index 0000000..007d4db
+--- /dev/null
++++ b/spikes-overlay/arena.lds
+@@ -0,0 +1,20 @@
++/* One RWX LOAD segment holding ELF headers, code, data, and the code arena last.
++   Adapted from Theorem's theories/Examples/rwx_flag_ns/source/rwx.lds. */
++PHDRS { seg PT_LOAD FLAGS(7) FILEHDR PHDRS; }
++ENTRY(_start)
++SECTIONS {
++  . = 0x10000 + SIZEOF_HEADERS;
++  . = ALIGN(16);
++  .text : { *(.text*) } :seg
++  .rodata : { *(.rodata*) *(.srodata*) }
++  .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(.init_array*)) PROVIDE_HIDDEN(__init_array_end = .); }
++  .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); }
++  .data : { *(.data*) }
++  .got : { *(.got*) }
++  .sdata : { __global_pointer$ = . + 0x800; *(.sdata*) }
++  .bss : { *(.sbss*) *(EXCLUDE_FILE(*arena.o) .bss*) *(COMMON) }
++  . = ALIGN(4096);
++  .arena (NOLOAD) : { *(.bss.spike_arena) }
++  _end = .;
++  /DISCARD/ : { *(.comment) *(.note*) *(.riscv.attributes) *(.eh_frame*) }
++}
+diff --git a/spikes-overlay/arena.o b/spikes-overlay/arena.o
+new file mode 100644
+index 0000000..28bafca
+Binary files /dev/null and b/spikes-overlay/arena.o differ
+diff --git a/spikes-overlay/spike8.o b/spikes-overlay/spike8.o
+new file mode 100644
+index 0000000..b8fe764
+Binary files /dev/null and b/spikes-overlay/spike8.o differ
+diff --git a/src/runtime/heap.c b/src/runtime/heap.c
+index 0c23990..e9408db 100644
+--- a/src/runtime/heap.c
++++ b/src/runtime/heap.c
+@@ -57,7 +57,7 @@ static uint64_t *reserve_heap(size_t min_words, size_t *words)
+ #else
+         void *p = mmap(NULL, HEAP_BYTES(*words), PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
+         if (p != MAP_FAILED) {
+-#ifdef MADV_HUGEPAGE
++#if defined(MADV_HUGEPAGE) && !defined(SPIKE_NO_THP)
+             /* Touching fresh small pages costs about as much as allocating
+                on them. Without this, Linux may not give huge pages at all. */
+             madvise(p, HEAP_BYTES(*words), MADV_HUGEPAGE);
+diff --git a/src/runtime/jit.c b/src/runtime/jit.c
+index 8f848f1..bf780d4 100644
+--- a/src/runtime/jit.c
++++ b/src/runtime/jit.c
+@@ -24,6 +24,18 @@
+ /* The heap pointer, vm->hp, while compiled code runs: call_c writes it back
+    before calling C, which may allocate or collect, and loads it after. */
+ #define HP SLJIT_S3, 0
++typedef struct {
++    const uint8_t *code; size_t len; uint64_t base;
++    const uint32_t *words; size_t nwords; const size_t *cuts; size_t first_cut;
++    uint32_t frame, arity, nconst; const uint64_t *const *cells;
++    uint64_t arity_stub, unwind, h_alloc;
++    uint32_t hp_off, hlimit_off, fp_off, top_off;
++    uint32_t p_consp, p_eq, p_cons, p_hd, p_tl;
++    const char *name;
++} SpikeFn;
++const char *spike_check_fn(const SpikeFn *f);
++int spike_in_domain(const uint32_t *w, size_t n, uint32_t p_consp, uint32_t p_eq, uint32_t p_cons, uint32_t p_hd, uint32_t p_tl);
++void spike_note(const char *name, const char *why, int in_domain);
+ #define NONE UINT32_MAX
+ /* The registers of code written by hand. Three float registers are for one instruction's work;
+    assign_places gives the next ones, and the integer registers this leaves, to what is used most,
+@@ -1959,6 +1971,9 @@ static void emit_sqrt(struct sljit_compiler *c, sljit_s32 d, sljit_s32 s)
+     sljit_u8 sqrtsd[] = {0xF2, (sljit_u8)(0x40 | (rd >> 3) << 2 | rs >> 3), 0x0F, 0x51,
+                          (sljit_u8)(0xC0 | (rd & 7) << 3 | (rs & 7))};
+     sljit_emit_op_custom(c, sqrtsd, sizeof sqrtsd);
++#elif (defined SLJIT_CONFIG_RISCV_64 && SLJIT_CONFIG_RISCV_64)
++    sljit_u32 fsqrt = 0x5A007053u | rs << 15 | rd << 7;
++    sljit_emit_op_custom(c, &fsqrt, sizeof fsqrt);
+ #else
+ #error "no square root for this target"
+ #endif
+@@ -3361,6 +3376,18 @@ static size_t strip_marks(uint32_t *words, size_t *n, void **out)
+     return count;
+ }
+ 
++static const char *symbol_cstr_spike(VM *vm, V name)
++{
++    (void)vm;
++    if (!is_symbol(name)) return NULL;
++    static char buf[128];
++    V str = ptr(name)[SYM_NAME];
++    size_t n = string_length(str) < 127 ? string_length(str) : 127;
++    memcpy(buf, string_bytes(str), n);
++    buf[n] = 0;
++    return buf;
++}
++
+ static void *compile_code(VM *vm, V code)
+ {
+     uint64_t *co = ptr(code);
+@@ -3462,8 +3489,13 @@ static void *compile_code(VM *vm, V code)
+     e.cached = e.entry = e.arity && !raw_loop(words, nwords) && read_soon(&e, 2, false) ? 2 : NONE;
+     bool falls = true;
+     size_t mark = 0;
++    /* Spike 8: mark each instruction's first byte, for the checker. */
++    struct sljit_label **spike_cuts = calloc(nwords + 1, sizeof *spike_cuts);
++    struct sljit_label *spike_first = sljit_emit_label(c);
+     for (size_t i = 0; i < nwords; i += insn_length(words + i)) {
+         const uint32_t *p = words + i;
++        if (spike_cuts)
++            spike_cuts[i] = sljit_emit_label(c);
+         uint32_t pre = e.cached;
+         size_t first_slow = e.nslow;
+         while (e.ninl && e.inl_end[e.ninl - 1] <= i) { /* past the end of an inlined body */
+@@ -3688,6 +3720,8 @@ static void *compile_code(VM *vm, V code)
+         }
+         e.cached = e.post;
+     }
++    if (spike_cuts)
++        spike_cuts[nwords] = sljit_emit_label(c);
+     e.cached = NONE; /* slow paths read operands from their slots */
+     emit_slow_paths(&e);
+     for (size_t i = 0; i < e.nfixups; i++) {
+@@ -3701,6 +3735,33 @@ static void *compile_code(VM *vm, V code)
+         fprintf(stderr, "shen-jit: SLJIT error %d\n", sljit_get_compiler_error(c));
+     else if ((generated = sljit_generate_code(c, 0, NULL))) {
+         native = (void *)sljit_get_label_addr(entry);
++        {
++            int dom = spike_in_domain(words, nwords, P_CONSP, P_EQ, P_CONS, P_HD, P_TL) && !e.homes && !e.loops &&
++                      !all && !e.nmemory && e.frame < 64;
++            const char *why = NULL;
++            if (dom && spike_cuts) {
++                size_t *cuts = malloc((nwords + 1) * sizeof *cuts);
++                const uint64_t **cells = malloc((e.nconst + 1) * sizeof *cells);
++                for (uint32_t k = 0; k < e.nconst; k++)
++                    cells[k] = (const uint64_t *)ra_at(&vm->consts, e.cbase + k);
++                uintptr_t b = (uintptr_t)native;
++                for (size_t k = 0; k <= nwords; k++)
++                    cuts[k] = spike_cuts[k] ? (size_t)(sljit_get_label_addr(spike_cuts[k]) - b) : SIZE_MAX;
++                SpikeFn f = {.code = (const uint8_t *)native, .len = ((const size_t *)native)[-2] - 2 * sizeof(size_t), /* the arena block (spikes-overlay/arena.c) */
++                             .base = b, .words = words, .nwords = nwords, .cuts = cuts,
++                             .first_cut = (size_t)(sljit_get_label_addr(spike_first) - b),
++                             .frame = (uint32_t)e.frame, .arity = e.arity, .nconst = (uint32_t)e.nconst, .cells = cells,
++                             .arity_stub = (uint64_t)(uintptr_t)vm->jit->arity, .unwind = (uint64_t)(uintptr_t)vm->jit->unwind,
++                             .h_alloc = (uint64_t)(uintptr_t)h_alloc,
++                             .hp_off = offsetof(VM, hp), .hlimit_off = offsetof(VM, hlimit), .fp_off = offsetof(VM, fp),
++                             .top_off = offsetof(VM, top), .p_consp = P_CONSP, .p_eq = P_EQ, .p_cons = P_CONS,
++                             .p_hd = P_HD, .p_tl = P_TL, .name = symbol_cstr_spike(vm, co[CODE_NAME])};
++                why = spike_check_fn(&f);
++                free(cuts);
++                free(cells);
++            }
++            spike_note(symbol_cstr_spike(vm, co[CODE_NAME]), why, dom);
++        }
+         vm->jit->ncompiled++;
+         /* The entry starts the code, so a collection can free it once the
+            code object is dead. */
