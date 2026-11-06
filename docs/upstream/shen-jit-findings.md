@@ -68,6 +68,13 @@ Output, exit status 0:
 
 Reproduced on the `shen-jit-0.3-linux-arm64-static` release (hash checked against `SHA256SUMS`), with the same output and exit status 0. `fputc` and `fclose` were still unchecked at upstream `cb442cf` when filed, read from source. The filed text is in the issue.
 
+### Upstream response
+
+On #12, tizoc said the behavior isn't intentional and is worth fixing. They also said Shen's default I/O
+functions are deliberately under-specified for portability, and that they plan to add fuller `io` and `fs`
+modules soon to cover this ground. So don't spend proof effort on the default stream primitives beyond what
+the claim needs, and expect the I/O surface to change.
+
 ## Smaller prose points
 
 Doc-only, no behavior at stake. Not worth separate issues: see the `Findings against the source` section of
