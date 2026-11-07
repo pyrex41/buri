@@ -20,7 +20,7 @@ got=$(sha256sum "$bin" | cut -d' ' -f1)
 python3 "$root/tests/shen-jit/check_tables.py" "$root" "$src" || exit 4
 eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
 mkdir -p "$out"; cd "$out"
-FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile Audit_Jit"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerStage0 Audit_Jit"
 for f in $FILES; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
   d=$(diff "$root/rocq/$f.v" "$f.v" || true)   # diff exits 1 when the files differ
@@ -35,6 +35,23 @@ closed=$(grep -c '^Closed under the global context$' Audit_Jit.log || true)
 [ "$closed" = "$expected" ] || { cat Audit_Jit.log; echo "AUDIT_MISMATCH $closed of $expected"; exit 7; }
 rocqchk -silent -Q . Buri $(for f in $FILES; do echo "Buri.$f"; done) > chk.log 2>&1 || { tail -5 chk.log; echo "ROCQCHK_FAILED"; exit 8; }
 echo "rocq-9: ${closed} audited statements closed, rocqchk passed"
+# Stage 0 translation validation (E2E-38): each definition's form and code object are decoded in
+# Rocq and JitLowerCheck decides them. The per-file counts must equal tests/shen-jit/stage0-accepted.txt,
+# so a change in either direction fails. Acceptance is per definition; rejection proves nothing.
+if [ -z "${SKIP_STAGE0:-}" ]; then
+  s0="$out/s0"; mkdir -p "$s0"; got="$s0/counts.txt"; : > "$got"
+  for f in $(cd "$src/build/stage0" && ls *.forms | sed 's/\.forms$//'); do
+    id=$(echo "$f" | tr - _)
+    python3 "$root/tests/shen-jit/stage0_to_rocq.py" "$src/build/stage0" "$f" "$s0/S0_$id.v" || { echo "STAGE0_READ_FAILED $f"; exit 11; }
+    sed -i 's/^From Coq Require/From Stdlib Require/' "$s0/S0_$id.v"
+    (cd "$s0" && rocq compile -Q "$out" Buri "S0_$id.v" > "S0_$id.log" 2>&1) || { tail -5 "$s0/S0_$id.log"; echo "STAGE0_ROCQ_FAILED $f"; exit 11; }
+    c=$(tr '\n' ' ' < "$s0/S0_$id.log" | grep -oE "result_$id = *\([0-9]+, [0-9]+, [0-9]+" | sed 's/.*(//; s/,//g')
+    [ -n "$c" ] || { echo "STAGE0_NO_RESULT $f"; exit 11; }
+    echo "$f $c" >> "$got"
+  done
+  diff "$root/tests/shen-jit/stage0-accepted.txt" "$got" > "$s0/diff.txt" || { cat "$s0/diff.txt"; echo "STAGE0_CHANGED"; exit 12; }
+  echo "stage0: $(awk '{a+=$2; r+=$3; u+=$4} END {print a " accepted, " r " rejected, " u " unreadable of " a+r+u " definitions"}' "$got"), as recorded"
+else echo "stage0: NOT RUN (SKIP_STAGE0 set)"; fi
 if [ -n "${SKIP_DIFF:-}" ]; then echo "differential: NOT RUN (SKIP_DIFF set)"; exit 0; fi
 d="$out/d"; mkdir -p "$d"; cd "$d"
 cat "$src/tests/kl/ops.kl" "$root/tests/shen-jit/ops-calls.kl" > ops-all.kl

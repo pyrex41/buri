@@ -4646,22 +4646,51 @@
    "scope": "universal",
    "owner": "E2E-38",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "KLambda to bytecode",
-   "identity": "",
+   "identity": "rocq/JitLowerThm.v",
    "statement": "Bytecode produced by the actual lowerer preserves the KLambda semantics under the Shen/JIT profile.",
-   "premises": [],
+   "premises": [
+    "the simulation relation's FunRel: every function the source store defines is installed as a closure of accepted code (OB-JIT-LOWER-FUNREL)",
+    "no handler is installed in the bytecode machine while related code runs (Com)",
+    "KLPort.step_r_resource lets the source raise a catchable stack or heap error at any running state (OB-JIT-RESOURCES)"
+   ],
    "depends_on": [
     "OB-JIT-BYTECODE-SEMANTICS",
     "OB-JIT-DEV-FIXNUM",
     "OB-JIT-DEV-ARITY"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitLowerThm.JitLowerThm.preservation",
+     "establishes": "model-proof",
+     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end with a related value or an error both raise. Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, named calls and named tail calls; no closures, handlers, =, dynamic application, globals, defun or eval-kl."
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitLowerThm.JitLowerThm.call_preservation",
+     "establishes": "model-proof",
+     "note": "the same, started from a call of an accepted function with related arguments."
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
+     "establishes": "model-proof",
+     "note": "code JitLowerCheck accepts is related to its definition, so the theorems above apply to it."
+    }
+   ],
    "completion_evidence": "Universal theorem over a source-linked lowerer model.",
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: partial. A preservation theorem for a fragment of accepted code, and a checker proved sound for it. Not a theorem about lower.shen for every input.",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-STAGE0",
@@ -4669,18 +4698,33 @@
    "scope": "instance",
    "owner": "E2E-38",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Stage 0 files",
    "identity": "",
    "statement": "The exact stage 0 files are correct lowerings of kernel KLambda, so that no host is trusted.",
-   "premises": [],
+   "premises": [
+    "the tokenizer tests/shen-jit/stage0_to_rocq.py is trusted (OB-JIT-LOWER-READER)"
+   ],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
+     "establishes": "artifact-correspondence",
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 59 of 941 definitions accepted at b4ccf2d (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 882 rejected are unvalidated, not refuted."
+    }
+   ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: partial, 59 of 941 definitions accepted.",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-EMITTER",
@@ -5711,6 +5755,141 @@
     "AGENTS.md"
    ],
    "history": []
+  },
+  {
+   "id": "OB-JIT-LOWER-READER",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "assumed",
+   "boundary": "Stage 0 text to Rocq trees",
+   "identity": "tests/shen-jit/stage0_to_rocq.py",
+   "statement": "The tokenizer turns each stage 0 .forms and .sbc file into the generic trees of JitLowerStage0.v exactly, including real literals decoded to IEEE-754 bits by Python's struct.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A Rocq reader of the stage 0 syntax over the files' bytes, as the encoder lane does for its capture.",
+   "sources": [
+    "tests/shen-jit/stage0_to_rocq.py"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: assumed.",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-LOWER-FRAGMENT",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to bytecode",
+   "identity": "rocq/JitLowerRel.v",
+   "statement": "The lowering relation and simulation cover the rest of KLambda and the bytecode: closures (lambda, freeze, capture), trap-error and handlers, =, dynamic application, set and value, the remaining primitives, defun and sealing, and eval-kl.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-LOWERING"
+   ],
+   "evidence": [],
+   "completion_evidence": "The constructs added to JitLowerRel.Comp with their simulation cases proved.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: open. On stage 0, = appears in 441 of 941 definitions and dynamic application in 398 (tests/shen-jit/stage0_census.py, a count, not proof).",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-LOWER-OPTIMIZATIONS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to bytecode",
+   "identity": "src/lowerer/lower.shen",
+   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-LOWER-FRAGMENT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Relation rules for each rewrite, with their simulation cases.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: open. 117 stage 0 definitions use only admitted constructs and are still rejected, which bounds what these rewrites cost the checker today.",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-LOWER-FUNREL",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "Image to source store",
+   "identity": "rocq/JitLowerStep.v",
+   "statement": "In the running image, every function the source store defines is installed as a closure of code related to its definition, every name it does not define has no closure, and primitive names are fixed, as JitLowerStep.FunRel requires.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-IMAGE",
+    "OB-JIT-STAGE0"
+   ],
+   "evidence": [],
+   "completion_evidence": "Derived for the initialised image from the stage 0 validation and the image obligation.",
+   "sources": [
+    "rocq/JitLowerStep.v"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: open.",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-LOWER-GENERAL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "Lowerer for every input",
+   "identity": "src/lowerer/lower.shen",
+   "statement": "For every definition lower.shen accepts at runtime (eval-kl), its output is related to the input, so no per-definition check is needed. Needs a source-linked model of lower.shen.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-LOWER-FRAGMENT",
+    "OB-JIT-LOWER-OPTIMIZATIONS"
+   ],
+   "evidence": [],
+   "completion_evidence": "A universal theorem over a source-linked lowerer model, or a proved checker run on every runtime lowering.",
+   "sources": [
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: open.",
+     "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    }
+   ]
   }
  ],
  "legacy_inventory_map": [

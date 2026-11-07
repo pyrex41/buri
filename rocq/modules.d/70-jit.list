@@ -3,3 +3,11 @@ JitBytecode
 JitMeta
 KLPort
 JitProfile
+JitLowerRel
+JitLowerKont
+JitLowerStable
+JitLowerPrim
+JitLowerStep
+JitLowerThm
+JitLowerCheck
+JitLowerStage0

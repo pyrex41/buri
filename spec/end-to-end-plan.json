@@ -1493,13 +1493,23 @@
       "id": "E2E-38",
       "title": "Prove KLambda to bytecode preservation for the actual Shen/JIT lowerer.",
       "lane": "shen-jit",
-      "status": "planned",
+      "status": "in-progress",
       "mandatory_for_closed_deployment": false,
       "depends_on": [
         "E2E-37",
         "E2E-06"
       ],
-      "evidence": [],
+      "evidence": [
+        "rocq/JitLowerRel.v",
+        "rocq/JitLowerKont.v",
+        "rocq/JitLowerStable.v",
+        "rocq/JitLowerPrim.v",
+        "rocq/JitLowerStep.v",
+        "rocq/JitLowerThm.v",
+        "rocq/JitLowerCheck.v",
+        "rocq/JitLowerStage0.v",
+        "tests/shen-jit/stage0-accepted.txt"
+      ],
       "acceptance": "a universally quantified preservation theorem for a source-linked model of src/lowerer/lower.shen, plus validation of the exact stage 0 files against kernel KLambda.",
       "details": "docs/SHEN-JIT.md"
     },

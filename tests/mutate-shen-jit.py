@@ -7,6 +7,10 @@ ShenJitNoOverflow: no integer range in jit_rules. jit_overflow_raises must fail.
 ShenJitRoundedCompare: comparison through a double, as before 0.3. jit_compare_exact must fail.
 ShenJitBigChars: n->string up to 256. jit_byte_strings must fail.
 ShenJitNoSealing: defun ignores the sealed set. jit_defun_sealed_refused must fail.
+ShenJitLowerWrongPrim: + related to the bytecode's -. p_add must fail.
+ShenJitLowerCheckMove: the checker accepts a move from any slot. chk_sound must fail.
+ShenJitLowerCheckLabel: the checker skips the else label of an if. chk_sound must fail.
+ShenJitLowerCheckConst: the checker accepts any integer constant. vrb_sound must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -37,4 +41,15 @@ mutate('ShenJitRoundedCompare', 'rocq/JitProfile.v',
 mutate('ShenJitBigChars', 'rocq/JitProfile.v', 'Z.leb z 255', 'Z.leb z 256')
 mutate('ShenJitNoSealing', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))', '(fun _ f => negb (is_fixed_name f))')
+mutate('ShenJitLowerWrongPrim', 'rocq/JitLowerPrim.v',
+       "Lemma p_add : forall a b a' b', VR a a' -> VR b b' -> PR sealed E pt m d PAdd B.PAdd [a; b] [a'; b'] s.",
+       "Lemma p_add : forall a b a' b', VR a a' -> VR b b' -> PR sealed E pt m d PAdd B.PSub [a; b] [a'; b'] s.")
+mutate('ShenJitLowerCheckMove', 'rocq/JitLowerCheck.v',
+       "| B.IMove d' s' :: r' => if N.eqb d d' && N.eqb s s' then Some r' else None",
+       "| B.IMove d' s' :: r' => if N.eqb d d' then Some r' else None")
+mutate('ShenJitLowerCheckLabel', 'rocq/JitLowerCheck.v',
+       "       | Some (B.ILabel l' :: r3) => if N.eqb l l' && lbl_ok l r3 then chk n g top b dst r3 else None",
+       "       | Some (B.ILabel l' :: r3) => if N.eqb l l' then chk n g top b dst r3 else None")
+mutate('ShenJitLowerCheckConst', 'rocq/JitLowerCheck.v',
+       " | VNum (NInt z), B.VFix y => Z.eqb z y", " | VNum (NInt z), B.VFix y => true")
 print(' '.join(names))

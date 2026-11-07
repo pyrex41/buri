@@ -50,7 +50,7 @@ implementations, plus a formal model of what Shen means.
 |---|---|---|
 | Shen-Scheme, on Chez Scheme | Real compiler output for 12 arithmetic forms; one real compiler pass, for the programs it admits | The whole compiler, its primitives, Chez itself |
 | Shen-CL, on SBCL | A restricted result about how it compiles boolean tests | Almost everything |
-| [Shen/JIT](https://github.com/tizoc/shen-jit) 0.3, a small native JIT | A formal model of its bytecode, compared with the real binary on 732 cases; small pieces of the real RISC-V binary proved in a formal Linux model | The proof from Shen to bytecode is in progress; the code generator, runtime and collector |
+| [Shen/JIT](https://github.com/tizoc/shen-jit) 0.3, a small native JIT | A formal model of its bytecode, compared with the real binary on 732 cases; small pieces of the real RISC-V binary proved in a formal Linux model; a proof that compilation to bytecode preserves meaning, for a first fragment of KLambda | The rest of the KLambda-to-bytecode proof (closures, handlers, the compiler's rewrites); the code generator, runtime and collector |
 
 **Shen/JIT is now the lead track.** It is far smaller than Chez Scheme or SBCL, which makes a proof about
 its exact binary look reachable. Its proofs use the same formal model of a RISC-V Linux process that the
@@ -61,27 +61,28 @@ remaining cost and say where it is still unknown.
 
 ### The ledgers
 
-As of commit `7b0eaaa` (6 November 2026):
+As of the Phase 2 commit (6 November 2026):
 
 | Ledger | Status |
 |---|---|
-| [Work packages](spec/end-to-end-plan.json) | 0 of 41 done: 17 in progress, 24 planned |
+| [Work packages](spec/end-to-end-plan.json) | 0 of 41 done: 18 in progress, 23 planned |
 | [Six-stage plan](spec/six-stages.json) | 0 of 6 done: all partial |
-| [Obligations](spec/obligations.json) | 194 total: 18 discharged, 45 partial, 93 open, 18 assumed, 11 refuted, 5 superseded, 4 foundation |
+| [Obligations](spec/obligations.json) | 199 total: 18 discharged, 47 partial, 95 open, 19 assumed, 11 refuted, 5 superseded, 4 foundation |
 | [Semantics targets](spec/release-charter.json) | 27 total: 7 partial, 20 planned |
 | [Release pins](spec/release-charter.json) | 20 total: 11 pinned, 2 identity-only, 7 unpinned |
 
 ### The last full check
 
-`make report` passed on 6 November 2026, on the tree committed as `7b0eaaa`, in a Linux x86-64 container.
+`make report` passed on 6 November 2026 in a Linux x86-64 container, on the Phase 2 tree (`4ff9c37`), which differs
+from the Phase 2 commit only in this README and one note on upstream issues.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
 | Gate | Result |
 |---|---|
-| Rocq audit | 995 audited theorems, replayed with `coqchk` |
-| Proof mutations | 160 deliberately broken variants, all rejected |
-| Shen test suites | 1,018 checks across 26 suites |
+| Rocq audit | 1,002 audited theorems, replayed with `coqchk` |
+| Proof mutations | 164 deliberately broken variants, all rejected |
+| Shen test suites | 1,126 checks across 27 suites |
 | Shen-Scheme comparisons | 108 cases (tests, not proof) |
 | Orchestration checks | 27 |
 

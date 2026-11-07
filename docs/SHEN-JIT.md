@@ -198,6 +198,100 @@ Rechecked at 0.3. Reproductions and a draft issue are in
 the first run. Its first disagreements were in harness setup and an unfinished printer, not in instruction
 semantics.
 
+## Phase 2: KLambda to bytecode (in progress)
+
+Status 6 November 2026, at 0.3 (`b4ccf2d`). **Nothing here proves that `lower.shen` is correct.** There is a
+preservation theorem for code a stated relation accepts, a checker proved to decide that relation, and the
+checker's verdict on every stage 0 definition.
+
+**Route.** Translation validation first, as Búri does for captured compiler output: a relation between a
+KLambda definition and its code, preservation proved once over the relation, and a Rocq checker run on real
+output. This gave a first theorem within the first session. It cannot cover runtime `eval-kl`, which lowers
+definitions that don't exist yet, so the general proof over a source-linked model of `lower.shen`
+(`OB-JIT-LOWER-GENERAL`) is still needed. Two ways are open: prove the lowerer, or run this checker on every
+runtime lowering and prove the checker's binary later, as the emitter spike chose. Not decided.
+
+| File | Contents |
+|---|---|
+| `rocq/JitLowerRel.v` | `Comp` and companions: code that is a lowering of an expression, following `lower.shen`'s emission |
+| `rocq/JitLowerKont.v`, `JitLowerStable.v` | The continuation relation, and that writes above the live slots leave it intact |
+| `rocq/JitLowerPrim.v` | `prim_agree`: the admitted primitives agree on related arguments, or both raise |
+| `rocq/JitLowerStep.v` | `sim`: one step of the simulation, with stuttering bounded by a measure |
+| `rocq/JitLowerThm.v` | `preservation`, `related_progress`, `call_preservation` |
+| `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
+| `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
+
+**The theorem.** `preservation` says: for every store, configuration and machine in the simulation relation, and
+every n, either the bytecode takes at least n steps while the source keeps a related configuration, or both end
+together, with related values or an error both raise. `call_preservation` starts it from a call of an accepted
+function with related arguments. The source is `KLPort.step_r (jit_rules sealed) jit_profile`, the target
+`JitBytecode.next`, for every environment `E` and primitive table. `Print Assumptions` is closed for all of them.
+
+**What the relation admits:** integer, real, string, symbol, boolean and nil literals; variables in slots; `let`,
+including sharing a slot; `if`, `cond`, `and` and `or`, as values and as tests; `type`; the primitives `+ - *`,
+the four comparisons, `cons hd tl cons? number? string?`; named calls and named tail calls, with
+`lower.shen`'s in-place argument moves. **Not admitted:** closures, captured variables, `trap-error`, `=`,
+dynamic application, `set` and `value`, the other primitives, `do`, `thaw`, `defun` and `eval-kl`, and every
+rewrite listed under the surprises above.
+
+**Premises, each a ledger entry:**
+
+- `FunRel` in `Com`: every function the source store defines is an installed closure of accepted code, and
+  primitive names are fixed (`OB-JIT-LOWER-FUNREL`, which depends on the image).
+- No handler is installed while related code runs, since the fragment has no `trap-error`.
+- The source may raise a catchable stack or heap error at any running state (`KLPort.step_r_resource`,
+  `OB-JIT-RESOURCES`). The bytecode's `out of memory` and `stack overflow` are matched through it, so the
+  theorem says nothing about when those happen.
+- `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
+
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **59 of 941 definitions
+accepted**, 882 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). Each accepted definition is a
+lowering of its kernel KLambda in the relation's sense; a rejected one is unvalidated, not wrong. A census of the
+forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the rest go:
+
+| Construct | Definitions using it | Only blocker |
+|---|---|---|
+| `=` | 441 | 18 |
+| Dynamic application | 398 | 18 |
+| Port primitives (`shen-jit.*`) | 167 | 35 |
+| `simple-error` | 143 | 5 |
+| `lambda` | 124 | 23 |
+| `do` | 122 | 4 |
+| `value` | 120 | 35 |
+| None of the constructs counted | 176 | |
+
+Of the 176 using none of them, 117 are still rejected: the rewrites under the surprises above (sharing,
+folding, inlining, goto labels) are the likely cause, not yet confirmed per definition.
+
+**Measures.** Lines by hand, first session: about 70 minutes to the first theorem, about 2.5 hours in all, including
+compile waits. Each Rocq file compiles in under 3 minutes under Rocq 9.3.
+
+| Part | Lines, as written | Covers |
+|---|---|---|
+| Relation (`JitLowerRel.v`) | 169 | the fragment above |
+| Continuations and stability (`JitLowerKont.v`, `JitLowerStable.v`) | 269 | |
+| Primitives (`JitLowerPrim.v`) | 176 | 13 primitives |
+| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313 | every case of the fragment |
+| Checker and soundness (`JitLowerCheck.v`) | 428 | |
+| Stage 0 decoding and tokenizer | 133 | |
+
+Calls and tail calls (frames, windows, argument moves, stack growth, arity errors) took about half the step proof.
+Projection, from these numbers only: each further construct family costs a relation rule, a simulation case and a
+checker case, roughly 100 to 400 lines by what each case here took (calls and tail calls together took about 600); closures and handlers will be at the high end,
+since they change the continuation relation, and the rewrites each need their own argument. That is perhaps
+3,000 to 8,000 more lines for the instance route across the whole kernel. The general proof over `lower.shen`
+was not attempted and is not estimated here.
+
+**Gaps found:**
+
+- The source semantics has no `do`: `do` is an ordinary call of the kernel's definition, and the lowerer compiles
+  it inline. Relating them needs the store's `do` to be the kernel's, as `OB-JIT-LOWER-OPTIMIZATIONS` lists.
+- `=` cannot be admitted as it stands: the bytecode model is stuck (`RIdentity`) on two NaNs, where the source
+  answers. Admitting it needs either a stuck outcome in the theorem or identity for reals in the model
+  (`OB-JIT-NAN-IDENTITY`).
+- No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
+  one by one.
+
 ## Differential results
 
 Tests under `qemu-riscv64` on the named binary, at the pin. Each case's code comes from the real lowerer, and

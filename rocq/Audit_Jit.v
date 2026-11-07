@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck.
 Print Assumptions JitMeta.JitMeta.step_deterministic_tau.
 Print Assumptions JitMeta.JitMeta.step_deterministic_io.
 Print Assumptions JitMeta.JitMeta.step_tau_excludes_io.
@@ -34,3 +34,10 @@ Print Assumptions JitProfile.JitProfile.jit_no_partial.
 Print Assumptions JitProfile.JitProfile.jit_resources_catchable.
 Print Assumptions JitProfile.JitProfile.jit_defun_fixed_refused.
 Print Assumptions JitProfile.JitProfile.jit_defun_sealed_refused.
+Print Assumptions JitLowerPrim.JitLowerPrim.prim_agree.
+Print Assumptions JitLowerStep.JitLowerStep.sim.
+Print Assumptions JitLowerThm.JitLowerThm.preservation.
+Print Assumptions JitLowerThm.JitLowerThm.related_progress.
+Print Assumptions JitLowerThm.JitLowerThm.call_preservation.
+Print Assumptions JitLowerCheck.JitLowerCheck.chk_sound.
+Print Assumptions JitLowerCheck.JitLowerCheck.check_fn_sound.
