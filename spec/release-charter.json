@@ -1540,7 +1540,7 @@
    "value": "43.4, archive sha256 15e7972e6bf0cd65d37c2eba85750b8839d2dbadda41027eae0c88e5017a2756",
    "source": "docs/SHEN-JIT.md",
    "closure_package": "E2E-37",
-   "note": "Differs from the shared lanes' 43.1 with PR117; see OB-JIT-KERNEL-43-2."
+   "note": "Differs from the shared lanes' 43.1 with PR117, parked by decision; see OB-JIT-KERNEL-43-2."
   },
   {
    "id": "sljit",

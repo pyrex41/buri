@@ -4915,19 +4915,25 @@
    "status": "open",
    "boundary": "Kernel version",
    "identity": "",
-   "statement": "Shen/JIT is pinned to kernel 43.4 (archive sha256 15e7972e...) and Buri's shared lanes to 43.1 with PR117; results at one are not results at the other. The id keeps its 43.2 name.",
+   "statement": "Shen/JIT is pinned to kernel 43.4 (archive sha256 15e7972e6bf0cd65d37c2eba85750b8839d2dbadda41027eae0c88e5017a2756). The Shen-Scheme and Shen-CL lanes are parked on 43.1 with PR117 by decision (Reuben, 7 November 2026; see docs/KERNEL-43.4-PARKED.md). Results at one kernel are not results at the other. The id keeps its 43.2 name.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
    "completion_evidence": "One kernel pin across the lanes, or per-lane statements of which applies.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "docs/KERNEL-43.4-PARKED.md"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: the Shen/JIT pin moved from 43.2 to 43.4 with 0.4. Only the Shen/JIT lane's pins changed; the shared lanes stay on 43.1 with PR117, so the gap is wider, not closed.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    },
+    {
+     "source": "docs/KERNEL-43.4-PARKED.md",
+     "recorded": "2026-11-07: the split is 43.4 for Shen/JIT and 43.1 with PR117 for the parked shared lanes. A source comparison found no change between 43.1 with PR117 and 43.4 to any kernel definition Buri extracts or models. PR117 and the shen-sources#118 fix are both in 43.4, and 43.4's t-star.shen is byte-identical to Buri's overlay. This is an identity-and-diff argument, not a proof: no theorem relates the two kernels.",
+     "reconciliation": "Scope decision: only the Shen/JIT lane moves to 43.4; the shared lanes' move is parked because only Shen-Scheme v0.54 embeds 43.4 and it changes the proved lowering."
     }
    ]
   },
