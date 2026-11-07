@@ -61,7 +61,7 @@ remaining cost and say where it is still unknown.
 
 ### The ledgers
 
-As of the Shen/JIT v0.4 re-pin (7 November 2026):
+As of commit `1495f49` (7 November 2026):
 
 | Ledger | Status |
 |---|---|
@@ -73,8 +73,8 @@ As of the Shen/JIT v0.4 re-pin (7 November 2026):
 
 ### The last full check
 
-`make report` passed on 7 November 2026 in a Linux x86-64 container, on the tree committed as `9f3d775`
-(the Shen/JIT v0.4 re-pin).
+`make report` passed on 7 November 2026 in a Linux x86-64 container, on the tree committed as `1495f49`
+(the v0.4 cons-chain rule in the Shen/JIT lowerer proof).
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
