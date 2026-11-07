@@ -6,7 +6,8 @@ Pinned upstream source: `tizoc/shen-scheme` at
 `8d261518db17fbfec32d1b268b40ed216b925c74`.
 The toolchain uses v0.52 / Shen 43.1 and a hash-checked kernel PR #117 overlay.
 Source blob identities are in `toolchain.lock.json`. Binary/source equivalence
-has NOT been established.
+has NOT been established, and cannot be from this revision alone: `8d261518` is
+4 commits after the v0.52 tag `fa071737` (first released in v0.53).
 
 | Actual implementation area | Required contract | Current evidence |
 |---|---|---|

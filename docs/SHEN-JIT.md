@@ -18,7 +18,7 @@ Every claim is about this one build, and not about any upstream release.
 | Patch | [`ports/shen-jit/shen-jit-rv64-arena.patch`](../ports/shen-jit/shen-jit-rv64-arena.patch), built by [`build.sh`](../ports/shen-jit/build.sh): a static RWX code arena, no `MADV_HUGEPAGE`, and `fsqrt.d` for the RV64 `real-sqrt` emitter, which upstream otherwise refuses to compile. It applies to 0.4 unchanged |
 | Target | Static `ET_EXEC`, musl, RV64GC, one RWX `PT_LOAD` |
 | Binary | SHA-256 `5eb9f4336aee535b93577c436f589b65262853defc2602aee41d8cc7d6c51872`, including its image (runtime `a06f85d8...`, image `0a135cab...`). Built by `build.sh /lps/p4/sj` in a fresh `ubuntu:24.04` linux/arm64 container, with Zig 0.13.0 (`zig cc`, riscv64-linux-musl); a second fresh build gave the same bytes. The hash depends on the output directory, which `-g` records |
-| Kernel | 43.4, archive SHA-256 `15e7972e...`; Búri's shared lanes are on 43.1 with PR117 (`OB-JIT-KERNEL-43-2`) |
+| Kernel | 43.4, archive SHA-256 `15e7972e...`; Búri's shared lanes are on 43.1 with PR117 (`OB-JIT-KERNEL-43-2`; their move is [parked](KERNEL-43.4-PARKED.md)) |
 | SLJIT | `a0020dd49a21020434ff838fc308626c48cd8f05`, as vendored |
 | Process model | `theorem-labs/rocq-linux-process-semantics` `5e13f6b0f82936aa5d006438e07e265c5d9fcfc4` |
 | Prover | Rocq 9.3.0, OCaml 5.2.1 for the process model; the same `rocq/Jit*.v` sources under Coq 8.18.0 in `make prove` |

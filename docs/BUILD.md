@@ -213,10 +213,13 @@ ARM work is kept separately under `nix/arm/`.
 
 ## Open obligations (E2E-03 is not complete)
 
-1. Rebuild Shen-Scheme v0.52 and its Chez Scheme from pinned source (source
-   revision `8d261518db17fbfec32d1b268b40ed216b925c74`, which was reviewed in
-   `toolchain.lock.json`). Then explain any difference from the release
-   binary's bytes. Today the binary is an input trusted by hash.
+1. Rebuild Shen-Scheme v0.52 and its Chez Scheme from the v0.52 tag
+   (`fa071737`), then explain any difference from the release binary's bytes.
+   The reviewed revision in `toolchain.lock.json`,
+   `8d261518db17fbfec32d1b268b40ed216b925c74`, is not that source: it is 4
+   commits after the tag (first released in v0.53) and changes
+   `compiler.shen`, `primitives.scm`, `overrides.shen` and `chez-prelude.scm`.
+   That diff must also be reviewed for its effect on the proved captures. Today the binary is an input trusted by hash.
 2. Rebuild Coq 8.18.0 / OCaml 4.14.1 from source, or reproduce the Ubuntu deb
    build. Pin the runtime libc and libgmp debs from the same snapshot so that
    the two routes' runtimes match.

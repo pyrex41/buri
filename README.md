@@ -61,27 +61,27 @@ remaining cost and say where it is still unknown.
 
 ### The ledgers
 
-As of the Phase 2 commit (6 November 2026):
+As of the Shen/JIT v0.4 re-pin (7 November 2026):
 
 | Ledger | Status |
 |---|---|
 | [Work packages](spec/end-to-end-plan.json) | 0 of 41 done: 18 in progress, 23 planned |
 | [Six-stage plan](spec/six-stages.json) | 0 of 6 done: all partial |
-| [Obligations](spec/obligations.json) | 199 total: 18 discharged, 47 partial, 95 open, 19 assumed, 11 refuted, 5 superseded, 4 foundation |
+| [Obligations](spec/obligations.json) | 199 total: 18 discharged, 46 partial, 94 open, 19 assumed, 11 refuted, 7 superseded, 4 foundation |
 | [Semantics targets](spec/release-charter.json) | 27 total: 7 partial, 20 planned |
 | [Release pins](spec/release-charter.json) | 20 total: 11 pinned, 2 identity-only, 7 unpinned |
 
 ### The last full check
 
-`make report` passed on 6 November 2026 in a Linux x86-64 container, on the Phase 2 tree (`4ff9c37`), which differs
-from the Phase 2 commit only in this README and one note on upstream issues.
+`make report` passed on 7 November 2026 in a Linux x86-64 container, on the tree committed as `9f3d775`
+(the Shen/JIT v0.4 re-pin).
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
 | Gate | Result |
 |---|---|
-| Rocq audit | 1,002 audited theorems, replayed with `coqchk` |
-| Proof mutations | 164 deliberately broken variants, all rejected |
+| Rocq audit | 1,003 audited theorems, replayed with `coqchk` |
+| Proof mutations | 165 deliberately broken variants, all rejected |
 | Shen test suites | 1,126 checks across 27 suites |
 | Shen-Scheme comparisons | 108 cases (tests, not proof) |
 | Orchestration checks | 27 |
