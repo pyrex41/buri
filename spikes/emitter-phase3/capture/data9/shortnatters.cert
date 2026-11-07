@@ -1,0 +1,8 @@
+# Certificate for shen.<shortnatters> (untrusted: a wrong state makes check_all fail).
+# One line per bytecode instruction: C M P R K0 K1 (- for none). Written by hand from the disassembly.
+2 7 0 0 - -
+6 71 0 0 - -
+- 15 0 0 3 -
+4 31 0 0 3 -
+6 31 0 2 3 -
+5 31 0 0 3 -
