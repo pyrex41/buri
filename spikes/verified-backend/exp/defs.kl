@@ -1,0 +1,9 @@
+(defun vb.magless (V4115 V4116) (let W4117 (* V4116 2) (if (> W4117 V4115) V4116 (vb.magless V4115 W4117))))
+(defun vb.lower-size (V3) (cond ((cons? V3) (+ (vb.lower-size (hd V3)) (vb.lower-size (tl V3)))) (true 1)))
+(defun vb.abs (V4114) (if (> V4114 0) V4114 (- 0 V4114)))
+(defun vb.digit? (V2942) (and (>= V2942 48) (<= V2942 57)))
+(defun vb.reverse (V4053) (vb.reverse-help V4053 ()))
+(defun vb.reverse-help (V4058 V4059) (cond ((= () V4058) V4059) ((cons? V4058) (vb.reverse-help (tl V4058) (cons (hd V4058) V4059))) (true (simple-error "attempt to reverse a non-list
+"))))
+(defun vb.length (V4092) (vb.length-h V4092 0))
+(defun vb.length-h (V4097 V4098) (cond ((= () V4097) V4098) (true (vb.length-h (tl V4097) (+ V4098 1)))))

@@ -1,0 +1,4 @@
+(defun vb.mk (N) (if (= N 0) 1 (cons (vb.mk (- N 1)) (vb.mk (- N 1)))))
+(defun vb.mklist (N Acc) (if (= N 0) Acc (vb.mklist (- N 1) (cons N Acc))))
+(defun vb.step (N) (+ (vb.lower-size (vb.mk 10)) (+ (vb.magless 1000000000 1) (+ (vb.length (vb.reverse (vb.mklist 200 ()))) (+ (vb.abs (- 0 N)) (if (vb.digit? 50) 1 0))))))
+(defun vb.bench (N Acc) (if (= N 0) Acc (vb.bench (- N 1) (+ Acc (vb.step N)))))

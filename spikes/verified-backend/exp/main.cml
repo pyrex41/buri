@@ -1,0 +1,7 @@
+val n = case CommandLine.arguments () of
+    [s] => (case Int.fromString s of Some k => k | None => 1)
+  | _ => 1;
+val _ = (case f_vb_2ebench (KInt n) (KInt 0) of
+           KInt r => print (Int.toString r ^ "\n")
+         | _ => print "non-integer\n")
+        handle KlErr m => print ("error: " ^ m ^ "\n");

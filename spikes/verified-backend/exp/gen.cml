@@ -1,0 +1,34 @@
+
+datatype kv = KInt int | KSym string | KStr string | KBool bool | KNil | KCons kv kv;
+exception KlErr string;
+fun kl_test v = case v of KBool b => b | _ => raise KlErr "not a boolean";
+fun kl_num2 f a b = case (a, b) of (KInt x, KInt y) => f x y | _ => raise KlErr "not a number";
+fun kl_add a b = kl_num2 (fn x => fn y => KInt (x + y)) a b;
+fun kl_sub a b = kl_num2 (fn x => fn y => KInt (x - y)) a b;
+fun kl_mul a b = kl_num2 (fn x => fn y => KInt (x * y)) a b;
+fun kl_gt a b = kl_num2 (fn x => fn y => KBool (x > y)) a b;
+fun kl_lt a b = kl_num2 (fn x => fn y => KBool (x < y)) a b;
+fun kl_ge a b = kl_num2 (fn x => fn y => KBool (x >= y)) a b;
+fun kl_le a b = kl_num2 (fn x => fn y => KBool (x <= y)) a b;
+fun kl_eq a b = case (a, b) of
+    (KInt x, KInt y) => x = y | (KSym x, KSym y) => x = y | (KStr x, KStr y) => x = y
+  | (KBool x, KBool y) => x = y | (KNil, KNil) => True
+  | (KCons a1 d1, KCons a2 d2) => kl_eq a1 a2 andalso kl_eq d1 d2
+  | _ => False;
+fun kl_eqv a b = KBool (kl_eq a b);
+fun kl_hd v = case v of KCons a _ => a | _ => raise KlErr "hd: not a pair";
+fun kl_tl v = case v of KCons _ d => d | _ => raise KlErr "tl: not a pair";
+fun kl_consp v = case v of KCons _ _ => KBool True | _ => KBool False;
+fun kl_error v = case v of KStr s => raise KlErr s | _ => raise KlErr "simple-error: not a string";
+fun f_vb_2emagless v_V4115 v_V4116 = (let val v_W4117_0 = (kl_mul v_V4116 (KInt (2))) in (if (kl_test (kl_gt v_W4117_0 v_V4115)) then v_V4116 else (f_vb_2emagless v_V4115 v_W4117_0)) end)
+and f_vb_2elower_2dsize v_V3 = (if (kl_test (kl_consp v_V3)) then (let val t2 = (let val t3 = (kl_hd v_V3) in (f_vb_2elower_2dsize t3) end) val t4 = (let val t5 = (kl_tl v_V3) in (f_vb_2elower_2dsize t5) end) in (kl_add t2 t4) end) else (if (kl_test (KBool True)) then (KInt (1)) else (raise (KlErr "cond failure"))))
+and f_vb_2eabs v_V4114 = (if (kl_test (kl_gt v_V4114 (KInt (0)))) then v_V4114 else (kl_sub (KInt (0)) v_V4114))
+and f_vb_2edigit_3f v_V2942 = (KBool ((kl_test (kl_ge v_V2942 (KInt (48)))) andalso (kl_test (kl_le v_V2942 (KInt (57))))))
+and f_vb_2ereverse v_V4053 = (f_vb_2ereverse_2dhelp v_V4053 KNil)
+and f_vb_2ereverse_2dhelp v_V4058 v_V4059 = (if (kl_test (kl_eqv KNil v_V4058)) then v_V4059 else (if (kl_test (kl_consp v_V4058)) then (let val t6 = (kl_tl v_V4058) val t7 = (let val t8 = (kl_hd v_V4058) in (KCons t8 v_V4059) end) in (f_vb_2ereverse_2dhelp t6 t7) end) else (if (kl_test (KBool True)) then (kl_error (KStr "attempt to reverse a non-list\n")) else (raise (KlErr "cond failure")))))
+and f_vb_2elength v_V4092 = (f_vb_2elength_2dh v_V4092 (KInt (0)))
+and f_vb_2elength_2dh v_V4097 v_V4098 = (if (kl_test (kl_eqv KNil v_V4097)) then v_V4098 else (if (kl_test (KBool True)) then (let val t9 = (kl_tl v_V4097) val t10 = (kl_add v_V4098 (KInt (1))) in (f_vb_2elength_2dh t9 t10) end) else (raise (KlErr "cond failure"))))
+and f_vb_2emk v_N = (if (kl_test (kl_eqv v_N (KInt (0)))) then (KInt (1)) else (let val t11 = (let val t12 = (kl_sub v_N (KInt (1))) in (f_vb_2emk t12) end) val t13 = (let val t14 = (kl_sub v_N (KInt (1))) in (f_vb_2emk t14) end) in (KCons t11 t13) end))
+and f_vb_2emklist v_N v_Acc = (if (kl_test (kl_eqv v_N (KInt (0)))) then v_Acc else (let val t15 = (kl_sub v_N (KInt (1))) val t16 = (KCons v_N v_Acc) in (f_vb_2emklist t15 t16) end))
+and f_vb_2estep v_N = (let val t17 = (let val t18 = (f_vb_2emk (KInt (10))) in (f_vb_2elower_2dsize t18) end) val t19 = (let val t20 = (f_vb_2emagless (KInt (1000000000)) (KInt (1))) val t21 = (let val t22 = (let val t23 = (let val t24 = (f_vb_2emklist (KInt (200)) KNil) in (f_vb_2ereverse t24) end) in (f_vb_2elength t23) end) val t25 = (let val t26 = (let val t27 = (kl_sub (KInt (0)) v_N) in (f_vb_2eabs t27) end) val t28 = (if (kl_test (f_vb_2edigit_3f (KInt (50)))) then (KInt (1)) else (KInt (0))) in (kl_add t26 t28) end) in (kl_add t22 t25) end) in (kl_add t20 t21) end) in (kl_add t17 t19) end)
+and f_vb_2ebench v_N v_Acc = (if (kl_test (kl_eqv v_N (KInt (0)))) then v_Acc else (let val t29 = (kl_sub v_N (KInt (1))) val t30 = (let val t31 = (f_vb_2estep v_N) in (kl_add v_Acc t31) end) in (f_vb_2ebench t29 t30) end));
