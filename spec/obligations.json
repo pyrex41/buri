@@ -4507,7 +4507,7 @@
    "status": "partial",
    "boundary": "Shen/JIT named build",
    "identity": "",
-   "statement": "Every Shen/JIT claim names one exact static RV64 build at 0.3 with a code arena, and its exclusions.",
+   "statement": "Every Shen/JIT claim names one exact static RV64 build at 0.4 with a code arena, and its exclusions.",
    "premises": [],
    "depends_on": [],
    "evidence": [
@@ -4522,7 +4522,13 @@
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: re-pinned from 0.3 (b4ccf2d, binary 2d444d92...) to 0.4 (d3348ce, binary 5eb9f433...). A second build in a fresh container gave the same bytes, but only with the same OUT directory: -g records it, so the hash depends on it.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-EXCLUSIONS-ENFORCED",
@@ -4711,7 +4717,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
      "establishes": "artifact-correspondence",
-     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 59 of 941 definitions accepted at b4ccf2d (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 882 rejected are unvalidated, not refuted."
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 53 of 950 definitions accepted at d3348ce (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 897 rejected are unvalidated, not refuted."
     }
    ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
@@ -4723,6 +4729,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: partial, 59 of 941 definitions accepted.",
      "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: partial, 53 of 950 definitions accepted at 0.4 (59 of 941 at 0.3). Eight lost to 0.4's one-slot cons chain, which JitLowerRel does not admit; two gained from kernel 43.4.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
     }
    ]
   },
@@ -4904,7 +4915,7 @@
    "status": "open",
    "boundary": "Kernel version",
    "identity": "",
-   "statement": "Shen/JIT is pinned to kernel 43.2 and Buri's shared lanes to 43.1 with PR117; results at one are not results at the other.",
+   "statement": "Shen/JIT is pinned to kernel 43.4 (archive sha256 15e7972e...) and Buri's shared lanes to 43.1 with PR117; results at one are not results at the other. The id keeps its 43.2 name.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
@@ -4912,7 +4923,13 @@
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: the Shen/JIT pin moved from 43.2 to 43.4 with 0.4. Only the Shen/JIT lane's pins changed; the shared lanes stay on 43.1 with PR117, so the gap is wider, not closed.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-FLOAT-MODEL",
@@ -5480,16 +5497,16 @@
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "partial",
+   "status": "superseded",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "A failed write-byte is not an error, since fputc's result is unchecked. KLPort's unchecked_writes states it; relating it to the binary is open, and upstream may change it (docs/upstream/shen-jit-findings.md).",
+   "statement": "A failed write-byte was not an error at 0.3, since fputc's result was unchecked, and KLPort's unchecked_writes stated it. At 0.4 write-byte and close raise on a failed write (tizoc/shen-jit#12), and jit_rules uses the agreed rule.",
    "premises": [],
    "depends_on": [],
    "evidence": [
     {
      "kind": "universal-theorem",
-     "ref": "KLPort.KLPort.unchecked_write_returns",
+     "ref": "JitProfile.JitProfile.jit_writes_checked",
      "establishes": "model-proof",
      "note": "about the semantics only, not the binary"
     }
@@ -5504,8 +5521,14 @@
     {
      "date": "2026-11-06",
      "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: tizoc/shen-jit#12 is fixed at the 0.4 pin (a0a6517). JitBytecode raises on JFailed for write-byte and close, and jit_rules sets unchecked_writes false.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
     }
-   ]
+   ],
+   "superseded_by": "OB-JIT-BYTECODE-SEMANTICS"
   },
   {
    "id": "OB-JIT-DEV-CHAR",
@@ -5572,7 +5595,7 @@
    "scope": "instance",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
+   "status": "superseded",
    "boundary": "Upstream issue",
    "identity": "",
    "statement": "define fails on a cond with no true clause (kernel shen.factor-recognisors), by default in Shen/JIT. tizoc/shen-jit#1; the kernel fix is shen-sources #119.",
@@ -5583,7 +5606,14 @@
    "sources": [
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: fixed by kernel 43.4 at the 0.4 pin: on the named binary the repro's define gives (fn f), and (f 2) raises \"condition failure\".",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    }
+   ],
+   "superseded_by": "OB-JIT-KERNEL-43-2"
   },
   {
    "id": "OB-JIT-ISSUE-2",
@@ -5805,6 +5835,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: open. On stage 0, = appears in 441 of 941 definitions and dynamic application in 398 (tests/shen-jit/stage0_census.py, a count, not proof).",
      "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: at 0.4, = appears in 447 of 950 stage 0 definitions and dynamic application in 403 (tests/shen-jit/stage0_census.py, a count, not proof).",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
     }
    ]
   },
@@ -5817,7 +5852,7 @@
    "status": "open",
    "boundary": "KLambda to bytecode",
    "identity": "src/lowerer/lower.shen",
-   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites.",
+   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, a cons chain with constant heads computed in one slot (0.4), inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites.",
    "premises": [],
    "depends_on": [
     "OB-JIT-LOWER-FRAGMENT"
@@ -5832,6 +5867,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: open. 117 stage 0 definitions use only admitted constructs and are still rejected, which bounds what these rewrites cost the checker today.",
      "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-06: at 0.4, 125 stage 0 definitions use only admitted constructs and are still rejected. The one-slot cons chain, (prim D cons (const K) D), appears in 169 of 950 definitions and is the only cause of the eight accepted at 0.3 and rejected at 0.4.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
     }
    ]
   },

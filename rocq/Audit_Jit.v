@@ -30,6 +30,7 @@ Print Assumptions KLPort.KLPort.step_r_deterministic_tau.
 Print Assumptions JitProfile.JitProfile.jit_overflow_raises.
 Print Assumptions JitProfile.JitProfile.jit_compare_exact.
 Print Assumptions JitProfile.JitProfile.jit_byte_strings.
+Print Assumptions JitProfile.JitProfile.jit_writes_checked.
 Print Assumptions JitProfile.JitProfile.jit_no_partial.
 Print Assumptions JitProfile.JitProfile.jit_resources_catchable.
 Print Assumptions JitProfile.JitProfile.jit_defun_fixed_refused.

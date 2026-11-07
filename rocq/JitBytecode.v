@@ -1,5 +1,5 @@
 (* Shen/JIT Phase 1: an executable semantics of Shen/JIT's register bytecode, at
-   pin b4ccf2d (0.3) (docs/bytecode.md, src/runtime/ops.h, loader.c, jit.c, prims.c,
+   pin d3348ce (0.4) (docs/bytecode.md, src/runtime/ops.h, loader.c, jit.c, prims.c,
    dict.c). This is a specification of the bytecode level. Nothing here relates
    it to the emitted machine code or to KLambda: those are open obligations in
    spec/obligations.json. `next` is a function, so one state has one move;
@@ -824,7 +824,7 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
  | PConsp, [v] => isb (match v with VPair _ _ => true | _ => false end)
  | PStringp, [v] => isb (match v with VStr _ => true | _ => false end)
  | PAbsvector, [v] => match v with
-   | VFix n => if Z.ltb n 0 then raise_v m "absvector: ~S is not a valid length" v else
+   | VFix n => if (Z.ltb n 0 || Z.leb 281474976710656 n)%bool then raise_v m "absvector: ~S is not a valid length" v else
      let '(l, m') := alloc m (OVec (repeat (VSym S_shen_fail_) (Z.to_nat n))) in ret_to m' d (VVec l)
    | _ => raise_v m "absvector: ~S is not a valid length" v end
  | PAbsvectorp, [v] => isb (match v with VVec _ => true | _ => false end)
@@ -901,7 +901,7 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
    | _ => raise_v m "~S is not an exit status" a end
  | PSymbolKind, [a] => ret (VFix (match a with VSym s => name_kind (text_of_sym s) | _ => 0 end))
  | PFilledVector, [a; x] => match a with
-   | VFix n => if Z.ltb n 0 then raise_v m "shen-jit.filled-vector: ~S is not a valid length" a else
+   | VFix n => if (Z.ltb n 0 || Z.leb 281474976710656 n)%bool then raise_v m "shen-jit.filled-vector: ~S is not a valid length" a else
      let '(l, m') := alloc m (OVec (repeat x (Z.to_nat n))) in ret_to m' d (VVec l)
    | _ => raise_v m "shen-jit.filled-vector: ~S is not a valid length" a end
  | PDictFind, [dv; k] => match dict_parts m dv with
@@ -1156,7 +1156,11 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
  | PClose, [s] => match s with
    | VStream l => match tget l (m_heap m) with
      | Some (OStream h dr true) =>
-       MIO (JClose h) (fun _ => set_stack (set_heap m (tset l (OStream h dr false) (m_heap m))) (swrite m d VNil))
+       (* The stream is closed either way; a failed flush or fclose raises (prims.c, 0.4). *)
+       let m1 := set_heap m (tset l (OStream h dr false) (m_heap m)) in
+       MIO (JClose h) (fun r => match r with
+         | JFailed => match raise_s m1 "close: the write failed" with MTau m' => m' | _ => m1 end
+         | _ => set_stack m1 (swrite m1 d VNil) end)
      | _ => ret VNil end
    | _ => raise_v m "close: ~S is not a stream" s end
  | PReadByte, [s] => match s with
@@ -1171,8 +1175,10 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
      | Some (OStream h SOut true) => match b with
        | VFix z =>
          if (Z.leb 0 z && Z.leb z 255)%bool
-         (* fputc's result is not checked: a failed write is not an error here. *)
-         then MIO (JWrite h (Z.to_N z)) (fun _ => set_stack m (swrite m d b))
+         (* fputc returning EOF raises (prims.c, 0.4); buffering decides when the environment says so. *)
+         then MIO (JWrite h (Z.to_N z)) (fun r => match r with
+           | JFailed => match raise_s m "write-byte: the write failed" with MTau m' => m' | _ => m end
+           | _ => set_stack m (swrite m d b) end)
          else raise_v m "write-byte: ~S is not a byte" b
        | _ => raise_v m "write-byte: ~S is not a byte" b end
      | _ => raise_v m "write-byte: ~S is not an open output stream" s end

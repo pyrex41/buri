@@ -1,6 +1,6 @@
 # Shen/JIT lane (E2E-37 to E2E-41)
 
-Status: **Phase 1 done, at the 0.3 pin. Nothing about Shen/JIT is verified.** This lane has a written
+Status: **Phase 1 done, re-pinned to 0.4. Nothing about Shen/JIT is verified.** This lane has a written
 scope, a Rocq semantic profile, and an executable bytecode semantics that has been compared
 with the binary on samples. No theorem yet relates that semantics to KLambda or to machine
 code.
@@ -14,11 +14,11 @@ Every claim is about this one build, and not about any upstream release.
 
 | Item | Pin |
 |---|---|
-| Source | `tizoc/shen-jit` `b4ccf2dff97031ee624692bb32d2addd18cacb39`, release 0.3, frozen for this phase |
-| Patch | [`ports/shen-jit/shen-jit-rv64-arena.patch`](../ports/shen-jit/shen-jit-rv64-arena.patch), built by [`build.sh`](../ports/shen-jit/build.sh): a static RWX code arena, no `MADV_HUGEPAGE`, and `fsqrt.d` for the RV64 `real-sqrt` emitter, which 0.3 otherwise refuses to compile |
+| Source | `tizoc/shen-jit` `d3348cefbb2b209992039c1c0f55751241750364`, release 0.4, frozen for this phase |
+| Patch | [`ports/shen-jit/shen-jit-rv64-arena.patch`](../ports/shen-jit/shen-jit-rv64-arena.patch), built by [`build.sh`](../ports/shen-jit/build.sh): a static RWX code arena, no `MADV_HUGEPAGE`, and `fsqrt.d` for the RV64 `real-sqrt` emitter, which upstream otherwise refuses to compile. It applies to 0.4 unchanged |
 | Target | Static `ET_EXEC`, musl, RV64GC, one RWX `PT_LOAD` |
-| Binary | SHA-256 `2d444d926e6faec26ffdfa4ab9e107be24e404773d53165f48139a8b60cf7a5a`, including its image |
-| Kernel | 43.2, archive SHA-256 `23c71508...`; Búri's shared lanes are on 43.1 with PR117 |
+| Binary | SHA-256 `5eb9f4336aee535b93577c436f589b65262853defc2602aee41d8cc7d6c51872`, including its image (runtime `a06f85d8...`, image `0a135cab...`). Built by `build.sh /lps/p4/sj` in a fresh `ubuntu:24.04` linux/arm64 container, with Zig 0.13.0 (`zig cc`, riscv64-linux-musl); a second fresh build gave the same bytes. The hash depends on the output directory, which `-g` records |
+| Kernel | 43.4, archive SHA-256 `15e7972e...`; Búri's shared lanes are on 43.1 with PR117 (`OB-JIT-KERNEL-43-2`) |
 | SLJIT | `a0020dd49a21020434ff838fc308626c48cd8f05`, as vendored |
 | Process model | `theorem-labs/rocq-linux-process-semantics` `5e13f6b0f82936aa5d006438e07e265c5d9fcfc4` |
 | Prover | Rocq 9.3.0, OCaml 5.2.1 for the process model; the same `rocq/Jit*.v` sources under Coq 8.18.0 in `make prove` |
@@ -33,6 +33,26 @@ accepts them. The lowerer doesn't emit them. The code is still linked in the bin
 **Spikes stay at the old pin.** `spikes/` and its results are evidence about `715bf60` and aren't rewritten.
 Upstream moves quickly, so this pin won't be `main` for long; proofs bind to exact bytes, and moving again is a
 deliberate step.
+
+### What changed at 0.4
+
+`b4ccf2d..d3348ce`: 23 commits, 33 files. `ops.h`, `value.h` and the primitive table are unchanged, so the opcode
+and primitive tables match as before (`check_tables.py`: 120 primitives, 76 opcodes, 55 excluded).
+
+| Upstream change | In the model |
+|---|---|
+| `write-byte` and `close` raise on a failed write (#12, `a0a6517`). Output is buffered, so `write-byte` raises once the buffer fills and `close` for the rest, closing the stream either way | Changed: both raise on `JFailed` in `JitBytecode.v`, `close` after marking the stream closed. `jit_rules` sets `unchecked_writes` to false, so `write-byte` follows the agreed rule (`jit_writes_checked`). The message is fixed text, where the binary appends `strerror` |
+| `absvector` and `shen-jit.filled-vector` refuse a length of 2^48 or more | Changed: both raise "not a valid length" from 2^48 |
+| `cons` raises "out of memory" when allocation fails | No change: a resource failure, matched through `step_r_resource` |
+| Kernel 43.4: 7 functions differ, none overridden by the port; its factoriser takes a `cond` with no true clause | Fixes `tizoc/shen-jit#1` on the named binary (`OB-JIT-ISSUE-1` superseded). Stage 0 has 950 definitions, from 941 |
+| Lowerer: a `cons` chain with constant heads is computed into one slot, `(prim D cons (const K) D)`, when D is not a parameter's slot | Not admitted by `JitLowerRel`: the only cause of the stage 0 definitions accepted at 0.3 and rejected at 0.4 (below). Used by 169 of 950 definitions |
+| Lowerer: constants are shared only when `=` as well as printed alike, and the pool is built in reverse | No effect: the checker reads constants by index and value, not by how they were shared |
+| JIT: two more kept registers, carried across labels; `SHEN_JIT_SLOW_PRIMS` | No effect at the bytecode level. They change the emitter that later phases prove |
+| Docs: `protect` listed as fixed; nested `defun` raises; a malformed primitive call raises when lowered, before any `trap-error` | `is_fixed_name` now includes `protect`, which `lower.shen` already treated as fixed at 0.3. The other two are lowerer behavior, for Phase 2 |
+| Docs: Prolog variables as immediates; hash range and the other prose findings corrected | Already modeled (`VPvar`). Findings 4 to 7 below no longer apply |
+
+A call's result slot below its window moved from `check.shen`'s list to the lowerer's own habits; `JitLowerRel` never
+relied on it.
 
 ### What changed at 0.3
 
@@ -109,7 +129,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 34 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 42 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -130,11 +150,13 @@ checks them in Rocq. This semantics is executable in Rocq and has no Shen counte
 - **`e_hash` is a parameter**, so XXH3 values and dictionary order are not determined.
 - **Slots read before being written stop** with `RBadSlot`. The real machine reads whatever is there.
   `check.shen`'s rules exclude this for lowered code, but `shen-jit.install` doesn't check it.
-- **IO** is a request and a response at this level; failure of a write is not observed, as in the code.
+- **IO** is a request and a response at this level. From 0.4 a write or close the environment answers with `JFailed`
+  raises; when buffering lets that happen is the environment's choice.
 
 ## Port options on the KLambda semantics
 
-`rocq/KLPort.v` opens the eight points where Búri's KLambda rules contradicted this port, as a `port_rules` record.
+`rocq/KLPort.v` opens the eight points where Búri's KLambda rules contradicted this port at 0.3, as a `port_rules` record.
+At 0.4 the seventh no longer applies to Shen/JIT.
 `rocq/KLSemantics.v` and `rocq/KLValue.v` are unchanged, so no existing statement changed. `next_r_agreed` and
 `step_r_agreed` prove that `agreed_rules` gives exactly `next` and `step` for every profile and configuration, which
 also stops this copy drifting from `KLSemantics.v`. `jit_rules` in `rocq/JitProfile.v` is the Shen/JIT instance.
@@ -147,7 +169,7 @@ also stops this copy drifting from `KLSemantics.v`. `jit_rules` in `rocq/JitProf
 | 4 | `arity_errors` | A named call of the wrong count raises `XArity` | |
 | 5 | `defun_allowed` | `defun` of a primitive, special form, `do`, `thaw`, or sealed name raises | The sealed set is a parameter, not yet related to the image |
 | 6 | `time_kind_ok`, and the profile's `jit_time` | `run` and `unix` only, and `RTime`'s integer is read as binary64 bits | No theorem yet |
-| 7 | `unchecked_writes` | `write-byte` returns its byte whatever the environment answers | Upstream may change this |
+| 7 | `unchecked_writes` | False from 0.4: `write-byte` follows the agreed rule (`jit_writes_checked`) | True at 0.3, when `fputc`'s result was unchecked |
 | 8 | `resource_exn` | Out of memory and stack overflow raise `XUser` with their message | `step_r_resource` lets them happen at any evaluation or return, which is broader than the binary (`OB-JIT-RESOURCES`) |
 
 **Exception identity isn't stated.** An `exn` has nowhere to hold a location, and adding a constructor breaks the
@@ -159,19 +181,19 @@ no identity there either (`OB-JIT-NAN-IDENTITY`).
 
 ## Findings against the source
 
-Rechecked at 0.3. Reproductions and a draft issue are in
-[upstream/shen-jit-findings.md](upstream/shen-jit-findings.md). **None has been filed by this work.**
+Rechecked at 0.4. Reproductions are in [upstream/shen-jit-findings.md](upstream/shen-jit-findings.md). Finding 1 was filed
+as `tizoc/shen-jit#12`; nothing else has been filed by this work. **None remains at 0.4.**
 
-1. **Unchecked writes survive.** `write-byte` ignores `fputc`'s result (`prims.c:1202`), and on `/dev/full` both it and
-   `close` report success.
-2. **NaN no longer applies.** `semantics.md` now says what the binary does.
-3. **Mixed comparison no longer applies.** Fixed upstream as `tizoc/shen-jit#2`.
-4. **Hash range remains.** `semantics.md:155` says 0 to N inclusive; `bytecode.md` and `hash` in `prims.c`
-   give 1 to N-1, and 1 when N is 1, which is N.
-5. **A missing reference remains.** `bytecode.md:104` points to a "Primitive contract" section that doesn't exist.
-6. **A family that doesn't exist remains.** `semantics.md:53` lists a Primitive object family; `value.h` has no such type.
-7. **A different message remains.** `bytecode.md:89` says `jump-if-false` raises "expected a boolean"; `h_boolean_error`
-   (`jit.c:397`) raises "~S is not a boolean". Messages aren't a compatibility requirement, so this is minor.
+1. **Unchecked writes: fixed at 0.4.** `write-byte` and `close` raise on a failed write; on `/dev/full` the named binary's
+   `close` raises "close: No space left on device".
+2. **NaN no longer applies** (since 0.3).
+3. **Mixed comparison no longer applies** (since 0.3, `tizoc/shen-jit#2`).
+4. **Hash range: fixed in the docs.** `semantics.md` now gives 1 to N-1, or 1 when N is 1, as `prims.c` does.
+5. **The missing reference: gone.** `bytecode.md` no longer points to a "Primitive contract" section.
+6. **The family that doesn't exist: gone.** `semantics.md`'s families are now those of `value.h`.
+7. **The message: fixed in the docs.** `bytecode.md` gives "X is not a boolean".
+
+No new probable upstream bug was found at 0.4.
 
 ## What Phase 2 needs from this
 
@@ -200,7 +222,7 @@ semantics.
 
 ## Phase 2: KLambda to bytecode (in progress)
 
-Status 6 November 2026, at 0.3 (`b4ccf2d`). **Nothing here proves that `lower.shen` is correct.** There is a
+Written at 0.3 (`b4ccf2d`) and rechecked at 0.4 (`d3348ce`), 6 November 2026. **Nothing here proves that `lower.shen` is correct.** There is a
 preservation theorem for code a stated relation accepts, a checker proved to decide that relation, and the
 checker's verdict on every stage 0 definition.
 
@@ -244,24 +266,30 @@ rewrite listed under the surprises above.
   theorem says nothing about when those happen.
 - `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
 
-**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **59 of 941 definitions
-accepted**, 882 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). Each accepted definition is a
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **53 of 950 definitions
+accepted** at 0.4, 897 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.3 it was 59 of 941. Eight
+accepted at 0.3 are rejected at 0.4, each because of the one-slot `cons` chain (`(prim D cons (const K) D)`), which the
+relation doesn't admit: `shen.compile-to-kl`, `shen.x.expand-dynamic.wrap-in-defun`, `shen-jit.lower.lets`,
+`shen.tuple-up`, `shen.create-skeleton`, `shen.macro-@ch`, `shen.macro-@c` and `<!>`. Two are new: kernel 43.4's
+`shen.precompiled-function?` and `shen.x.expand-dynamic.expand-initializer`. Each accepted definition is a
 lowering of its kernel KLambda in the relation's sense; a rejected one is unvalidated, not wrong. A census of the
 forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the rest go:
 
 | Construct | Definitions using it | Only blocker |
 |---|---|---|
-| `=` | 441 | 18 |
-| Dynamic application | 398 | 18 |
+| `=` | 447 | 18 |
+| Dynamic application | 403 | 18 |
 | Port primitives (`shen-jit.*`) | 167 | 35 |
 | `simple-error` | 143 | 5 |
-| `lambda` | 124 | 23 |
-| `do` | 122 | 4 |
-| `value` | 120 | 35 |
-| None of the constructs counted | 176 | |
+| `lambda` | 125 | 23 |
+| `do` | 123 | 4 |
+| `value` | 121 | 35 |
+| None of the constructs counted | 178 | |
 
-Of the 176 using none of them, 117 are still rejected: the rewrites under the surprises above (sharing,
-folding, inlining, goto labels) are the likely cause, not yet confirmed per definition.
+These are 0.4's counts. Of the 178 using none of them, 125 are still rejected (117 of 176 at 0.3): the rewrites under the
+surprises above (sharing, folding, inlining, goto labels) and, from 0.4, the one-slot `cons` chain are the likely
+causes, not yet confirmed per definition. Admitting the chain is one relation rule, one simulation case and one checker
+case: the inner `cons` is a lowering into D, and the outer reads D before writing it.
 
 **Measures.** Lines by hand, first session: about 70 minutes to the first theorem, about 2.5 hours in all, including
 compile waits. Each Rocq file compiles in under 3 minutes under Rocq 9.3.
@@ -297,12 +325,27 @@ was not attempted and is not estimated here.
 Tests under `qemu-riscv64` on the named binary, at the pin. Each case's code comes from the real lowerer, and
 Rocq computes the verdict by `vm_compute`. Agreement is sampled evidence, not proof.
 
-**732 cases, 713 agree, 19 known differences, 0 new.** Of those differences, 16 need IO responses the harness can't supply,
-2 use the excluded `save-executable`, and 1 is a harness limit: `(fn append)` reads the kernel's property vector, which is
-image state the harness doesn't load. Five forms the lowerer rejected are outside these counts, as lowering is Phase 2.
+**At 0.4: 1,344 cases, 1,238 agree, 106 known differences, 0 new or unexplained** (`tests/shen-jit/known-differences.txt`).
+By set: eval cases 1,045 (948 agree), ops 138 (all agree), contract 161 (152 agree). Of the 106 differences:
 
-Moving to 0.3 added 8 cases from upstream's tests, and every one agreed. The model changes above were made from reading the
-source before this ran, so the run is a check of them rather than where they came from.
+| Kind | Cases | Why |
+|---|---|---|
+| Excluded feature reached | 80 | the wide byte-buffer accessors, pointers, threads, FFI and `save-executable`, which the model stops on with `RExcluded` |
+| Depends on an excluded feature | 6 | three loops waiting for what an excluded thread sets (fuel), two globals only such a thread sets, and a function only FFI defines |
+| No identity in the model | 3 | `same?` on two pairs, and `=` on NaNs (`OB-JIT-NAN-IDENTITY`) |
+| IO responses | 16 | the harness has no IO oracle |
+| Image state | 1 | `(fn append)` reads the kernel's property vector, which the harness doesn't load |
+
+None is a model bug or an upstream bug. The ten eval cases upstream added at 0.4 all agree; they exercise the
+`absvector` bound of 2^48, Prolog variable offsets and the one-slot `cons` chain. Five forms the lowerer rejected
+(three eval, two contract) are outside these counts, as lowering is Phase 2.
+
+**Correction to the earlier counts.** Until this re-pin, the eval set stopped at its 439th case. The case
+`(error "save-executable: not running from an executable" (shen-jit.save-executable "x" ()))` succeeds on the named build,
+which runs from an executable: it saves one and ends the process with status 0, so no later case ran and nothing
+reported it. The 0.3 figures (732 cases, 713 agree, 19 known differences) are true of what ran, but about 600 of the
+1,039 eval forms never did, including 196 of the 206 lines upstream added at 0.3. `capture.shen` now skips that one case.
+Every form is accounted for: 1,049 `value` and `error` forms are 1,045 cases, 3 lowering errors and the one skipped.
 
 Streams and files have had no differential test. Kernel functions run from the stage 0 closure without the initialised image,
 so state-dependent kernel behavior is barely sampled. GC stress, the kernel test suite, and other inputs were not run through the model.
@@ -314,8 +357,8 @@ so state-dependent kernel behavior is barely sampled. GC stress, the kernel test
 
 ## Decisions for Reuben
 
-Decided on 6 November 2026: options added without changing the agreed rules, re-pinned once to 0.3 and frozen, and the
-bytecode semantics stays Rocq-only. Filing upstream waits on [the draft](upstream/shen-jit-findings.md).
+Decided on 6 November 2026: options added without changing the agreed rules, re-pinned to 0.3 and then to 0.4 and frozen
+again, and the bytecode semantics stays Rocq-only. `#12`, filed from [the findings](upstream/shen-jit-findings.md), is fixed at 0.4.
 
 **Lane status in the charter.** The packages are `mandatory_for_closed_deployment: false`, and the charter
 target stays closed deployment on both ports. Making this the lead track doesn't change that target.

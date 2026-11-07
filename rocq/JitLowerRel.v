@@ -1,6 +1,6 @@
 (* Shen/JIT Phase 2: what it means for bytecode to be a lowering of a KLambda expression.
    `Comp` and its companions relate a resolved expression to the instructions of one code object,
-   following the shapes of src/lowerer/lower.shen (b4ccf2d). They say nothing about how those
+   following the shapes of src/lowerer/lower.shen (d3348ce). They say nothing about how those
    instructions were produced, so a theorem over them holds for any code they accept, whatever
    lowered it. JitLowerSim.v proves preservation over them; JitLowerCheck.v decides them on
    captured output. Inlining, sharing, closures, handlers, defun and eval-kl are not here: the

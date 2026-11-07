@@ -62,7 +62,10 @@
           (do (sj.cap.say "@code" (sj.cap.ser Code 1000000))
               (sj.cap.report (sj.cap.exec Code))))))))
 \\ (value E F), (error F), (error Prefix F), a string to skip, or a bare form.
+\\ (error _ (shen-jit.save-executable S ())) is skipped too: the named build runs from an executable, so it
+\\ saves one and ends the process, and no case after it would run. save-executable is excluded from the claim.
 (define sj.cap.kl-form
+  [error _ [shen-jit.save-executable S []]] -> [] where (string? S)
   [value _ F] -> [F]
   [error F] -> [F]
   [error _ F] -> [F]

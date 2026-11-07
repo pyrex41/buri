@@ -183,4 +183,5 @@ same machine with eight points open to a port: integer range, which integers `n-
 errors in place of currying, refusing `defun`, the clock's domain, unchecked writes, and catchable resource failures.
 `next_r_agreed` and `step_r_agreed` prove that `agreed_rules` gives exactly `next` and `step` for every profile and
 configuration. The Scheme and CL lanes use `next` directly. Only the Shen/JIT lane uses `next_r`
-([SHEN-JIT](SHEN-JIT.md)), and two exceptions stay undefined under `=` there.
+([SHEN-JIT](SHEN-JIT.md)), and two exceptions stay undefined under `=` there. From Shen/JIT 0.4 it no longer sets
+unchecked writes, which stays an option.

@@ -16,7 +16,7 @@ fresh; sed -i 's/let up := if Z.ltb half rest then true/let up := if Z.ltb half 
 fresh; sed -i '/^ev 437 /d' $m/root/tests/shen-jit/known-differences.txt; expect known-list-missing 1 env JIT_OUT=/tmp/p1 python3 $m/root/tests/shen-jit/compare_known.py $m/root/tests/shen-jit/known-differences.txt ev ops ct
 fresh; echo 'ev 0 | diff-ok | invented' >> $m/root/tests/shen-jit/known-differences.txt; expect known-list-stale 1 env JIT_OUT=/tmp/p1 python3 $m/root/tests/shen-jit/compare_known.py $m/root/tests/shen-jit/known-differences.txt ev ops ct
 fresh; sed -i 's/Some (Z.compare (i \* den) (if neg then - n else n))/compare (of_Z i) b/' $m/root/rocq/JitBytecode.v; expect model-rounded-compare 6 env JIT_OUT=$m/o SKIP_DIFF=1 bash $m/root/scripts/check-shen-jit.sh
-fresh; sed -i 's/^core 2 61 0$/core 3 60 0/' $m/root/tests/shen-jit/stage0-accepted.txt; expect stage0-count-changed 12 env JIT_OUT=$m/o SKIP_DIFF=1 bash $m/root/scripts/check-shen-jit.sh
+fresh; sed -i 's/^core 1 62 0$/core 2 61 0/' $m/root/tests/shen-jit/stage0-accepted.txt; expect stage0-count-changed 12 env JIT_OUT=$m/o SKIP_DIFF=1 bash $m/root/scripts/check-shen-jit.sh
 fresh; sed -i 's/| B.IMove d. s. :: r. => if N.eqb d d. \&\& N.eqb s s. then Some r. else None/| B.IMove d0 s0 :: r0 => if N.eqb d d0 then Some r0 else None/' $m/root/rocq/JitLowerCheck.v; expect checker-unsound 6 env JIT_OUT=$m/o SKIP_DIFF=1 bash $m/root/scripts/check-shen-jit.sh
 rm -rf $m
 echo GATE_TESTS_DONE

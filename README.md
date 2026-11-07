@@ -50,7 +50,7 @@ implementations, plus a formal model of what Shen means.
 |---|---|---|
 | Shen-Scheme, on Chez Scheme | Real compiler output for 12 arithmetic forms; one real compiler pass, for the programs it admits | The whole compiler, its primitives, Chez itself |
 | Shen-CL, on SBCL | A restricted result about how it compiles boolean tests | Almost everything |
-| [Shen/JIT](https://github.com/tizoc/shen-jit) 0.3, a small native JIT | A formal model of its bytecode, compared with the real binary on 732 cases; small pieces of the real RISC-V binary proved in a formal Linux model; a proof that compilation to bytecode preserves meaning, for a first fragment of KLambda | The rest of the KLambda-to-bytecode proof (closures, handlers, the compiler's rewrites); the code generator, runtime and collector |
+| [Shen/JIT](https://github.com/tizoc/shen-jit) 0.4, a small native JIT | A formal model of its bytecode, compared with the real binary on 1,344 cases; small pieces of the real RISC-V binary proved in a formal Linux model; a proof that compilation to bytecode preserves meaning, for a first fragment of KLambda | The rest of the KLambda-to-bytecode proof (closures, handlers, the compiler's rewrites); the code generator, runtime and collector |
 
 **Shen/JIT is now the lead track.** It is far smaller than Chez Scheme or SBCL, which makes a proof about
 its exact binary look reachable. Its proofs use the same formal model of a RISC-V Linux process that the

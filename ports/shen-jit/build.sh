@@ -3,10 +3,12 @@
 # Run inside a fresh ubuntu:24.04 linux/arm64 container, with this directory readable:
 #   docker run --rm --platform linux/arm64 -v "$PWD":/ports ubuntu:24.04 bash /ports/build.sh [OUT]
 # OUT defaults to /tmp/shen-jit-rv64. The binary needs qemu-riscv64 (or RISC-V) to run.
+# The hash depends on OUT, since -g records the build directory: the named binary (toolchain.lock.json)
+# is built with OUT=/lps/p4/sj, and the same command in a fresh container gives the same bytes.
 set -euo pipefail
 SPIKE=$(cd "$(dirname "$0")" && pwd)
 OUT=${1:-/tmp/shen-jit-rv64}
-COMMIT=b4ccf2dff97031ee624692bb32d2addd18cacb39
+COMMIT=d3348cefbb2b209992039c1c0f55751241750364
 ZIG=zig-linux-aarch64-0.13.0
 ZIG_SHA256=041ac42323837eb5624068acd8b00cd5777dac4cf91179e8dad7a7e90dd0c556
 

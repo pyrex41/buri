@@ -81,11 +81,12 @@ Proof. reflexivity. Qed.
 (* --- The options --- *)
 Definition byte_ok (z : Z) : bool := (Z.leb 0 z && Z.leb z 255)%bool.
 
-(* Names defun refuses: every primitive of the table, the special forms, do and thaw (semantics.md s10). Which kernel names are sealed comes from
-   the image, so it is a parameter here; relating it to the image is OB-JIT-IMAGE. *)
+(* Names defun refuses: every primitive of the table, the special forms, do, thaw and protect (semantics.md s10,
+   lower.shen's fixed?). Which kernel names are sealed comes from the image, so it is a parameter here; relating it
+   to the image is OB-JIT-IMAGE. *)
 Definition is_fixed_name (f : name) : bool :=
  existsb (fun e => match e with (nm, _, _) => text_eqb f (of_string nm) end) JitBytecode.JitBytecode.prim_table
- || keyword f || text_eqb f (of_string "do") || text_eqb f (of_string "thaw").
+ || keyword f || text_eqb f (of_string "do") || text_eqb f (of_string "thaw") || text_eqb f (of_string "protect").
 
 Definition jit_rules (sealed : list name) : port_rules := PortRules
  (Some (JitBytecode.JitBytecode.fix_min, JitBytecode.JitBytecode.fix_max))
@@ -94,7 +95,7 @@ Definition jit_rules (sealed : list name) : port_rules := PortRules
  true
  (fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))
  (fun k => orb (text_eqb k (of_string "run")) (text_eqb k (of_string "unix")))
- true
+ false (* 0.4: write-byte and close raise on a failed write (tizoc/shen-jit#12), as the agreed rule does *)
  (fun r => match r with
   | Observation.Observation.RHeap => Some (XUser (of_string "out of memory"))
   | Observation.Observation.RStack => Some (XUser (of_string "stack overflow")) end).
@@ -117,6 +118,11 @@ Theorem jit_byte_strings : forall sealed s,
  rule_n_to_string_r (jit_rules sealed) [VNum (NInt 256)] s = dom PNToString /\
  rule_n_to_string_r (jit_rules sealed) [VNum (NInt 255)] s = ret (VStr [255%N]) s.
 Proof. intros. split; reflexivity. Qed.
+
+(* From 0.4, a failed write raises (tizoc/shen-jit#12), so write-byte follows the agreed rule. *)
+Theorem jit_writes_checked : forall sealed args s,
+ rule_write_byte_r (jit_rules sealed) args s = rule_write_byte args s.
+Proof. reflexivity. Qed.
 
 (* A named call of the wrong count raises, and a resource failure can be caught. *)
 Theorem jit_no_partial : forall sealed g args k s ps b,
@@ -176,12 +182,9 @@ Definition deviations : list deviation :=
   Dev "sealing" "defun of a sealed name raises; sealed calls bind once (s10)" In_port_rules "OB-JIT-DEV-SEALING";
   Dev "lazy-lambda-form" "lambda forms are made on first fn; a placeholder before that (s11)" Ledger_only "OB-JIT-DEV-LAZY-FORM";
   Dev "get-time" "get-time takes run and unix only, and returns reals (s12)" In_port_rules "OB-JIT-DEV-TIME";
-  Dev "write-failure" "a failed write-byte is not an error: fputc's result is unchecked (prims.c)"
-    In_port_rules "OB-JIT-DEV-WRITE";
   Dev "char-streams" "char-stream? is false; read-unit-string and write-string raise (s12)" In_bytecode "OB-JIT-DEV-CHAR";
   Dev "catchable-resources" "stack overflow and out of memory are catchable errors (s14)"
     In_port_rules "OB-JIT-DEV-RESOURCES";
-  Dev "cyclic-equality" "= on a cycle, or past its budgets, ends the process; #3's deep-term crash is fixed (s6)" Ledger_only "OB-JIT-ISSUE-3";
-  Dev "factorise-cond" "define fails on a cond with no true clause (tizoc/shen-jit#1)" Ledger_only "OB-JIT-ISSUE-1"].
+  Dev "cyclic-equality" "= on a cycle, or past its budgets, ends the process; #3's deep-term crash is fixed (s6)" Ledger_only "OB-JIT-ISSUE-3"].
 
 End JitProfile.

@@ -1,4 +1,13 @@
-# Differential differences at pin b4ccf2d: set index | kind | why. Tests, not proof.
+# Differential differences at pin d3348ce: set index | kind | why. Tests, not proof.
+ct 102 | io | needs IO responses; not compared
+ct 103 | io | needs IO responses; not compared
+ct 104 | io | needs IO responses; not compared
+ct 105 | io | needs IO responses; not compared
+ct 106 | io | needs IO responses; not compared
+ct 108 | io | needs IO responses; not compared
+ct 113 | io | needs IO responses; not compared
+ct 114 | io | needs IO responses; not compared
+ct 134 | diff-err | (fn append) reads the kernel's property vector, which is image state the harness does not load (OB-JIT-IMAGE)
 ev 118 | io | needs IO responses; the harness has no IO oracle, so not compared
 ev 119 | io | needs IO responses; not compared
 ev 120 | io | needs IO responses; not compared
@@ -9,12 +18,90 @@ ev 129 | io | needs IO responses; not compared
 ev 130 | io | needs IO responses; not compared
 ev 437 | stuck excluded | save-executable is excluded from the named build
 ev 438 | stuck excluded | save-executable is excluded from the named build
-ct 101 | io | needs IO responses; not compared
-ct 102 | io | needs IO responses; not compared
-ct 103 | io | needs IO responses; not compared
-ct 104 | io | needs IO responses; not compared
-ct 105 | io | needs IO responses; not compared
-ct 107 | io | needs IO responses; not compared
-ct 112 | io | needs IO responses; not compared
-ct 113 | io | needs IO responses; not compared
-ct 133 | diff-err | (fn append) reads the kernel's property vector, which is image state the harness does not load (OB-JIT-IMAGE)
+ev 686 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 687 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 688 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 689 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 691 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 692 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 693 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 694 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 695 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 696 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 697 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 698 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 699 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 700 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 701 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 702 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 703 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 704 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 705 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 795 | stuck identity | same? on two pairs: the model gives pairs no identity (docs/SHEN-JIT.md, Semantics limits)
+ev 815 | stuck excluded | threads are excluded from the claim
+ev 816 | fuel | waits for a flag an excluded shen-jit.thread sets (ev 815), so the model loops until its fuel runs out
+ev 821 | stuck excluded | threads are excluded from the claim
+ev 822 | stuck excluded | threads are excluded from the claim
+ev 824 | fuel | waits for counts excluded threads set (ev 821, 822), so the model loops until its fuel runs out
+ev 825 | diff-err | t.a is set only by an excluded thread (ev 821), so it is unbound in the model
+ev 826 | diff-ok | t.b is set by an excluded thread (ev 822); the model keeps its earlier value, a byte buffer (ev 635)
+ev 828 | stuck excluded | threads are excluded from the claim
+ev 829 | fuel | waits for a value an excluded thread sets (ev 828), so the model loops until its fuel runs out
+ev 830 | stuck excluded | threads are excluded from the claim
+ev 833 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 834 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 835 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 836 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 837 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 839 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 840 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 841 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 842 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 843 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 844 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 845 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 846 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 847 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 848 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 849 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 850 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 851 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 852 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 853 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 854 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 855 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 856 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 857 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 862 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 863 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 864 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 865 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 927 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 928 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 929 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 931 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 932 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 933 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 934 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 935 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 936 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 937 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 938 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 939 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 940 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 941 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 942 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 943 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 944 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 945 | stuck excluded | wide byte-buffer accessors (s32 to f64!) and the real-register code using them are excluded from the claim
+ev 946 | stuck excluded | pointers (lib/ffi.shen) are excluded from the claim
+ev 947 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 948 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 949 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 950 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 952 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 954 | diff-err | p.none is defined only through excluded FFI (ev 952), so the model finds no function where the binary raises an arity error
+ev 955 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 956 | stuck excluded | FFI (shen-jit.foreign, errno) is excluded from the claim
+ev 1014 | stuck identity | = on two NaNs: a real has no identity in the model (OB-JIT-NAN-IDENTITY)
+ev 1015 | stuck identity | = on one NaN object: a real has no identity in the model (OB-JIT-NAN-IDENTITY)

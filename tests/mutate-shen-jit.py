@@ -6,6 +6,7 @@ ShenJitClosureIdentity: closures that always compare equal. closure_identity mus
 ShenJitNoOverflow: no integer range in jit_rules. jit_overflow_raises must fail.
 ShenJitRoundedCompare: comparison through a double, as before 0.3. jit_compare_exact must fail.
 ShenJitBigChars: n->string up to 256. jit_byte_strings must fail.
+ShenJitUncheckedWrites: jit_rules ignores a failed write, as before 0.4. jit_writes_checked must fail.
 ShenJitNoSealing: defun ignores the sealed set. jit_defun_sealed_refused must fail.
 ShenJitLowerWrongPrim: + related to the bytecode's -. p_add must fail.
 ShenJitLowerCheckMove: the checker accepts a move from any slot. chk_sound must fail.
@@ -39,6 +40,8 @@ mutate('ShenJitRoundedCompare', 'rocq/JitProfile.v',
        ' | NInt x, NFloat y => jit_order p (JitBytecode.JitBytecode.compare_fix_real x y)',
        ' | NInt x, NFloat y => jit_order p (JitFloat.JitFloat.compare (JitFloat.JitFloat.of_Z x) y)')
 mutate('ShenJitBigChars', 'rocq/JitProfile.v', 'Z.leb z 255', 'Z.leb z 256')
+mutate('ShenJitUncheckedWrites', 'rocq/JitProfile.v',
+       ' false (* 0.4: write-byte and close raise', ' true (* 0.4: write-byte and close raise')
 mutate('ShenJitNoSealing', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))', '(fun _ f => negb (is_fixed_name f))')
 mutate('ShenJitLowerWrongPrim', 'rocq/JitLowerPrim.v',

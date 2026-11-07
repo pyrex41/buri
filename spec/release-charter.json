@@ -1519,7 +1519,7 @@
    "id": "shen-jit-source",
    "component": "Shen/JIT source",
    "status": "pinned",
-   "value": "tizoc/shen-jit@b4ccf2dff97031ee624692bb32d2addd18cacb39 (0.3) plus ports/shen-jit/shen-jit-rv64-arena.patch",
+   "value": "tizoc/shen-jit@d3348cefbb2b209992039c1c0f55751241750364 (0.4) plus ports/shen-jit/shen-jit-rv64-arena.patch",
    "source": "ports/shen-jit/build.sh",
    "closure_package": "E2E-37",
    "note": "The named build is a patched build, not an upstream release. Frozen for this phase; spikes stay at 715bf60."
@@ -1528,7 +1528,7 @@
    "id": "shen-jit-binary",
    "component": "Shen/JIT named binary",
    "status": "pinned",
-   "value": "static musl RV64GC, sha256 2d444d926e6faec26ffdfa4ab9e107be24e404773d53165f48139a8b60cf7a5a",
+   "value": "static musl RV64GC, sha256 5eb9f4336aee535b93577c436f589b65262853defc2602aee41d8cc7d6c51872",
    "source": "ports/shen-jit/build.sh",
    "closure_package": "E2E-37",
    "note": "Exclusions are not yet removed from this binary; see OB-JIT-EXCLUSIONS-ENFORCED."
@@ -1537,7 +1537,7 @@
    "id": "shen-jit-kernel",
    "component": "Shen/JIT kernel",
    "status": "pinned",
-   "value": "43.2, archive sha256 23c71508f0de24785e1f127ea4fab440081904d81c463090bc642ee840417f32",
+   "value": "43.4, archive sha256 15e7972e6bf0cd65d37c2eba85750b8839d2dbadda41027eae0c88e5017a2756",
    "source": "docs/SHEN-JIT.md",
    "closure_package": "E2E-37",
    "note": "Differs from the shared lanes' 43.1 with PR117; see OB-JIT-KERNEL-43-2."
