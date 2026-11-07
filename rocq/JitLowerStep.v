@@ -1136,6 +1136,31 @@ Proof.
      * constructor.
      * constructor.
      * exact Rk.
+ - (* a cons chain: the source takes the constant head, then runs the tail into d with the cons
+      pending; the frame binds nothing, so it is safe whatever d held *)
+   destruct (KD_of_KC _ _ _ _ _ _ _ _ Kc) as [Wd Kd].
+   eapply O_step with (c' := Cfg (Eval rho e0) (KCallArgs f [v] [] rho :: k) s) (m' := m).
+   + eapply S1; [reflexivity|]. eapply S1; [eapply lit_step; eauto|]. eapply S1'; reflexivity.
+   + right. split; [reflexivity|]. pose proof (esize_pos a). msr_dec.
+   + eapply MS_eval with (g := g) (top := top) (dst := DSlot d) (w := w); [exact Cm|rewrite Hr; eassumption|exact Me|exact Eb|exact Ab|].
+     apply KC_slot; [exact Wd|].
+     eapply KD_prim with (g := []) (top := top + d + 1) (es := []) (ops := []) (dops := [B.OConst k0])
+       (vals := [v]) (d := d) (r1 := r2) (w1 := w) (p := PCons) (q := B.PCons) (rho := rho).
+     * exact H.
+     * reflexivity.
+     * reflexivity.
+     * intros x0 s0 L0. discriminate L0.
+     * intros x0 s0 L0. discriminate L0.
+     * intros x0 s0 L0. discriminate L0.
+     * constructor.
+     * econstructor; [exact H1|exact H2|constructor].
+     * constructor; [exact I|constructor].
+     * constructor; [exact I|constructor].
+     * cbn. lia.
+     * intros q0 X; exact X.
+     * intros q0 X. apply Ab. lia.
+     * exact Wd.
+     * exact Kd.
 Qed.
 
 Lemma step_op : forall s m, Com s m -> OpStep s m.

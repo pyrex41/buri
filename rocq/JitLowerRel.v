@@ -116,6 +116,13 @@ Inductive Comp : env -> N -> expr -> dest -> list B.instr -> list B.instr -> Pro
      n + 2 <= t -> top <= t -> CompTA g 2 t args [] r (i :: r') ->
      tail_instr i 0 (B.sym_of_text f) n ->
      Comp g top (ECall f args) DRet r r'
+ (* A cons with a constant head, in place (lower.shen's value-h, from d3348ce): the tail goes to
+    d, and the cons reads it there and writes d again. lower.shen takes this only when d is not a
+    parameter slot, which check.shen asks of it; the simulation doesn't need that. *)
+ | C_chain g top f a e v v' k d r r' : prim_of_name f = Some PCons ->
+     lit_val a = Some v -> konst k = Some v' -> VR v v' ->
+     Comp g top e (DSlot d) r (B.IPrim d B.PCons [B.OConst k; B.OSlot d] :: r') ->
+     Comp g top (ECall f [a; e]) (DSlot d) r r'
 
 (* Falls through when the value is true, and goes to l when it is false. *)
 with CompT : env -> N -> expr -> N -> list B.instr -> list B.instr -> Prop :=

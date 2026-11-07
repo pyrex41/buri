@@ -127,6 +127,45 @@ Variable c : B.code.
 Definition lbl_ok (l : N) (r : list B.instr) : bool := match lbl c l with
  | Some r' => Nat.eqb (List.length r') (List.length r) | None => false end.
 
+(* lower.shen's one-slot cons chain (from d3348ce): a cons whose head is a literal and whose tail
+   is a cons, into a slot d that is not a parameter's. *)
+Definition chain_head (d : N) (p : prim) (args : list expr) : option (value * expr) :=
+ if N.leb (2 + B.code_arity c) d then match p, args with
+   | PCons, [a; ECall f2 a2] => match lit_val a, prim_of_name f2 with
+     | Some v, Some PCons => Some (v, ECall f2 a2) | _, _ => None end
+   | _, _ => None end
+ else None.
+Ltac dmh H := repeat match type of H with context [match ?x with _ => _ end] =>
+ let E := fresh "E" in destruct x eqn:E; try discriminate end.
+Lemma chain_head_ok : forall d p args v e, chain_head d p args = Some (v, e) ->
+ p = PCons /\ exists a, args = [a; e] /\ lit_val a = Some v.
+Proof.
+ intros d p args v e H. unfold chain_head in H. dmh H.
+ injection H; intros; subst. split; [reflexivity|eauto].
+Qed.
+(* After the tail's code: the cons, reading d and writing it. *)
+Definition konst_vr (v : value) (k : N) : bool := match konst c k with Some w => vrb v w | None => false end.
+Lemma konst_vr_ok : forall v k, konst_vr v k = true -> exists w, konst c k = Some w /\ VR v w.
+Proof.
+ intros v k H. unfold konst_vr in H. destruct (konst c k) as [w|]; [|discriminate].
+ exists w. split; [reflexivity|apply vrb_sound; exact H].
+Qed.
+Definition chain_tail (d : N) (v : value) (r : list B.instr) : option (list B.instr) :=
+ match r with
+ | B.IPrim d' q [B.OConst k; B.OSlot d2] :: r' =>
+   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q && konst_vr v k then Some r' else None
+ | _ => None end.
+Lemma chain_tail_ok : forall d v r r', chain_tail d v r = Some r' ->
+ exists k w, r = B.IPrim d B.PCons [B.OConst k; B.OSlot d] :: r' /\ konst c k = Some w /\ VR v w.
+Proof.
+ intros d v r r' H. unfold chain_tail in H. dmh H. injection H; intros; subst.
+ repeat match goal with A : (_ && _)%bool = true |- _ => apply andb_true_iff in A as [? ?] end.
+ repeat match goal with A : N.eqb _ _ = true |- _ => apply N.eqb_eq in A
+   | A : q_eqb _ _ = true |- _ => apply q_eqb_eq in A end. subst.
+ match goal with A : konst_vr _ ?k = true |- _ => destruct (konst_vr_ok _ _ A) as (w & K & V); exists k, w end.
+ auto.
+Qed.
+
 Fixpoint chk (n : nat) (g : env) (top : N) (e : expr) (dst : dest) (r : list B.instr) {struct n} : option (list B.instr) :=
  match n with O => None | S n =>
  let tst := chkT n in let op := chkOp n in
@@ -171,13 +210,16 @@ Fixpoint chk (n : nat) (g : env) (top : N) (e : expr) (dst : dest) (r : list B.i
        | _ => None end end end
  | ECall f args => match prim_of_name f with
    | Some p => match pmap p, dst with
-     | Some q, DSlot d =>
+     | Some q, DSlot d => match chain_head d p args with
+       | Some (v, e2) => match chk n g top e2 (DSlot d) r with
+         | Some r1 => chain_tail d v r1 | None => None end
+       | None =>
        if Nat.eqb (List.length args) (prim_arity p) && negb (Nat.eqb (List.length args) 0) then
          match chkOps n g top args r with
          | Some (ops, B.IPrim d' q' ops' :: r') =>
            if N.eqb d d' && q_eqb q q' && os_eqb ops ops' then Some r' else None
          | _ => None end
-       else None
+       else None end
      | Some _, DRet => match op g top e r with
        | Some (o, _, B.IReturn o' :: r') => if o_eqb o o' then Some r' else None | _ => None end
      | None, _ => None end
@@ -367,6 +409,12 @@ Ltac use IC IT IO IOs IW ITA := repeat match goal with
   | H : is_call _ _ _ _ _ = true |- _ => apply is_call_ok in H
   | H : is_tailcall _ _ _ = true |- _ => apply is_tailcall_ok in H
   | H : moves_prefix _ _ = Some _ |- _ => apply moves_prefix_ok in H
+  | H : chain_tail _ _ _ = Some _ |- _ =>
+      let k := fresh "k" in let w := fresh "w" in let A := fresh in let K := fresh in let V := fresh in
+      destruct (chain_tail_ok _ _ _ _ H) as (k & w & A & K & V); clear H; subst
+  | H : chain_head _ _ _ = Some (_, _) |- _ =>
+      let P := fresh in let a := fresh "a" in let A := fresh in let L := fresh in
+      destruct (chain_head_ok _ _ _ _ _ H) as (P & a & A & L); clear H; subst
   | _ => progress sat_suffix
   end.
 
@@ -384,6 +432,7 @@ Proof.
  - (* chk *) intros g top e dst r r' H S. destruct e; crush H; use IC IT IO IOs IW ITA.
    all: try (split; [econstructor; eauto|eauto]; fail).
    all: try (split; [eapply C_tail; eauto; lia|eauto]; fail).
+   all: try (split; [eapply C_chain; eauto|eauto]; fail).
    split; [|assumption]. eapply C_prim; [exact E|exact E0|exact H0|intro Ea; subst; exact (H1 eq_refl)|exact H].
  - (* chkT *) intros g top e r l r' H S. destruct e; crush H; use IC IT IO IOs IW ITA.
    all: try (split; [econstructor; eauto|eauto]; fail).

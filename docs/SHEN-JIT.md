@@ -251,7 +251,7 @@ function with related arguments. The source is `KLPort.step_r (jit_rules sealed)
 
 **What the relation admits:** integer, real, string, symbol, boolean and nil literals; variables in slots; `let`,
 including sharing a slot; `if`, `cond`, `and` and `or`, as values and as tests; `type`; the primitives `+ - *`,
-the four comparisons, `cons hd tl cons? number? string?`; named calls and named tail calls, with
+the four comparisons, `cons hd tl cons? number? string?`; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
 `lower.shen`'s in-place argument moves. **Not admitted:** closures, captured variables, `trap-error`, `=`,
 dynamic application, `set` and `value`, the other primitives, `do`, `thaw`, `defun` and `eval-kl`, and every
 rewrite listed under the surprises above.
@@ -266,12 +266,14 @@ rewrite listed under the surprises above.
   theorem says nothing about when those happen.
 - `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
 
-**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **53 of 950 definitions
-accepted** at 0.4, 897 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.3 it was 59 of 941. Eight
-accepted at 0.3 are rejected at 0.4, each because of the one-slot `cons` chain (`(prim D cons (const K) D)`), which the
-relation doesn't admit: `shen.compile-to-kl`, `shen.x.expand-dynamic.wrap-in-defun`, `shen-jit.lower.lets`,
-`shen.tuple-up`, `shen.create-skeleton`, `shen.macro-@ch`, `shen.macro-@c` and `<!>`. Two are new: kernel 43.4's
-`shen.precompiled-function?` and `shen.x.expand-dynamic.expand-initializer`. Each accepted definition is a
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **61 of 950 definitions
+accepted** at 0.4, 889 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.3 it was 59 of 941. At the
+re-pin to 0.4 it fell to 53: eight definitions accepted at 0.3 were rejected because of the one-slot `cons` chain
+(`(prim D cons (const K) D)`). Admitting the chain (below) brought back exactly those eight and no others:
+`shen.compile-to-kl`, `shen.x.expand-dynamic.wrap-in-defun`, `shen-jit.lower.lets`, `shen.tuple-up`,
+`shen.create-skeleton`, `shen.macro-@ch`, `shen.macro-@c` and `<!>`. Two are new since 0.3: kernel 43.4's
+`shen.precompiled-function?` and `shen.x.expand-dynamic.expand-initializer`. Of the 169 definitions whose code uses the
+chain, 161 are still rejected for other constructs. Each accepted definition is a
 lowering of its kernel KLambda in the relation's sense; a rejected one is unvalidated, not wrong. A census of the
 forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the rest go:
 
@@ -286,21 +288,37 @@ forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the re
 | `value` | 121 | 35 |
 | None of the constructs counted | 178 | |
 
-These are 0.4's counts. Of the 178 using none of them, 125 are still rejected (117 of 176 at 0.3): the rewrites under the
-surprises above (sharing, folding, inlining, goto labels) and, from 0.4, the one-slot `cons` chain are the likely
-causes, not yet confirmed per definition. Admitting the chain is one relation rule, one simulation case and one checker
-case: the inner `cons` is a lowering into D, and the outer reads D before writing it.
+These are 0.4's counts. Of the 178 using none of them, 128 are still rejected, counted by name against the accepted
+list. (The 125 recorded at the re-pin, and 117 of 176 at 0.3, subtracted every accepted definition from the 178, but 11
+accepted definitions use a counted construct, as when the census flags a call of a `shen-jit.` function; by name the
+re-pin figure was 135.) The rewrites under the surprises above (sharing, folding, inlining, goto labels) are the likely
+causes, not yet confirmed per definition.
+
+**The one-slot `cons` chain** (`JitLowerRel.C_chain`). `lower.shen` computes `(cons K Tail)`, with K a constant and Tail
+a `cons`, by lowering Tail into D and then emitting `(prim D cons (const K) D)`, which reads D and writes it. The rule
+admits that for any tail expression. The simulation case runs three source steps without a bytecode step: the call
+starts, K evaluates, and the tail starts with the `cons` pending. It then reuses the existing primitive-argument frame
+with an empty environment, since nothing the frame binds lives in D, so the in-place write disturbs nothing. The frame,
+stability and theorem statements are unchanged. `lower.shen` takes the chain only when D is not a parameter slot, which
+`check.shen` asks of it (a written parameter is read only by a tail call). The simulation doesn't need that guard. The
+checker keeps it, testing `2 + arity <= D` as `lower.shen` does, so it follows the lowerer's dispatch with no
+backtracking. A checker without the guard is still sound, so no proof mutation can catch that, but it rejects `shen.mkstr`,
+whose tail call computes `(cons shen.proc-nl (cons V7021 ()))` in place into parameter slot 2, where `lower.shen` puts
+the inner `cons` in a slot above; then the stage 0 count gate fires
+(`tests/shen-jit/gate_tests.sh`, `chain-guard-dropped`). Two proof mutants are rejected (`ShenJitLowerChainSlot`, the cons reads any slot; `ShenJitLowerChainConst`, any head constant). Lines added:
+7 in `JitLowerRel.v`, 25 in `JitLowerStep.v`, 49 net in `JitLowerCheck.v`, 81 in all, under the 100 to 400 projected
+per construct below.
 
 **Measures.** Lines by hand, first session: about 70 minutes to the first theorem, about 2.5 hours in all, including
 compile waits. Each Rocq file compiles in under 3 minutes under Rocq 9.3.
 
 | Part | Lines, as written | Covers |
 |---|---|---|
-| Relation (`JitLowerRel.v`) | 169 | the fragment above |
+| Relation (`JitLowerRel.v`) | 169, then 176 | the fragment above |
 | Continuations and stability (`JitLowerKont.v`, `JitLowerStable.v`) | 269 | |
 | Primitives (`JitLowerPrim.v`) | 176 | 13 primitives |
-| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313 | every case of the fragment |
-| Checker and soundness (`JitLowerCheck.v`) | 428 | |
+| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313, then 1,338 | every case of the fragment |
+| Checker and soundness (`JitLowerCheck.v`) | 428, then 477 | |
 | Stage 0 decoding and tokenizer | 133 | |
 
 Calls and tail calls (frames, windows, argument moves, stack growth, arity errors) took about half the step proof.

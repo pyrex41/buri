@@ -4671,7 +4671,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerThm.JitLowerThm.preservation",
      "establishes": "model-proof",
-     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end with a related value or an error both raise. Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, named calls and named tail calls; no closures, handlers, =, dynamic application, globals, defun or eval-kl."
+     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end with a related value or an error both raise. Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, =, dynamic application, globals, defun or eval-kl."
     },
     {
      "kind": "universal-theorem",
@@ -4717,7 +4717,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
      "establishes": "artifact-correspondence",
-     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 53 of 950 definitions accepted at d3348ce (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 897 rejected are unvalidated, not refuted."
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 61 of 950 definitions accepted at d3348ce (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 889 rejected are unvalidated, not refuted."
     }
    ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
@@ -4734,6 +4734,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: partial, 53 of 950 definitions accepted at 0.4 (59 of 941 at 0.3). Eight lost to 0.4's one-slot cons chain, which JitLowerRel does not admit; two gained from kernel 43.4.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-07: partial, 61 of 950 definitions accepted at 0.4. JitLowerRel admits the one-slot cons chain (C_chain), which regains the eight lost at the re-pin and no others; 161 of the 169 definitions that use the chain are still rejected for other constructs.",
+     "reconciliation": "Admitting the one-slot cons chain, 7 November 2026."
     }
    ]
   },
@@ -5846,6 +5851,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: at 0.4, = appears in 447 of 950 stage 0 definitions and dynamic application in 403 (tests/shen-jit/stage0_census.py, a count, not proof).",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-07: open. The relation gains one rule for 0.4's one-slot cons chain (JitLowerRel.C_chain); the constructs this entry lists are unchanged.",
+     "reconciliation": "Admitting the one-slot cons chain, 7 November 2026."
     }
    ]
   },
@@ -5858,7 +5868,7 @@
    "status": "open",
    "boundary": "KLambda to bytecode",
    "identity": "src/lowerer/lower.shen",
-   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, a cons chain with constant heads computed in one slot (0.4), inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites.",
+   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites.",
    "premises": [],
    "depends_on": [
     "OB-JIT-LOWER-FRAGMENT"
@@ -5878,6 +5888,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: at 0.4, 125 stage 0 definitions use only admitted constructs and are still rejected. The one-slot cons chain, (prim D cons (const K) D), appears in 169 of 950 definitions and is the only cause of the eight accepted at 0.3 and rejected at 0.4.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-07: the one-slot cons chain is admitted (JitLowerRel.C_chain, with its simulation case and checker case) and leaves this list. lower.shen takes it only when the slot is not a parameter's; the simulation does not need that guard, which the checker keeps to follow lower.shen's dispatch. Of the 178 stage 0 definitions using none of the counted constructs, 128 are still rejected (the 125 recorded at the re-pin assumed every accepted definition was among the 178; by name it was 135).",
+     "reconciliation": "Admitting the one-slot cons chain, 7 November 2026."
     }
    ]
   },

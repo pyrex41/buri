@@ -12,6 +12,10 @@ ShenJitLowerWrongPrim: + related to the bytecode's -. p_add must fail.
 ShenJitLowerCheckMove: the checker accepts a move from any slot. chk_sound must fail.
 ShenJitLowerCheckLabel: the checker skips the else label of an if. chk_sound must fail.
 ShenJitLowerCheckConst: the checker accepts any integer constant. vrb_sound must fail.
+ShenJitLowerChainSlot: the checker's cons chain reads any slot, not the one the tail went to.
+  chain_tail_ok must fail.
+ShenJitLowerChainConst: the checker's cons chain takes any constant as the head. chain_tail_ok
+  must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -55,4 +59,10 @@ mutate('ShenJitLowerCheckLabel', 'rocq/JitLowerCheck.v',
        "       | Some (B.ILabel l' :: r3) => if N.eqb l l' then chk n g top b dst r3 else None")
 mutate('ShenJitLowerCheckConst', 'rocq/JitLowerCheck.v',
        " | VNum (NInt z), B.VFix y => Z.eqb z y", " | VNum (NInt z), B.VFix y => true")
+mutate('ShenJitLowerChainSlot', 'rocq/JitLowerCheck.v',
+       "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q && konst_vr v k then Some r' else None",
+       "   if N.eqb d d' && q_eqb B.PCons q && konst_vr v k then Some r' else None")
+mutate('ShenJitLowerChainConst', 'rocq/JitLowerCheck.v',
+       "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q && konst_vr v k then Some r' else None",
+       "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q then Some r' else None")
 print(' '.join(names))
