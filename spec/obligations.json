@@ -5944,20 +5944,20 @@
    "status": "open",
    "boundary": "KLambda = on related heaps of different lengths",
    "identity": "rocq/JitEqBudget.v",
-   "statement": "eq_core_statement (rocq/JitEqBudget.v): with a symmetric, transitive number equality, at budget length h one more budget changes no comparison of two cells. eq_budget_from_core derives JitLowerEquiv.eq_budget_statement from it, and jit_eq_per proves jit_eq_per_statement.",
+   "statement": "eq_core_statement (rocq/JitEqBudget.v): for every port rules R, every profile P' whose num_cmp P' PEqual is symmetric and transitive, and every heap h with Forall (lok (length h)) h, cellcmp R P' h (length h) p q = cellcmp R P' h (S (length h)) p q for all p <> q. eq_budget_from_core proves that it implies JitLowerEquiv.eq_budget_statement.",
    "premises": [
     "the hypotheses are needed: eq_budget_refuted gives a five-cell heap where, with a tolerance number equality, = answers None at budget S (length h) and Some false at one more"
    ],
    "depends_on": [],
    "evidence": [],
-   "completion_evidence": "eq_core_statement proved with no axioms. The file header has a paper proof: merge cells that compare true, then bound the walks to a difference by an ultrametric argument on stop positions.",
+   "completion_evidence": "eq_core_statement proved with no axioms. Estimated over 1,000 lines, in four parts: (1) the merge simulation, both the same-budget and the shifted direction, with a lemma that interchangeable leaves change no comparison; (2) depth-first stop positions over cyclic heaps, the ultrametric lemma and its two-smallest-equal consequence; (3) on a finite set, strict refinement of an equivalence adds a class; (4) the induction on closed sets of cells.",
    "sources": [
     "rocq/JitEqBudget.v"
    ],
    "history": [
     {
      "source": "rocq/JitEqBudget.v",
-     "recorded": "2026-11-08: open. Reduction, jit_eq_per and the refutation of the hypothesis-free form proved; the core has a paper proof only.",
+     "recorded": "2026-11-08: open. Paper proof in the file header: show tau(p,q) <= |S| for every set S of cells closed under data pointers, by induction on |S|. Merge step: redirect the least-budget distinct true pair x, y into one cell; answers are unchanged and tau grows by at most 1. Ultrametric base: with no true pair, an answer is one walk, and stop positions form an ultrametric because leaf agreement is a PER; each walk position refines the partition of S strictly, so the walk has at most |S| - 1 pairs. The merge step agreed on 5,804 random heaps (search-only Python copy of eq_depth_r; PER and NaN-like atoms, nested pairs, opaque values, n <= 6; 0 failures). Proved: the reduction (eq_budget_from_core), jit_eq_per, and eq_budget_refuted for the statement without its hypotheses.",
      "reconciliation": "Eq budget spike, 8 November 2026."
     }
    ]
