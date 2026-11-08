@@ -338,8 +338,8 @@ Two disagreements, neither new to C: two NaNs (`OB-JIT-NAN-IDENTITY`, already kn
 reads a name as digits in base 256, which is injective on bytes but not on the code points the KLambda semantics
 uses: `[1;1]` and `[65537]` are one symbol, as are `ab` and the one-character name U+16062
 (`JitLowerPrim.eq_sym_text_collision`, checked). C interns by name and agrees with the source, so the defect is the
-model's, and `intern` shares it. That is `OB-JIT-SYM-TEXT`; fixing it, or restricting `VR_sym` as a stated limit, is
-undecided. Until then the guard leaves symbol constants out, and it is this, not NaN, that costs most: of the 447
+model's, and `intern` shares it. That is `OB-JIT-SYM-TEXT`. Restricting `VR_sym` was ruled out, since it would narrow the related states; the fix is
+being given to a separate change (an injective encoding matching C's interning by name); `=` against a symbol literal waits on it. Until then the guard leaves symbol constants out, and it is this, not NaN, that costs most: of the 447
 definitions using `=`, 429 compare only against a literal, but only 140 against literals that are not symbols.
 
 Fuel plays no part. `eq_val` spends fuel only at absvectors, which `VR` never relates, and pairs recurse

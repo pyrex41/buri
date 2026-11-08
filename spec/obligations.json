@@ -5182,7 +5182,7 @@
    "status": "open",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "JitBytecode.sym_of_text is not injective on the texts of the KLambda semantics, which are code points: a code point above 256 collides, so [1;1] and [65537] are one symbol, as are the name ab and the one-character name U+16062. JitLowerRel.VR relates VSym s to VSym (sym_of_text s), so on such pairs the model's = and intern answer as if the names were equal, where the source and C, which interns by name, tell them apart.",
+   "statement": "JitBytecode.sym_of_text is not injective on the texts of the KLambda semantics, which are code points: a code point above 256 collides, so [1;1] and [65537] are one symbol, as are the name ab and the one-character name U+16062. JitLowerRel.VR relates VSym s to VSym (sym_of_text s), so on such pairs the model's = and intern (JitBytecode.prim_step's PIntern case, line 884, which makes VSym (sym_of_text s)) answer as if the names were equal, where the source and C, which interns by name, tell them apart.",
    "premises": [],
    "depends_on": [],
    "evidence": [],
