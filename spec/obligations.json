@@ -5163,6 +5163,56 @@
    "history": []
   },
   {
+   "id": "OB-JIT-SYM-INJECTIVE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "discharged",
+   "boundary": "Shen/JIT bytecode model, symbols",
+   "identity": "rocq/JitBytecode.v",
+   "statement": "The bytecode model's symbol for a name, JitBytecode.sym_of_text, is injective on every text the KLambda semantics admits (any list of naturals, not only bytes or Unicode scalars), as src/runtime/objects.c interns by the name's bytes. So VR_sym relates distinct source symbols to distinct machine symbols, and the machine's symbol test is the source's name test.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitBytecode.JitBytecode.text_of_sym_of_text",
+     "establishes": "model-proof",
+     "note": "text_of_sym reads every text back from its symbol, for every text"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitBytecode.JitBytecode.sym_of_text_inj",
+     "establishes": "model-proof",
+     "note": "for every two texts"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitBytecode.JitBytecode.sym_of_text_eqb",
+     "establishes": "model-proof",
+     "note": "Pos.eqb of two symbols is text_eqb of their names"
+    }
+   ],
+   "completion_evidence": "text_of_sym_of_text, sym_of_text_inj and sym_of_text_eqb in rocq/Audit_Jit.v; the ShenJitSymBase256 mutant, which restores the base-256 numeral, is refused.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitBytecode.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitBytecode.v",
+     "recorded": "2026-11-08: open. sym_of_text was the name's elements as a base-256 numeral with 256 for 0, which is not injective once an element is 257 or more ([1; 1] and [65537] both give 65793; [0] and [256]), and text_of_sym decoded only bytes. VR_sym could relate distinct source symbols to one machine symbol, so = could not be admitted for symbols.",
+     "reconciliation": "Found while admitting = in Phase 2 of the Shen/JIT lane, 8 November 2026."
+    },
+    {
+     "source": "rocq/JitBytecode.v",
+     "recorded": "2026-11-08: discharged. sym_of_text is a prefix code (each element n as the bits of n+1 below the leading 1, each behind a 1, then a 0), text_of_sym its structural inverse; the round trip, injectivity and the eqb law are proved with no assumptions. Every S_* constant changed value; stage 0 counts and the differential are unchanged, since every captured name is bytes and only names are printed or compared.",
+     "reconciliation": "Injective symbol encoding, 8 November 2026."
+    }
+   ]
+  },
+  {
    "id": "OB-JIT-DEV-LITERALS",
    "kind": "model-proof",
    "scope": "universal",

@@ -129,10 +129,16 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 42 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 45 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
+
+**Symbols are their names** (`OB-JIT-SYM-INJECTIVE`): the runtime interns by the name's bytes, and
+`JitBytecode.sym_of_text` is a prefix code that `text_of_sym` reads back for every text, whatever its
+elements (`text_of_sym_of_text`), so distinct names are distinct symbols (`sym_of_text_inj`) and the
+machine's symbol test is the name test (`sym_of_text_eqb`). Until 8 November 2026 the name was a base-256
+numeral, which merged names with an element of 257 or more with shorter ones (`[1; 1]` with `[65537]`).
 
 Sources live in `rocq/`, so one copy compiles under both provers: the only rewrite for 9.3 is
 the import line, and the gate refuses any other difference.

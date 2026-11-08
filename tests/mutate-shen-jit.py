@@ -16,6 +16,8 @@ ShenJitLowerChainSlot: the checker's cons chain reads any slot, not the one the 
   chain_tail_ok must fail.
 ShenJitLowerChainConst: the checker's cons chain takes any constant as the head. chain_tail_ok
   must fail.
+ShenJitSymBase256: symbols as the name's elements in base 256, as before, which merges [1;1] with
+  [65537]. text_of_sym_of_text must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -65,4 +67,7 @@ mutate('ShenJitLowerChainSlot', 'rocq/JitLowerCheck.v',
 mutate('ShenJitLowerChainConst', 'rocq/JitLowerCheck.v',
        "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q && konst_vr v k then Some r' else None",
        "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q then Some r' else None")
+mutate('ShenJitSymBase256', 'rocq/JitBytecode.v',
+       ' fold_right (fun n acc => sym_push (N.succ_pos n) acc) xH s.',
+       ' fold_left (fun acc b =>\n   Pos.add (Pos.mul acc 256) (match b with N0 => 256 | Npos p => p end)) s xH.')
 print(' '.join(names))

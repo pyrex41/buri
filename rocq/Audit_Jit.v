@@ -1,5 +1,8 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
 From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck.
+Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
+Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
+Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
 Print Assumptions JitMeta.JitMeta.step_deterministic_tau.
 Print Assumptions JitMeta.JitMeta.step_deterministic_io.
 Print Assumptions JitMeta.JitMeta.step_tau_excludes_io.
