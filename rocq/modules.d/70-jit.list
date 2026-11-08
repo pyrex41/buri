@@ -11,4 +11,5 @@ JitLowerStep
 JitLowerThm
 JitLowerCheck
 JitLowerEquiv
+JitEqBudget
 JitLowerStage0

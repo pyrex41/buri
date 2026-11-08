@@ -5936,6 +5936,33 @@
    ]
   },
   {
+   "id": "OB-JIT-EQ-BUDGET-CORE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda = on related heaps of different lengths",
+   "identity": "rocq/JitEqBudget.v",
+   "statement": "eq_core_statement (rocq/JitEqBudget.v): with a symmetric, transitive number equality, at budget length h one more budget changes no comparison of two cells. eq_budget_from_core derives JitLowerEquiv.eq_budget_statement from it, and jit_eq_per proves jit_eq_per_statement.",
+   "premises": [
+    "the hypotheses are needed: eq_budget_refuted gives a five-cell heap where, with a tolerance number equality, = answers None at budget S (length h) and Some false at one more"
+   ],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "eq_core_statement proved with no axioms. The file header has a paper proof: merge cells that compare true, then bound the walks to a difference by an ultrametric argument on stop positions.",
+   "sources": [
+    "rocq/JitEqBudget.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitEqBudget.v",
+     "recorded": "2026-11-08: open. Reduction, jit_eq_per and the refutation of the hypothesis-free form proved; the core has a paper proof only.",
+     "reconciliation": "Eq budget spike, 8 November 2026."
+    }
+   ]
+  },
+  {
    "id": "OB-JIT-LOWER-TERM",
    "kind": "model-proof",
    "scope": "universal",
