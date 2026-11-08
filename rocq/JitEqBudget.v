@@ -1,5 +1,6 @@
-(* JitLowerEquiv.eq_budget_statement is false: past the budget S (length h), more budget can
-   still change what = answers, here from None to Some false.
+(* Without its two hypotheses on number equality, JitLowerEquiv.eq_budget_statement is false:
+   past the budget S (length h), more budget can still change what = answers, here from None to
+   Some false. `eq_budget_old_statement` is the statement without them, as it was at 818fd86.
 
    The statement quantifies over every profile P', and a profile's equality on inexact numbers
    (inexact_cmp P' PEqual) is any boolean function. `tol` below takes it to be a tolerance,
@@ -48,15 +49,31 @@ Proof. intro R. vm_compute. reflexivity. Qed.
 Lemma kl_eq_h5 : forall R, kl_eq_r R tol h5 (VVec 1) (VVec 3) = None.
 Proof. intro R. exact (at_budget_6 R). Qed.
 
-Theorem eq_budget_refuted : forall sealed, ~ JitLowerEquiv.eq_budget_statement sealed.
+Definition eq_budget_old_statement (R : port_rules) : Prop := forall P' h d a b,
+ Forall (lok (List.length h)) h -> vok (List.length h) a -> vok (List.length h) b ->
+ (S (List.length h) <= d)%nat -> eq_depth_r R P' h d a b = kl_eq_r R P' h a b.
+
+Theorem eq_budget_refuted : forall R, ~ eq_budget_old_statement R.
 Proof.
- intros sealed H.
+ intros R H.
  specialize (H tol h5 7 (VVec 1) (VVec 3) h5_ok).
- assert (E : eq_depth_r (jit_rules sealed) tol h5 7 (VVec 1) (VVec 3) =
-             kl_eq_r (jit_rules sealed) tol h5 (VVec 1) (VVec 3))
+ assert (E : eq_depth_r R tol h5 7 (VVec 1) (VVec 3) = kl_eq_r R tol h5 (VVec 1) (VVec 3))
    by (apply H; cbn; lia).
  rewrite at_budget_7, kl_eq_h5 in E. discriminate E.
 Qed.
+
+(* `tol` is symmetric, so what the counterexample breaks is transitivity, the second of the
+   hypotheses JitLowerEquiv.eq_budget_statement now takes. *)
+Lemma tol_symmetric : forall x y, num_cmp tol PEqual x y = num_cmp tol PEqual y x.
+Proof.
+ intros [x|x] [y|y]; cbn; try reflexivity.
+ - apply Z.eqb_sym.
+ - apply andb_comm.
+Qed.
+Lemma tol_not_transitive :
+ num_cmp tol PEqual (NFloat 0) (NFloat 1) = true /\ num_cmp tol PEqual (NFloat 1) (NFloat 2) = true /\
+ num_cmp tol PEqual (NFloat 0) (NFloat 2) = false.
+Proof. vm_compute. repeat split. Qed.
 
 (* What does hold for every profile: on one heap, more budget never takes back a defined
    answer. It cannot turn Some into None or change which Some, because an answer is defined
@@ -100,17 +117,8 @@ Lemma eq_depth_mono_le : forall R P h d d' a b y, (d <= d')%nat ->
  eq_depth_r R P h d a b = Some y -> eq_depth_r R P h d' a b = Some y.
 Proof. intros R P h d d' a b y L. induction L; intro H; [exact H|]. apply eq_depth_mono. auto. Qed.
 
-(* ======================= the statements, as revised ======================= *)
-(* Local copies of the revised statements in JitLowerEquiv, until they land there. *)
-Definition num_eq_per (P : profile) : Prop :=
- (forall x y, num_cmp P PEqual x y = num_cmp P PEqual y x) /\
- (forall x y z, num_cmp P PEqual x y = true -> num_cmp P PEqual y z = true -> num_cmp P PEqual x z = true).
-Definition jit_eq_per_statement : Prop := num_eq_per jit_profile.
-Definition eq_budget_per_statement (R : port_rules) : Prop := forall P' h d a b,
- (forall x y, num_cmp P' PEqual x y = num_cmp P' PEqual y x) ->
- (forall x y z, num_cmp P' PEqual x y = true -> num_cmp P' PEqual y z = true -> num_cmp P' PEqual x z = true) ->
- Forall (lok (List.length h)) h -> vok (List.length h) a -> vok (List.length h) b ->
- (S (List.length h) <= d)%nat -> eq_depth_r R P' h d a b = kl_eq_r R P' h a b.
+(* ======================= the revised statements ======================= *)
+(* JitLowerEquiv.jit_eq_per_statement: proved below as jit_eq_per. *)
 
 Section PerZ.
 Local Open Scope Z_scope.
@@ -246,7 +254,7 @@ Proof.
  - rewrite jit_order_eq. exact (float_eq a b).
 Qed.
 
-Theorem jit_eq_per : jit_eq_per_statement.
+Theorem jit_eq_per : JitLowerEquiv.jit_eq_per_statement.
 Proof.
  split.
  - intros x y. apply Bool.eq_iff_eq_true. rewrite !jit_num_eq_iff.
@@ -347,10 +355,11 @@ Definition eq_core_statement (R : port_rules) : Prop := forall P' h,
  Forall (lok (List.length h)) h ->
  forall p q, p <> q -> cellcmp R P' h (List.length h) p q = cellcmp R P' h (S (List.length h)) p q.
 
-Theorem eq_budget_from_core : forall R, eq_core_statement R -> eq_budget_per_statement R.
+Theorem eq_budget_from_core : forall sealed,
+ eq_core_statement (jit_rules sealed) -> JitLowerEquiv.eq_budget_statement sealed.
 Proof.
- intros R Core P' h d a b Sy Tr Hh _ _ L. unfold kl_eq_r.
- exact (budget_from_step R P' h _ (Core P' h Sy Tr Hh) d a b L).
+ intros sealed Core P' h d a b Sy Tr Hh _ _ L. unfold kl_eq_r.
+ exact (budget_from_step (jit_rules sealed) P' h _ (Core P' h Sy Tr Hh) d a b L).
 Qed.
 
 End JitEqBudget.
