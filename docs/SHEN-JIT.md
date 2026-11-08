@@ -371,7 +371,7 @@ constants at run time. Stage 0's writer refuses to print those, so no stage 0 wi
 | `[var X]` | `EVar X`; None if X is not in scope | none |
 | `[let X V B]` | `ELet` | none |
 | `[let stage0.lower.inlining [const F] B]` (also `shen-jit.lower.inlining`) | B, when V is a symbol constant and B never mentions the name; otherwise `ELet` | `marker_dead` states the side condition. Dropping the let changes no value or effect, but removes one `KLet` frame, so under a stack bound the two differ in when they run out of stack. The emitter makes no frame for it either. |
-| `[do X Y]` | `ELet shen-jit.norm.do X Y`; None if Y mentions that name (`erase_do`) | Y stays in tail position and the meaning does not depend on the global `do`. The source's `(do X Y)` is a call of the kernel's `do`, so the front end needs the store's `do` to be the kernel's (`OB-JIT-LOWER-OPTIMIZATIONS`). The emitter lowers Y at the same top where `C_let` raises it, so `check_fn` rejects most `do`. That gap belongs to the emission relation. |
+| `[do X Y]` | `ECall do [X; Y]` (`erase_do`) | This is the named call the source `(do X Y)` is in KLSemantics, which is how `JitLowerEquiv` (pass-equiv) states the front end, so that step is congruence. The emitter instead inlines it: X goes into a temporary, then Y is lowered in place in tail position. `check_fn` expects a call, so it rejects every `do`. Admitting the inlining is the emission relation's job, under the premise that the store's `do` is the kernel's: `do` is sealed at stage 0, and its code `(return 3)` is the kind `check_fn` accepts, so `FunRel` can cover it. An earlier version erased `do` as a fresh `let`, which `check_fn` accepted in 3 more definitions (`shen-jit.lower.finish`, `.value`, `shen.repl`). It was switched to the named call to match the front end's interface. |
 | `[prim raise-cond []]` | `ECond []` | none: it raises `XCondFail`, as `norm-cond`'s end does, and `C_cond_nil` admits it. `raise-cond` is not a KL name. |
 | `[prim Op Args]`, Op a KL primitive | `ECall Op Args`; None if the count is not Op's arity | A primitive call is a named call in `KLSemantics`, resolved in `gfuns`. This is correct under the store invariant `JitLowerStep` already assumes (`fr_prim`/`fr_name`: primitive names are bound to their `FPrim`). |
 | `[prim Op Args]`, any other Op | `ECall Op Args`, listed by `port_prims` | **Port primitive, no KL meaning**: the KL store defines no such name, so the call raises `XUndefinedFun`. Each one needs a primitive spec and a ledger entry. These include `shen-jit.inlined?` (`open-call`'s guard) and `shen-jit.arity?` (`fn-call`'s test). Both are C primitives (`src/runtime/prims.c`, `P_INLINEDP`/`P_ARITYP`) that read a function's current code object, and their specs must make the guard's two branches agree. |
@@ -397,38 +397,35 @@ judge is not a gate, and its counts are reported, not pinned.
 hash of their `sha256sum *.norm` listing, sorted by name, is `2fa5a8e186fa006bfe88c5586c5c58e514bed4e44fb9491da21f222bc25b5747`.
 pass-capture's copies of `core` and `lower` `.forms`/`.sbc` were checked byte for byte against the pin. For the other
 files, the judge's name and parameter check covers the pairing, with 0 unparsed. The command was
-`NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm2 scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), at the
-commit that added this section, whose Rocq and tokenizer sources are unchanged from `2e407b1`. `rocqchk` replays
-both modules.
+`NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm3 scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), at the
+commit that added this paragraph. The witnesses are pass-capture's final set: stage 0 code reproduced 950/950 byte for
+byte at `614a39a` on `pass/capture`, and the per-file hashes match its `SHA256SUMS`. `rocqchk` replays both modules.
 
-**75 of 950 definitions accepted** on the erased witness: 875 rejected, none failing erase, none unreadable. All
-75 are front end unchecked. None uses a port primitive and none has a folded constant, because `check_fn` rejects
-both. The stage 0 judge on the source bodies accepts the same definitions as before (61), and every one of the 61 is
-also accepted on its witness: none lost, so no erase choice broke a definition the checker already took.
+**72 of 950 definitions accepted** on the erased witness: 878 rejected, none failing erase, none unreadable. All
+72 are front end unchecked. None uses a port primitive and none has a folded constant, because `check_fn` rejects
+both. The stage 0 judge on the source bodies still accepts the same 61, and every one of the 61 is also accepted on its
+witness. None is lost, so no erase choice broke a definition the checker already took.
 
 | File | Accepted | Was (source) | Gained |
 |---|---:|---:|---|
-| lower | 12 | 8 | `shen-jit.lower.code`, `.finish`, `.apply-all?`, `.value` |
+| lower | 10 | 8 | `shen-jit.lower.code`, `shen-jit.lower.apply-all?` |
 | prolog | 9 | 8 | `shen.prolog-parameters` |
 | reader | 8 | 7 | `shen.alpha?` |
 | shen-jit | 10 | 6 | `shen.<shortnatters>`, `shen.<whitespaces>`, `shen.<digits>`, `shen-jit.digits` |
 | sys | 12 | 11 | `eval` |
-| toplevel | 1 | 0 | `shen.repl` |
 | yacc | 5 | 3 | `shen.partial-parse-failure?`, `shen.parse-failure` |
-| the other 17 files | 18 | 18 | |
+| the other 18 files | 18 | 18 | |
 
-Of the 14 gained, 12 contain an inlining marker that erase drops, and 3 contain a `do` erased to `ELet`
-(`shen-jit.lower.finish` has both; `shen-jit.lower.value` and `shen.repl` have a `do` and no marker).
-pass-capture's own census accepted 72 with only the marker dropped (61 + 11). That fits the 75 here, with the
-difference coming from `do`, but the two name lists were not compared. Three hand mutations of `shen-jit.digits`'s witness each turned that one
-verdict to rejected and changed nothing else: a constant changed (48 to 49), the marker's name used in its body, and
-the marker renamed so that it is no longer dropped. These were hand checks; no proof mutation was added, since the
-judge is not in a gate.
+All 11 gained definitions contain an inlining marker, which erase drops. This agrees with pass-capture's census (72
+with the marker dropped). Three hand mutations of `shen-jit.digits`'s witness were each made on the earlier version
+of erase, whose marker handling is unchanged. Each one turned that one verdict to rejected and changed nothing else:
+a constant changed (48 to 49), the marker's name used in its body, and the marker renamed so that it is no longer
+dropped. These were hand checks. No proof mutation was added, since the judge is not in a gate.
 
-What the 75 mean: each code object is a lowering, in `JitLowerRel`'s sense, of its witness's erasure. For the 61
-that were already accepted, the source-body verdict still stands on its own. For the 14 gained, nothing yet says
+What the 72 mean: each code object is a lowering, in `JitLowerRel`'s sense, of its witness's erasure. For the 61
+that were already accepted, the source-body verdict still stands on its own. For the 11 gained, nothing yet says
 that the erasure is equivalent to the kernel's KLambda: inlining (`shen.digit?` and others) and sharing changed the
-body, and that is wave 2's obligation. Most of the 875 rejections come from the emission relation (`=`, `value`,
+body, and that is wave 2's obligation. Most of the 878 rejections come from the emission relation (`=`, `value`,
 closures, folded constants, port primitives), not from erase; pass-capture's census lists the first blocker for each.
 
 **Coq 8.18.** `make prove` runs Coq 8.18 (`toolchain.lock.json`, `scripts/bootstrap-rocq`). The pinned 8.18 debs

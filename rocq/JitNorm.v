@@ -89,9 +89,8 @@ Definition inlining_name : name := kw "shen-jit.lower.inlining".
    in the copy of the lowerer that stage 0 runs. *)
 Definition stage0_inlining_name : name := kw "stage0.lower.inlining".
 Definition is_marker_name (x : name) : bool := text_eqb x inlining_name || text_eqb x stage0_inlining_name.
-(* The variable a `do` binds in its erasure. lower.shen never makes it; erase checks that the
-   second expression does not mention it anyway. *)
-Definition do_name : name := kw "shen-jit.norm.do".
+(* `do` is the kernel's function (sys.kl: (defun do (V1 V2) V2), sealed at stage 0). *)
+Definition do_name : name := kw "do".
 
 (* ---------- meaning ---------- *)
 (* A constant with a literal is that literal. ESym is a literal of resolved syntax: eval_move
@@ -120,9 +119,10 @@ Definition marker (x : name) (ev eb : expr) : bool :=
    - [var X]: EVar X, and None if X is not in scope (no witness of a closed definition has one).
    - [if] [and] [or] [lambda] [freeze]: the special form.
    - [let X V B]: ELet, except the inlining marker, which is its body when `marker` holds.
-   - [do X Y]: evaluate X, discard it, then Y in tail position: ELet do_name X Y, None if Y
-     mentions do_name. Not (ECall do [X; Y]), which would put Y in an argument position and make
-     the meaning depend on the global function `do`.
+   - [do X Y]: ECall do [X; Y], the named call the source (do X Y) is in KLSemantics, as
+     JitLowerEquiv (pass-equiv) states the front end. The emitter instead computes X, drops it
+     and lowers Y in place; that it may is the emission relation's obligation, and needs the
+     store's `do` to be the kernel's (sealed; its stage 0 code is (return 3)).
    - [prim raise-cond []]: ECond [], which raises XCondFail as norm-cond's end does.
    - [prim Op Args] for a KL primitive Op: ECall Op Args, None if the count is not Op's arity.
      A named call is what a primitive call is in KLSemantics: it resolves Op in gfuns, which
@@ -150,7 +150,7 @@ Fixpoint erase (sc : list name) (n : nexpr) {struct n} : option expr :=
    | Some ev, Some eb => if marker x ev eb then Some eb else Some (ELet x ev eb)
    | _, _ => None end
  | NDo a b => match erase sc a, erase sc b with
-   | Some ea, Some eb => if bound (vars eb) do_name then None else Some (ELet do_name ea eb)
+   | Some ea, Some eb => Some (ECall do_name [ea; eb])
    | _, _ => None end
  | NLambda x b => option_map (ELam x) (erase (x :: sc) b)
  | NFreeze b => option_map EFreeze (erase sc b)
@@ -281,7 +281,7 @@ Fixpoint kl_shaped (sc : list name) (n : nexpr) : bool :=
  | NIf c a b => kl_shaped sc c && kl_shaped sc a && kl_shaped sc b
  | NAnd a b | NOr a b | NApply1 a b => kl_shaped sc a && kl_shaped sc b
  | NLet x v b => negb (is_marker_name x) && kl_shaped sc v && kl_shaped (x :: sc) b
- | NDo _ _ => false
+ | NDo a b => kl_shaped sc a && kl_shaped sc b
  | NLambda x b => kl_shaped (x :: sc) b
  | NFreeze b | NApply0 b => kl_shaped sc b
  | NPrim op l => match prim_of_name op with
@@ -322,6 +322,7 @@ Proof.
  - destruct (IHn1 sc) as [? ->]; auto; destruct (IHn2 sc) as [? ->]; auto; eauto.
  - destruct (IHn1 sc) as [ev ->]; auto; destruct (IHn2 (x :: sc)) as [eb ->]; auto.
    destruct (marker x ev eb); eauto.
+ - destruct (IHn1 sc) as [? ->]; auto; destruct (IHn2 sc) as [? ->]; auto; eauto.
  - destruct (IHn (x :: sc)) as [? ->]; auto; cbn; eauto.
  - destruct (IHn sc) as [? ->]; auto; cbn; eauto.
  - destruct (prim_of_name op) as [p|] eqn:Pn; [|discriminate].
@@ -355,15 +356,11 @@ Proof.
    congruence.
 Qed.
 Lemma erase_do : forall sc a b e, erase sc (NDo a b) = Some e ->
- exists ea eb, erase sc a = Some ea /\ erase sc b = Some eb /\ e = ELet do_name ea eb /\ ~ In do_name (vars eb).
+ exists ea eb, erase sc a = Some ea /\ erase sc b = Some eb /\ e = ECall do_name [ea; eb].
 Proof.
  intros sc a b e H. cbn [erase] in H.
  destruct (erase sc a) as [ea|] eqn:Ea; [|discriminate]; destruct (erase sc b) as [eb|] eqn:Eb; [|discriminate].
- destruct (bound (vars eb) do_name) eqn:B; [discriminate|]. inversion H; subst.
- exists ea, eb. split; [auto|split; [auto|split; [auto|]]].
- intro I. unfold bound in B.
- assert (existsb (text_eqb do_name) (vars eb) = true) by (apply existsb_exists; exists do_name; split; [auto|apply text_eqb_refl]).
- congruence.
+ inversion H; subst. exists ea, eb. auto.
 Qed.
 
 (* Erase is not injective, and the checker does not need it to be: it relates code to the
@@ -380,8 +377,9 @@ Proof. reflexivity. Qed.
    - Emission of a pair constant: lower.shen emits (const d k) with a pair in the constant
      table; JitLowerRel's C_lit admits atoms only, so check_fn rejects such code. Owner: the
      emission relation (JitLowerRel), not erase.
-   - [do X Y] as ELet do_name X Y: the emitter computes Y with top unchanged where C_let raises
-     top for the body, so check_fn rejects most do. Owner: the emission relation.
+   - [do X Y] as ECall do [X; Y]: the emitter inlines it (X into a temporary, then Y in place,
+     Y in tail position), so check_fn, which expects a call, rejects every do. Owner: the
+     emission relation, under the premise that the store's `do` is the kernel's.
    - Port primitives (`port_prims`): shen-jit.inlined? (open-call's guard) and shen-jit.arity?
      (fn-call's test) are C primitives (src/runtime/prims.c) reading a function's current code
      object; each needs a primitive spec under which the guard's two branches agree. The other
