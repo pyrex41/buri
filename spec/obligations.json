@@ -4671,7 +4671,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerThm.JitLowerThm.preservation",
      "establishes": "model-proof",
-     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end with a related value or an error both raise. Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, =, dynamic application, globals, defun or eval-kl."
+     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end: the bytecode runs to a machine whose next step returns a value related to the source's, or raises an error the source also raises (Ends takes that machine as a parameter; Ends_final). Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, =, dynamic application, globals, defun or eval-kl."
     },
     {
      "kind": "universal-theorem",
@@ -4695,6 +4695,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: partial. A preservation theorem for a fragment of accepted code, and a checker proved sound for it. Not a theorem about lower.shen for every input.",
      "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-08: partial. Until this date the end case of preservation, related_progress and call_preservation did not tie the bytecode's final machine to the run: Ends bound its machine inside each constructor, so the end case held for any source run that ends, whatever the bytecode did, and was weaker than this entry's note claimed. Ends now takes the final machine as a parameter (Ends_final); proof mutant ShenJitLowerEndsDecoupled, the old form of E_ok, is rejected.",
+     "reconciliation": "Fixing the Ends statement in JitLowerThm.v, 8 November 2026."
     }
    ]
   },
