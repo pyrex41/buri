@@ -392,7 +392,14 @@ modules, so `make prove` compiles them. Nothing else changes: no audit module co
 `scripts/report.py` and `check-shen-jit.sh` are untouched. The opt-in script checks their assumptions itself. The
 judge is not a gate, and its counts are reported, not pinned.
 
-**Stage 0 result** (witnesses from the pass-capture run, `.forms`/`.sbc` identical to the pin's `build/stage0`):
+**Stage 0 result.** Inputs: the `.forms` and `.sbc` of the pin's `/lps/p4/sj/build/stage0`, and pass-capture's 24
+`.norm` witnesses. The witnesses are not in the repo yet; where they land is pass-capture's or the lead's call. The
+hash of their `sha256sum *.norm` listing, sorted by name, is `2fa5a8e186fa006bfe88c5586c5c58e514bed4e44fb9491da21f222bc25b5747`.
+pass-capture's copies of `core` and `lower` `.forms`/`.sbc` were checked byte for byte against the pin. For the other
+files, the judge's name and parameter check covers the pairing, with 0 unparsed. The command was
+`NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm2 scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), at the
+commit that added this section, whose Rocq and tokenizer sources are unchanged from `2e407b1`. `rocqchk` replays
+both modules.
 
 **75 of 950 definitions accepted** on the erased witness: 875 rejected, none failing erase, none unreadable. All
 75 are front end unchecked. None uses a port primitive and none has a folded constant, because `check_fn` rejects
@@ -424,9 +431,11 @@ that the erasure is equivalent to the kernel's KLambda: inlining (`shen.digit?` 
 body, and that is wave 2's obligation. Most of the 875 rejections come from the emission relation (`=`, `value`,
 closures, folded constants, port primitives), not from erase; pass-capture's census lists the first blocker for each.
 
-**UNKNOWN:** `make prove` runs Rocq 8.18 (`toolchain.lock.json`), which was not available on this machine. The two
-files compile under Rocq 9.3 (the `shen_jit` toolchain) and are written to the 8.18 library (`From Coq Require`,
-explicit `@Forall_cons`), but no 8.18 compile was run.
+**Coq 8.18.** `make prove` runs Coq 8.18 (`toolchain.lock.json`, `scripts/bootstrap-rocq`). The pinned 8.18 debs
+(checksums from `rocq-packages.lock`) were used in an amd64 Ubuntu 24.04 container. Under them, the 70-jit chain
+from `Observation` through `JitNormStage0` compiled with `scripts/rocq coqc -Q . Buri`, the six statements printed
+"Closed under the global context", and `coqchk` replayed `JitNorm` and `JitNormStage0`. A full `make prove` was not
+run.
 
 ## Differential results
 

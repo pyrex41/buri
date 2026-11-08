@@ -44,6 +44,8 @@ rocq compile -Q . Buri NormAudit.v > NormAudit.log 2>&1 || { cat NormAudit.log; 
 closed=$(grep -c '^Closed under the global context$' NormAudit.log || true)
 [ "$closed" = 6 ] || { cat NormAudit.log; echo "AUDIT_MISMATCH $closed of 6"; exit 7; }
 echo "norm audit: 6 statements closed under the global context"
+timeout 1800 rocqchk -silent -Q . Buri Buri.JitNorm Buri.JitNormStage0 > chk.log 2>&1 || { tail -5 chk.log; echo "ROCQCHK_FAILED"; exit 8; }
+echo "rocqchk: JitNorm and JitNormStage0 replayed"
 n0="$out/n0"; mkdir -p "$n0"; got="$n0/counts.txt"; : > "$got"; : > "$n0/names.txt"
 printf '%-42s %5s %5s %5s %5s %5s %5s %5s %5s\n' file acc rej erase unp fe_unch ports folds src_acc
 for f in $(cd "$src/build/stage0" && ls *.forms | sed 's/\.forms$//'); do
