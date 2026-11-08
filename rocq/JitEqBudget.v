@@ -18,11 +18,12 @@
    product. Transitivity alone is not enough: a search also found transitive, non-symmetric
    equalities that need more than S (length h). *)
 From Coq Require Import List ZArith NArith Bool Lia.
-From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitProfile JitLowerEquiv.
+From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitFloat JitProfile JitLowerEquiv.
 Import ListNotations.
 Module JitEqBudget.
 Import Observation.Observation KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLSemantics
  KLPort.KLPort JitProfile.JitProfile.
+Module F := JitFloat.JitFloat.
 
 Definition tol_cmp (_ : prim) (a b : num) : bool := match a, b with
  | NFloat x, NFloat y => (N.leb x (y + 1) && N.leb y (x + 1))%bool
@@ -98,5 +99,245 @@ Qed.
 Lemma eq_depth_mono_le : forall R P h d d' a b y, (d <= d')%nat ->
  eq_depth_r R P h d a b = Some y -> eq_depth_r R P h d' a b = Some y.
 Proof. intros R P h d d' a b y L. induction L; intro H; [exact H|]. apply eq_depth_mono. auto. Qed.
+
+(* ======================= the statements, as revised ======================= *)
+(* Local copies of the revised statements in JitLowerEquiv, until they land there. *)
+Definition num_eq_per (P : profile) : Prop :=
+ (forall x y, num_cmp P PEqual x y = num_cmp P PEqual y x) /\
+ (forall x y z, num_cmp P PEqual x y = true -> num_cmp P PEqual y z = true -> num_cmp P PEqual x z = true).
+Definition jit_eq_per_statement : Prop := num_eq_per jit_profile.
+Definition eq_budget_per_statement (R : port_rules) : Prop := forall P' h d a b,
+ (forall x y, num_cmp P' PEqual x y = num_cmp P' PEqual y x) ->
+ (forall x y z, num_cmp P' PEqual x y = true -> num_cmp P' PEqual y z = true -> num_cmp P' PEqual x z = true) ->
+ Forall (lok (List.length h)) h -> vok (List.length h) a -> vok (List.length h) b ->
+ (S (List.length h) <= d)%nat -> eq_depth_r R P' h d a b = kl_eq_r R P' h a b.
+
+Section PerZ.
+Local Open Scope Z_scope.
+(* ======================= = on numbers under jit_profile is a PER ======================= *)
+(* Every number that = can relate gets a key: an infinity its sign, a finite value (zeros
+   included) its exact value times 2^1074, an integer in the scale. Finite doubles have
+   exponent at least -1074, so the scaled value is an integer. NaN has no key. *)
+(* The scale, kept opaque so that no tactic expands 2^1074. *)
+Definition sc : Z := 1074.
+Lemma sc_eq : sc = 1074. Proof. reflexivity. Qed.
+Lemma sc_nonneg : 0 <= sc. Proof. unfold sc; lia. Qed.
+Opaque sc.
+Ltac slia := pose proof sc_eq; lia.
+Definition fval (b : N) : option (Z * Z) := match F.rank (F.classify b) with
+ | None => None
+ | Some (i, s, e) => Some (i, s * 2 ^ (e + sc)) end.
+Definition nval (x : num) : option (Z * Z) := match x with
+ | NInt i => Some (0, i * 2 ^ sc)
+ | NFloat b => fval b end.
+
+Lemma classify_fin_e : forall b n m e, F.classify b = F.CFin n m e -> -1074 <= e.
+Proof.
+ intros b n m e H. unfold F.classify in H. cbv zeta in H.
+ remember (Z.land (Z.shiftr (Z.of_N b) 52) 2047) as ex eqn:Ex.
+ remember (Z.land (Z.of_N b) 4503599627370495) as fr eqn:Fr.
+ assert (X : 0 <= ex) by (subst ex; apply Z.land_nonneg; right; lia).
+ clear Ex Fr.
+ destruct (Z.eqb_spec ex 2047); [destruct (Z.eqb fr 0); discriminate H|].
+ destruct (Z.eqb_spec ex 0).
+ - destruct (Z.eqb fr 0); inversion H; lia.
+ - injection H as _ _ <-. lia.
+Qed.
+
+Lemma rank_facts : forall b i s e, F.rank (F.classify b) = Some (i, s, e) ->
+ (i <> 0 /\ s = 0 /\ e = 0) \/ (i = 0 /\ -1074 <= e).
+Proof.
+ intros b i s e H. destruct (F.classify b) as [|neg|neg|neg m e'] eqn:C; cbn in H;
+  inversion H; subst.
+ - left. destruct neg; lia.
+ - right. lia.
+ - right. split; [reflexivity|]. exact (classify_fin_e _ _ _ _ C).
+Qed.
+
+Lemma pow2_nz : forall k, 0 <= k -> 2 ^ k <> 0.
+Proof. intros k K. apply Z.pow_nonzero; slia. Qed.
+
+Lemma scale_eq : forall s1 e1 s2 e2, -1074 <= e1 -> -1074 <= e2 ->
+ (s1 * Z.shiftl 1 (e1 - Z.min e1 e2) = s2 * Z.shiftl 1 (e2 - Z.min e1 e2) <->
+  s1 * 2 ^ (e1 + sc) = s2 * 2 ^ (e2 + sc)).
+Proof.
+ intros s1 e1 s2 e2 H1 H2. rewrite !Z.shiftl_1_l.
+ assert (Me : Z.min e1 e2 <= e1 /\ Z.min e1 e2 <= e2 /\ -1074 <= Z.min e1 e2) by lia.
+ remember (Z.min e1 e2) as e eqn:Ee. clear Ee.
+ assert (A : e1 + sc = (e1 - e) + (e + sc)) by slia.
+ assert (B : e2 + sc = (e2 - e) + (e + sc)) by slia.
+ rewrite A, B.
+ rewrite (Z.pow_add_r 2 (e1 - e) (e + sc)) by slia.
+ rewrite (Z.pow_add_r 2 (e2 - e) (e + sc)) by slia. rewrite !Z.mul_assoc.
+ split; intro Q; [rewrite Q; reflexivity|].
+ apply Z.mul_cancel_r in Q; [exact Q|]. apply pow2_nz; slia.
+Qed.
+
+Lemma jit_order_eq : forall c, jit_order PEqual c = true <-> c = Some Eq.
+Proof. intros [[| |]|]; split; cbn; congruence. Qed.
+
+Lemma float_eq : forall a b, F.compare a b = Some Eq <-> fval a = fval b /\ fval a <> None.
+Proof.
+ intros a b. unfold F.compare, fval.
+ destruct (F.rank (F.classify a)) as [[[i1 s1] e1]|] eqn:Ra;
+ destruct (F.rank (F.classify b)) as [[[i2 s2] e2]|] eqn:Rb;
+  try (split; [discriminate | intros [Q N]; congruence]).
+ apply rank_facts in Ra, Rb.
+ destruct (Z.eqb_spec i1 i2) as [<-|D]; cbn [negb].
+ - destruct (Z.eqb_spec i1 0) as [->|D]; cbn [negb].
+   + destruct Ra as [[? _]|[_ E1]]; [slia|]. destruct Rb as [[? _]|[_ E2]]; [slia|].
+     pose proof (scale_eq s1 e1 s2 e2 E1 E2) as SE. split.
+     * intro Q. injection Q as Q. apply Z.compare_eq_iff, SE in Q. rewrite Q.
+       split; [reflexivity|discriminate].
+     * intros [Q _]. injection Q as Q. apply SE in Q. rewrite (proj2 (Z.compare_eq_iff _ _) Q).
+       reflexivity.
+   + destruct Ra as [[_ [-> ->]]|[? _]]; [|slia]. destruct Rb as [[_ [-> ->]]|[? _]]; [|slia].
+     split; [intros _; split; [reflexivity|discriminate] | reflexivity].
+ - split.
+   + intro Q. injection Q as Q. apply Z.compare_eq_iff in Q. contradiction.
+   + intros [Q _]. injection Q as Q _. contradiction.
+Qed.
+
+
+Lemma int_float_eq : forall i b,
+ JitBytecode.JitBytecode.compare_fix_real i b = Some Eq <-> Some (0, i * 2 ^ sc) = fval b.
+Proof.
+ intros i b. unfold JitBytecode.JitBytecode.compare_fix_real, F.ratio, fval.
+ destruct (F.classify b) as [|neg|neg|neg m e] eqn:C; cbn.
+ - split; discriminate.
+ - split; [destruct neg; discriminate | intro Q; injection Q as Q _; destruct neg; discriminate Q].
+ - rewrite Z.mul_1_r. split.
+   + intro Q. injection Q as Q. apply Z.compare_eq_iff in Q. destruct neg; subst; reflexivity.
+   + intro Q. injection Q as Q. f_equal. apply Z.compare_eq_iff.
+     apply Z.mul_eq_0 in Q. destruct Q as [->|Q]; [destruct neg; reflexivity|].
+     exfalso. exact (pow2_nz sc sc_nonneg Q).
+ - pose proof (classify_fin_e _ _ _ _ C) as E.
+   destruct (Z.leb_spec 0 e) as [L|L];
+    change (if neg then - ?n else ?n) with (F.snum neg n).
+   + rewrite Z.mul_1_r, Z.shiftl_mul_pow2 by exact L.
+     assert (S : F.snum neg (m * 2 ^ e) = F.snum neg m * 2 ^ e) by (destruct neg; cbn; ring).
+     rewrite S, Z.pow_add_r, Z.mul_assoc by slia.
+     split.
+     * intro Q. injection Q as Q. apply Z.compare_eq_iff in Q. rewrite Q. reflexivity.
+     * intro Q. injection Q as Q. f_equal. apply Z.compare_eq_iff.
+       apply Z.mul_cancel_r in Q; [exact Q|apply pow2_nz; slia].
+   + rewrite Z.shiftl_1_l.
+     assert (K : 2 ^ sc = 2 ^ (- e) * 2 ^ (e + sc))
+       by (rewrite <- Z.pow_add_r by slia; f_equal; slia).
+     rewrite K, Z.mul_assoc. split.
+     * intro Q. injection Q as Q. apply Z.compare_eq_iff in Q. rewrite Q. reflexivity.
+     * intro Q. injection Q as Q. f_equal. apply Z.compare_eq_iff.
+       apply Z.mul_cancel_r in Q; [exact Q|apply pow2_nz; slia].
+Qed.
+
+Theorem jit_num_eq_iff : forall x y,
+ num_cmp jit_profile PEqual x y = true <-> nval x = nval y /\ nval x <> None.
+Proof.
+ intros [i|a] [j|b]; cbn [num_cmp nval]; cbn [inexact_cmp jit_profile]; unfold jit_inexact_cmp.
+ - rewrite Z.eqb_eq. split.
+   + intros ->. split; [reflexivity|discriminate].
+   + intros [Q _]. injection Q as Q. apply Z.mul_cancel_r in Q; [exact Q|apply pow2_nz; slia].
+ - rewrite jit_order_eq, int_float_eq. split; [intros Q; split; [exact Q|discriminate]|tauto].
+ - rewrite jit_order_eq.
+   assert (Fl : forall c, flip c = Some Eq <-> c = Some Eq) by (intros [[| |]|]; cbn; split; congruence).
+   rewrite Fl, int_float_eq. split.
+   + intro Q. rewrite <- Q. split; [reflexivity|discriminate].
+   + intros [Q N]. symmetry. exact Q.
+ - rewrite jit_order_eq. exact (float_eq a b).
+Qed.
+
+Theorem jit_eq_per : jit_eq_per_statement.
+Proof.
+ split.
+ - intros x y. apply Bool.eq_iff_eq_true. rewrite !jit_num_eq_iff.
+   split; intros [Q N]; (split; [symmetry; exact Q| rewrite <- Q; exact N]).
+ - intros x y z. rewrite !jit_num_eq_iff. intros [Q1 N1] [Q2 N2]. split; [congruence|exact N1].
+Qed.
+
+(* The edges of it. *)
+Definition nan : N := F.canonical_nan.
+Definition neg_zero : N := 9223372036854775808%N.
+Example nan_not_reflexive : num_cmp jit_profile PEqual (NFloat nan) (NFloat nan) = false.
+Proof. vm_compute. reflexivity. Qed.
+Example zeros_equal : num_cmp jit_profile PEqual (NFloat neg_zero) (NFloat 0) = true
+  /\ num_cmp jit_profile PEqual (NInt 0) (NFloat neg_zero) = true.
+Proof. vm_compute. split; reflexivity. Qed.
+(* 2^53 + 1 is not a double: it differs from the double 2^53, which equals 2^53. *)
+Example big_int_exact :
+ num_cmp jit_profile PEqual (NInt 9007199254740993) (NFloat (F.of_Z 9007199254740992)) = false
+ /\ num_cmp jit_profile PEqual (NInt 9007199254740992) (NFloat (F.of_Z 9007199254740992)) = true
+ /\ num_cmp jit_profile PEqual (NFloat (F.of_Z 9007199254740993)) (NFloat (F.of_Z 9007199254740992)) = true.
+Proof. vm_compute. repeat split. Qed.
+End PerZ.
+
+(* ======================= reduction to one step on cells ======================= *)
+(* = at budget S d reads the heap only through `cellcmp d`: the comparison, at budget d, of the
+   contents of two different cells. So once one more budget changes no cell comparison, no
+   further budget changes anything. What is left open is that step at d = length h. *)
+Section Reduce.
+Variables (R : port_rules) (P : profile) (h : list (list value)).
+Local Open Scope nat_scope.
+
+Definition cellcmp (d p q : nat) : option bool := match nth_error h p, nth_error h q with
+ | Some xs, Some ys => list_eq (eq_depth_r R P h d) xs ys
+ | _, _ => None end.
+
+Lemma list_eq_ext : forall f g, (forall u v, f u v = g u v) ->
+ forall xs ys, list_eq f xs ys = list_eq g xs ys.
+Proof.
+ intros f g E. induction xs as [|u xs IH]; intros [|v ys]; cbn; try reflexivity.
+ rewrite E. destruct (g u v) as [[|]|]; try reflexivity. apply IH.
+Qed.
+
+Lemma eq_depth_same_cells : forall d d', (forall p q, p <> q -> cellcmp d p q = cellcmp d' p q) ->
+ forall a b, eq_depth_r R P h (S d) a b = eq_depth_r R P h (S d') a b.
+Proof.
+ intros d d' Hc a.
+ induction a as [n|s|bb|t| |a1 IHa1 a2 IHa2|l|st|x0 e0 r0|e1 r1|f0 args0|ex]; intro w;
+  destruct w as [n'|s'|bb'|t'| |b1 b2|l0|st'|x1 e2 r2|e3 r3|f1 args1|ex']; try reflexivity.
+ - change (match eq_depth_r R P h (S d) a1 b1 with Some true => eq_depth_r R P h (S d) a2 b2 | r => r end
+         = match eq_depth_r R P h (S d') a1 b1 with Some true => eq_depth_r R P h (S d') a2 b2 | r => r end).
+   rewrite IHa1, IHa2. reflexivity.
+ - cbn. destruct (Nat.eqb_spec l l0) as [_|D]; [reflexivity|]. exact (Hc l l0 D).
+Qed.
+
+Lemma cellcmp_step : forall d d', (forall p q, p <> q -> cellcmp d p q = cellcmp d' p q) ->
+ forall p q, cellcmp (S d) p q = cellcmp (S d') p q.
+Proof.
+ intros d d' Hc p q. unfold cellcmp at 1 2.
+ destruct (nth_error h p), (nth_error h q); try reflexivity.
+ apply list_eq_ext. intros u v. apply eq_depth_same_cells. exact Hc.
+Qed.
+
+Lemma cellcmp_stable : forall n, (forall p q, p <> q -> cellcmp n p q = cellcmp (S n) p q) ->
+ forall k p q, p <> q -> cellcmp (k + n) p q = cellcmp n p q.
+Proof.
+ intros n Hn. induction k as [|k IH]; intros p q D; [reflexivity|].
+ change (S k + n) with (S (k + n)).
+ rewrite (cellcmp_step (k + n) n IH p q). symmetry. exact (Hn p q D).
+Qed.
+
+Theorem budget_from_step : forall n, (forall p q, p <> q -> cellcmp n p q = cellcmp (S n) p q) ->
+ forall d a b, S n <= d -> eq_depth_r R P h d a b = eq_depth_r R P h (S n) a b.
+Proof.
+ intros n Hn d a b L. destruct d as [|d]; [lia|].
+ apply eq_depth_same_cells. intros p q D.
+ replace d with ((d - n) + n) by lia. exact (cellcmp_stable n Hn _ p q D).
+Qed.
+End Reduce.
+
+(* The open core: at budget length h, one more budget changes no cell comparison. The search
+   (see the header) found the cell comparisons settled one step earlier still. *)
+Definition eq_core_statement (R : port_rules) : Prop := forall P' h,
+ (forall x y, num_cmp P' PEqual x y = num_cmp P' PEqual y x) ->
+ (forall x y z, num_cmp P' PEqual x y = true -> num_cmp P' PEqual y z = true -> num_cmp P' PEqual x z = true) ->
+ Forall (lok (List.length h)) h ->
+ forall p q, p <> q -> cellcmp R P' h (List.length h) p q = cellcmp R P' h (S (List.length h)) p q.
+
+Theorem eq_budget_from_core : forall R, eq_core_statement R -> eq_budget_per_statement R.
+Proof.
+ intros R Core P' h d a b Sy Tr Hh _ _ L. unfold kl_eq_r.
+ exact (budget_from_step R P' h _ (Core P' h Sy Tr Hh) d a b L).
+Qed.
 
 End JitEqBudget.
