@@ -1,4 +1,4 @@
-(* Shen/JIT Phase 2, the lowerer's front passes: STATEMENTS ONLY (wave 1(c), Phase A).
+(* Shen/JIT Phase 2, the lowerer's front passes (wave 1(c)): statements, reviewed and revised.
    lower.shen (d3348ce) lowers a body in three steps: share (b0 to b1, KLambda to KLambda),
    norm (b1 to a normal form n, read back as KLambda e), and emission (e to code c, which
    JitLowerRel.CompFn relates). The intermediate outputs are untrusted witnesses: a Rocq check
@@ -28,14 +28,27 @@
      may take any number, so inlining a sealed callee (fewer frames, fewer steps) is allowed.
    - Composition never uses transitivity of the logical relation (which does not hold in
      general for step-indexed relations). It applies each link's adequacy to the closed
-     first-order observation and composes there, where the relation, `GStore`, is transitive. *)
+     first-order observation and composes there, where the relation, `GStore`, is transitive.
+   - KRef is PARTIAL CORRECTNESS: a terminating run of the target is matched. It does not say
+     that a target diverges only when the source does. Termination is a separate relation, to be
+     proved later with its own compatibility lemmas (OB-JIT-LOWER-TERM): roughly, a source run
+     reaching a terminal state that is not a resource error is matched by a target run reaching
+     one, so a diverging target has a diverging source by contraposition, constructively.
+
+   What a front-end checker must REJECT, because the rewrite cannot satisfy KRef in Búri's
+   KLambda (pass-capture's census: none fires at stage 0):
+   - norm's (fn F) rewrites: ((fn F) X...) to (F X...) needs the kernel's fn in D, whose body uses
+     trap-error and so is not accepted code, against Com's FunRel; the open-F rewrite calls
+     shen-jit.arity?, which the KLambda store does not define;
+   - open-call inlining guarded by shen-jit.inlined?, which the store does not define;
+   - eval-kl to a call of shen-jit.eval-kl, which the store does not define. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
-From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitProfile JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm.
+From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitProfile JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck.
 Import ListNotations.
 Module JitLowerEquiv.
 Import Observation.Observation KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLSemantics KLPort.KLPort
  JitProfile.JitProfile JitLowerRel.JitLowerRel JitLowerKont.JitLowerKont JitLowerPrim.JitLowerPrim
- JitLowerStep.JitLowerStep JitLowerThm.JitLowerThm.
+ JitLowerStep.JitLowerStep JitLowerThm.JitLowerThm JitLowerCheck.JitLowerCheck.
 Module B := JitBytecode.JitBytecode.
 
 Section Equiv.
@@ -71,8 +84,8 @@ Definition same_id (w : world) (r0 r : lenv) : Prop :=
 Definition StoreHas (s : store) : Prop := forall f d, In (f, d) D -> lookup f (gfuns s) = Some d.
 
 (* ---------- the ground relation: what a whole run is compared by ---------- *)
-(* Values: first-order data equal, vectors by the world, closures only by kind.
-   Does NOT say: anything about a closure's body or environment. *)
+(* Values: first-order data equal, vectors by the world, closures by kind and identity.
+   Does NOT say: anything about a closure's body or environment beyond its identity. *)
 Fixpoint GVal (w : world) (v0 v : value) {struct v0} : Prop :=
  match v0, v with
  | VNum a, VNum b => a = b
@@ -83,8 +96,8 @@ Fixpoint GVal (w : world) (v0 v : value) {struct v0} : Prop :=
  | VCons a0 d0, VCons a d => GVal w a0 a /\ GVal w d0 d
  | VVec l0, VVec l => In (l0, l) w
  | VStream h0, VStream h => h0 = h
- | VLam _ _ _, VLam _ _ _ => True
- | VFrozen _ _, VFrozen _ _ => True
+ | VLam _ _ r0, VLam _ _ r => same_id w r0 r
+ | VFrozen _ r0, VFrozen _ r => same_id w r0 r
  | VPartial f0 as0, VPartial f as1 => f0 = f /\
      (fix go (l0 l : list value) {struct l0} : Prop := match l0, l with
       | [], [] => True
@@ -95,7 +108,8 @@ Fixpoint GVal (w : world) (v0 v : value) {struct v0} : Prop :=
 
 (* Stores: the same function table, the same global names in the same order with GVal-related
    values, and cells related by the world. Does NOT say: anything about cells outside the world
-   (garbage, or cells only one side made), or that the world maps an old location to itself. *)
+   (garbage, or cells only one side made). That the world maps old locations to themselves is
+   said by the statements that use it (wext (id_world s) w). *)
 Definition GStore (w : world) (s0 s : store) : Prop :=
  gfuns s0 = gfuns s /\
  Forall2 (fun p0 p => fst p0 = fst p /\ GVal w (snd p0) (snd p)) (gvals s0) (gvals s) /\
@@ -105,15 +119,15 @@ Definition GStore (w : world) (s0 s : store) : Prop :=
 (* ---------- observation ---------- *)
 (* Every target run of fewer than k steps that reaches a terminal state is matched by a source
    run with the same IO trace to a terminal state of the same kind: a GVal-related value, the
-   same exception, or a wrong state, with GStore-related stores.
-   Does NOT say: that a diverging target has a diverging source (termination-insensitive, see the
-   report), anything about infinite IO, or which wrong state. *)
-Definition Obs (k : nat) (c0 c : config) : Prop :=
+   same exception, or a wrong state, with GStore-related stores, under a world extending w.
+   Does NOT say: that a diverging target has a diverging source (partial correctness: see
+   OB-JIT-LOWER-TERM), anything about infinite IO, or which wrong state. *)
+Definition ObsT (k : nat) (w : world) (c0 c : config) : Prop :=
  forall n t c', (n < k)%nat -> runs n c t c' ->
-  (forall v s, c' = Cfg (Ret v) [] s -> exists v0 s0 w,
-     srun c0 t (Cfg (Ret v0) [] s0) /\ wf_world w /\ GVal w v0 v /\ GStore w s0 s) /\
-  (forall x s, c' = Cfg (Throw x) [] s -> exists s0 w,
-     srun c0 t (Cfg (Throw x) [] s0) /\ wf_world w /\ GStore w s0 s) /\
+  (forall v s, c' = Cfg (Ret v) [] s -> exists v0 s0 w',
+     srun c0 t (Cfg (Ret v0) [] s0) /\ wext w w' /\ GVal w' v0 v /\ GStore w' s0 s) /\
+  (forall x s, c' = Cfg (Throw x) [] s -> exists s0 w',
+     srun c0 t (Cfg (Throw x) [] s0) /\ wext w w' /\ GStore w' s0 s) /\
   (forall why, next_r R P c' = MWrong why -> exists c0' why0,
      srun c0 t c0' /\ next_r R P c0' = MWrong why0).
 
@@ -137,13 +151,13 @@ Definition EnvRel_with (V1 : world -> value -> value -> Prop) (w : world) (g : l
    related, at every lower index and larger world. *)
 Definition KRel_with (k : nat) (w : world) (K0 K : list frame) : Prop :=
  forall j, (j <= k)%nat -> forall w', wext w w' ->
-  (forall v0 v s0 s, V j w' v0 v -> SRel_with (V j) w' s0 s -> Obs j (Cfg (Ret v0) K0 s0) (Cfg (Ret v) K s)) /\
-  (forall x s0 s, SRel_with (V j) w' s0 s -> Obs j (Cfg (Throw x) K0 s0) (Cfg (Throw x) K s)).
+  (forall v0 v s0 s, V j w' v0 v -> SRel_with (V j) w' s0 s -> ObsT j w' (Cfg (Ret v0) K0 s0) (Cfg (Ret v) K s)) /\
+  (forall x s0 s, SRel_with (V j) w' s0 s -> ObsT j w' (Cfg (Throw x) K0 s0) (Cfg (Throw x) K s)).
 
 (* Expressions: under related continuations and stores, the two evaluations are observably related. *)
 Definition ERel_with (k : nat) (w : world) (rho0 : lenv) (e0 : expr) (rho : lenv) (e : expr) : Prop :=
  forall j, (j <= k)%nat -> forall w', wext w w' -> forall K0 K, KRel_with j w' K0 K ->
-  forall s0 s, SRel_with (V j) w' s0 s -> Obs j (Cfg (Eval rho0 e0) K0 s0) (Cfg (Eval rho e) K s).
+  forall s0 s, SRel_with (V j) w' s0 s -> ObsT j w' (Cfg (Eval rho0 e0) K0 s0) (Cfg (Eval rho e) K s).
 
 (* Values at index k. A lambda or a frozen body is related by what it does when applied, at
    every lower index, so two bodies rewritten differently can be related.
@@ -192,20 +206,31 @@ Definition ERel (k : nat) : world -> lenv -> expr -> lenv -> expr -> Prop := ERe
    trace, is one of e0: a related value and store, the same exception and a related store, or a
    wrong state. The source and the target are both KLPort.step_r (jit_rules sealed) jit_profile,
    so either may raise a catchable resource error at any running state.
-   Does NOT say: that e diverges only if e0 does; that the two take comparable numbers of steps
-   or have comparable continuations at any intermediate point (inlining changes both); anything
-   about IO beyond identical traces on terminating runs; anything about states outside D. *)
+   Partial correctness. Does NOT say:
+   - that e diverges only if e0 does: e may diverge silently where e0 returns (OB-JIT-LOWER-TERM);
+   - that the two take comparable numbers of steps or have comparable continuations at any
+     intermediate point (inlining changes both);
+   - anything about IO beyond identical traces on terminating runs, or about stores outside D;
+   - anything distinguishing a resource error from a user error: under jit_rules a resource
+     error IS (XUser "out of memory") or (XUser "stack overflow"), so a target's
+     (simple-error "stack overflow") refines any source that can reach a running state with a
+     related store and continuation. *)
 Definition KRef (g : list name) (e0 e : expr) : Prop :=
  forall k w rho0 rho, wf_world w -> EnvRel_with (VRel k) w g rho0 rho -> ERel k w rho0 e0 rho e.
 
 (* ---------- premises, as decidable checks ---------- *)
-(* Names the lowerer makes. `shen-jit.lower.fresh` is (concat Prefix N) with N counting from 1
-   per definition, so a reserved name is a prefix followed by decimal digits; the fixed names are
-   norm's inlining marker and KLPort's closure-identity key. *)
-Definition lowerer_prefixes : list name :=
- map of_string ["shen-jit.lower.else"; "shen-jit.lower.exception"; "shen-jit.lower.arg";
-                "shen-jit.lower.head"; "shen-jit.lower.partial"]%string.
-Definition lowerer_fixed : list name := [of_string "shen-jit.lower.inlining"; id_key].
+(* Names the lowerer makes, in its namespace ns. `ns.fresh` is (concat Prefix N) with N counting
+   from 1 per definition, so a reserved name is a prefix followed by decimal digits; the fixed names
+   are norm's inlining marker and KLPort's closure-identity key. The namespace is a parameter:
+   stage 0 runs lower.shen with shen-jit.lower. renamed to stage0.lower. (shen-jit's Makefile), so
+   its names are stage0.lower.else1, stage0.lower.arg2, stage0.lower.inlining, ...; at run time
+   they are shen-jit.lower.*. The lowerer's own definitions mention shen-jit.lower.inlining, so
+   fresh_ok in the run-time namespace fails on them; in stage 0's it does not. *)
+Definition ns_stage0 : name := of_string "stage0.lower.".
+Definition ns_runtime : name := of_string "shen-jit.lower.".
+Definition lowerer_prefixes (ns : name) : list name :=
+ map (fun p => ns ++ of_string p) ["else"; "exception"; "arg"; "head"; "partial"]%string.
+Definition lowerer_fixed (ns : name) : list name := [ns ++ of_string "inlining"; id_key].
 
 Fixpoint prefixb (p t : text) : bool := match p, t with
  | [], _ => true
@@ -214,8 +239,8 @@ Fixpoint prefixb (p t : text) : bool := match p, t with
 Definition digitb (c : N) : bool := (N.leb 48 c && N.leb c 57)%bool.
 Definition fresh_shape (p x : name) : bool :=
  prefixb p x && negb (Nat.eqb (List.length x) (List.length p)) && forallb digitb (skipn (List.length p) x).
-Definition reserved (x : name) : bool :=
- existsb (fun p => fresh_shape p x) lowerer_prefixes || existsb (text_eqb x) lowerer_fixed.
+Definition reserved (ns x : name) : bool :=
+ existsb (fun p => fresh_shape p x) (lowerer_prefixes ns) || existsb (text_eqb x) (lowerer_fixed ns).
 
 (* Every name an expression mentions, in any position: binders, variables, symbol literals,
    called names and defun parameters. *)
@@ -241,8 +266,8 @@ Fixpoint names (e : expr) : list name := match e with
    in D (inlining brings their names in). *)
 Definition D_bodies : list expr :=
  flat_map (fun p => match snd p with FUser _ b => [b] | FPrim _ => [] end) D.
-Definition fresh_ok (es : list expr) : bool :=
- forallb (fun e => forallb (fun x => negb (reserved x)) (names e)) es.
+Definition fresh_ok (ns : name) (es : list expr) : bool :=
+ forallb (fun e => forallb (fun x => negb (reserved ns x)) (names e)) es.
 
 (* Binders. Búri's parse makes a keyword head a special form even where the keyword is bound;
    lower.shen tests `F in Scope` first and makes it a dynamic call. They agree when no binder is
@@ -263,11 +288,18 @@ Fixpoint binders (e : expr) : list name := match e with
  | _ => [] end.
 Definition no_keyword_binders (e : expr) : bool := forallb (fun x => negb (keyword x)) (binders e).
 
-(* D names only sealed functions, so no defun can replace them during a run. KRel and SRel make
-   promises only about stores meeting D, so every statement whose proof runs store code (a call,
-   eval-kl, a partial application, a stored closure, a defun) takes D_sealed: without it a defun
-   of a D name mid-run leaves the stores outside those promises. *)
-Definition D_sealed : Prop := Forall (fun p => In (fst p) sealed) D.
+(* D names only sealed functions, each once, so no defun can replace them during a run. KRel and
+   SRel make promises only about stores meeting D, so every statement whose proof runs store code
+   (a call, eval-kl, a partial application, a stored closure, a defun) takes D_wf: without it a
+   defun of a D name mid-run leaves the stores outside those promises. *)
+Definition D_wf : Prop := Forall (fun p => In (fst p) sealed) D /\ NoDup (map fst D).
+
+(* Every user definition in D is code the emission relation accepts, given a code object for it:
+   what lets a store meeting D also meet Com's FunRel. Decided by JitLowerCheck.check_fn. *)
+Definition D_compiled (cs : list (name * B.code)) : bool :=
+ forallb (fun p => match snd p with
+   | FUser ps b => match lookup (fst p) cs with Some c => check_fn c ps b | None => false end
+   | FPrim _ => true end) D.
 
 (* Variables free in e are all in g. *)
 Fixpoint scoped (g : list name) (e : expr) : bool := match e with
@@ -284,17 +316,27 @@ Fixpoint scoped (g : list name) (e : expr) : bool := match e with
  | ECall _ args => forallb (scoped g) args
  | _ => true end.
 
-(* Every location a store's cells and globals mention is a cell of it, closures' identities included. *)
+(* Each of the store's locations to itself. *)
 Definition id_world (s : store) : world := map (fun l => (l, l)) (seq 0 (List.length (heap s))).
 
 (* ======================= statements (Phase B proves them) ======================= *)
 
 (* --- the premises' own specifications --- *)
-Definition fresh_ok_spec_statement : Prop := forall es,
- fresh_ok es = true <-> (forall e x, In e es -> In x (names e) -> reserved x = false).
+Definition fresh_ok_spec_statement : Prop := forall ns es,
+ fresh_ok ns es = true <-> (forall e x, In e es -> In x (names e) -> reserved ns x = false).
 
 Definition no_keyword_binders_spec_statement : Prop := forall e,
  no_keyword_binders e = true <-> (forall x, In x (binders e) -> keyword x = false).
+
+Definition D_compiled_spec_statement : Prop := forall cs,
+ D_compiled cs = true -> forall f ps b, In (f, FUser ps b) D -> exists c, lookup f cs = Some c /\ CompFn c ps b.
+
+(* = on vectors compares contents with a budget of one more than the heap's length (KLPort
+   eq_depth_r). Two related heaps differ in length by their one-sided cells, so the relation needs
+   the answer not to depend on the budget past that bound. *)
+Definition eq_budget_statement : Prop := forall P' h d a b,
+ Forall (lok (List.length h)) h -> vok (List.length h) a -> vok (List.length h) b ->
+ (S (List.length h) <= d)%nat -> eq_depth_r R P' h d a b = kl_eq_r R P' h a b.
 
 (* Sealed definitions are never redefined: defun refuses a sealed name (jit_rules option 5), and
    gfuns changes only by defun, including through eval-kl, so this is a lemma, not a premise. *)
@@ -302,7 +344,7 @@ Definition sealed_stable_statement : Prop := forall c t c' f,
  srun c t c' -> In f sealed -> lookup f (gfuns (mem c')) = lookup f (gfuns (mem c)).
 
 Definition storehas_stable_statement : Prop := forall c t c',
- D_sealed -> srun c t c' -> StoreHas (mem c) -> StoreHas (mem c').
+ D_wf -> srun c t c' -> StoreHas (mem c) -> StoreHas (mem c').
 
 (* --- structure of the relation --- *)
 Definition VRelF_index_statement : Prop := forall k j, (j <= k)%nat -> VRelF k j = VRel j.
@@ -331,27 +373,14 @@ Definition KRel_top_statement : Prop := forall k w, wf_world w -> KRel k w [] []
 Definition EnvRelAll (k : nat) (w : world) (rho0 rho : lenv) : Prop :=
  Forall2 (fun p0 p => fst p0 = fst p /\ VRel k w (snd p0) (snd p)) rho0 rho.
 Definition fundamental_statement : Prop := forall k w rho0 rho e,
- D_sealed -> wf_world w -> EnvRelAll k w rho0 rho -> ERel k w rho0 e rho e.
+ D_wf -> wf_world w -> EnvRelAll k w rho0 rho -> ERel k w rho0 e rho e.
 (* Not a corollary of fundamental_statement as stated: a closure captures the whole environment,
    and KRef relates only g. Phase B needs the fundamental lemma in a scoped form too. *)
-Definition KRef_refl_statement : Prop := forall g e, D_sealed -> scoped g e = true -> KRef g e e.
-(* Every location a value mentions, through pairs, partial applications and closure
-   environments (closure identities included), is below n. *)
-Fixpoint locs_below (n : nat) (v : value) {struct v} : Prop :=
- match v with
- | VVec l => (l < n)%nat
- | VCons a d => locs_below n a /\ locs_below n d
- | VLam _ _ r | VFrozen _ r => (fix go (r : lenv) : Prop := match r with
-     | [] => True | (_, x) :: r => locs_below n x /\ go r end) r
- | VPartial _ xs => (fix go (xs : list value) : Prop := match xs with
-     | [] => True | x :: xs => locs_below n x /\ go xs end) xs
- | _ => True end.
-Definition store_closed (s : store) : Prop :=
- Forall (fun p => locs_below (List.length (heap s)) (snd p)) (gvals s) /\
- Forall (Forall (locs_below (List.length (heap s)))) (heap s).
-(* A closed store meeting D is related to itself at the identity world. *)
+Definition KRef_refl_statement : Prop := forall g e, D_wf -> scoped g e = true -> KRef g e e.
+(* A well-formed store (KLValue.store_ok: every value points into its heap) meeting D is related
+   to itself at the identity world. *)
 Definition store_refl_statement : Prop := forall k s,
- D_sealed -> StoreHas s -> store_closed s -> SRel k (id_world s) s s.
+ D_wf -> StoreHas s -> store_ok s -> SRel k (id_world s) s s.
 
 (* --- compatibility: one statement per constructor the passes rewrite under --- *)
 Definition compat_lit_statement : Prop := forall g e v, lit_val e = Some v -> KRef g e e.
@@ -369,17 +398,17 @@ Definition compat_cond_statement : Prop := forall g cl0 cl,
  KRef g (ECond cl0) (ECond cl).
 Definition compat_type_statement : Prop := forall g a0 a, KRef g a0 a -> KRef g (EType a0) (EType a).
 Definition compat_trap_statement : Prop := forall g a0 a h0 h,
- D_sealed -> KRef g a0 a -> KRef g h0 h -> KRef g (ETrap a0 h0) (ETrap a h).
+ D_wf -> KRef g a0 a -> KRef g h0 h -> KRef g (ETrap a0 h0) (ETrap a h).
 Definition compat_lambda_statement : Prop := forall g x b0 b,
  KRef (x :: g) b0 b -> KRef g (ELam x b0) (ELam x b).
 Definition compat_freeze_statement : Prop := forall g b0 b, KRef g b0 b -> KRef g (EFreeze b0) (EFreeze b).
 (* Named calls cover `do`, `thaw` and `protect`, which Búri's KLambda has as ordinary calls. *)
 Definition compat_call_statement : Prop := forall g f as0 as1,
- D_sealed -> Forall2 (KRef g) as0 as1 -> KRef g (ECall f as0) (ECall f as1).
+ D_wf -> Forall2 (KRef g) as0 as1 -> KRef g (ECall f as0) (ECall f as1).
 Definition compat_app_statement : Prop := forall g h0 h as0 as1,
- D_sealed -> KRef g h0 h -> Forall2 (KRef g) as0 as1 -> KRef g (EApp h0 as0) (EApp h as1).
+ D_wf -> KRef g h0 h -> Forall2 (KRef g) as0 as1 -> KRef g (EApp h0 as0) (EApp h as1).
 (* A defun is not rewritten under (lower.shen rejects a nested defun): only reflexivity. *)
-Definition compat_defun_statement : Prop := forall g f ps b, D_sealed -> KRef g (EDefun f ps b) (EDefun f ps b).
+Definition compat_defun_statement : Prop := forall g f ps b, D_wf -> KRef g (EDefun f ps b) (EDefun f ps b).
 Definition KRef_scope_statement : Prop := forall g g' e0 e, incl g g' -> KRef g e0 e -> KRef g' e0 e.
 
 (* --- adequacy: what one link says about a whole run from the same start --- *)
@@ -391,12 +420,12 @@ Inductive fo : value -> Prop :=
  | fo_str t : fo (VStr t) | fo_nil : fo VNil | fo_cons a d : fo a -> fo d -> fo (VCons a d).
 
 Definition adequacy_statement : Prop := forall g e0 e rho s,
- D_sealed -> KRef g e0 e -> Forall (fun p => fo (snd p)) rho -> (forall x, In x g -> exists v, lookup x rho = Some v) ->
- StoreHas s -> store_closed s ->
+ D_wf -> KRef g e0 e -> Forall (fun p => fo (snd p)) rho -> (forall x, In x g -> exists v, lookup x rho = Some v) ->
+ StoreHas s -> store_ok s ->
  (forall v s', srun (Cfg (Eval rho e) [] s) [] (Cfg (Ret v) [] s') -> fo v ->
-    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s0) /\ wf_world w /\ GStore w s0 s') /\
+    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s0) /\ wext (id_world s) w /\ GStore w s0 s') /\
  (forall x s', srun (Cfg (Eval rho e) [] s) [] (Cfg (Throw x) [] s') ->
-    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Throw x) [] s0) /\ wf_world w /\ GStore w s0 s').
+    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Throw x) [] s0) /\ wext (id_world s) w /\ GStore w s0 s').
 
 Definition srun_nil_Sstar_statement : Prop := forall c c', srun c [] c' <-> Sstar sealed c c'.
 
@@ -405,31 +434,39 @@ Section Compose.
 Variables (E : B.env) (pt : B.tree (B.prim * nat)).
 
 (* Ends (JitLowerThm) with one difference, visible here: the source's final store is related to
-   the starting one by GStore under some world, instead of being it. b0 may allocate closure
-   cells e never makes (a removed ((lambda X B) A), let-lambda or let-frozen), so equality is
-   not available. Like Ends, the machine m1 of each constructor is bound inside it. *)
-Inductive EndsSrc (s : store) (c : config) : Prop :=
- | ES_ok v v' m1 m2 s0 w : Sstar sealed c (Cfg (Ret v) [] s0) -> wf_world w -> GStore w s0 s ->
-     B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> EndsSrc s c
- | ES_err x l msg tv m1 m2 s0 w : Sstar sealed c (Cfg (Throw x) [] s0) -> wf_world w -> GStore w s0 s ->
+   the starting one by GStore under a world that maps each of s's locations to itself, instead of
+   being it. b0 may allocate closure cells e never makes (a removed ((lambda X B) A), let-lambda or
+   let-frozen), so equality is not available. As in Ends, m1 is a parameter: the machine the
+   bytecode's run reaches is the one that finishes. *)
+Inductive EndsSrc (s : store) (c : config) (m1 : B.machine) : Prop :=
+ | ES_ok v v' m2 s0 w : Sstar sealed c (Cfg (Ret v) [] s0) -> wext (id_world s) w -> GStore w s0 s ->
+     B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> EndsSrc s c m1
+ | ES_err x l msg tv m2 s0 w : Sstar sealed c (Cfg (Throw x) [] s0) -> wext (id_world s) w -> GStore w s0 s ->
      B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m2 ->
-     B.tget l (B.m_heap m2) = Some (B.OExn msg tv) -> exn_ok x msg -> EndsSrc s c.
+     B.tget l (B.m_heap m2) = Some (B.OExn msg tv) -> exn_ok x msg -> EndsSrc s c m1.
 
 (* call_preservation with the source body b0 where it had b. Its hypotheses are kept verbatim
    (Com, CompFn of the emitted e, the argument count, entered); the two front links, D, and
-   store_closed (no value in s names a cell s lacks; expected of reachable stores, not proved) are added.
+   store_ok s are added.
    The first disjunct still speaks of e's configuration and MS: the bytecode is in step
    with a run of e, and that disjunct says nothing about b0. The second is about b0.
-   Does NOT say: that b0 diverges when the bytecode does (neither does call_preservation); that
-   b0's final store equals s. *)
+   Does NOT say:
+   - that b0 diverges when the bytecode does. call_preservation ties the bytecode's divergence to
+     e's run (MS at every n); the gap is KRef's partial correctness: e may diverge silently where
+     b0 returns (OB-JIT-LOWER-TERM);
+   - that b0's final store equals s;
+   - anything about b0 against the SOURCE store. Under Com's FunRel every function s defines is
+     accepted code, so the callees b0 calls are the LOWERED bodies (each definition's e), not the
+     kernel's source definitions. Composing definitions with each other needs gfuns related by
+     KRef rather than equal, which is not this theorem. *)
 Definition call_preservation_src_statement : Prop :=
  forall s m c ps b0 b1 e args n,
-  D_sealed -> KRef ps b0 b1 -> KRef ps b1 e -> StoreHas s -> store_closed s ->
+  D_wf -> KRef ps b0 b1 -> KRef ps b1 e -> StoreHas s -> store_ok s ->
   Com s m -> CompFn c ps e -> List.length ps = List.length args -> entered m c args ->
   let c0 := Cfg (Eval (combine ps args) b0) [] s in
   let ce := Cfg (Eval (combine ps args) e) [] s in
   (exists c' m' k, Sstar sealed ce c' /\ TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
-  (exists m1, EndsSrc s c0 /\ TStar E pt m m1).
+  (exists m1, EndsSrc s c0 m1 /\ TStar E pt m m1).
 End Compose.
 End Equiv.
 End JitLowerEquiv.

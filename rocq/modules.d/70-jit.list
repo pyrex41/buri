@@ -9,6 +9,6 @@ JitLowerStable
 JitLowerPrim
 JitLowerStep
 JitLowerThm
-JitLowerEquiv
 JitLowerCheck
+JitLowerEquiv
 JitLowerStage0
