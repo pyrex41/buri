@@ -263,7 +263,10 @@ Fixpoint binders (e : expr) : list name := match e with
  | _ => [] end.
 Definition no_keyword_binders (e : expr) : bool := forallb (fun x => negb (keyword x)) (binders e).
 
-(* D names only sealed functions, so no defun can replace them during a run. *)
+(* D names only sealed functions, so no defun can replace them during a run. KRel and SRel make
+   promises only about stores meeting D, so every statement whose proof runs store code (a call,
+   eval-kl, a partial application, a stored closure, a defun) takes D_sealed: without it a defun
+   of a D name mid-run leaves the stores outside those promises. *)
 Definition D_sealed : Prop := Forall (fun p => In (fst p) sealed) D.
 
 (* Variables free in e are all in g. *)
@@ -328,8 +331,10 @@ Definition KRel_top_statement : Prop := forall k w, wf_world w -> KRel k w [] []
 Definition EnvRelAll (k : nat) (w : world) (rho0 rho : lenv) : Prop :=
  Forall2 (fun p0 p => fst p0 = fst p /\ VRel k w (snd p0) (snd p)) rho0 rho.
 Definition fundamental_statement : Prop := forall k w rho0 rho e,
- wf_world w -> EnvRelAll k w rho0 rho -> ERel k w rho0 e rho e.
-Definition KRef_refl_statement : Prop := forall g e, scoped g e = true -> KRef g e e.
+ D_sealed -> wf_world w -> EnvRelAll k w rho0 rho -> ERel k w rho0 e rho e.
+(* Not a corollary of fundamental_statement as stated: a closure captures the whole environment,
+   and KRef relates only g. Phase B needs the fundamental lemma in a scoped form too. *)
+Definition KRef_refl_statement : Prop := forall g e, D_sealed -> scoped g e = true -> KRef g e e.
 (* Every location a value mentions, through pairs, partial applications and closure
    environments (closure identities included), is below n. *)
 Fixpoint locs_below (n : nat) (v : value) {struct v} : Prop :=
@@ -346,7 +351,7 @@ Definition store_closed (s : store) : Prop :=
  Forall (Forall (locs_below (List.length (heap s)))) (heap s).
 (* A closed store meeting D is related to itself at the identity world. *)
 Definition store_refl_statement : Prop := forall k s,
- StoreHas s -> store_closed s -> SRel k (id_world s) s s.
+ D_sealed -> StoreHas s -> store_closed s -> SRel k (id_world s) s s.
 
 (* --- compatibility: one statement per constructor the passes rewrite under --- *)
 Definition compat_lit_statement : Prop := forall g e v, lit_val e = Some v -> KRef g e e.
@@ -364,17 +369,17 @@ Definition compat_cond_statement : Prop := forall g cl0 cl,
  KRef g (ECond cl0) (ECond cl).
 Definition compat_type_statement : Prop := forall g a0 a, KRef g a0 a -> KRef g (EType a0) (EType a).
 Definition compat_trap_statement : Prop := forall g a0 a h0 h,
- KRef g a0 a -> KRef g h0 h -> KRef g (ETrap a0 h0) (ETrap a h).
+ D_sealed -> KRef g a0 a -> KRef g h0 h -> KRef g (ETrap a0 h0) (ETrap a h).
 Definition compat_lambda_statement : Prop := forall g x b0 b,
  KRef (x :: g) b0 b -> KRef g (ELam x b0) (ELam x b).
 Definition compat_freeze_statement : Prop := forall g b0 b, KRef g b0 b -> KRef g (EFreeze b0) (EFreeze b).
 (* Named calls cover `do`, `thaw` and `protect`, which Búri's KLambda has as ordinary calls. *)
 Definition compat_call_statement : Prop := forall g f as0 as1,
- Forall2 (KRef g) as0 as1 -> KRef g (ECall f as0) (ECall f as1).
+ D_sealed -> Forall2 (KRef g) as0 as1 -> KRef g (ECall f as0) (ECall f as1).
 Definition compat_app_statement : Prop := forall g h0 h as0 as1,
- KRef g h0 h -> Forall2 (KRef g) as0 as1 -> KRef g (EApp h0 as0) (EApp h as1).
+ D_sealed -> KRef g h0 h -> Forall2 (KRef g) as0 as1 -> KRef g (EApp h0 as0) (EApp h as1).
 (* A defun is not rewritten under (lower.shen rejects a nested defun): only reflexivity. *)
-Definition compat_defun_statement : Prop := forall g f ps b, KRef g (EDefun f ps b) (EDefun f ps b).
+Definition compat_defun_statement : Prop := forall g f ps b, D_sealed -> KRef g (EDefun f ps b) (EDefun f ps b).
 Definition KRef_scope_statement : Prop := forall g g' e0 e, incl g g' -> KRef g e0 e -> KRef g' e0 e.
 
 (* --- adequacy: what one link says about a whole run from the same start --- *)
@@ -386,7 +391,7 @@ Inductive fo : value -> Prop :=
  | fo_str t : fo (VStr t) | fo_nil : fo VNil | fo_cons a d : fo a -> fo d -> fo (VCons a d).
 
 Definition adequacy_statement : Prop := forall g e0 e rho s,
- KRef g e0 e -> Forall (fun p => fo (snd p)) rho -> (forall x, In x g -> exists v, lookup x rho = Some v) ->
+ D_sealed -> KRef g e0 e -> Forall (fun p => fo (snd p)) rho -> (forall x, In x g -> exists v, lookup x rho = Some v) ->
  StoreHas s -> store_closed s ->
  (forall v s', srun (Cfg (Eval rho e) [] s) [] (Cfg (Ret v) [] s') -> fo v ->
     exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s0) /\ wf_world w /\ GStore w s0 s') /\
@@ -419,7 +424,7 @@ Inductive EndsSrc (s : store) (c : config) : Prop :=
    b0's final store equals s. *)
 Definition call_preservation_src_statement : Prop :=
  forall s m c ps b0 b1 e args n,
-  KRef ps b0 b1 -> KRef ps b1 e -> StoreHas s -> store_closed s ->
+  D_sealed -> KRef ps b0 b1 -> KRef ps b1 e -> StoreHas s -> store_closed s ->
   Com s m -> CompFn c ps e -> List.length ps = List.length args -> entered m c args ->
   let c0 := Cfg (Eval (combine ps args) b0) [] s in
   let ce := Cfg (Eval (combine ps args) e) [] s in
