@@ -138,9 +138,9 @@ They are not in git. Hashes of each witness set, all 24 files concatenated in C 
   the build's rename. Only the counting run loads it, never the witness run, and it reproduces all 950 stage 0 lines byte
   for byte. Ticks include rewrites inside inlined bodies and inside the synthetic code that `unified-now` and `bound-now`
   normalise. `dynamic-apply` counts `norm-apply` entries; it is not a rewrite.
-- Two cross-checks agree:
-  - `share-chain` ticks (4 definitions) match the 4 definitions whose `.share` differs from `.forms`.
-  - `sealed-inline` (531 definitions) matches the 531 definitions that carry the inlining marker.
+- Two cross-checks agree definition by definition (0 mismatches in each):
+  - `share-chain` ticks: 4 definitions; definitions whose `.share` differs from `.forms`: 4.
+  - `sealed-inline` ticks: 531 definitions; definitions that carry the inlining marker: 531.
 - Fresh variables appear in 517 definitions. Folded constant lists appear in 98.
 
 ## Not done / UNKNOWN
