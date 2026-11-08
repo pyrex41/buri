@@ -326,8 +326,21 @@ Proof.
 Qed.
 End Reduce.
 
-(* The open core: at budget length h, one more budget changes no cell comparison. The search
-   (see the header) found the cell comparisons settled one step earlier still. *)
+(* The open core: at budget length h, one more budget changes no cell comparison. By
+   eq_depth_mono it is enough that a cell comparison that ever answers Some does so by budget
+   length h. A search (a Python copy of eq_depth_r, used only for search, n <= 6, with
+   partial-equivalence atoms, NaN-like atoms, nested pairs and an opaque value) found every
+   cell comparison settled by budget length h - 1, one step inside this.
+
+   Sketch, not formalized. Let a ~ b be "= answers Some true at some budget", extended with
+   a ~ a. With a partial-equivalence number equality, ~ is an equivalence. Pairs that answer
+   true: let M_k be the pairs whose comparison closes by pointer equality within k levels. M_k
+   is an equivalence that only grows, and M_k determines M_(k+1), so it stops growing within
+   length h steps. Pairs that answer false: the pairs the walk visits on the way to the
+   first difference join locations into a forest. A cycle would need two of its edges to
+   share the smallest first-difference offset, and those offsets strictly fall along the
+   walk. So the walk has fewer pairs than cells. Not covered: a walk that also compares true
+   sub-pairs on the way, where the two depths add. *)
 Definition eq_core_statement (R : port_rules) : Prop := forall P' h,
  (forall x y, num_cmp P' PEqual x y = num_cmp P' PEqual y x) ->
  (forall x y z, num_cmp P' PEqual x y = true -> num_cmp P' PEqual y z = true -> num_cmp P' PEqual x z = true) ->
