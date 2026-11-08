@@ -16,6 +16,10 @@ ShenJitLowerChainSlot: the checker's cons chain reads any slot, not the one the 
   chain_tail_ok must fail.
 ShenJitLowerChainConst: the checker's cons chain takes any constant as the head. chain_tail_ok
   must fail.
+ShenJitLowerEqSym: = agrees against a symbol constant. eq_core must fail (OB-JIT-SYM-TEXT).
+ShenJitLowerEqNaN: = agrees against any real constant, NaN included. eq_core must fail
+  (OB-JIT-NAN-IDENTITY).
+ShenJitLowerCheckEqGuard: the checker admits = without a safe constant operand. chk_sound must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -65,4 +69,11 @@ mutate('ShenJitLowerChainSlot', 'rocq/JitLowerCheck.v',
 mutate('ShenJitLowerChainConst', 'rocq/JitLowerCheck.v',
        "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q && konst_vr v k then Some r' else None",
        "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q then Some r' else None")
+eq_core = "VR a a' -> VR b b' -> existsb eq_safe_val [a'; b'] = true ->\n exists r,"
+mutate('ShenJitLowerEqSym', 'rocq/JitLowerPrim.v', eq_core,
+       "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VSym _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
+mutate('ShenJitLowerEqNaN', 'rocq/JitLowerPrim.v', eq_core,
+       "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VReal _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
+mutate('ShenJitLowerCheckEqGuard', 'rocq/JitLowerCheck.v',
+       "os_eqb ops ops' && pguard c q ops then Some r' else None", "os_eqb ops ops' then Some r' else None")
 print(' '.join(names))

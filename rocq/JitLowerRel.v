@@ -33,7 +33,7 @@ Definition pmap (p : prim) : option B.prim := match p with
  | PAdd => Some B.PAdd | PSub => Some B.PSub | PMul => Some B.PMul
  | PGt => Some B.PGt | PLt => Some B.PLt | PGe => Some B.PGe | PLe => Some B.PLe
  | PCons => Some B.PCons | PHd => Some B.PHd | PTl => Some B.PTl | PConsP => Some B.PConsp
- | PNumberP => Some B.PNumberp | PStringP => Some B.PStringp
+ | PNumberP => Some B.PNumberp | PStringP => Some B.PStringp | PEqual => Some B.PEq
  | _ => None end.
 
 Definition prim_of_name (f : name) : option prim :=
@@ -63,6 +63,20 @@ Definition ins := B.code_ins c.
 Definition konst (k : N) := nth_error (B.code_consts c) (N.to_nat k).
 Definition lbl (l : N) := B.find_label l ins.
 
+(* = is admitted only with a constant operand it cannot misjudge: a fixnum, string, boolean, (),
+   or a real that is not a NaN. On two NaNs the model is stuck (RIdentity, OB-JIT-NAN-IDENTITY)
+   where the source answers false; on two symbols B.sym_of_text, not injective on code points,
+   can make distinct names equal (OB-JIT-SYM-TEXT). An atom of these kinds meets neither. *)
+Definition eq_safe_val (w : B.val) : bool := match w with
+ | B.VFix _ | B.VStr _ | B.VBool _ | B.VNil => true
+ | B.VReal b => negb (JitFloat.JitFloat.is_nan b)
+ | _ => false end.
+Definition eq_safe_op (o : B.operand) : bool := match o with
+ | B.OConst k => match konst k with Some w => eq_safe_val w | None => false end
+ | B.OSlot _ => false end.
+Definition pguard (q : B.prim) (ops : list B.operand) : bool := match q with
+ | B.PEq => existsb eq_safe_op ops | _ => true end.
+
 (* `Comp e top e dst r r'`: r starts with e's code, then r'. A value goes to slot d, or is
    returned. Every slot e's code writes is at or above top, or is d, and d last. *)
 Inductive Comp : env -> N -> expr -> dest -> list B.instr -> list B.instr -> Prop :=
@@ -73,7 +87,8 @@ Inductive Comp : env -> N -> expr -> dest -> list B.instr -> list B.instr -> Pro
  | C_same g top x d r : lookup x g = Some d -> Comp g top (EVar x) (DSlot d) r r
  | C_prim g top f p q args ops d r r' :
      prim_of_name f = Some p -> pmap p = Some q -> List.length args = prim_arity p -> args <> [] ->
-     CompOps g top args ops r (B.IPrim d q ops :: r') -> Comp g top (ECall f args) (DSlot d) r r'
+     CompOps g top args ops r (B.IPrim d q ops :: r') -> pguard q ops = true ->
+     Comp g top (ECall f args) (DSlot d) r r'
  | C_let g top x a b dst r r1 r' : Comp g (top + 1) a (DSlot top) r r1 ->
      Comp ((x, top) :: g) (top + 1) b dst r1 r' -> Comp g top (ELet x a b) dst r r'
  | C_alias g top x y s b dst r r' : lookup y g = Some s ->

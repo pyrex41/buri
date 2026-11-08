@@ -4671,7 +4671,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerThm.JitLowerThm.preservation",
      "establishes": "model-proof",
-     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end with a related value or an error both raise. Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, =, dynamic application, globals, defun or eval-kl."
+     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end with a related value or an error both raise. Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, = when one operand is a constant fixnum, string, boolean, () or non-NaN real (JitLowerRel.pguard), the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, = without such a constant, dynamic application, globals, defun or eval-kl."
     },
     {
      "kind": "universal-theorem",
@@ -4717,7 +4717,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
      "establishes": "artifact-correspondence",
-     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 61 of 950 definitions accepted at d3348ce (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 889 rejected are unvalidated, not refuted."
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 110 of 950 definitions accepted at d3348ce (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 840 rejected are unvalidated, not refuted."
     }
    ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
@@ -4739,6 +4739,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-07: partial, 61 of 950 definitions accepted at 0.4. JitLowerRel admits the one-slot cons chain (C_chain), which regains the eight lost at the re-pin and no others; 161 of the 169 definitions that use the chain are still rejected for other constructs.",
      "reconciliation": "Admitting the one-slot cons chain, 7 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-08: partial, 110 of 950 definitions accepted at 0.4 (was 61). JitLowerRel admits = when one operand is a constant fixnum, string, boolean, () or non-NaN real (JitLowerRel.pguard); no definition is lost.",
+     "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
     }
    ]
   },
@@ -5160,7 +5165,40 @@
     "docs/SHEN-JIT.md",
     "rocq/JitProfile.v"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-08: open. The lowerer proof admits = only against a constant that is not a NaN (JitLowerRel.pguard), where neither semantics depends on identity; the deviation itself is unchanged.",
+     "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-SYM-TEXT",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT deviation",
+   "identity": "",
+   "statement": "JitBytecode.sym_of_text is not injective on the texts of the KLambda semantics, which are code points: a code point above 256 collides, so [1;1] and [65537] are one symbol, as are the name ab and the one-character name U+16062. JitLowerRel.VR relates VSym s to VSym (sym_of_text s), so on such pairs the model's = and intern answer as if the names were equal, where the source and C, which interns by name, tell them apart.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Symbols in the model keyed injectively on the name (as its UTF-8 bytes, as C stores it), or VR_sym restricted to texts sym_of_text keeps apart, stated as a limit of the claim. Either admits = against a symbol constant in the lowerer proof.",
+   "sources": [
+    "docs/SHEN-JIT.md",
+    "rocq/JitBytecode.v",
+    "rocq/JitLowerPrim.v"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-08: open. Found admitting = in the lowerer proof; JitLowerPrim.eq_sym_text_collision is a checked witness. pguard leaves symbol constants out, which keeps 289 of the 429 definitions that compare only against literals outside the proof.",
+     "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-DEV-LITERALS",
@@ -5856,6 +5894,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-07: open. The relation gains one rule for 0.4's one-slot cons chain (JitLowerRel.C_chain); the constructs this entry lists are unchanged.",
      "reconciliation": "Admitting the one-slot cons chain, 7 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-08: open, narrowed. = is admitted when one operand is a constant fixnum, string, boolean, () or non-NaN real, decided by the checker on the code's constant (JitLowerRel.pguard, JitLowerPrim.p_eq). Of the 447 stage 0 definitions using =, 429 use it only with a literal operand but 140 only with a literal that is not a symbol; = on two variables, and against a symbol, stay here (OB-JIT-NAN-IDENTITY, OB-JIT-SYM-TEXT).",
+     "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
     }
    ]
   },

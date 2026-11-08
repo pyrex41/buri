@@ -88,7 +88,7 @@ Inductive KD : B.code -> N -> B.tree B.val -> list B.cont -> (N -> Prop) -> B.op
      (List.length vals + 1 + List.length es)%nat = prim_arity p ->
      MEnv fp st g rho -> Prot g fp w -> EnvBelow g top ->
      CompOps c g top es ops r (B.IPrim d q (rev dops ++ o :: ops) :: r1) ->
-     DoneR c fp st vals dops -> Forall (o_safe fp w) dops ->
+     pguard c q (rev dops ++ o :: ops) = true -> DoneR c fp st vals dops -> Forall (o_safe fp w) dops ->
      Forall (o_below top) dops -> o_below top o ->
      Sub w w1 -> Above fp top w1 -> w1 (fp + d) -> KD c fp st cs w1 (B.OSlot d) r1 k1 ->
      KD c fp st cs w o r (KCallArgs f vals es rho :: k1)
