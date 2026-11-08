@@ -333,10 +333,22 @@ Definition D_compiled_spec_statement : Prop := forall cs,
 
 (* = on vectors compares contents with a budget of one more than the heap's length (KLPort
    eq_depth_r). Two related heaps differ in length by their one-sided cells, so the relation needs
-   the answer not to depend on the budget past that bound. *)
+   the answer not to depend on the budget past that bound. It needs numeric equality to be
+   symmetric and transitive: for a profile whose inexact equality is a tolerance, a five-cell heap
+   with a 2-cycle and a 3-cycle answers None at budget 6 and Some false at 7 (pass/eqbudget,
+   bfa9d64, proved in Rocq). *)
 Definition eq_budget_statement : Prop := forall P' h d a b,
+ (forall x y, num_cmp P' PEqual x y = num_cmp P' PEqual y x) ->
+ (forall x y z, num_cmp P' PEqual x y = true -> num_cmp P' PEqual y z = true -> num_cmp P' PEqual x z = true) ->
  Forall (lok (List.length h)) h -> vok (List.length h) a -> vok (List.length h) b ->
  (S (List.length h) <= d)%nat -> eq_depth_r R P' h d a b = kl_eq_r R P' h a b.
+
+(* Shen/JIT's profile meets both hypotheses, so the fundamental property can use the budget
+   statement at jit_profile. *)
+Definition jit_eq_per_statement : Prop :=
+ (forall x y, num_cmp jit_profile PEqual x y = num_cmp jit_profile PEqual y x) /\
+ (forall x y z, num_cmp jit_profile PEqual x y = true -> num_cmp jit_profile PEqual y z = true ->
+    num_cmp jit_profile PEqual x z = true).
 
 (* Sealed definitions are never redefined: defun refuses a sealed name (jit_rules option 5), and
    gfuns changes only by defun, including through eval-kl, so this is a lemma, not a premise. *)
