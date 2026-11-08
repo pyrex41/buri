@@ -1244,3 +1244,8 @@ release 0.4, and `rocq/KLPort.v` adds per-port options to the KLambda semantics,
 are exactly `KLSemantics.next`, so the existing lanes are unchanged. Forty-two statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. They do not relate the bytecode to KLambda or to machine code. Comparison
 with the binary is test evidence. Shen/JIT is not verified.
+
+Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
+its erasure to KLambda, and a judge of the emit pass alone on captured witnesses. 75 of 950 stage 0 definitions are
+accepted, all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
+Their statements are not in an audit count; `scripts/check-shen-jit-norm.sh` checks that they use no axioms.

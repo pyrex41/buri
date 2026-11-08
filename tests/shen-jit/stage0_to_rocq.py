@@ -101,6 +101,19 @@ def main_norm(d, nd, name, out):
 
 if __name__ == '__main__':
     if sys.argv[1] == '--norm':
-        main_norm(*sys.argv[2:6])
+        # Witness trees nest deeper than Python's default recursion limit (init.norm): a resource
+        # limit only, raised on a thread with a larger stack.
+        import threading
+        sys.setrecursionlimit(200000)
+        threading.stack_size(1 << 29)
+        failed = []
+        def run():
+            try:
+                main_norm(*sys.argv[2:6])
+            except BaseException as e:
+                failed.append(e); raise
+        th = threading.Thread(target=run); th.start(); th.join()
+        if failed:
+            sys.exit(1)
     else:
         main(*sys.argv[1:4])
