@@ -61,7 +61,7 @@ Hypothesis H_apply1 : forall f a, Q f -> Q a -> Q (NApply1 f a).
 Hypothesis H_trap : forall b e h, Q b -> Q h -> Q (NTrap b e h).
 Fixpoint nexpr_ind' (n : nexpr) : Q n :=
  let all := fix all (l : list nexpr) : Forall Q l := match l with
-   | [] => Forall_nil Q | a :: l => Forall_cons a (nexpr_ind' a) (all l) end in
+   | [] => @Forall_nil nexpr Q | a :: l => @Forall_cons nexpr Q a l (nexpr_ind' a) (all l) end in
  match n with
  | NConst v => H_const v | NVar x => H_var x
  | NIf c a b => H_if c a b (nexpr_ind' c) (nexpr_ind' a) (nexpr_ind' b)
@@ -85,6 +85,10 @@ Definition raise_cond_name : name := kw "raise-cond".
 (* The inliner's marker, [let shen-jit.lower.inlining [const F] Body] (inline-frozen): the
    emitter compiles it as Body alone (lower.expr; `mark` adds nothing at stage 0). *)
 Definition inlining_name : name := kw "shen-jit.lower.inlining".
+(* The same marker as stage 0 prints it: the Makefile renames shen-jit.lower.* to stage0.lower.*
+   in the copy of the lowerer that stage 0 runs. *)
+Definition stage0_inlining_name : name := kw "stage0.lower.inlining".
+Definition is_marker_name (x : name) : bool := text_eqb x inlining_name || text_eqb x stage0_inlining_name.
 (* The variable a `do` binds in its erasure. lower.shen never makes it; erase checks that the
    second expression does not mention it anyway. *)
 Definition do_name : name := kw "shen-jit.norm.do".
@@ -106,9 +110,11 @@ Fixpoint erase_const (v : value) : option expr := match v with
 
 Definition is_sym (e : expr) : bool := match e with ESym _ => true | _ => false end.
 (* The inlining marker, droppable: its value is a symbol constant and the body never mentions
-   the name (vars lists every variable occurrence, bound or free). *)
+   the name (vars lists every variable occurrence, bound or free). Dropping it changes no value
+   or effect; it does remove one KLet frame, so under a stack bound the erasure can succeed
+   where the let would run out of stack (the emitter makes no frame for it either). *)
 Definition marker (x : name) (ev eb : expr) : bool :=
- text_eqb x inlining_name && is_sym ev && negb (bound (vars eb) x).
+ is_marker_name x && is_sym ev && negb (bound (vars eb) x).
 
 (* `erase sc n`, sc the variables in scope (the parameters, at a definition's top).
    - [var X]: EVar X, and None if X is not in scope (no witness of a closed definition has one).
@@ -274,7 +280,7 @@ Fixpoint kl_shaped (sc : list name) (n : nexpr) : bool :=
  | NVar x => bound sc x
  | NIf c a b => kl_shaped sc c && kl_shaped sc a && kl_shaped sc b
  | NAnd a b | NOr a b | NApply1 a b => kl_shaped sc a && kl_shaped sc b
- | NLet x v b => negb (text_eqb x inlining_name) && kl_shaped sc v && kl_shaped (x :: sc) b
+ | NLet x v b => negb (is_marker_name x) && kl_shaped sc v && kl_shaped (x :: sc) b
  | NDo _ _ => false
  | NLambda x b => kl_shaped (x :: sc) b
  | NFreeze b | NApply0 b => kl_shaped sc b
@@ -338,10 +344,11 @@ Lemma erase_marker : forall sc x v b ev eb, erase sc v = Some ev -> erase (x :: 
  erase sc (NLet x v b) = Some (if marker x ev eb then eb else ELet x ev eb).
 Proof. intros sc x v b ev eb Hv Hb. cbn [erase]. rewrite Hv, Hb. destruct (marker x ev eb); reflexivity. Qed.
 Lemma marker_dead : forall x ev eb, marker x ev eb = true ->
- x = inlining_name /\ (exists s, ev = ESym s) /\ ~ In x (vars eb).
+ (x = inlining_name \/ x = stage0_inlining_name) /\ (exists s, ev = ESym s) /\ ~ In x (vars eb).
 Proof.
  intros x ev eb H. unfold marker in H. apply andb_true_iff in H as [H H3]. apply andb_true_iff in H as [H1 H2].
- apply text_eqb_eq in H1. split; [auto|split].
+ unfold is_marker_name in H1. apply orb_true_iff in H1.
+ split; [destruct H1 as [H1|H1]; apply text_eqb_eq in H1; auto|split].
  - destruct ev; try discriminate; eauto.
  - intro I. apply negb_true_iff in H3. unfold bound in H3.
    assert (existsb (text_eqb x) (vars eb) = true) by (apply existsb_exists; exists x; split; [auto|apply text_eqb_refl]).

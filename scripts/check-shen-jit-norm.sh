@@ -1,0 +1,65 @@
+#!/bin/bash
+# Opt-in, report only: the Shen/JIT emit-pass judge (rocq/JitNormStage0.v) over every stage 0 file.
+# NOT part of `make prove` or scripts/check-shen-jit.sh, and it gates nothing: it prints counts.
+#
+#   SHEN_JIT_SRC  checkout of the pinned Shen/JIT, with build/stage0 (default /lps/p4/sj)
+#   NORM_DIR      directory of <file>.norm witnesses, lower.shen's normal form of each definition
+#                 in .forms order (required)
+#   JIT_OUT       work directory (default /tmp/ir-norm)
+#
+# Runs where scripts/check-shen-jit.sh runs (the Rocq of toolchain.lock.json's shen_jit entry).
+# Acceptance is decided by rocq: check_fn on the erased witness, for the emit pass ONLY. Every
+# accepted definition is also counted under front_end_unchecked: nothing here relates a witness
+# to its source body (wave 2). Rejection proves nothing.
+set -uo pipefail
+root=$(cd "$(dirname "$0")/.." && pwd)
+src=${SHEN_JIT_SRC:-/lps/p4/sj}
+norm=${NORM_DIR:?set NORM_DIR to the directory of .norm witnesses}
+out=${JIT_OUT:-/tmp/ir-norm}
+eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
+mkdir -p "$out"; cd "$out"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitProfile JitLowerRel JitLowerCheck JitLowerStage0 JitNorm JitNormStage0"
+for f in $FILES; do
+  sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
+  d=$(diff "$root/rocq/$f.v" "$f.v" || true)
+  other=$(printf '%s\n' "$d" | grep -E '^[<>]' | grep -vE '^[<>] From (Coq|Stdlib) Require' || true)
+  [ -z "$other" ] || { echo "SPEC_DRIFT $f"; exit 5; }
+  rm -f "$f.vo"
+  timeout 1800 rocq compile -Q . Buri "$f.v" > "$f.log" 2>&1 || { tail -20 "$f.log"; echo "ROCQ_FAILED $f"; exit 6; }
+done
+# The judge's soundness and erase's lemmas use no axiom (these files are in no audit module, so
+# `make prove` compiles them but does not count them).
+cat > NormAudit.v <<'EOF'
+From Buri Require Import JitNorm JitNormStage0.
+Print Assumptions JitNorm.JitNorm.erase_const_eval.
+Print Assumptions JitNorm.JitNorm.erase_kl_shaped.
+Print Assumptions JitNorm.JitNorm.marker_dead.
+Print Assumptions JitNorm.JitNorm.erase_do.
+Print Assumptions JitNormStage0.JitNormStage0.judge_core_sound.
+Print Assumptions JitNormStage0.JitNormStage0.judge_norm_sound.
+EOF
+rocq compile -Q . Buri NormAudit.v > NormAudit.log 2>&1 || { cat NormAudit.log; echo "ROCQ_FAILED NormAudit"; exit 6; }
+closed=$(grep -c '^Closed under the global context$' NormAudit.log || true)
+[ "$closed" = 6 ] || { cat NormAudit.log; echo "AUDIT_MISMATCH $closed of 6"; exit 7; }
+echo "norm audit: 6 statements closed under the global context"
+n0="$out/n0"; mkdir -p "$n0"; got="$n0/counts.txt"; : > "$got"
+printf '%-42s %5s %5s %5s %5s %5s %5s %5s %5s\n' file acc rej erase unp fe_unch ports folds src_acc
+for f in $(cd "$src/build/stage0" && ls *.forms | sed 's/\.forms$//'); do
+  id=$(echo "$f" | tr - _)
+  [ -f "$norm/$f.norm" ] || { echo "NORM_MISSING $f"; exit 11; }
+  python3 "$root/tests/shen-jit/stage0_to_rocq.py" --norm "$src/build/stage0" "$norm" "$f" "$n0/N0_$id.v" || { echo "NORM_READ_FAILED $f"; exit 11; }
+  sed -i 's/^From Coq Require/From Stdlib Require/' "$n0/N0_$id.v"
+  (cd "$n0" && timeout 1800 rocq compile -Q "$out" Buri "N0_$id.v" > "N0_$id.log" 2>&1) || { tail -5 "$n0/N0_$id.log"; echo "NORM_ROCQ_FAILED $f"; exit 11; }
+  r=$(tr '\n' ' ' < "$n0/N0_$id.log" | tr -s ' ')
+  num() { printf '%s' "$r" | grep -oE "$1 := [0-9]+" | head -1 | grep -oE '[0-9]+$'; }
+  lst() { printf '%s' "$r" | grep -oE "$1 := \[[^]]*\]" | head -1 | sed "s/^$1 := //"; }
+  a=$(num accepted); [ -n "$a" ] || { echo "NORM_NO_RESULT $f"; exit 11; }
+  line="$f $a $(num rejected) $(num erase_failed) $(num unparsed) $(num front_end_unchecked) $(num with_port_prims) $(num with_folds) $(num src_accepted)"
+  echo "$line" >> "$got"
+  printf '%-42s %5s %5s %5s %5s %5s %5s %5s %5s\n' $line
+  echo "$f lost $(lst lost) gained $(lst gained) port_prims $(lst port_prims_used)" >> "$n0/names.txt"
+done
+awk '{a+=$2; r+=$3; x+=$4; u+=$5; fe+=$6; p+=$7; fo+=$8; s+=$9}
+  END {printf "%-42s %5d %5d %5d %5d %5d %5d %5d %5d\n", "total", a, r, x, u, fe, p, fo, s}' "$got"
+echo "per-file names (lost = accepted on the source body, not on the witness): $n0/names.txt"
+echo "emit pass only; front end unchecked for every accepted definition"
