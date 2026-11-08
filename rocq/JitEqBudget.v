@@ -340,15 +340,34 @@ End Reduce.
    partial-equivalence atoms, NaN-like atoms, nested pairs and an opaque value) found every
    cell comparison settled by budget length h - 1, one step inside this.
 
-   Sketch, not formalized. Let a ~ b be "= answers Some true at some budget", extended with
-   a ~ a. With a partial-equivalence number equality, ~ is an equivalence. Pairs that answer
-   true: let M_k be the pairs whose comparison closes by pointer equality within k levels. M_k
-   is an equivalence that only grows, and M_k determines M_(k+1), so it stops growing within
-   length h steps. Pairs that answer false: the pairs the walk visits on the way to the
-   first difference join locations into a forest. A cycle would need two of its edges to
-   share the smallest first-difference offset, and those offsets strictly fall along the
-   walk. So the walk has fewer pairs than cells. Not covered: a walk that also compares true
-   sub-pairs on the way, where the two depths add. *)
+   Paper proof, not formalized. Write K_d(p,q) for cellcmp d p q, and tau(p,q) for the least d
+   at which it is Some, if any. By eq_depth_mono, the core says tau(p,q) <= length h. Prove,
+   for every set S of cells closed under the vector pointers in their data (not closure
+   environments: = never reads those) and all p, q in S, that tau(p,q) <= |S|. Induction on |S|:
+
+   - Step: some distinct x, y in S have K_d(x,y) = Some true for some d. Take such a pair with
+     the least d. Then the vector pointers in x and y's data are pairwise identical (a distinct
+     true pair below them would have a smaller d). Every other leaf pair answers Some true,
+     which is all = ever learns from it (numbers by the PER, closures by their ids). So
+     replacing x's contents by y's leaves every comparison unchanged. Let h' redirect every
+     VVec y in the data of S to VVec x. Then S - {y} is closed in h'. Same-budget simulation:
+     where h' meets VVec x on both sides, h meets x against y, so h' answers the same as h
+     at the same budget, or more often. Shifted simulation: h at budget d+1 answers at least
+     what h' answers at budget d, the extra step paying for the one comparison of x with y. So
+     tau_h <= tau_h' + 1 <= (|S| - 1) + 1.
+   - Base: no two distinct cells of S ever compare true. Then a comparison with a Some answer
+     is a single walk e_0, e_1, ..., e_L of cell pairs. Each step goes through the first leaf
+     pair that disagrees, and tau(e_0) <= L + 1. Let pos(u,v) be the path, in depth-first
+     order, at which comparing u with v stops, or infinity if it never stops. Agreement of
+     leaves is a PER: number equality, closure ids, pointer identity. So for distinct u, v, w,
+     the two smaller of pos(u,v), pos(v,w), pos(u,w) are equal. Hence, for each threshold t,
+     "u = v or pos(u,v) > t" is an equivalence. The e_i have distinct pos, since pos(e_i) is
+     one index longer than pos(e_(i+1)). Sort them and take each as the threshold in turn.
+     Each split refines the partition of S strictly, so L + 2 <= |S|.
+
+   The search suggests the bound is one better than this. Formalizing it needs depth-first
+   positions over cyclic heaps, the ultrametric lemma, counting classes of equivalences on
+   finite sets, and the heap-surgery simulation. *)
 Definition eq_core_statement (R : port_rules) : Prop := forall P' h,
  (forall x y, num_cmp P' PEqual x y = num_cmp P' PEqual y x) ->
  (forall x y z, num_cmp P' PEqual x y = true -> num_cmp P' PEqual y z = true -> num_cmp P' PEqual x z = true) ->
