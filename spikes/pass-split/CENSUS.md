@@ -79,7 +79,7 @@ All of these run in container `buri-lps`. The worktree is copied to `/work/captu
 
 ```
 bash /work/capture/tests/shen-jit/capture_passes.sh /tmp/capture-run                 # ~21 s; CAPTURE_OK
-# Rocq: Observation … JitLowerStage0 compiled into /tmp/capture-rocq, as check-shen-jit.sh does (~5 min)
+bash /work/capture/tests/shen-jit/judge_split_rocq.sh /tmp/capture-rocq                # ~5 min; ROCQ_OK
 JOBS=6 bash /work/capture/tests/shen-jit/judge_split.sh /tmp/capture-rocq /lps/p4/sj/build/stage0 \
      /tmp/capture-run/witness /tmp/capture-judge                                    # ~1-2 min; JUDGE_SPLIT_DONE
 diff tests/shen-jit/stage0-accepted.txt /tmp/capture-judge/src.counts                # empty: src judge = recorded 61
@@ -88,7 +88,7 @@ python3 tests/shen-jit/pass_census.py /lps/p4/sj/build/stage0 /tmp/capture-run /
 
 The generated files (witnesses, ticks, logs, per-definition verdicts and the census output) are at
 `/private/tmp/claude-502/-Users-reuben-projects/2d420b2f-bdd4-44a2-b787-ce4910b8299e/scratchpad/pass-capture/`. That
-directory has 488 files plus `SHA256SUMS`, whose own sha256 is `e599080f1fa1c39f3ce89c9096c0e6a6dc7f814a1ac7b29040427c5b679291a5`.
+directory has 489 files plus `SHA256SUMS`, whose own sha256 is `e599080f1fa1c39f3ce89c9096c0e6a6dc7f814a1ac7b29040427c5b679291a5`.
 They are not in git. Hashes of each witness set, all 24 files concatenated in C order:
 
 | set | sha256 |
@@ -100,21 +100,25 @@ They are not in git. Hashes of each witness set, all 24 files concatenated in C 
 
 ## Findings
 
-1. **Erasing norm unblocks nothing. Of the 889 definitions rejected on source, 0 are accepted on `.nforms`.** The
-   accepted set is identical on both: the same 61 definitions. In the existing `Comp`'s terms, none of the 889
-   rejections is caused by a front-end rewrite that `norm` removes. Every one still meets an emit-side construct.
-2. **The inlining marker hides 11.** Treat it as its body (`.tforms`) and 72 are accepted: the 61, plus
+1. **Answer: of the 889 source rejections, 11 are front-end-only and 878 meet an emit-side construct.** Treat the
+   inlining marker as its body, as emission does at stage 0 (`.tforms`), and 72 are accepted: the 61, plus
    `shen-jit.lower.code`, `shen-jit.lower.apply-all?`, `shen.prolog-parameters`, `shen.alpha?`, `shen.<shortnatters>`,
    `shen.<whitespaces>`, `shen.<digits>`, `shen-jit.digits`, `eval`, `shen.partial-parse-failure?` and `shen.parse-failure`.
    On these 11 definitions, `Comp` accepts the code against the normal form but rejects it against the source. Their
    source differs from their code only through front-end rewrites (inlining, in these cases). They are the definitions
    that a proved front end plus the existing emit-side relation would cover with no new emit rule.
+2. **The brief's literal erasure (`.nforms`, marker kept as a `let`) unblocks nothing: 0 of 889.** The marker
+   then forces a slot mismatch for a construct emission ignores; 242 definitions have it as first blocker. The
+   accepted set on `.nforms` is the same 61 definitions as on source.
 3. **The emit-side blockers are ranked in the tables below.** On `.tforms` (878 rejected), counting first blocker in evaluation order:
    - **prim `=`: 461.** It is in 587 rejected definitions and the only blocker in 154. `pmap` does not admit `=`.
    - **prim `value`: 59** first blocker, in 220, sole blocker in 36.
    - `<-address` 50; `simple-error` 39; `do` 36; `lambda` 32; `set` 25; folded constant list 21; `trap` 20.
    - Every rejected definition has at least one syntactic blocker. The category "none found (emit mismatch on admitted constructs)" is empty on both nf and tf.
    - There are no anomalies: no definition is accepted while having a blocker.
+   - Folded constant lists (sole blocker in 13 on tf) exist only because `norm` folds them; KLambda has no list
+     literal, so they are emit-side because `Comp`'s expression language lacks list constants, not because the code
+     does something new.
 4. **What norm actually does to stage 0** (counting run, ticks):
    - Sealed inlining reaches 531 of 950 definitions, with 5395 inlines.
    - `cond` desugaring reaches 461. Constant `cons` folding reaches 98, with 1075 folds.
