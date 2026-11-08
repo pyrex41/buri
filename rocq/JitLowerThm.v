@@ -22,10 +22,18 @@ Inductive TN : nat -> B.machine -> B.machine -> Prop :=
  | TN_0 m : TN 0 m m
  | TN_S n m m1 m2 : TS E pt m m1 -> TN n m1 m2 -> TN (S n) m m2.
 
-Inductive Ends (s : store) (c : config) : Prop :=
- | E_ok v v' m1 m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c
- | E_err x l msg tv m1 m2 : Sstar sealed c (Cfg (Throw x) [] s) -> B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m2 ->
-     B.tget l (B.m_heap m2) = Some (B.OExn msg tv) -> exn_ok x msg -> Ends s c.
+(* The bytecode machine m1 finishes as the source configuration c does: m1's next step returns a
+   value related to the one c evaluates to, or raises an error c also raises. m1 is a parameter, so
+   the theorems below say the machine their run reaches is the one that finishes. *)
+Inductive Ends (s : store) (c : config) (m1 : B.machine) : Prop :=
+ | E_ok v v' m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1
+ | E_err x l msg tv m2 : Sstar sealed c (Cfg (Throw x) [] s) -> B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m2 ->
+     B.tget l (B.m_heap m2) = Some (B.OExn msg tv) -> exn_ok x msg -> Ends s c m1.
+
+(* The machine Ends names is the one that finishes: its next step is final. False if Ends bound its
+   own machine inside the constructors (ShenJitLowerEndsDecoupled). *)
+Lemma Ends_final : forall s c m1, Ends s c m1 -> exists o m2, B.next E pt m1 = B.MFinal o m2.
+Proof. intros s c m1 H; destruct H; eauto. Qed.
 
 Lemma TStar_TN : forall a b, TStar E pt a b -> exists n, TN n a b.
 Proof. intros a b H; induction H; [exists 0%nat; constructor|destruct IHTStar as [n T]; exists (S n); econstructor; eauto]. Qed.
@@ -33,7 +41,7 @@ Proof. intros a b H; induction H; [exists 0%nat; constructor|destruct IHTStar as
 (* After n steps of the bytecode: still related, or the run has ended as the source's does. *)
 Theorem preservation : forall n s c m, MS s c m ->
  (exists c' m' k, Sstar sealed c c' /\ TN k m m' /\ (n <= k)%nat /\ MS s c' m') \/
- (exists m1, Ends s c /\ TStar E pt m m1).
+ (exists m1, Ends s c m1 /\ TStar E pt m m1).
 Proof.
  induction n as [|n IHn]; intros s c m H.
  - left. exists c, m, 0%nat. repeat split; [constructor|constructor|lia|exact H].
@@ -59,7 +67,7 @@ Qed.
 
 (* A step the bytecode can take is matched: no related state is stuck, and none takes IO. *)
 Corollary related_progress : forall s c m, MS s c m ->
- (exists m', TPlus E pt m m') \/ (exists m1, Ends s c /\ TStar E pt m m1) \/
+ (exists m', TPlus E pt m m') \/ (exists m1, Ends s c m1 /\ TStar E pt m m1) \/
  (exists c', Sstar sealed c c' /\ (msr c' < msr c)%nat /\ MS s c' m).
 Proof.
  intros s c m H. destruct (sim E pt sealed s c m H) as [c' m' Ss [Tp|[-> L]] M|v v' m1 m2 Ss Ts Nf Vr|x l msg tv m1 m2 Ss Ts Nf Lh Xo].
@@ -79,7 +87,7 @@ Theorem call_preservation : forall s m c ps b args n,
  Com s m -> CompFn c ps b -> List.length ps = List.length args -> entered m c args ->
  let c0 := Cfg (Eval (combine ps args) b) [] s in
  (exists c' m' k, Sstar sealed c0 c' /\ TN k m m' /\ (n <= k)%nat /\ MS s c' m') \/
- (exists m1, Ends s c0 /\ TStar E pt m m1).
+ (exists m1, Ends s c0 m1 /\ TStar E pt m m1).
 Proof.
  intros s m c ps b args n Cm [r' Cf] L [Hc [Hr [Hk Aa]]] c0.
  apply preservation. subst c0.
