@@ -12,9 +12,11 @@
      1 : [1; ->2]    2 : [1; ->4]    4 : [2; ->1]      (a 3-cycle)
    Comparing cells 1 and 3 walks through the pairs (1,3) (2,0) (4,3) (1,0) (2,3) (4,0). The labels
    agree under `tol` until (4,0) compares 2 with 0. Six pairs need budget 7, but
-   kl_eq_r's budget is S 5 = 6. With a transitive equality, Moore's bound applies to this
-   functional walk: labels that agree with a common label agree with each other. Without
-   transitivity, the walk around two coprime cycles can run up to their product. *)
+   kl_eq_r's budget is S 5 = 6. With a partial equivalence (symmetric and transitive), labels
+   that agree with a common label agree with each other, and Moore's bound applies to this
+   functional walk. Without that, the walk around two coprime cycles can run up to their
+   product. Transitivity alone is not enough: a search also found transitive, non-symmetric
+   equalities that need more than S (length h). *)
 From Coq Require Import List ZArith NArith Bool Lia.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitProfile JitLowerEquiv.
 Import ListNotations.
@@ -55,11 +57,13 @@ Proof.
  rewrite at_budget_7, kl_eq_h5 in E. discriminate E.
 Qed.
 
-(* What does hold for every profile: more budget never takes back a defined answer. It cannot
-   turn Some into None or change which Some, because an answer is defined only if every
-   comparison it reads is defined. So if the side with fewer cells answers Some, the other side,
-   with more cells and so more budget, gives the same answer. The other direction fails: a
-   None at the smaller budget can become Some at the larger one. *)
+(* What does hold for every profile: on one heap, more budget never takes back a defined
+   answer. It cannot turn Some into None or change which Some, because an answer is defined
+   only if every comparison it reads is defined. The reverse fails (h5 above): a None at a
+   smaller budget can become Some at a larger one. Carrying this to two related heaps needs
+   more, which is not proved here: a lemma that = answers the same at equal budgets on heaps
+   related by a location bijection whose extra cells = never reads. That only helps when the
+   side with the larger heap may answer where the other answers None. *)
 Lemma list_eq_mono : forall (f g : value -> value -> option bool),
  (forall u v y, f u v = Some y -> g u v = Some y) ->
  forall xs ys y, list_eq f xs ys = Some y -> list_eq g xs ys = Some y.
