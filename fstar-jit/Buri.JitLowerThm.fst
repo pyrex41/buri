@@ -24,13 +24,21 @@ noeq type tN (e : B.env) (pt : B.tree (B.prim & nat)) : nat -> B.machine -> B.ma
   | TN_S : n:nat -> m:B.machine -> m1:B.machine -> m2:B.machine -> squash (tS e pt m m1) -> tN e pt n m1 m2 ->
       tN e pt (n + 1) m m2
 
-(* As in Rocq, the machines inside Ends are its own: Ends does not say they are on m's run. *)
-noeq type ends (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (c : config) : Type0 =
-  | E_ok : v:value -> v':B.val_ -> m1:B.machine -> m2:B.machine -> sstar sealed c (cfg (Ret v) [] s) ->
-      squash (B.next e pt m1 == B.MFinal (B.FReturn v') m2) -> vr v v' -> ends e pt sealed s c
-  | E_err : x:exn -> l:pos -> msg:B.text -> tv:B.val_ -> m1:B.machine -> m2:B.machine ->
+(* Ends as on branch pass/equiv (670d29d), where m1 is a parameter: the machine the run reaches is
+   the one that finishes. At the phase0 base (4cba179) Ends bound m1 and m2 inside its
+   constructors, which made the second disjunct of preservation say nothing about m's run
+   (ShenJitLowerEndsDecoupled, fixed there; this port noticed it independently). JitLowerEquiv
+   needs this form. *)
+noeq type ends (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (c : config) (m1 : B.machine) : Type0 =
+  | E_ok : v:value -> v':B.val_ -> m2:B.machine -> sstar sealed c (cfg (Ret v) [] s) ->
+      squash (B.next e pt m1 == B.MFinal (B.FReturn v') m2) -> vr v v' -> ends e pt sealed s c m1
+  | E_err : x:exn -> l:pos -> msg:B.text -> tv:B.val_ -> m2:B.machine ->
       sstar sealed c (cfg (Throw x) [] s) -> squash (B.next e pt m1 == B.MFinal (B.FError (B.VExn l)) m2) ->
-      squash (B.tget l m2.B.m_heap == Some (B.OExn msg tv)) -> squash (exn_ok x msg) -> ends e pt sealed s c
+      squash (B.tget l m2.B.m_heap == Some (B.OExn msg tv)) -> squash (exn_ok x msg) -> ends e pt sealed s c m1
+
+let ends_final (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list name) (#s : store) (#c : config)
+  (#m1 : B.machine) (h : ends e pt sealed s c m1) : Lemma (exists o m2. B.next e pt m1 == B.MFinal o m2) =
+  match h with E_ok _ _ _ _ _ _ -> () | E_err _ _ _ _ _ _ _ _ _ -> ()
 
 let rec tStar_tN (#e : B.env) (#pt : B.tree (B.prim & nat)) (#a #b : B.machine) (h : tStar e pt a b)
   : Tot (n : nat & tN e pt n a b) (decreases h) =
@@ -45,17 +53,17 @@ let rec tN_app (#e : B.env) (#pt : B.tree (B.prim & nat)) (#j #k : nat) (#a #b #
   | TN_S n _ m1 _ _ rest -> TN_S (n + k) a m1 c () (tN_app rest t)
 
 let ends_prefix (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list name) (#s : store) (#c #c' : config)
-  (ss : sstar sealed c c') (en : ends e pt sealed s c') : ends e pt sealed s c =
+  (#m1 : B.machine) (ss : sstar sealed c c') (en : ends e pt sealed s c' m1) : ends e pt sealed s c m1 =
   match en with
-  | E_ok v v' m1 m2 s2 _ dv -> E_ok v v' m1 m2 (sstar_trans ss s2) () dv
-  | E_err x l msg tv m1 m2 s2 _ _ _ -> E_err x l msg tv m1 m2 (sstar_trans ss s2) () () ()
+  | E_ok v v' m2 s2 _ dv -> E_ok v v' m2 (sstar_trans ss s2) () dv
+  | E_err x l msg tv m2 s2 _ _ _ -> E_err x l msg tv m2 (sstar_trans ss s2) () () ()
 
 (* After n steps of the bytecode: still related, or the run has ended as the source's does. *)
 noeq type pres_result (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (n : nat) (s : store)
   (c : config) (m : B.machine) : Type0 =
   | Still : c':config -> m':B.machine -> k:nat -> sstar sealed c c' -> tN e pt k m m' -> squash (n <= k) ->
       mS s c' m' -> pres_result e pt sealed n s c m
-  | Ended : m1:B.machine -> ends e pt sealed s c -> tStar e pt m m1 -> pres_result e pt sealed n s c m
+  | Ended : m1:B.machine -> ends e pt sealed s c m1 -> tStar e pt m m1 -> pres_result e pt sealed n s c m
 
 let rec preservation (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list name)
   (sim : sim_statement e pt sealed) (n : nat) (s : store) (c : config) (m : B.machine) (h : mS s c m)
@@ -73,14 +81,14 @@ let rec preservation (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list 
     (match preservation sim n s c' m ms with
      | Still c2 m2 k s2 t2 _ m2s -> Still c2 m2 k (sstar_trans ss s2) t2 () m2s
      | Ended m2 en t2 -> Ended m2 (ends_prefix ss en) t2)
-  | O_ok v v' m1 m2 ss ts _ dv -> Ended m1 (E_ok v v' m1 m2 ss () dv) ts
-  | O_err x l msg tv m1 m2 ss ts _ _ _ -> Ended m1 (E_err x l msg tv m1 m2 ss () () ()) ts
+  | O_ok v v' m1 m2 ss ts _ dv -> Ended m1 (E_ok v v' m2 ss () dv) ts
+  | O_err x l msg tv m1 m2 ss ts _ _ _ -> Ended m1 (E_err x l msg tv m2 ss () () ()) ts
 
 (* A step the bytecode can take is matched: no related state is stuck, and none takes IO. *)
 noeq type progress_result (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store)
   (c : config) (m : B.machine) : Type0 =
   | P_step : m':B.machine -> tPlus e pt m m' -> progress_result e pt sealed s c m
-  | P_ends : m1:B.machine -> ends e pt sealed s c -> tStar e pt m m1 -> progress_result e pt sealed s c m
+  | P_ends : m1:B.machine -> ends e pt sealed s c m1 -> tStar e pt m m1 -> progress_result e pt sealed s c m
   | P_src : c':config -> sstar sealed c c' -> squash (msr c' < msr c) -> mS s c' m -> progress_result e pt sealed s c m
 
 let related_progress (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list name)
@@ -89,8 +97,8 @@ let related_progress (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list 
   match sim s c m h with
   | O_step c' m' ss (Inl tp) ms -> P_step m' tp
   | O_step c' m' ss (Inr _) ms -> P_src c' ss () ms
-  | O_ok v v' m1 m2 ss ts _ dv -> P_ends m1 (E_ok v v' m1 m2 ss () dv) ts
-  | O_err x l msg tv m1 m2 ss ts _ _ _ -> P_ends m1 (E_err x l msg tv m1 m2 ss () () ()) ts
+  | O_ok v v' m1 m2 ss ts _ dv -> P_ends m1 (E_ok v v' m2 ss () dv) ts
+  | O_err x l msg tv m1 m2 ss ts _ _ _ -> P_ends m1 (E_err x l msg tv m2 ss () () ()) ts
 
 (* ---------- a call from the top level ---------- *)
 let entered (m : B.machine) (c : B.code) (args : list value) : prop =

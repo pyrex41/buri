@@ -237,3 +237,15 @@ Buri.JitLowerPrim.fst rc=0 wall=2s cpu=1.52s
 Buri.JitLowerPrim.fst rc=0 wall=11s cpu=4s 
 Buri.JitLowerPrim.fst rc=0 wall=10s cpu=8.51s 
 Buri.JitLowerPrim.fst rc=0 wall=9s cpu=8.75s 
+Buri.JitLowerThm.fst rc=0 wall=3s cpu=2.7s 
+Buri.JitLowerEquiv.fst rc=1 wall=5s cpu=3.52s 
+Buri.JitLowerEquiv.fst rc=0 wall=4s cpu=3.22s 
+Buri.JitLowerEquiv.fst rc=0 wall=5s cpu=4.28s 
+Buri.JitLowerEquiv.fst rc=0 wall=7s cpu=4.74s 
+Buri.JitLowerEquiv.fst rc=0 wall=6s cpu=5.34s 
+Buri.JitLowerEquiv.fst rc=1 wall=9s cpu=6.72s 
+Buri.JitLowerEquiv.fst rc=0 wall=7s cpu=5.95s 
+Buri.JitLowerEquiv.fst rc=1 wall=6s cpu=6.04s 
+Buri.JitLowerEquiv.fst rc=1 wall=6s cpu=5.61s 
+Buri.JitLowerEquiv.fst rc=1 wall=5s cpu=5.14s 
+Buri.JitLowerEquiv.fst rc=0 wall=6s cpu=5.62s 
