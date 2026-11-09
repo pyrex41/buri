@@ -67,7 +67,7 @@ As of commit `1495f49` (7 November 2026):
 |---|---|
 | [Work packages](spec/end-to-end-plan.json) | 0 of 41 done: 18 in progress, 23 planned |
 | [Six-stage plan](spec/six-stages.json) | 0 of 6 done: all partial |
-| [Obligations](spec/obligations.json) | 199 total: 18 discharged, 46 partial, 94 open, 19 assumed, 11 refuted, 7 superseded, 4 foundation |
+| [Obligations](spec/obligations.json) | 200 total: 19 discharged, 46 partial, 94 open, 19 assumed, 11 refuted, 7 superseded, 4 foundation |
 | [Semantics targets](spec/release-charter.json) | 27 total: 7 partial, 20 planned |
 | [Release pins](spec/release-charter.json) | 20 total: 11 pinned, 2 identity-only, 7 unpinned |
 

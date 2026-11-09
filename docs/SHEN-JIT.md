@@ -129,10 +129,16 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 42 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 46 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
+
+**Symbols are their names** (`OB-JIT-SYM-INJECTIVE`): the runtime interns by the name's bytes, and
+`JitBytecode.sym_of_text` is a prefix code that `text_of_sym` reads back for every text, whatever its
+elements (`text_of_sym_of_text`), so distinct names are distinct symbols (`sym_of_text_inj`) and the
+machine's symbol test is the name test (`sym_of_text_eqb`). Until 8 November 2026 the name was a base-256
+numeral, which merged names with an element of 257 or more with shorter ones (`[1; 1]` with `[65537]`).
 
 Sources live in `rocq/`, so one copy compiles under both provers: the only rewrite for 9.3 is
 the import line, and the gate refuses any other difference.
@@ -330,17 +336,18 @@ How the three sides compare, on the values `VR` relates (numbers, symbols, boole
 | fixnum, real | `compare_fix_real = Eq`, exact | the same | `compare_fix_real == 0`, exact |
 | real, real | `compare = Eq`: -0.0 = 0.0, NaN unequal | the same, except two NaNs: stuck (`RIdentity`) | `==` after testing the words: one NaN object equals itself |
 | string, string | code points equal | the same | header and payload words equal |
-| symbol, symbol | names equal | `sym_of_text` numbers equal: **not injective** | interned: one object per name |
+| symbol, symbol | names equal | `sym_of_text` numbers equal; injective since `OB-JIT-SYM-INJECTIVE` | interned: one object per name |
 | pair, pair | heads then tails, structural | the same, structural recursion | tails iterative, heads recursive to depth 256, then a heap work list |
 | different kinds | false | false | false |
 
-Two disagreements, neither new to C: two NaNs (`OB-JIT-NAN-IDENTITY`, already known) and symbols. `sym_of_text`
-reads a name as digits in base 256, which is injective on bytes but not on the code points the KLambda semantics
-uses: `[1;1]` and `[65537]` are one symbol, as are `ab` and the one-character name U+16062
-(`JitLowerPrim.eq_sym_text_collision`, checked). C interns by name and agrees with the source, so the defect is the
-model's, and `intern` shares it. That is `OB-JIT-SYM-TEXT`. Restricting `VR_sym` was ruled out, since it would narrow the related states; the fix is
-being given to a separate change (an injective encoding matching C's interning by name); `=` against a symbol literal waits on it. Until then the guard leaves symbol constants out, and it is this, not NaN, that costs most: of the 447
-definitions using `=`, 429 compare only against a literal, but only 140 against literals that are not symbols.
+Two disagreements were found, and C caused neither. The first is two NaNs (`OB-JIT-NAN-IDENTITY`, already known). The second
+was symbols: `sym_of_text` read a name as digits in base 256, which is injective on bytes but not on the code points
+the KLambda semantics uses, so `[1;1]` and `[65537]` were one symbol, as were `ab` and the one-character name U+16062.
+C interns by name and agrees with the source, so the defect was the model's, and `intern` shared it. Restricting
+`VR_sym` was ruled out, since it would narrow the related states. The encoding was made injective instead
+(`OB-JIT-SYM-INJECTIVE`, discharged; `sym_of_text_eqb`, above). Before that fix, the guard left symbol constants
+out, which cost the most: of the 447 definitions using `=`, 429 compare only against a literal, but only 140 against
+literals that are not symbols.
 
 Fuel plays no part. `eq_val` spends fuel only at absvectors, which `VR` never relates, and pairs recurse
 structurally, so on related values the model never stops with `RCyclic`; the source's depth bound likewise matters
@@ -375,7 +382,7 @@ was not attempted and is not estimated here.
 - The source semantics has no `do`: `do` is an ordinary call of the kernel's definition, and the lowerer compiles
   it inline. Relating them needs the store's `do` to be the kernel's, as `OB-JIT-LOWER-OPTIMIZATIONS` lists.
 - `=` is admitted only against a safe constant: the bytecode model is stuck (`RIdentity`) on two NaNs, where the
-  source answers (`OB-JIT-NAN-IDENTITY`), and its symbols are not injective on code points (`OB-JIT-SYM-TEXT`).
+  source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
 

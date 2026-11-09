@@ -5174,29 +5174,57 @@
    ]
   },
   {
-   "id": "OB-JIT-SYM-TEXT",
+   "id": "OB-JIT-SYM-INJECTIVE",
    "kind": "model-proof",
    "scope": "universal",
    "owner": "E2E-37",
    "packages": [],
-   "status": "open",
-   "boundary": "Shen/JIT deviation",
-   "identity": "",
-   "statement": "JitBytecode.sym_of_text is not injective on the texts of the KLambda semantics, which are code points: a code point above 256 collides, so [1;1] and [65537] are one symbol, as are the name ab and the one-character name U+16062. JitLowerRel.VR relates VSym s to VSym (sym_of_text s), so on such pairs the model's = and intern (JitBytecode.prim_step's PIntern case, line 884, which makes VSym (sym_of_text s)) answer as if the names were equal, where the source and C, which interns by name, tell them apart.",
+   "status": "discharged",
+   "boundary": "Shen/JIT bytecode model, symbols",
+   "identity": "rocq/JitBytecode.v",
+   "statement": "The bytecode model's symbol for a name, JitBytecode.sym_of_text, is injective on every text the KLambda semantics admits (any list of naturals, not only bytes or Unicode scalars), as src/runtime/objects.c interns by the name's bytes. So VR_sym relates distinct source symbols to distinct machine symbols, and the machine's symbol test is the source's name test.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
-   "completion_evidence": "Symbols in the model keyed injectively on the name (as its UTF-8 bytes, as C stores it), or VR_sym restricted to texts sym_of_text keeps apart, stated as a limit of the claim. Either admits = against a symbol constant in the lowerer proof.",
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitBytecode.JitBytecode.text_of_sym_of_text",
+     "establishes": "model-proof",
+     "note": "text_of_sym reads every text back from its symbol, for every text"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitBytecode.JitBytecode.sym_of_text_inj",
+     "establishes": "model-proof",
+     "note": "for every two texts"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitBytecode.JitBytecode.sym_of_text_eqb",
+     "establishes": "model-proof",
+     "note": "Pos.eqb of two symbols is text_eqb of their names"
+    }
+   ],
+   "completion_evidence": "text_of_sym_of_text, sym_of_text_inj and sym_of_text_eqb in rocq/Audit_Jit.v; the ShenJitSymBase256 mutant, which restores the base-256 numeral, is refused.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitBytecode.v",
-    "rocq/JitLowerPrim.v"
+    "rocq/JitBytecode.v"
    ],
    "history": [
     {
+     "source": "rocq/JitBytecode.v",
+     "recorded": "2026-11-08: open. sym_of_text was the name's elements as a base-256 numeral with 256 for 0, which is not injective once an element is 257 or more ([1; 1] and [65537] both give 65793; [0] and [256]), and text_of_sym decoded only bytes. VR_sym could relate distinct source symbols to one machine symbol, so = could not be admitted for symbols.",
+     "reconciliation": "Found while admitting = in Phase 2 of the Shen/JIT lane, 8 November 2026."
+    },
+    {
      "source": "docs/SHEN-JIT.md",
-     "recorded": "2026-11-08: open. Found admitting = in the lowerer proof; JitLowerPrim.eq_sym_text_collision is a checked witness. pguard leaves symbol constants out, which keeps 289 of the 429 definitions that compare only against literals outside the proof.",
+     "recorded": "2026-11-08: open (recorded as OB-JIT-SYM-TEXT on pass/eq). Found admitting = in the lowerer proof, with a checked witness, JitLowerPrim.eq_sym_text_collision, since removed. pguard leaves symbol constants out, which keeps 289 of the 429 definitions that compare only against literals outside the proof.",
      "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    },
+    {
+     "source": "rocq/JitBytecode.v",
+     "recorded": "2026-11-08: discharged. sym_of_text is a prefix code (each element n as the bits of n+1 below the leading 1, each behind a 1, then a 0), text_of_sym its structural inverse; the round trip, injectivity and the eqb law are proved with no assumptions. Every S_* constant changed value; stage 0 counts and the differential are unchanged, since every captured name is bytes and only names are printed or compared.",
+     "reconciliation": "Injective symbol encoding, 8 November 2026."
     }
    ]
   },
@@ -5897,7 +5925,7 @@
     },
     {
      "source": "docs/SHEN-JIT.md",
-     "recorded": "2026-11-08: open, narrowed. = is admitted when one operand is a constant fixnum, string, boolean, () or non-NaN real, decided by the checker on the code's constant (JitLowerRel.pguard, JitLowerPrim.p_eq). Of the 447 stage 0 definitions using =, 429 use it only with a literal operand but 140 only with a literal that is not a symbol; = on two variables, and against a symbol, stay here (OB-JIT-NAN-IDENTITY, OB-JIT-SYM-TEXT).",
+     "recorded": "2026-11-08: open, narrowed. = is admitted when one operand is a constant fixnum, string, boolean, () or non-NaN real, decided by the checker on the code's constant (JitLowerRel.pguard, JitLowerPrim.p_eq). Of the 447 stage 0 definitions using =, 429 use it only with a literal operand but 140 only with a literal that is not a symbol; = on two variables, and against a symbol, stay here (OB-JIT-NAN-IDENTITY, OB-JIT-SYM-INJECTIVE).",
      "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
     }
    ]

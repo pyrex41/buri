@@ -34,13 +34,22 @@ Fixpoint tset {A} (k : positive) (x : A) (m : tree A) : tree A := match m with
    | xO k => Node (tset k x l) v r
    | xI k => Node l v (tset k x r) end end.
 
-(* ---------- symbols: a name's bytes as one number, so a symbol is its name.
+(* ---------- symbols: a name as one number, so a symbol is its name.
+   src/runtime/objects.c interns by the name's bytes (memcmp), so two symbols are
+   the same exactly when their names are. The number is a prefix code of the name,
+   which is injective on every text, whatever its elements: each element n is
+   written, lowest bit first, as the bits of n+1 below its leading 1, each behind
+   a 1, then a 0. `text_of_sym` reads it back, and `text_of_sym_of_text` proves
+   the round trip, so `sym_of_text` is injective (`sym_of_text_inj`).
    A collection can drop a symbol nothing reaches; re-interning makes a new one
    that nothing can tell from the old (docs/semantics.md section 2), which is why
    the model needs no intern table. ---------- *)
+Fixpoint sym_push (q acc : positive) : positive := match q with
+ | xH => xO acc
+ | xO q => xI (xO (sym_push q acc))
+ | xI q => xI (xI (sym_push q acc)) end.
 Definition sym_of_text (s : text) : positive :=
- fold_left (fun acc b =>
-   Pos.add (Pos.mul acc 256) (match b with N0 => 256 | Npos p => p end)) s xH.
+ fold_right (fun n acc => sym_push (N.succ_pos n) acc) xH s.
 Definition sym (s : string) : positive := sym_of_text (t s).
 Definition S_move : positive := Eval vm_compute in sym "move".
 Definition S_const : positive := Eval vm_compute in sym "const".
@@ -71,13 +80,39 @@ Definition S_in : positive := Eval vm_compute in sym "in".
 Definition S_out : positive := Eval vm_compute in sym "out".
 Definition S_shen_fail_ : positive := Eval vm_compute in sym "shen.fail!".
 Definition S__home_directory_ : positive := Eval vm_compute in sym "*home-directory*".
-(* Bytes are stored as digits 1..256, so the encoding is injective; see JitMeta. *)
-Fixpoint text_of_sym_go (fuel : nat) (p : Z) (acc : text) : text := match fuel with
- | O => acc
- | S f => if Z.leb p 1 then acc else
-   let d := (Z.rem (p - 1) 256 + 1)%Z in
-   text_of_sym_go f (Z.quot (p - d) 256) (Z.to_N (Z.rem d 256) :: acc) end.
-Definition text_of_sym (p : positive) : text := text_of_sym_go 4096 (Zpos p) [].
+(* The name back from the number. `k` holds the bits of the element being read;
+   a number no name gives (ending in 1 then the leading 1) reads as the name so far. *)
+Fixpoint text_of_sym_go (p : positive) (k : positive -> positive) : text := match p with
+ | xH => []
+ | xO r => Pos.pred_N (k xH) :: text_of_sym_go r (fun x => x)
+ | xI (xO r) => text_of_sym_go r (fun x => k (xO x))
+ | xI (xI r) => text_of_sym_go r (fun x => k (xI x))
+ | xI xH => [] end.
+Definition text_of_sym (p : positive) : text := text_of_sym_go p (fun x => x).
+
+Lemma text_of_sym_go_push : forall q acc k,
+  text_of_sym_go (sym_push q acc) k = Pos.pred_N (k q) :: text_of_sym_go acc (fun x => x).
+Proof.
+ induction q as [q IH|q IH|]; intros acc k; simpl.
+ - exact (IH acc (fun x => k (xI x))).
+ - exact (IH acc (fun x => k (xO x))).
+ - reflexivity.
+Qed.
+
+(* The round trip: every text is the name of its symbol. *)
+Theorem text_of_sym_of_text : forall s, text_of_sym (sym_of_text s) = s.
+Proof.
+ induction s as [|n s IH]; [reflexivity|].
+ unfold text_of_sym; simpl. rewrite text_of_sym_go_push.
+ change (text_of_sym_go (sym_of_text s) (fun x => x)) with (text_of_sym (sym_of_text s)).
+ rewrite IH. f_equal. destruct n as [|n]; [reflexivity|apply Pos.pred_N_succ].
+Qed.
+
+(* Distinct names are distinct symbols, for every text the KLambda spec admits. *)
+Theorem sym_of_text_inj : forall s1 s2, sym_of_text s1 = sym_of_text s2 -> s1 = s2.
+Proof.
+ intros s1 s2 H. rewrite <- (text_of_sym_of_text s1), <- (text_of_sym_of_text s2), H. reflexivity.
+Qed.
 
 (* ---------- values, code, heap ---------- *)
 Inductive val :=
@@ -306,6 +341,21 @@ Definition same (a b : val) : option bool := match a, b with
 
 Fixpoint text_eqb (a b : text) : bool := match a, b with
  | [], [] => true | x :: a, y :: b => (N.eqb x y && text_eqb a b)%bool | _, _ => false end.
+
+Lemma text_eqb_true_iff : forall a b, text_eqb a b = true <-> a = b.
+Proof.
+ induction a as [|x a IH]; intros [|y b]; simpl; split; intro H; try discriminate; try reflexivity.
+ - apply andb_true_iff in H as [H1 H2]. apply N.eqb_eq in H1. apply IH in H2. subst. reflexivity.
+ - injection H as H1 H2. subst. apply andb_true_iff. split; [apply N.eqb_refl|apply IH; reflexivity].
+Qed.
+
+(* So the machine's symbol test is the source's name test (VR_sym). *)
+Theorem sym_of_text_eqb : forall a b, Pos.eqb (sym_of_text a) (sym_of_text b) = text_eqb a b.
+Proof.
+ intros a b. destruct (text_eqb a b) eqn:E.
+ - apply text_eqb_true_iff in E. subst. apply Pos.eqb_refl.
+ - apply Pos.eqb_neq. intro H. apply sym_of_text_inj, text_eqb_true_iff in H. congruence.
+Qed.
 
 (* ---------- = (sj_equal) ---------- *)
 Inductive eqr := EqT | EqF | EqIdentity | EqCycle.

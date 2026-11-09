@@ -65,8 +65,8 @@ Definition lbl (l : N) := B.find_label l ins.
 
 (* = is admitted only with a constant operand it cannot misjudge: a fixnum, string, boolean, (),
    or a real that is not a NaN. On two NaNs the model is stuck (RIdentity, OB-JIT-NAN-IDENTITY)
-   where the source answers false; on two symbols B.sym_of_text, not injective on code points,
-   can make distinct names equal (OB-JIT-SYM-TEXT). An atom of these kinds meets neither. *)
+   where the source answers false. Symbols are left out too, as before B.sym_of_text was made
+   injective (OB-JIT-SYM-INJECTIVE). An atom of these kinds meets neither. *)
 Definition eq_safe_val (w : B.val) : bool := match w with
  | B.VFix _ | B.VStr _ | B.VBool _ | B.VNil => true
  | B.VReal b => negb (JitFloat.JitFloat.is_nan b)

@@ -203,14 +203,7 @@ Proof.
 Qed.
 End P.
 
-(* Why pguard leaves symbols out (OB-JIT-SYM-TEXT): B.sym_of_text is not injective on texts of
-   code points, so two names the source tells apart can be one symbol in the model. C interns
-   by name and agrees with the source. And -0.0 = 0.0 in both semantics. *)
-Example eq_sym_text_collision : forall R h n hb f,
- B.sym_of_text [1; 1]%N = B.sym_of_text [65537]%N /\
- eq_depth_r R jit_profile h (S n) (VSym [1; 1]%N) (VSym [65537]%N) = Some false /\
- B.eq_val hb (S f) (B.VSym (B.sym_of_text [1; 1]%N)) (B.VSym (B.sym_of_text [65537]%N)) = B.EqT.
-Proof. intros. split; [vm_compute; reflexivity|split; reflexivity]. Qed.
+(* -0.0 = 0.0 in both semantics. *)
 Example eq_signed_zero : JitFloat.JitFloat.eqv 0 9223372036854775808 = true /\
  jit_order PEqual (JitFloat.JitFloat.compare 0 9223372036854775808) = true.
 Proof. vm_compute. split; reflexivity. Qed.
