@@ -80,7 +80,7 @@ for current evidence run `make report` yourself.
 
 | Gate | Result |
 |---|---|
-| Rocq audit | 1,021 audited theorems, replayed with `coqchk` |
+| Rocq audit | 1,026 audited theorems, replayed with `coqchk` |
 | Proof mutations | 175 deliberately broken variants, all rejected |
 | Shen test suites | 1,126 checks across 27 suites |
 | Shen-Scheme comparisons | 108 cases (tests, not proof) |

@@ -129,7 +129,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 60 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 65 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -463,44 +463,48 @@ modules, so `make prove` compiles them. Nothing else changes: no audit module co
 `scripts/report.py` and `check-shen-jit.sh` are untouched. The opt-in script checks their assumptions itself. The
 judge is not a gate, and its counts are reported, not pinned.
 
-**Stage 0 result.** Inputs: the `.forms` and `.sbc` of the pin's `/lps/p4/sj/build/stage0`, and pass-capture's 24
-`.norm` witnesses. The witnesses are not committed: `scripts/check-shen-jit-norm.sh` regenerates them with
-`tests/shen-jit/capture_passes.sh` unless `NORM_DIR` names a directory of them. The
-hash of their `sha256sum *.norm` listing, sorted by name, is `2fa5a8e186fa006bfe88c5586c5c58e514bed4e44fb9491da21f222bc25b5747`.
-pass-capture's copies of `core` and `lower` `.forms`/`.sbc` were checked byte for byte against the pin. For the other
-files, the judge's name and parameter check covers the pairing, with 0 unparsed. The command was
-`NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm3 scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), at the
-commit that added this paragraph. The witnesses are pass-capture's final set: stage 0 code reproduced 950/950 byte for
-byte at `614a39a` on `pass/capture`, and the per-file hashes match its `SHA256SUMS`. `rocqchk` replays both modules.
+**Stage 0 result.** Inputs: the `.forms` and `.sbc` of the pin's `/lps/p4/sj/build/stage0`, and 24 `.norm`
+witnesses. The witnesses are not committed: `scripts/check-shen-jit-norm.sh` regenerates them with
+`tests/shen-jit/capture_passes.sh` unless `NORM_DIR` names a directory of them, and capture fails unless the build's
+own lowerer reproduces every stage 0 code object byte for byte. On `p2/int` the command was
+`JIT_OUT=/tmp/p2-int-norm scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), on the tree of commit
+"Reconcile wave 1 of the pass split on p2/int": witness and count runs 950 of 950 byte-identical, image run 939 of 950
+(a measurement). `cd witness && sha256sum *.norm | sha256sum` is
+`38a414a295c1aff39360a73a812591d0862fbc6c0bf32bc24314d8140993de20`, and every per-file hash equals that of the set
+used for the earlier run below. The six statements are closed and `rocqchk` replays both modules.
 
-These counts were measured with the checker before `=` was admitted (`pass/eq`); on `p2/int` the checker also
-admits `=` against a safe constant, so they are stale until the script is rerun there.
-
-**72 of 950 definitions accepted** on the erased witness: 878 rejected, none failing erase, none unreadable. All
-72 are front end unchecked. None uses a port primitive and none has a folded constant, because `check_fn` rejects
-both. The stage 0 judge on the source bodies still accepts the same 61, and every one of the 61 is also accepted on its
-witness. None is lost, so no erase choice broke a definition the checker already took.
+**131 of 950 definitions accepted** on the erased witness on `p2/int`, where the checker also admits `=` against a
+safe constant (`pass/eq`): 819 rejected, none failing erase, none unreadable. All 131 are front end unchecked. None
+uses a port primitive and none has a folded constant. The stage 0 judge on the source bodies accepts 110, and every
+one of the 110 is also accepted on its witness: none is lost.
 
 | File | Accepted | Was (source) | Gained |
 |---|---:|---:|---|
-| lower | 10 | 8 | `shen-jit.lower.code`, `shen-jit.lower.apply-all?` |
-| prolog | 9 | 8 | `shen.prolog-parameters` |
-| reader | 8 | 7 | `shen.alpha?` |
-| shen-jit | 10 | 6 | `shen.<shortnatters>`, `shen.<whitespaces>`, `shen.<digits>`, `shen-jit.digits` |
-| sys | 12 | 11 | `eval` |
-| yacc | 5 | 3 | `shen.partial-parse-failure?`, `shen.parse-failure` |
-| the other 18 files | 18 | 18 | |
+| declarations | 2 | 1 | `shen.lambda-entry` |
+| lower | 24 | 19 | `shen-jit.lower.call`, `.let-frozen`, `.code`, `.apply-all?`, `.inline-thaw?` |
+| prolog | 13 | 11 | `shen.prolog-arity-check`, `shen.prolog-parameters` |
+| reader | 14 | 13 | `shen.alpha?` |
+| sequent | 6 | 5 | `shen.construct-context` |
+| shen-jit | 19 | 13 | `shen.+string?`, `shen.<shortnatters>`, `shen.<whitespaces>`, `shen.<digits>`, `shen-jit.digits`, `shen-jit.number-start?` |
+| sys | 16 | 15 | `eval` |
+| writer | 5 | 3 | `shen.fbound?`, `shen.list?` |
+| yacc | 7 | 5 | `shen.partial-parse-failure?`, `shen.parse-failure` |
+| the other 15 files | 25 | 25 | |
 
-All 11 gained definitions contain an inlining marker, which erase drops. This agrees with pass-capture's census (72
-with the marker dropped). Three hand mutations of `shen-jit.digits`'s witness were each made on the earlier version
-of erase, whose marker handling is unchanged. Each one turned that one verdict to rejected and changed nothing else:
-a constant changed (48 to 49), the marker's name used in its body, and the marker renamed so that it is no longer
-dropped. These were hand checks. No proof mutation was added, since the judge is not in a gate.
+**Earlier run, before `=` was admitted** (`pass/ir`, `NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm3`): 72 of 950
+accepted, 878 rejected; the source-body judge accepted 61, all also accepted on the witness. The 11 gained there
+(`shen-jit.lower.code`, `shen-jit.lower.apply-all?`, `shen.prolog-parameters`, `shen.alpha?`, `shen.<shortnatters>`,
+`shen.<whitespaces>`, `shen.<digits>`, `shen-jit.digits`, `eval`, `shen.partial-parse-failure?`, `shen.parse-failure`)
+all contain an inlining marker, which erase drops; this agreed with pass-capture's census (72 with the marker dropped).
+Three hand mutations of `shen-jit.digits`'s witness, on the earlier version of erase, whose marker handling is
+unchanged, each turned that one verdict to rejected and changed nothing else: a constant changed (48 to 49), the
+marker's name used in its body, and the marker renamed so that it is no longer dropped. These were hand checks. No
+proof mutation was added, since the judge is not in a gate. The ten gained only on `p2/int` were not checked by hand.
 
-What the 72 mean: each code object is a lowering, in `JitLowerRel`'s sense, of its witness's erasure. For the 61
-that were already accepted, the source-body verdict still stands on its own. For the 11 gained, nothing yet says
+What the 131 mean: each code object is a lowering, in `JitLowerRel`'s sense, of its witness's erasure. For the 110
+that were already accepted, the source-body verdict still stands on its own. For the 21 gained, nothing yet says
 that the erasure is equivalent to the kernel's KLambda: inlining (`shen.digit?` and others) and sharing changed the
-body, and that is wave 2's obligation. Most of the 878 rejections come from the emission relation (`=`, `value`,
+body, and that is wave 2's obligation. Most of the 819 rejections come from the emission relation (`=` without a safe constant, `value`,
 closures, folded constants, port primitives), not from erase; pass-capture's census lists the first blocker for each.
 
 **Coq 8.18.** `make prove` runs Coq 8.18 (`toolchain.lock.json`, `scripts/bootstrap-rocq`). The pinned 8.18 debs

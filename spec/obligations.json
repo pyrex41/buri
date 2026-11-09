@@ -6036,6 +6036,11 @@
      "source": "rocq/JitEqBudget.v",
      "recorded": "2026-11-08: open. Paper proof in the file header: show tau(p,q) <= |S| for every set S of cells closed under data pointers, by induction on |S|. Merge step: redirect the least-budget distinct true pair x, y into one cell; answers are unchanged and tau grows by at most 1. Ultrametric base: with no true pair, an answer is one walk, and stop positions form an ultrametric because leaf agreement is a PER; each walk position refines the partition of S strictly, so the walk has at most |S| - 1 pairs. The merge step agreed on 5,804 random heaps (search-only Python copy of eq_depth_r; PER and NaN-like atoms, nested pairs, opaque values, n <= 6; 0 failures). Proved: the reduction (eq_budget_from_core), jit_eq_per, and eq_budget_refuted for the statement without its hypotheses.",
      "reconciliation": "Eq budget spike, 8 November 2026."
+    },
+    {
+     "source": "rocq/Audit_Jit.v",
+     "recorded": "2026-11-09: open. On p2/int, eq_budget_refuted, jit_num_eq_iff, jit_eq_per, budget_from_step and eq_budget_from_core are in rocq/Audit_Jit.v and print Closed under the global context; eq_core_statement itself is not proved.",
+     "reconciliation": "Integrating wave 1 of the pass split on p2/int, 9 November 2026."
     }
    ]
   },
