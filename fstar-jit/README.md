@@ -41,7 +41,7 @@ All checks are `nice -n 19` and verify one module at a time.
 ## Fidelity rules kept
 
 - No `admit`, `assume`, `assume val` or `--admit_smt_queries` anywhere. Check with
-  `grep -rn "admit\|assume" *.fst`: the only hit is a comment saying that nothing is assumed.
+  `grep -rn "admit\|assume" *.fst`: the three hits are comments (two say nothing is assumed; one is the English "admitted primitives").
 - Statements say what the Rocq statements say. Every place where the form differs is listed
   under "Encoding differences", with the reason it is the same proposition.
 - Theorems that Rocq proves but this port does not take the missing theorem as an explicit
