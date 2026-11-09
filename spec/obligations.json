@@ -4530,7 +4530,7 @@
     },
     {
      "source": "docs/SHEN-JIT.md",
-     "recorded": "2026-11-09: re-pinned from 0.4 (d3348ce, binary 5eb9f433...) to 0.6 (commit 934cfa5, tag v0.6 object 68aa54f8, binary c2d6aa35...). The rv64 arena patch applies unchanged. Built in buri-lps with OUT=/lps/p6/sj; a second fresh-container build was not run at 0.6, so reproducibility at this pin is UNKNOWN. Under qemu-riscv64 the binary passes the kernel suite (154 passed, 0 failed), the kernel extension tests (178, 0) and contract/examples.shen (164, 0).",
+     "recorded": "2026-11-09: re-pinned from 0.4 (d3348ce, binary 5eb9f433...) to 0.6 (commit 934cfa5, tag v0.6 object 68aa54f8, binary e0acd513...). The rv64 arena patch applies unchanged. Built with OUT=/lps/p6/sj in buri-lps and in two fresh ubuntu:24.04 containers, with the same bytes; build.sh now uses an empty Zig cache at OUT.zig-cache, since a shared cache made a first buri-lps build differ (debug info naming another checkout). Under qemu-riscv64 the binary passes the kernel suite (154 passed, 0 failed), the kernel extension tests (178, 0) and contract/examples.shen (164, 0).",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
     }
    ]

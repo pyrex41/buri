@@ -21,7 +21,7 @@ python3 tests/shen-jit/pass_census.py /lps/p6/sj/build/stage0 /tmp/p2-v06-captur
 | what | value at 0.6 |
 |---|---|
 | Shen/JIT source | `/lps/p6/sj` at `934cfa56a5723165c63bf679f15d2d5214955a5d` (tag `v0.6`); `src/lowerer` and `src/port` clean, only `src/runtime/{heap,jit}.c` patched |
-| binary | `build/shen-jit`, sha256 `c2d6aa351c6d2f2b7a73320d85efa334225777d3de27cf2a64bf22af588de137` |
+| binary | `build/shen-jit`, sha256 `e0acd5132a9d876e7618bf1f400706abd82330d18458d209ee064d81d3c10c8d` |
 | `src/lowerer/lower.shen` | `0048eebcd7bff8de3a96b23618df363eadecb0bbffb7c2a5b40b463ea8253d6b` |
 | `build/tools/lower.shen` | `504ca2723b212148ecc56e1592f34012e942f94ed3592e660e8d8a2998813043`, the Makefile's rename of `lower.shen` |
 | `src/lowerer/host.shen` | `a3fd9c3b3dc7c5ebbea5945585a58308896abecf1ebd827c15cf5777ac6b4285` (unchanged) |
@@ -29,6 +29,11 @@ python3 tests/shen-jit/pass_census.py /lps/p6/sj/build/stage0 /tmp/p2-v06-captur
 | `build/stage0/*.forms *.sbc` | sha256 of `LC_ALL=C sha256sum *.forms *.sbc` = `ec9b387204471bfce36162019601b89493eb29abc4e42e8b8424d0ab903ab736`; the build checks them against upstream's `generated.sha256` |
 | kernel 43.4 `klambda/*.kl` | `694236173d0655f12b4d468df79d148d92fe04b75bf70f49a5b24031cfcd71dd` (unchanged) |
 | witness sets (24 files, C order) | share `6881eb294f9a7c90641351ff1a487297e2a6828389354387519ebfc41e97902d`, norm `e45add983f619559649a087a3c8a2c9e4f1fd3061be5d95996d33449a1b69dd1`, nforms `e66ab01a5d023bcc40e67d827fd86e120b817a0f4359d94c00189004ab2d24d6`, tforms `b4a4e7465726007b71e92d2a06f6306ec97429bc425ee1f7bbe929e4d8c847aa` |
+
+**Which binary.** The judge and census below ran on witnesses captured with a first build of the same source and image
+(`c2d6aa35...`, which differs from the pinned `e0acd513...` only in debug-info paths of two objects; see docs/SHEN-JIT.md).
+`capture_passes.sh` was then rerun on the pinned binary into `/tmp/p2-v06-capture2`: the same 955 of 955 reproduction
+and byte-identical witness sets (the four hashes above), so the verdicts carry over.
 
 **Capture.** 955 definitions (950 at 0.4). Witness and count runs: 955 of 955 code objects byte-identical to stage 0.
 Image run: 944 of 955 (a measurement). `instrument_lower.py` instruments two more sites, the rewrites 0.6 added to

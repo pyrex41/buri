@@ -1528,7 +1528,7 @@
    "id": "shen-jit-binary",
    "component": "Shen/JIT named binary",
    "status": "pinned",
-   "value": "static musl RV64GC, sha256 c2d6aa351c6d2f2b7a73320d85efa334225777d3de27cf2a64bf22af588de137",
+   "value": "static musl RV64GC, sha256 e0acd5132a9d876e7618bf1f400706abd82330d18458d209ee064d81d3c10c8d",
    "source": "ports/shen-jit/build.sh",
    "closure_package": "E2E-37",
    "note": "Exclusions are not yet removed from this binary; see OB-JIT-EXCLUSIONS-ENFORCED."

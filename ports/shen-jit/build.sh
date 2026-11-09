@@ -4,7 +4,7 @@
 #   docker run --rm --platform linux/arm64 -v "$PWD":/ports ubuntu:24.04 bash /ports/build.sh [OUT]
 # OUT defaults to /tmp/shen-jit-rv64. The binary needs qemu-riscv64 (or RISC-V) to run.
 # The hash depends on OUT, since -g records the build directory: the named binary (toolchain.lock.json)
-# is built with OUT=/lps/p6/sj (JOBS=2). At 0.4 the same command in a fresh container gave the same bytes; at 0.6 that is not yet rechecked.
+# is built with OUT=/lps/p6/sj (JOBS=2); at 0.6 the same command gave the same bytes in buri-lps and in two fresh containers.
 set -euo pipefail
 SPIKE=$(cd "$(dirname "$0")" && pwd)
 OUT=${1:-/tmp/shen-jit-rv64}
@@ -22,7 +22,11 @@ if [ ! -x /opt/$ZIG/zig ]; then
   echo "$ZIG_SHA256  /opt/zig.tar.xz" | sha256sum -c -
   tar -C /opt -xf /opt/zig.tar.xz
 fi
-export ZIG_GLOBAL_CACHE_DIR=/tmp/zg ZIG_LOCAL_CACHE_DIR=/tmp/zl
+# A private, empty Zig cache: zig cc reuses a cached object whose debug info names the directory it was first
+# compiled in, so a cache shared with another checkout changes the bytes (found at the 0.6 re-pin).
+# Its path is fixed by OUT, since the objects it holds record it too.
+ZC=$OUT.zig-cache; rm -rf "$ZC"
+export ZIG_GLOBAL_CACHE_DIR=$ZC/g ZIG_LOCAL_CACHE_DIR=$ZC/l
 CC_RV=/usr/local/bin/cc-rv64
 cat > $CC_RV <<EOF
 #!/bin/sh
@@ -46,3 +50,4 @@ make -j"${JOBS:-$(nproc)}" build/runtime CC=$CC_RV >/dev/null 2>&1
   qemu-riscv64 ./runtime --stage1 stage0 shen-jit.img
   cat runtime shen-jit.img > shen-jit; chmod +x shen-jit
   sha256sum runtime shen-jit.img shen-jit )
+rm -rf "$ZC"

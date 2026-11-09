@@ -1,6 +1,6 @@
 # Findings against Shen/JIT
 
-The lane moved to 0.6 (`934cfa56a5723165c63bf679f15d2d5214955a5d`, binary `c2d6aa35...de137`) on 9 November 2026.
+The lane moved to 0.6 (`934cfa56a5723165c63bf679f15d2d5214955a5d`, binary `e0acd513...10c8d`) on 9 November 2026.
 These findings were not re-run on that binary; 0.6 still checks `fputc` and `fclose`, and its new `write-bytes`
 checks `fwrite` (source read only).
 
