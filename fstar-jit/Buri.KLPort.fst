@@ -286,8 +286,10 @@ let unchecked_write_returns rr (b : int) (h : nat) s r
   : Lemma (requires rr.unchecked_writes = true /\ 0 <= b /\ b < 256)
           (ensures exists kk. rule_write_byte_r rr [VNum (NInt b); VStream h] s == PIO (QWrite h [to_nat b]) kk /\
                    kk r == ORet (VNum (NInt b)) s) =
-  let kk = (fun (_ : response) -> ORet (VNum (NInt b)) s) in
-  assert (rule_write_byte_r rr [VNum (NInt b); VStream h] s == PIO (QWrite h [to_nat b]) kk)
+  (* Rocq picks the continuation with eexists; here it is read off the result. *)
+  match rule_write_byte_r rr [VNum (NInt b); VStream h] s with
+  | PIO q kk -> assert (q == QWrite h [to_nat b] /\ kk r == ORet (VNum (NInt b)) s)
+  | PDone _ -> ()
 
 let catchable_resource rr pr r x k s
   : Lemma (requires rr.resource_exn r == Some x)
@@ -301,7 +303,8 @@ let closure_identity rr pr h x b r1 r2
   text_eqb_refl id_key
 #pop-options
 
-let step_r_deterministic_tau rr pr c c1 c2 (h1 : step_r rr pr c Tau c1) (h2 : step_r rr pr c Tau c2)
+let step_r_deterministic_tau (rr : port_rules) (pr : profile) (c c1 c2 : config) (h1 : step_r rr pr c Tau c1) (h2 : step_r rr pr c Tau c2)
   : Lemma (requires forall r. rr.resource_exn r == None) (ensures c1 == c2) =
-  match h1, h2 with
-  | Step_r_tau _ _ _, Step_r_tau _ _ _ -> ()
+  match h1 with
+  | Step_r_tau _ _ _ -> (match h2 with Step_r_tau _ _ _ -> () | Step_r_resource _ _ _ _ _ -> ())
+  | Step_r_resource _ _ _ _ _ -> ()

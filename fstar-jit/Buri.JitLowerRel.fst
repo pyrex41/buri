@@ -20,6 +20,32 @@ noeq type vr : value -> B.val_ -> Type0 =
   | VR_nil : vr VNil B.VNil
   | VR_cons : a:value -> a':B.val_ -> d:value -> d':B.val_ -> vr a a' -> vr d d' -> vr (VCons a d) (B.VPair a' d')
 
+(* VR as a proposition, for use inside quantified statements (MEnv). Z3 did not instantiate
+   quantifiers whose body held `inhabited (vr v v')` (an existential over a type indexed by the
+   bound values); `vrp` says the same (vrp_iff) and avoids that. *)
+let rec vrp (v : value) (w : B.val_) : Tot prop (decreases v) = match v, w with
+  | VNum (NInt z), B.VFix y -> z == y
+  | VNum (NFloat b), B.VReal c -> b == c
+  | VSym s, B.VSym p -> p == B.sym_of_text s
+  | VBool b, B.VBool c -> b == c
+  | VStr t, B.VStr u -> t == u
+  | VNil, B.VNil -> True
+  | VCons a d, B.VPair a' d' -> vrp a a' /\ vrp d d'
+  | _, _ -> False
+let rec vrp_of_vr (#v : value) (#w : B.val_) (d : vr v w) : Lemma (ensures vrp v w) (decreases d) =
+  match d with
+  | VR_cons a a' d1 d' h1 h2 -> vrp_of_vr h1; vrp_of_vr h2
+  | _ -> ()
+let rec vr_of_vrp (v : value) (w : B.val_) : Pure (vr v w) (requires vrp v w) (ensures fun _ -> True) (decreases v) =
+  match v, w with
+  | VNum (NInt z), B.VFix y -> VR_int z
+  | VNum (NFloat b), B.VReal c -> VR_real b
+  | VSym s, B.VSym p -> VR_sym s
+  | VBool b, B.VBool c -> VR_bool b
+  | VStr t, B.VStr u -> VR_str t
+  | VNil, B.VNil -> VR_nil
+  | VCons a d, B.VPair a' d' -> VR_cons a a' d d' (vr_of_vrp a a') (vr_of_vrp d d')
+
 let lit_val (e : expr) : option value = match e with
   | ENum n -> Some (VNum n) | EStr t -> Some (VStr t) | ESym s -> Some (VSym s)
   | EBool b -> Some (VBool b) | ENil -> Some VNil | _ -> None
