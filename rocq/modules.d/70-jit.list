@@ -10,6 +10,8 @@ JitLowerPrim
 JitLowerStep
 JitLowerThm
 JitLowerCheck
+JitLowerEquiv
+JitEqBudget
 JitLowerStage0
 JitNorm
 JitNormStage0

@@ -5902,6 +5902,94 @@
    ]
   },
   {
+   "id": "OB-JIT-LOWER-FRONT",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to KLambda (lower.shen's share and norm)",
+   "identity": "rocq/JitLowerEquiv.v",
+   "statement": "KRef (rocq/JitLowerEquiv.v), a step-indexed refinement on KLambda expressions under KLPort.step_r (jit_rules sealed) jit_profile, has the compatibility, fundamental and adequacy properties stated there, and composes two front links with call_preservation (call_preservation_src_statement), so a per-definition checker that establishes KRef for share's and norm's outputs makes call_preservation a claim about the source body.",
+   "premises": [
+    "partial correctness only: a target that diverges silently where the source returns is not excluded (OB-JIT-LOWER-TERM)",
+    "under jit_rules a resource error is XUser \"out of memory\" or XUser \"stack overflow\", so a user simple-error with that text refines any source that can reach a running state with related store and continuation",
+    "D_wf: the definitions a rewrite relies on are sealed, each named once; D_compiled decides that they are accepted code, which Com's FunRel needs",
+    "the callees b0 calls are the store's, which under FunRel are the lowered bodies, not the kernel's source definitions; composing definitions with each other needs function tables related by KRef, not equal",
+    "front-end checkers must reject norm's (fn F) rewrites, open-call inlining guarded by shen-jit.inlined?, and eval-kl to shen-jit.eval-kl: none can satisfy KRef in Buri's KLambda (none fires at stage 0)",
+    "fresh_ok is parametric in the lowerer's namespace: stage 0 emits stage0.lower.*, the run-time lowerer shen-jit.lower.*, and fresh_ok in the run-time namespace fails on the lowerer's own definitions"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRAGMENT"
+   ],
+   "evidence": [],
+   "completion_evidence": "The statements of rocq/JitLowerEquiv.v proved with no axioms and audited, and front-link checkers proved to establish KRef.",
+   "sources": [
+    "rocq/JitLowerEquiv.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitLowerEquiv.v",
+     "recorded": "2026-11-08: open. Statements written and reviewed; not yet proved.",
+     "reconciliation": "Front-pass equivalence statements, 8 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-EQ-BUDGET-CORE",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda = on related heaps of different lengths",
+   "identity": "rocq/JitEqBudget.v",
+   "statement": "eq_core_statement (rocq/JitEqBudget.v): for every port rules R, every profile P' whose num_cmp P' PEqual is symmetric and transitive, and every heap h with Forall (lok (length h)) h, cellcmp R P' h (length h) p q = cellcmp R P' h (S (length h)) p q for all p <> q. eq_budget_from_core proves that it implies JitLowerEquiv.eq_budget_statement.",
+   "premises": [
+    "the hypotheses are needed: eq_budget_refuted gives a five-cell heap where, with a tolerance number equality, = answers None at budget S (length h) and Some false at one more"
+   ],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "eq_core_statement proved with no axioms. Estimated over 1,000 lines, in four parts: (1) the merge simulation, both the same-budget and the shifted direction, with a lemma that interchangeable leaves change no comparison; (2) depth-first stop positions over cyclic heaps, the ultrametric lemma and its two-smallest-equal consequence; (3) on a finite set, strict refinement of an equivalence adds a class; (4) the induction on closed sets of cells.",
+   "sources": [
+    "rocq/JitEqBudget.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitEqBudget.v",
+     "recorded": "2026-11-08: open. Paper proof in the file header: show tau(p,q) <= |S| for every set S of cells closed under data pointers, by induction on |S|. Merge step: redirect the least-budget distinct true pair x, y into one cell; answers are unchanged and tau grows by at most 1. Ultrametric base: with no true pair, an answer is one walk, and stop positions form an ultrametric because leaf agreement is a PER; each walk position refines the partition of S strictly, so the walk has at most |S| - 1 pairs. The merge step agreed on 5,804 random heaps (search-only Python copy of eq_depth_r; PER and NaN-like atoms, nested pairs, opaque values, n <= 6; 0 failures). Proved: the reduction (eq_budget_from_core), jit_eq_per, and eq_budget_refuted for the statement without its hypotheses.",
+     "reconciliation": "Eq budget spike, 8 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-LOWER-TERM",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to KLambda (lower.shen's share and norm)",
+   "identity": "rocq/JitLowerEquiv.v",
+   "statement": "The front passes preserve termination: a source run that reaches a terminal state other than a resource error is matched by a target run that reaches one, so a target diverges only when the source does.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT"
+   ],
+   "evidence": [],
+   "completion_evidence": "A termination relation with its own compatibility lemmas, proved with no axioms, and the front-link checkers proved to establish it.",
+   "sources": [
+    "rocq/JitLowerEquiv.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitLowerEquiv.v",
+     "recorded": "2026-11-08: open. Kept separate from KRef, which is partial correctness: a divergence clause inside a step-indexed relation needs excluded middle to prove its congruences, while this direction gives divergence by contraposition, constructively, and its proofs do not reopen KRef's.",
+     "reconciliation": "Front-pass equivalence statements, 8 November 2026."
+    }
+   ]
+  },
+  {
    "id": "OB-JIT-LOWER-FUNREL",
    "kind": "artifact-correspondence",
    "scope": "instance",
