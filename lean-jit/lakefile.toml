@@ -1,0 +1,5 @@
+name = "lean-jit"
+defaultTargets = ["LeanJit"]
+
+[[lean_lib]]
+name = "LeanJit"
