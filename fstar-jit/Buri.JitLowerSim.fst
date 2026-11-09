@@ -583,3 +583,127 @@ let rec tk_nb (sealed : list name)
   | TK_jump _ _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_nb sealed tk1 s v
   | TK_label _ _ _ _ _ _ _ _ _ _ tk1 -> tk_nb sealed tk1 s v
 #pop-options
+
+(* ---------- primitives ---------- *)
+let rec all_some_app (#x #y : Type) (g : x -> option y) (a b : list x) (xa xb : list y)
+  : Lemma (requires B.all_some (map g a) == Some xa /\ B.all_some (map g b) == Some xb)
+          (ensures B.all_some (map g (app a b)) == Some (app xa xb)) =
+  match a with
+  | [] -> ()
+  | h :: a' -> (match g h with Some yv -> (match B.all_some (map g a') with Some ys -> all_some_app g a' b ys xb))
+
+let read_eq (m : B.machine) (o : B.operand) : Lemma (B.read_op m o == read_o (code m) (fp m) (st m) o) = ()
+
+let rec vrs_app (#a #a' #b #b' : _) (h1 : vrs a a') (h2 : vrs b b') : Tot (vrs (app a b) (app a' b')) (decreases h1) =
+  match h1 with
+  | VRs_nil -> h2
+  | VRs_cons x x' l l' dx rest -> VRs_cons x x' (app l b) (app l' b') dx (vrs_app rest h2)
+
+let rec done_all (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#vals : list value) (#dops : list B.operand)
+  (d : doneR c f s0 vals dops) (m : B.machine)
+  : Pure (xs : list B.val_ & vrs (rev vals) xs)
+    (requires code m == c /\ fp m == f /\ st m == s0)
+    (ensures fun res -> B.all_some (map (B.read_op m) (rev dops)) == Some (dfst res)) (decreases d) =
+  match d with
+  | DR_nil -> (| [], VRs_nil |)
+  | DR_cons v v' o vs os _ dv rest ->
+    let (| xs, h |) = done_all rest m in
+    read_eq m o;
+    all_some_app (B.read_op m) (rev os) [o] xs [v'];
+    (| app xs [v'], vrs_app h (VRs_cons v v' [] [] dv VRs_nil) |)
+
+let rec vrs_length (#a : list value) (#b : list B.val_) (h : vrs a b) : Lemma (ensures length a = length b) (decreases h) =
+  match h with VRs_nil -> () | VRs_cons _ _ _ _ _ r -> vrs_length r
+
+let prim_call (sealed : list name) (s : store) (f : name) (p : prim) (args : list value) (k : list frame) (o : pout)
+  : Lemma (requires lookup f s.gfuns == Some (FPrim p) /\ length args = prim_arity p /\
+                    prim_rule_r (rr sealed) pr p args s == PDone o)
+          (ensures call_named_r (rr sealed) pr f args k s == MTau (pout_config pr o [] k s)) =
+  firstn_len args (prim_arity p); skipn_len args (prim_arity p)
+
+let rec below_safe (f top : nat) (l : list B.operand)
+  : Lemma (requires forall_l (o_below top) l) (ensures forall_l (o_safe f (w_top f top)) l) =
+  match l with [] -> () | _ :: r -> below_safe f top r
+let rec below_mono (a b : nat) (l : list B.operand)
+  : Lemma (requires a <= b /\ forall_l (o_below a) l) (ensures forall_l (o_below b) l) =
+  match l with [] -> () | _ :: r -> below_mono a b r
+let rec safe_mono (f : nat) (w w1 : nat -> prop) (l : list B.operand)
+  : Lemma (requires forall_l (o_safe f w1) l /\ sub w w1) (ensures forall_l (o_safe f w) l) =
+  match l with [] -> () | _ :: r -> safe_mono f w w1 r
+
+(* ---------- an argument arrives ---------- *)
+#push-options "--z3rlimit 200 --fuel 2 --ifuel 1"
+let ret_prim (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (v : value) (v' : B.val_)
+  (m : B.machine) (o : B.operand) (f : name) (p : prim) (q : B.prim) (vals : list value) (es : list expr) (rho : lenv)
+  (k1 : list frame) (g : env) (top : nat) (ops dops : list B.operand) (d : nat) (r1 : list B.instr) (w w1 : nat -> prop)
+  (dv : vr v v') (co : compOps (code m) g top es ops m.B.m_rest (B.IPrim d q (app (rev dops) (o :: ops)) :: r1))
+  (dr : doneR (code m) (fp m) (st m) vals dops) (kd : kD (code m) (fp m) (st m) (cs m) w1 (B.OSlot d) r1 k1)
+  : Lemma (requires com s m /\ read_o (code m) (fp m) (st m) o == Some v' /\ prim_of_name f == Some p /\
+                    pmap p == Some q /\ length vals + 1 + length es = prim_arity p /\
+                    menv (fp m) (st m) g rho /\ prot g (fp m) w /\ envBelow g top /\
+                    forall_l (o_safe (fp m) w) dops /\ forall_l (o_below top) dops /\ o_below top o /\
+                    sub w w1 /\ above (fp m) top w1 /\ w1 (fp m + d))
+          (ensures iout e pt sealed s (cfg (Ret v) (KCallArgs f vals es rho :: k1) s) m) =
+  let c0 = cfg (Ret v) (KCallArgs f vals es rho :: k1) s in
+  kD_notrap kd;
+  match co with
+  | Os_nil _ _ _ ->
+    let m' = B.set_rest m r1 in
+    com_same s m m';
+    let (| xs, hx |) = done_all dr m' in
+    read_eq m' o;
+    all_some_app (B.read_op m') (rev dops) [o] xs [v'];
+    let args = rev (v :: vals) in
+    let args' = app xs [v'] in
+    let hv : vrs args args' = vrs_app hx (VRs_cons v v' [] [] dv VRs_nil) in
+    vrs_length hv; rev_length (v :: vals);
+    assert (lookup f s.gfuns == Some (FPrim p));
+    assert (next_r (rr sealed) pr c0 == call_named_r (rr sealed) pr f args k1 s);
+    assert (B.next e pt m == (if B.allocates q && e.B.e_oom m.B.m_allocs then B.raise_s m' "out of memory"
+                              else B.prim_step e pt m' d q args'));
+    if B.allocates q && e.B.e_oom m.B.m_allocs then begin
+      let x = XUser (of_string "out of memory") in
+      let st1 : step_r (rr sealed) pr c0 Tau (cfg (Throw x) c0.kont c0.mem) = Step_r_resource c0 RHeap x () () in
+      inhabits (finish_raise #e #pt #sealed s c0 m m' x (KCallArgs f vals [] rho :: k1) (B.t "out of memory") B.VCleared
+        (SS_step c0 (cfg (Throw x) c0.kont c0.mem) _ st1 (SS_refl _)))
+    end else begin
+      prim_agree sealed e pt m' d p q args args' s hv;
+      eliminate (exists v0 v0'. prim_rule_r (jit_rules sealed) jit_profile p args s == PDone (ORet v0 s) /\
+                   B.prim_step e pt m' d q args' == B.ret_to m' d v0' /\ inhabited (vr v0 v0')) \/
+                (exists x msg tv. prim_rule_r (jit_rules sealed) jit_profile p args s == PDone (OThrow x) /\
+                   B.prim_step e pt m' d q args' == B.raise m' msg tv /\ exn_ok x msg)
+      with begin
+        eliminate exists v0 v0'. prim_rule_r (jit_rules sealed) jit_profile p args s == PDone (ORet v0 s) /\
+                   B.prim_step e pt m' d q args' == B.ret_to m' d v0' /\ inhabited (vr v0 v0')
+        with eliminate exists (dv0 : vr v0 v0'). True
+        with begin
+          prim_call sealed s f p args k1 (ORet v0 s);
+          let c' = cfg (Ret v0) k1 s in
+          let m1 = wr m r1 d v0' in
+          inhabits (O_step #e #pt #sealed #s #c0 #m c' m1 (s1' c0 c' ()) (Inl (TPlus m1 () (TS_refl m1)))
+            (ms_write #s #m (KC_slot (code m) (fp m) (st m) (cs m) w1 d r1 k1 () kd) dv0))
+        end
+      end
+      and begin
+        eliminate exists x msg tv. prim_rule_r (jit_rules sealed) jit_profile p args s == PDone (OThrow x) /\
+                   B.prim_step e pt m' d q args' == B.raise m' msg tv /\ exn_ok x msg
+        with begin
+          prim_call sealed s f p args k1 (OThrow x);
+          inhabits (finish_raise #e #pt #sealed s c0 m m' x k1 msg tv (s1' c0 (cfg (Throw x) k1 s) ()))
+        end
+      end
+    end
+  | Os_cons _ _ a es' o2 os top2 _ r1' _ co1 co2 ->
+    compOp_mono co1;
+    app_assoc (rev dops) [o] (o2 :: os);
+    let wt = w_top (fp m) top in
+    prot_below g (fp m) top wt;
+    below_safe (fp m) top dops;
+    below_mono top top2 dops;
+    let k' = KCallArgs f (v :: vals) es' rho :: k1 in
+    let c' = cfg (Eval rho a) k' s in
+    let kd' = KD_prim (code m) (fp m) (st m) (cs m) wt o2 r1' f p q (v :: vals) es' rho k1 g top2 os (o :: dops) d r1 w1
+      () () () () () () co2 (DR_cons v v' o vals dops () dv dr) () () () () () () kd in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_op g top a o2 top2 r1' rho k' wt m () co1 () () () kd'))
+#pop-options
