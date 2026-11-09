@@ -338,6 +338,102 @@ was not attempted and is not estimated here.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
 
+### Pass split: the normal form (wave 1b)
+
+`lower.shen` lowers in passes: `share` (KL to KL), `norm` (KL to the normal form), then emission (normal form to
+bytecode). The stage 0 checker above relates source forms to code directly, so it rejects every definition the
+first two passes rewrite. Wave 1b models the normal form, gives it a meaning in KLambda, and judges the emit
+pass alone on captured `norm` witnesses. **Acceptance here is about emission only.** Every accepted definition is
+also counted as "front end unchecked": nothing in these files relates a witness to its source body. That is
+wave 2's obligation.
+
+| File | Contents |
+|---|---|
+| `rocq/JitNorm.v` | `nexpr`, the normal form's 14 node shapes; `erase : list name -> nexpr -> option expr`; `port_prims`, `folded`; sanity lemmas |
+| `rocq/JitNormStage0.v` | `decode` (witness trees to `nexpr`), `judge_core`/`judge_norm`, `judge_norm_sound`, the per-file tally |
+| `tests/shen-jit/stage0_to_rocq.py --norm` | Tokenizes `<file>.norm` as well, into the same generic trees; decides nothing |
+| `scripts/check-shen-jit-norm.sh` | Opt-in, report only: compiles the above, checks their assumptions, runs the judge over all 24 files |
+
+**The IR.** The node shapes are `lower.shen`'s list above `shen-jit.lower.norm`: `[const V] [var X] [if C X Y]
+[and X Y] [or X Y] [let X V Body] [do X Y] [lambda X Body] [freeze Body] [prim Op Args] [call F Args] [apply F]
+[apply F X] [trap X E Handler]`. That covers everything `norm-cond`, `open-call`, `fn-call`, `unified-now`,
+`bound-now` and the inliner build. A constant carries any KL `value`, so folded lists and the inline body in
+`open-call`'s guard can be represented. So can the closures and vectors that the last `norm` clause turns into
+constants at run time. Stage 0's writer refuses to print those, so no stage 0 witness has one.
+
+**What `erase` means**, node by node, with the obligation each choice leaves:
+
+| Node | Erasure | Obligation it leaves |
+|---|---|---|
+| `[const V]`, V an atom | the literal | none. `ESym` is a literal of resolved syntax: `eval_move` returns `VSym s` whatever the environment binds, so no variable captures a symbol constant (`erase_const_eval`, for any `rho`). Erase does not check scope for symbols. |
+| `[const V]`, V a pair | the `cons` chain that builds it | Proved at the expression level: `erase_const_eval` shows the chain evaluates to V in any environment and continuation, leaving the store unchanged. This holds when `cons` names the primitive and the stack has room for `cdepth V` frames. Still open: emission. `lower.shen` emits one `(const d k)` of a pair, which `C_lit` does not admit (atoms only), so `check_fn` rejects it. That gap belongs to the emission relation. |
+| `[const V]`, any other value | None | needs a constant form in KLSyntax |
+| `[var X]` | `EVar X`; None if X is not in scope | none |
+| `[let X V B]` | `ELet` | none |
+| `[let stage0.lower.inlining [const F] B]` (also `shen-jit.lower.inlining`) | B, when V is a symbol constant and B never mentions the name; otherwise `ELet` | `marker_dead` states the side condition. Dropping the let changes no value or effect, but removes one `KLet` frame, so under a stack bound the two differ in when they run out of stack. The emitter makes no frame for it either. |
+| `[do X Y]` | `ECall do [X; Y]` (`erase_do`) | This is the named call the source `(do X Y)` is in KLSemantics, which is how `JitLowerEquiv` (pass-equiv) states the front end, so that step is congruence. The emitter instead inlines it: X goes into a temporary, then Y is lowered in place in tail position. `check_fn` expects a call, so it rejects every `do`. Admitting the inlining is the emission relation's job, under the premise that the store's `do` is the kernel's: `do` is sealed at stage 0, and its code `(return 3)` is the kind `check_fn` accepts, so `FunRel` can cover it. An earlier version erased `do` as a fresh `let`, which `check_fn` accepted in 3 more definitions (`shen-jit.lower.finish`, `.value`, `shen.repl`). It was switched to the named call to match the front end's interface. |
+| `[prim raise-cond []]` | `ECond []` | none: it raises `XCondFail`, as `norm-cond`'s end does, and `C_cond_nil` admits it. `raise-cond` is not a KL name. |
+| `[prim Op Args]`, Op a KL primitive | `ECall Op Args`; None if the count is not Op's arity | A primitive call is a named call in `KLSemantics`, resolved in `gfuns`. This is correct under the store invariant `JitLowerStep` already assumes (`fr_prim`/`fr_name`: primitive names are bound to their `FPrim`). |
+| `[prim Op Args]`, any other Op | `ECall Op Args`, listed by `port_prims` | **Port primitive, no KL meaning**: the KL store defines no such name, so the call raises `XUndefinedFun`. Each one needs a primitive spec and a ledger entry. These include `shen-jit.inlined?` (`open-call`'s guard) and `shen-jit.arity?` (`fn-call`'s test). Both are C primitives (`src/runtime/prims.c`, `P_INLINEDP`/`P_ARITYP`) that read a function's current code object, and their specs must make the guard's two branches agree. |
+| `[call F Args]` | `ECall F Args` | none for erase. Port functions called this way are ordinary KL defuns in `src/port/shen-jit.kl`, so the store's definitions give their meaning: `shen-jit.eval-kl` (line 10), `shen-jit.undo` (181), `shen-jit.unify=` (186), `shen-jit.unify=!` (219), `shen.bindv`. Relating `unified-now`/`bound-now`'s expansions to `is`, `is!` and `shen.bind!` belongs to the front end. One semantic difference goes in the ledger rather than being left as a pending proof: `shen-jit.eval-kl` returns any non-pair unchanged, while KL's `eval-kl` raises `XEvalKL` on a closure or vector (`parse` fails). |
+| `[apply F]` | `EApp F []`, the thaw of a frozen value | Also `norm-apply`'s zero-argument dynamic call. Relating it to the source's `(thaw X)` needs the kernel's `thaw` (front end). |
+| `[apply F X]` | `EApp F [X]` | Uncurrying back to `(F A B)` belongs to the front end. |
+| `[trap X E H]` | `ETrap X (ELam E H)`, H in E's scope | none: `throw_move` applies the handler to the exception. The fresh-variable form `[trap X E [apply H' [var E]]]` is an eta-expansion of `(trap-error X H')`, which belongs to the front end. |
+
+`erase` is not injective: a folded constant and the `cons` it came from erase alike, and so do a call and a prim of
+the same name (`erase_not_injective_fold`, `_call`). The judge doesn't need injectivity, because it checks code
+against the erasure. `erase_kl_shaped` shows the erasure exists for every node that is KL as written. `judge_norm_sound`
+shows what acceptance gives: the form parses to `defun F Ps B`, the witness decodes with the same F and Ps, it erases
+to e, and `CompFn c Ps e`. It does not give `e ~ B`. `Print Assumptions` is closed for all six statements the
+script audits.
+
+**Gate.** The two files are registered in `rocq/modules.d/70-jit.list`, because `scripts/prove` refuses unregistered
+modules, so `make prove` compiles them. Nothing else changes: no audit module counts them, so `Audit_Jit.count`,
+`scripts/report.py` and `check-shen-jit.sh` are untouched. The opt-in script checks their assumptions itself. The
+judge is not a gate, and its counts are reported, not pinned.
+
+**Stage 0 result.** Inputs: the `.forms` and `.sbc` of the pin's `/lps/p4/sj/build/stage0`, and pass-capture's 24
+`.norm` witnesses. The witnesses are not in the repo yet; where they land is pass-capture's or the lead's call. The
+hash of their `sha256sum *.norm` listing, sorted by name, is `2fa5a8e186fa006bfe88c5586c5c58e514bed4e44fb9491da21f222bc25b5747`.
+pass-capture's copies of `core` and `lower` `.forms`/`.sbc` were checked byte for byte against the pin. For the other
+files, the judge's name and parameter check covers the pairing, with 0 unparsed. The command was
+`NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm3 scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), at the
+commit that added this paragraph. The witnesses are pass-capture's final set: stage 0 code reproduced 950/950 byte for
+byte at `614a39a` on `pass/capture`, and the per-file hashes match its `SHA256SUMS`. `rocqchk` replays both modules.
+
+**72 of 950 definitions accepted** on the erased witness: 878 rejected, none failing erase, none unreadable. All
+72 are front end unchecked. None uses a port primitive and none has a folded constant, because `check_fn` rejects
+both. The stage 0 judge on the source bodies still accepts the same 61, and every one of the 61 is also accepted on its
+witness. None is lost, so no erase choice broke a definition the checker already took.
+
+| File | Accepted | Was (source) | Gained |
+|---|---:|---:|---|
+| lower | 10 | 8 | `shen-jit.lower.code`, `shen-jit.lower.apply-all?` |
+| prolog | 9 | 8 | `shen.prolog-parameters` |
+| reader | 8 | 7 | `shen.alpha?` |
+| shen-jit | 10 | 6 | `shen.<shortnatters>`, `shen.<whitespaces>`, `shen.<digits>`, `shen-jit.digits` |
+| sys | 12 | 11 | `eval` |
+| yacc | 5 | 3 | `shen.partial-parse-failure?`, `shen.parse-failure` |
+| the other 18 files | 18 | 18 | |
+
+All 11 gained definitions contain an inlining marker, which erase drops. This agrees with pass-capture's census (72
+with the marker dropped). Three hand mutations of `shen-jit.digits`'s witness were each made on the earlier version
+of erase, whose marker handling is unchanged. Each one turned that one verdict to rejected and changed nothing else:
+a constant changed (48 to 49), the marker's name used in its body, and the marker renamed so that it is no longer
+dropped. These were hand checks. No proof mutation was added, since the judge is not in a gate.
+
+What the 72 mean: each code object is a lowering, in `JitLowerRel`'s sense, of its witness's erasure. For the 61
+that were already accepted, the source-body verdict still stands on its own. For the 11 gained, nothing yet says
+that the erasure is equivalent to the kernel's KLambda: inlining (`shen.digit?` and others) and sharing changed the
+body, and that is wave 2's obligation. Most of the 878 rejections come from the emission relation (`=`, `value`,
+closures, folded constants, port primitives), not from erase; pass-capture's census lists the first blocker for each.
+
+**Coq 8.18.** `make prove` runs Coq 8.18 (`toolchain.lock.json`, `scripts/bootstrap-rocq`). The pinned 8.18 debs
+(checksums from `rocq-packages.lock`) were used in an amd64 Ubuntu 24.04 container. Under them, the 70-jit chain
+from `Observation` through `JitNormStage0` compiled with `scripts/rocq coqc -Q . Buri`, the six statements printed
+"Closed under the global context", and `coqchk` replayed `JitNorm` and `JitNormStage0`. A full `make prove` was not
+run.
+
 ## Differential results
 
 Tests under `qemu-riscv64` on the named binary, at the pin. Each case's code comes from the real lowerer, and

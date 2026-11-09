@@ -11,3 +11,5 @@ JitLowerStep
 JitLowerThm
 JitLowerCheck
 JitLowerStage0
+JitNorm
+JitNormStage0
