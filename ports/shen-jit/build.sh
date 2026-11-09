@@ -4,11 +4,11 @@
 #   docker run --rm --platform linux/arm64 -v "$PWD":/ports ubuntu:24.04 bash /ports/build.sh [OUT]
 # OUT defaults to /tmp/shen-jit-rv64. The binary needs qemu-riscv64 (or RISC-V) to run.
 # The hash depends on OUT, since -g records the build directory: the named binary (toolchain.lock.json)
-# is built with OUT=/lps/p4/sj, and the same command in a fresh container gives the same bytes.
+# is built with OUT=/lps/p6/sj, and the same command in a fresh container gives the same bytes.
 set -euo pipefail
 SPIKE=$(cd "$(dirname "$0")" && pwd)
 OUT=${1:-/tmp/shen-jit-rv64}
-COMMIT=d3348cefbb2b209992039c1c0f55751241750364
+COMMIT=934cfa56a5723165c63bf679f15d2d5214955a5d
 ZIG=zig-linux-aarch64-0.13.0
 ZIG_SHA256=041ac42323837eb5624068acd8b00cd5777dac4cf91179e8dad7a7e90dd0c556
 
@@ -41,7 +41,7 @@ make build/stage0/.done >/dev/null
 echo "stage 0 matches generated.sha256"
 
 $CC_RV -std=c11 -O2 -g ${SPIKE_ARENA_CFLAGS:-} -c spikes-overlay/arena.c -o spikes-overlay/arena.o
-make -j"$(nproc)" build/runtime CC=$CC_RV >/dev/null 2>&1
+make -j"${JOBS:-$(nproc)}" build/runtime CC=$CC_RV >/dev/null 2>&1
 ( cd build
   qemu-riscv64 ./runtime --stage1 stage0 shen-jit.img
   cat runtime shen-jit.img > shen-jit; chmod +x shen-jit
