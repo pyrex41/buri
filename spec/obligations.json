@@ -5991,7 +5991,8 @@
     "fresh_ok is parametric in the lowerer's namespace: stage 0 emits stage0.lower.*, the run-time lowerer shen-jit.lower.*, and fresh_ok in the run-time namespace fails on the lowerer's own definitions"
    ],
    "depends_on": [
-    "OB-JIT-LOWER-FRAGMENT"
+    "OB-JIT-LOWER-FRAGMENT",
+    "OB-JIT-EQ-BUDGET-CORE"
    ],
    "evidence": [],
    "completion_evidence": "The statements of rocq/JitLowerEquiv.v proved with no axioms and audited, and front-link checkers proved to establish KRef.",

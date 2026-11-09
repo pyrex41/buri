@@ -423,7 +423,7 @@ wave 2's obligation.
 | `rocq/JitNorm.v` | `nexpr`, the normal form's 14 node shapes; `erase : list name -> nexpr -> option expr`; `port_prims`, `folded`; sanity lemmas |
 | `rocq/JitNormStage0.v` | `decode` (witness trees to `nexpr`), `judge_core`/`judge_norm`, `judge_norm_sound`, the per-file tally |
 | `tests/shen-jit/stage0_to_rocq.py --norm` | Tokenizes `<file>.norm` as well, into the same generic trees; decides nothing |
-| `scripts/check-shen-jit-norm.sh` | Opt-in, report only: compiles the above, checks their assumptions, runs the judge over all 24 files |
+| `scripts/check-shen-jit-norm.sh` | Opt-in, report only: regenerates the witnesses with `capture_passes.sh`, compiles the above, checks their assumptions, runs the judge over all 24 files |
 
 **The IR.** The node shapes are `lower.shen`'s list above `shen-jit.lower.norm`: `[const V] [var X] [if C X Y]
 [and X Y] [or X Y] [let X V Body] [do X Y] [lambda X Body] [freeze Body] [prim Op Args] [call F Args] [apply F]
@@ -464,13 +464,17 @@ modules, so `make prove` compiles them. Nothing else changes: no audit module co
 judge is not a gate, and its counts are reported, not pinned.
 
 **Stage 0 result.** Inputs: the `.forms` and `.sbc` of the pin's `/lps/p4/sj/build/stage0`, and pass-capture's 24
-`.norm` witnesses. The witnesses are not in the repo yet; where they land is pass-capture's or the lead's call. The
+`.norm` witnesses. The witnesses are not committed: `scripts/check-shen-jit-norm.sh` regenerates them with
+`tests/shen-jit/capture_passes.sh` unless `NORM_DIR` names a directory of them. The
 hash of their `sha256sum *.norm` listing, sorted by name, is `2fa5a8e186fa006bfe88c5586c5c58e514bed4e44fb9491da21f222bc25b5747`.
 pass-capture's copies of `core` and `lower` `.forms`/`.sbc` were checked byte for byte against the pin. For the other
 files, the judge's name and parameter check covers the pairing, with 0 unparsed. The command was
 `NORM_DIR=<witness dir> JIT_OUT=/tmp/ir-norm3 scripts/check-shen-jit-norm.sh` in `buri-lps` (Rocq 9.3), at the
 commit that added this paragraph. The witnesses are pass-capture's final set: stage 0 code reproduced 950/950 byte for
 byte at `614a39a` on `pass/capture`, and the per-file hashes match its `SHA256SUMS`. `rocqchk` replays both modules.
+
+These counts were measured with the checker before `=` was admitted (`pass/eq`); on `p2/int` the checker also
+admits `=` against a safe constant, so they are stale until the script is rerun there.
 
 **72 of 950 definitions accepted** on the erased witness: 878 rejected, none failing erase, none unreadable. All
 72 are front end unchecked. None uses a port primitive and none has a folded constant, because `check_fn` rejects
