@@ -241,7 +241,24 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerStep.v` | `sim`: one step of the simulation, with stuttering bounded by a measure |
 | `rocq/JitLowerThm.v` | `preservation`, `related_progress`, `call_preservation`, `Ends_final` |
 | `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
+| `rocq/JitLowerEquiv.v` | `KRef`, the front passes' refinement relation; its statements; the composition with `call_preservation`, proved from the fundamental property |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
+
+**The front passes** (`rocq/JitLowerEquiv.v`, `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
+(b1 to e) before it emits code for e. `KRef g e0 e` is a step-indexed Kripke refinement on KLambda expressions under
+`step_r (jit_rules sealed) jit_profile`: every terminating run of e, after any IO trace, is matched by one of e0 with a
+related value or the same exception and related stores. Worlds are partial bijections between heap locations, because
+each lambda and freeze allocates a cell and the passes add and remove them. It is partial correctness; termination is
+`OB-JIT-LOWER-TERM`. Proved: `call_preservation_src_of_fundamental`, that the fundamental property implies
+`call_preservation` with the source body b0 in place of e, given `KRef ps b0 b1`, `KRef ps b1 e`, the definitions D the
+rewrites rely on (sealed, `D_wf`) and a well-formed store; adequacy and store reflexivity from the same premise; the
+ground relation's lemmas, `KRel_top`, and the premise checks' specifications. The source's final store is related to
+the start by `GStore` under a world fixing the old locations, not equal to it. Not proved: the fundamental property, the
+compatibility lemmas, the `=` budget lemma (`JitEqBudget.v`, separate work), and any front-link checker. Under Com's
+FunRel the callees b0 calls are the lowered bodies, not the kernel's source definitions. A checker must reject norm's
+`(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
+`KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
+`ShenJitEquivComposeLeft` are rejected.
 
 **The theorem.** `preservation` says: for every store, configuration and machine in the simulation relation, and
 every n, either the bytecode takes at least n steps while the source keeps a related configuration, or both end

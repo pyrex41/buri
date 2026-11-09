@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv.
 Print Assumptions JitMeta.JitMeta.step_deterministic_tau.
 Print Assumptions JitMeta.JitMeta.step_deterministic_io.
 Print Assumptions JitMeta.JitMeta.step_tau_excludes_io.
@@ -43,3 +43,16 @@ Print Assumptions JitLowerThm.JitLowerThm.related_progress.
 Print Assumptions JitLowerThm.JitLowerThm.call_preservation.
 Print Assumptions JitLowerCheck.JitLowerCheck.chk_sound.
 Print Assumptions JitLowerCheck.JitLowerCheck.check_fn_sound.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.fresh_ok_spec.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.no_keyword_binders_spec.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.D_compiled_spec.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.srun_nil_Sstar.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.GVal_trans.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.GStore_trans.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.VRelF_index.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.VRel_ground.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.SRel_ground.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.KRel_top.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.store_refl_of_fundamental.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.adequacy_of_fundamental.
+Print Assumptions JitLowerEquiv.JitLowerEquiv.call_preservation_src_of_fundamental.

@@ -19,6 +19,12 @@ ShenJitLowerChainConst: the checker's cons chain takes any constant as the head.
 ShenJitLowerEndsDecoupled: Ends's E_ok binds its own final machine and ignores the machine
   parameter, as Ends did before the end case was tied to the run, so the machine the run reaches
   need not be the one that returns. Ends_final must fail.
+ShenJitEquivEndsSameStore: EndsSrc's ok case claims the source ends in the starting store itself,
+  which b0's one-sided closure cells make false. call_preservation_src_of_fundamental must fail.
+ShenJitEquivAdequacyStrict: adequacy claims the source's final store is the target's. b0 and e
+  allocate different cells, so adequacy_of_fundamental must fail.
+ShenJitEquivComposeLeft: composing two worlds keeps the first and drops the second, so the composed
+  world no longer relates the final stores. In_compose, on which GStore_trans rests, must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -71,4 +77,13 @@ mutate('ShenJitLowerChainConst', 'rocq/JitLowerCheck.v',
 mutate('ShenJitLowerEndsDecoupled', 'rocq/JitLowerThm.v',
        " | E_ok v v' m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1",
        " | E_ok v v' m0 m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1")
+mutate('ShenJitEquivEndsSameStore', 'rocq/JitLowerEquiv.v',
+       " | ES_ok v v' m2 s0 w : Sstar sealed c (Cfg (Ret v) [] s0)",
+       " | ES_ok v v' m2 s0 w : Sstar sealed c (Cfg (Ret v) [] s)")
+mutate('ShenJitEquivAdequacyStrict', 'rocq/JitLowerEquiv.v',
+       "    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s0) /\\ wext (id_world s) w /\\ GStore w s0 s') /\\",
+       "    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s') /\\ wext (id_world s) w /\\ GStore w s0 s') /\\")
+mutate('ShenJitEquivComposeLeft', 'rocq/JitLowerEquiv.v',
+       " flat_map (fun p => map (fun q => (fst p, snd q)) (filter (fun q => Nat.eqb (snd p) (fst q)) w2)) w1.",
+       " w1.")
 print(' '.join(names))

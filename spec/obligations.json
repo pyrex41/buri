@@ -5932,6 +5932,11 @@
      "source": "rocq/JitLowerEquiv.v",
      "recorded": "2026-11-08: open. Statements written and reviewed; not yet proved.",
      "reconciliation": "Front-pass equivalence statements, 8 November 2026."
+    },
+    {
+     "source": "rocq/JitLowerEquiv.v",
+     "recorded": "2026-11-08: open. Proved and audited: call_preservation_src_of_fundamental, adequacy_of_fundamental and store_refl_of_fundamental, each an implication from fundamental_statement, with the ground lemmas, KRel_top and the premise specifications. The fundamental property and the compatibility lemmas are not proved.",
+     "reconciliation": "Composition from the fundamental property, 8 November 2026."
     }
    ]
   },
