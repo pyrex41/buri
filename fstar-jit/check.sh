@@ -6,6 +6,8 @@ here=$(cd "$(dirname "$0")" && pwd)
 FSTAR=${FSTAR:-$HOME/opt/fstar-v2026.10.25/fstar-run}
 f=$1; shift
 mkdir -p "$here/_cache"
+# A current .checked file makes F* skip the module: remove it so the module is verified now.
+rm -f "$here/_cache/$(basename "$f").checked"
 start=$(date +%s)
 /usr/bin/time -p nice -n 19 "$FSTAR" --cache_checked_modules --cache_dir "$here/_cache" --odir "$here/_out" \
   --include "$here" --include "$here/stage0" "$here/$f" "$@" 2> "$here/_cache/last.err"
