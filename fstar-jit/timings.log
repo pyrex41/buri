@@ -249,3 +249,17 @@ Buri.JitLowerEquiv.fst rc=1 wall=6s cpu=6.04s
 Buri.JitLowerEquiv.fst rc=1 wall=6s cpu=5.61s 
 Buri.JitLowerEquiv.fst rc=1 wall=5s cpu=5.14s 
 Buri.JitLowerEquiv.fst rc=0 wall=6s cpu=5.62s 
+Buri.JitLowerEquiv.fst rc=0 wall=6s cpu=5.88s 
+Buri.JitLowerEquiv.fst rc=0 wall=6s cpu=6.38s 
+Buri.JitLowerEquiv.fst rc=1 wall=12s cpu=10.8s 
+Buri.JitLowerEquiv.fst rc=1 wall=10s cpu=10.09s 
+Buri.JitLowerEquiv.fst rc=1 wall=12s cpu=11.38s 
+Buri.JitLowerEquiv.fst rc=1 wall=1s cpu=0.03s --split_queries always
+Buri.JitLowerEquiv.fst rc=1 wall=20s cpu=13.14s 
+Buri.JitLowerEquiv.fst rc=1 wall=20s cpu=13.16s 
+Buri.JitLowerEquiv.fst rc=0 wall=16s cpu=9.31s 
+Buri.JitLowerStep.fst rc=0 wall=5s cpu=1.68s 
+Buri.JitLowerThm.fst rc=0 wall=2s cpu=2.2s 
+Buri.JitLowerEquiv.fst rc=0 wall=13s cpu=9.34s 
+Buri.Unfinished.fst rc=1 wall=0s cpu=0.03s 
+Buri.Unfinished.fst rc=0 wall=7s cpu=4.11s 

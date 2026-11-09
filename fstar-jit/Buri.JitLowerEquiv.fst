@@ -505,14 +505,16 @@ let gStore_trans (w1 w2 : world) (s0 s1 s : store)
     end
   end
 
-(* First-order values. *)
-noeq type fo : value -> Type0 =
-  | Fo_num : n:num -> fo (VNum n) | Fo_sym : x:name -> fo (VSym x) | Fo_bool : b:bool -> fo (VBool b)
-  | Fo_str : t:text -> fo (VStr t) | Fo_nil : fo VNil | Fo_cons : a:value -> d:value -> fo a -> fo d -> fo (VCons a d)
+(* First-order values. Rocq: an inductive Prop with one constructor per case; here the
+   equivalent recursive prop. *)
+let rec fo (v : value) : prop = match v with
+  | VNum _ | VSym _ | VBool _ | VStr _ | VNil -> True
+  | VCons a d -> fo a /\ fo d
+  | _ -> False
 
-let rec gVal_fo (w : world) (v0 v : value) (f : fo v) : Lemma (requires gVal w v0 v) (ensures v0 == v) (decreases f) =
-  match f with
-  | Fo_cons a d fa fd -> (match v0 with VCons a0 d0 -> gVal_fo w a0 a fa; gVal_fo w d0 d fd)
+let rec gVal_fo (w : world) (v0 v : value) : Lemma (requires fo v /\ gVal w v0 v) (ensures v0 == v) (decreases v) =
+  match v, v0 with
+  | VCons a d, VCons a0 d0 -> gVal_fo w a0 a; gVal_fo w d0 d
   | _ -> ()
 
 (* --- the index family --- *)
@@ -639,3 +641,297 @@ let kRel_top (sealed : list name) (dd : list (name & fundef)) (k : nat) (w : wor
       end
     end
   end
+
+(* --- transport between index families (Rocq: KRel_with_ext, ERel_with_ext, over equal
+   relations; here over pointwise-equivalent ones) --- *)
+let equiv_upto (vv vv' : vrelt) (j : nat) : prop =
+  forall (i : nat) w x y. i <= j ==> (vv i w x y <==> vv' i w x y)
+
+let rec forall2_glob_iff (v1 v2 : world -> value -> value -> prop) (w : world) (a b : list (name & value))
+  : Lemma (requires forall x y. v1 w x y <==> v2 w x y)
+          (ensures forall2_l (glob_rel v1 w) a b <==> forall2_l (glob_rel v2 w) a b) =
+  match a, b with _ :: a', _ :: b' -> forall2_glob_iff v1 v2 w a' b' | _ -> ()
+let rec forall2_cells_iff (v1 v2 : world -> value -> value -> prop) (w : world) (a b : list value)
+  : Lemma (requires forall x y. v1 w x y <==> v2 w x y)
+          (ensures forall2_l (v1 w) a b <==> forall2_l (v2 w) a b) =
+  match a, b with _ :: a', _ :: b' -> forall2_cells_iff v1 v2 w a' b' | _ -> ()
+
+let sRel_with_iff (dd : list (name & fundef)) (v1 v2 : world -> value -> value -> prop) (w : world) (s0 s : store)
+  : Lemma (requires forall x y. v1 w x y <==> v2 w x y) (ensures sRel_with dd v1 w s0 s <==> sRel_with dd v2 w s0 s) =
+  forall2_glob_iff v1 v2 w s0.gvals s.gvals;
+  introduce forall (c0 c : list value). forall2_l (v1 w) c0 c <==> forall2_l (v2 w) c0 c
+  with forall2_cells_iff v1 v2 w c0 c
+
+let kRel_with_ext (sealed : list name) (dd : list (name & fundef)) (vv vv' : vrelt) (j : nat) (w : world) (k0 kk : list frame)
+  : Lemma (requires equiv_upto vv vv' j /\ kRel_with sealed dd vv j w k0 kk) (ensures kRel_with sealed dd vv' j w k0 kk) =
+  introduce forall (i : nat) (w' : world) (s0 s : store). i <= j ==> (sRel_with dd (vv i) w' s0 s <==> sRel_with dd (vv' i) w' s0 s)
+  with introduce _ ==> _ with sRel_with_iff dd (vv i) (vv' i) w' s0 s
+
+let eRel_with_ext (sealed : list name) (dd : list (name & fundef)) (vv vv' : vrelt) (j : nat) (w : world)
+  (r0 : lenv) (e0 : expr) (r : lenv) (e : expr)
+  : Lemma (requires equiv_upto vv vv' j /\ eRel_with sealed dd vv j w r0 e0 r e) (ensures eRel_with sealed dd vv' j w r0 e0 r e) =
+  introduce forall (i : nat) (w' : world) (s0 s : store). i <= j ==> (sRel_with dd (vv i) w' s0 s <==> sRel_with dd (vv' i) w' s0 s)
+  with introduce _ ==> _ with sRel_with_iff dd (vv i) (vv' i) w' s0 s;
+  introduce forall (j' : nat) (w' : world) (k0 kk : list frame). j' <= j ==> kRel_with sealed dd vv' j' w' k0 kk ==> kRel_with sealed dd vv j' w' k0 kk
+  with introduce _ ==> _ with introduce _ ==> _ with kRel_with_ext sealed dd vv' vv j' w' k0 kk
+
+(* --- reflexivity of values and stores, from the fundamental property --- *)
+let envRelAll sealed dd (k : nat) (w : world) (rho0 rho : lenv) : prop =
+  forall2_l (glob_rel (vRel sealed dd k) w) rho0 rho
+
+(* NOT proved (in Rocq either): the fundamental property. *)
+let fundamental_statement (sealed : list name) (dd : list (name & fundef)) : prop =
+  forall (k : nat) w rho0 rho e. d_wf sealed dd ==> wf_world w ==> envRelAll sealed dd k w rho0 rho ==>
+    eRel sealed dd k w rho0 e rho e
+
+let diag_upto (n : nat) (w : world) : prop = forall (l : nat). l < n ==> mem_l (l, l) w
+
+let same_id_refl (n : nat) (w : world) (rho : lenv)
+  : Lemma (requires vok_env n rho /\ diag_upto n w) (ensures same_id w rho rho) =
+  match rho with
+  | (kk, VVec l) :: _ -> ()
+  | _ -> ()
+
+#push-options "--z3rlimit 60 --fuel 2 --ifuel 1"
+let rec vrefl (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (v : value) (n k : nat) (w : world)
+  : Lemma (requires d_wf sealed dd /\ wf_world w /\ diag_upto n w /\ vok n v) (ensures vRel sealed dd k w v v)
+    (decreases v) =
+  vRel_unfold sealed dd k w v v;
+  let vv = (if k = 0 then bottom_rel else vRelF sealed dd (k - 1)) in
+  match v with
+  | VCons a d ->
+    vrefl sealed dd fF a n k w; vrefl sealed dd fF d n k w;
+    vRel_unfold sealed dd k w a a; vRel_unfold sealed dd k w d d
+  | VPartial f args -> vrefl_list sealed dd fF args n k w
+  | VLam x b rho ->
+    same_id_refl n w rho;
+    introduce forall (j : nat). j < k ==> (forall w'. wext w w' ==> (forall a0 a. vv j w' a0 a ==>
+        eRel_with sealed dd vv j w' ((x, a0) :: rho) b ((x, a) :: rho) b))
+    with introduce _ ==> _ with
+    introduce forall w'. wext w w' ==> _ with introduce _ ==> _ with
+    introduce forall a0 a. vv j w' a0 a ==> _ with introduce _ ==> _ with begin
+      vRelF_index sealed dd (k - 1) j w' a0 a;
+      vrefl_env sealed dd fF rho n j w';
+      assert (envRelAll sealed dd j w' ((x, a0) :: rho) ((x, a) :: rho));
+      assert (eRel sealed dd j w' ((x, a0) :: rho) b ((x, a) :: rho) b);
+      introduce forall (i : nat) w2 p q. i <= j ==> (vRelF sealed dd j i w2 p q <==> vv i w2 p q)
+      with introduce _ ==> _ with (vRelF_index sealed dd j i w2 p q; vRelF_index sealed dd (k - 1) i w2 p q);
+      eRel_with_ext sealed dd (vRelF sealed dd j) vv j w' ((x, a0) :: rho) b ((x, a) :: rho) b
+    end
+  | VFrozen b rho ->
+    same_id_refl n w rho;
+    introduce forall (j : nat). j < k ==> (forall w'. wext w w' ==> eRel_with sealed dd vv j w' rho b rho b)
+    with introduce _ ==> _ with
+    introduce forall w'. wext w w' ==> _ with introduce _ ==> _ with begin
+      vrefl_env sealed dd fF rho n j w';
+      assert (eRel sealed dd j w' rho b rho b);
+      introduce forall (i : nat) w2 p q. i <= j ==> (vRelF sealed dd j i w2 p q <==> vv i w2 p q)
+      with introduce _ ==> _ with (vRelF_index sealed dd j i w2 p q; vRelF_index sealed dd (k - 1) i w2 p q);
+      eRel_with_ext sealed dd (vRelF sealed dd j) vv j w' rho b rho b
+    end
+  | _ -> ()
+and vrefl_list (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (l : list value) (n k : nat) (w : world)
+  : Lemma (requires d_wf sealed dd /\ wf_world w /\ diag_upto n w /\ vok_list n l)
+          (ensures vBody_list sealed dd (if k = 0 then bottom_rel else vRelF sealed dd (k - 1)) k w l l) (decreases l) =
+  match l with
+  | [] -> ()
+  | x :: r -> vrefl sealed dd fF x n k w; vRel_unfold sealed dd k w x x; vrefl_list sealed dd fF r n k w
+and vrefl_env (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (rho : lenv) (n k : nat) (w : world)
+  : Lemma (requires d_wf sealed dd /\ wf_world w /\ diag_upto n w /\ vok_env n rho)
+          (ensures envRelAll sealed dd k w rho rho) (decreases rho) =
+  match rho with
+  | [] -> ()
+  | (y, u) :: r -> vrefl sealed dd fF u n k w; vrefl_env sealed dd fF r n k w
+#pop-options
+
+let rec cells_refl (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (c : list value) (n k : nat) (w : world)
+  : Lemma (requires d_wf sealed dd /\ wf_world w /\ diag_upto n w /\ forall_l (vok n) c)
+          (ensures forall2_l (vRel sealed dd k w) c c) =
+  match c with [] -> () | x :: r -> vrefl sealed dd fF x n k w; cells_refl sealed dd fF r n k w
+
+let rec forall_l_nth (#a : Type) (p : a -> prop) (l : list a) (i : nat) (x : a)
+  : Lemma (requires forall_l p l /\ nth_error l i == Some x) (ensures p x) =
+  match l with _ :: r -> if i = 0 then () else forall_l_nth p r (i - 1) x
+let rec nth_error_some (#a : Type) (l : list a) (i : nat)
+  : Lemma (requires i < length l) (ensures Some? (nth_error l i)) =
+  match l with _ :: r -> if i = 0 then () else nth_error_some r (i - 1)
+
+let store_refl_of_fundamental (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (k : nat) (s : store)
+  : Lemma (requires d_wf sealed dd /\ storeHas dd s /\ store_ok s) (ensures sRel sealed dd k (id_world s) s s) =
+  let w = id_world s in
+  let n = length s.heap in
+  id_world_wf s;
+  introduce forall (l : nat). l < n ==> mem_l (l, l) w with id_world_mem s l l;
+  fold_eok n s.gvals;
+  vrefl_env sealed dd fF s.gvals n k w;
+  introduce forall (l0 l : nat). mem_l (l0, l) w ==> (exists c0 c. nth_error s.heap l0 == Some c0 /\
+     nth_error s.heap l == Some c /\ forall2_l (vRel sealed dd k w) c0 c)
+  with introduce _ ==> _ with begin
+    id_world_mem s l0 l;
+    nth_error_some s.heap l0;
+    let Some c = nth_error s.heap l0 in
+    forall_l_nth (lok n) s.heap l0 c;
+    cells_refl sealed dd fF c n k w
+  end
+
+let rec fo_vok (n : nat) (v : value) : Lemma (requires fo v) (ensures vok n v) =
+  match v with VCons a d -> fo_vok n a; fo_vok n d | _ -> ()
+
+let fo_binding (p : name & value) : prop = fo (snd p)
+
+let rec lookup_mem_fo (x : name) (rho : lenv) (v : value)
+  : Lemma (requires forall_l fo_binding rho /\ lookup x rho == Some v) (ensures fo v) =
+  match rho with (y, u) :: r -> if text_eqb x y then () else lookup_mem_fo x r v
+
+(* Rocq: adequacy_statement, proved there as adequacy_of_fundamental. Here too, from the hypothesis. *)
+let adequacy_pre (sealed : list name) (dd : list (name & fundef)) (g : list name) (e0 e : expr) (rho : lenv) (s : store) : prop =
+  d_wf sealed dd /\ kRef sealed dd g e0 e /\ forall_l fo_binding rho /\
+  (forall (y : name). mem_l y g ==> (exists (v : value). lookup y rho == Some v)) /\ storeHas dd s /\ store_ok s
+let adequacy_post (sealed : list name) (g : list name) (e0 e : expr) (rho : lenv) (s : store) : prop =
+  (forall v s'. srun sealed (cfg (Eval rho e) [] s) [] (cfg (Ret v) [] s') ==> fo v ==>
+     (exists s0 w. srun sealed (cfg (Eval rho e0) [] s) [] (cfg (Ret v) [] s0) /\ wext (id_world s) w /\ gStore w s0 s')) /\
+  (forall x s'. srun sealed (cfg (Eval rho e) [] s) [] (cfg (Throw x) [] s') ==>
+     (exists s0 w. srun sealed (cfg (Eval rho e0) [] s) [] (cfg (Throw x) [] s0) /\ wext (id_world s) w /\ gStore w s0 s'))
+(* Rocq: adequacy_statement (curried premises; the same proposition). *)
+let adequacy_statement (sealed : list name) (dd : list (name & fundef)) : prop =
+  forall (g : list name) (e0 e : expr) (rho : lenv) (s : store).
+    adequacy_pre sealed dd g e0 e rho s ==> adequacy_post sealed g e0 e rho s
+
+#push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
+let adequacy_main (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (g : list name) (e0 e : expr) (rho : lenv) (s : store) (n : nat)
+  : Lemma (requires d_wf sealed dd /\ kRef sealed dd g e0 e /\ forall_l fo_binding rho /\
+                    (forall x. mem_l x g ==> (exists v. lookup x rho == Some v)) /\ storeHas dd s /\ store_ok s)
+          (ensures obsT sealed (n + 1) (id_world s) (cfg (Eval rho e0) [] s) (cfg (Eval rho e) [] s)) =
+  let w = id_world s in
+  id_world_wf s;
+  introduce forall x. mem_l x g ==> (exists v0 v. lookup x rho == Some v0 /\ lookup x rho == Some v /\ vRel sealed dd (n + 1) w v0 v)
+  with introduce _ ==> _ with begin
+    eliminate exists v. lookup x rho == Some v
+    with (lookup_mem_fo x rho v; fo_vok 0 v; vrefl sealed dd fF v 0 (n + 1) w)
+  end;
+  assert (eRel sealed dd (n + 1) w rho e0 rho e);
+  kRel_top sealed dd (n + 1) w;
+  store_refl_of_fundamental sealed dd fF (n + 1) s;
+  wext_refl w;
+  introduce forall (w2 : world) (x y : value). vRelF sealed dd (n + 1) (n + 1) w2 x y <==> vRel sealed dd (n + 1) w2 x y
+  with ();
+  sRel_with_iff dd (vRel sealed dd (n + 1)) (vRelF sealed dd (n + 1) (n + 1)) w s s
+#pop-options
+
+(* The instance form of adequacy_statement: for these g, e0, e, rho, s. *)
+let adequacy_of_fundamental (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  (g : list name) (e0 e : expr) (rho : lenv) (s : store)
+  : Lemma (requires adequacy_pre sealed dd g e0 e rho s) (ensures adequacy_post sealed g e0 e rho s) =
+  introduce forall v s'. srun sealed (cfg (Eval rho e) [] s) [] (cfg (Ret v) [] s') ==> fo v ==>
+     (exists s0 w. srun sealed (cfg (Eval rho e0) [] s) [] (cfg (Ret v) [] s0) /\ wext (id_world s) w /\ gStore w s0 s')
+  with introduce _ ==> _ with introduce _ ==> _ with begin
+    eliminate exists (h : star (step_r (rr sealed) pr) (cfg (Eval rho e) [] s) [] (cfg (Ret v) [] s')). True
+    with begin
+      let (| n, hr |) = srun_runs h in
+      adequacy_main sealed dd fF g e0 e rho s n;
+      assert (exists v0 s0 w'. srun sealed (cfg (Eval rho e0) [] s) [] (cfg (Ret v0) [] s0) /\
+                wext (id_world s) w' /\ gVal w' v0 v /\ gStore w' s0 s');
+      eliminate exists v0 s0 w'. srun sealed (cfg (Eval rho e0) [] s) [] (cfg (Ret v0) [] s0) /\
+                wext (id_world s) w' /\ gVal w' v0 v /\ gStore w' s0 s'
+      with gVal_fo w' v0 v
+    end
+  end;
+  introduce forall x s'. srun sealed (cfg (Eval rho e) [] s) [] (cfg (Throw x) [] s') ==>
+     (exists s0 w. srun sealed (cfg (Eval rho e0) [] s) [] (cfg (Throw x) [] s0) /\ wext (id_world s) w /\ gStore w s0 s')
+  with introduce _ ==> _ with begin
+    eliminate exists (h : star (step_r (rr sealed) pr) (cfg (Eval rho e) [] s) [] (cfg (Throw x) [] s')). True
+    with begin
+      let (| n, hr |) = srun_runs h in
+      adequacy_main sealed dd fF g e0 e rho s n
+    end
+  end
+
+let adequacy_statement_of_fundamental (sealed : list name) (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
+  : Lemma (adequacy_statement sealed dd) =
+  introduce forall (g : list name) (e0 e : expr) (rho : lenv) (s : store). _
+  with FStar.Classical.move_requires (adequacy_of_fundamental sealed dd fF g e0 e rho) s
+
+(* ---------- composition with call_preservation ---------- *)
+noeq type endsSrc (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (c : config) (m1 : B.machine) : Type0 =
+  | ES_ok : v:value -> v':B.val_ -> m2:B.machine -> s0:store -> w:world -> sstar sealed c (cfg (Ret v) [] s0) ->
+      squash (wext (id_world s) w) -> squash (gStore w s0 s) ->
+      squash (B.next e pt m1 == B.MFinal (B.FReturn v') m2) -> vr v v' -> endsSrc e pt sealed s c m1
+  | ES_err : x:exn -> l:pos -> msg:B.text -> tv:B.val_ -> m2:B.machine -> s0:store -> w:world ->
+      sstar sealed c (cfg (Throw x) [] s0) -> squash (wext (id_world s) w) -> squash (gStore w s0 s) ->
+      squash (B.next e pt m1 == B.MFinal (B.FError (B.VExn l)) m2) ->
+      squash (B.tget l m2.B.m_heap == Some (B.OExn msg tv)) -> squash (exn_ok x msg) -> endsSrc e pt sealed s c m1
+
+noeq type pres_src_result (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (n : nat) (s : store)
+  (ce c0 : config) (m : B.machine) : Type0 =
+  | SStill : c':config -> m':B.machine -> k:nat -> sstar sealed ce c' -> tN e pt k m m' -> squash (n <= k) ->
+      mS s c' m' -> pres_src_result e pt sealed n s ce c0 m
+  | SEnded : m1:B.machine -> endsSrc e pt sealed s c0 m1 -> tStar e pt m m1 -> pres_src_result e pt sealed n s ce c0 m
+
+let rec vr_fo (#v : value) (#v' : B.val_) (d : vr v v') : Lemma (ensures fo v) (decreases d) =
+  match d with VR_cons _ _ _ _ h1 h2 -> vr_fo h1; vr_fo h2 | _ -> ()
+let rec argsAt_combine_fo (st : B.tree B.val_) (a : nat) (ps : list name) (args : list value) (h : argsAt st a args)
+  : Lemma (ensures forall_l fo_binding (combine ps args)) (decreases h) =
+  match h with
+  | AA_nil _ -> ()
+  | AA_cons _ v v' vs _ dv rest ->
+    (match ps with [] -> () | p :: ps' -> vr_fo dv; argsAt_combine_fo st (a + 1) ps' vs rest)
+let rec lookup_combine (ps : list name) (args : list value) (y : name)
+  : Lemma (requires length ps = length args /\ mem_l y ps) (ensures exists (v : value). lookup y (combine ps args) == Some v) =
+  match ps, args with
+  | p :: ps', v :: args' -> if text_eqb y p then () else (text_eqb_eq y p; lookup_combine ps' args' y)
+
+(* Rocq: call_preservation_src_statement, proved there from fundamental_statement. Here it is
+   proved from fundamental_statement AND the one-step simulation `sim` (proved in Rocq, not here). *)
+#push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
+let call_preservation_src_of_fundamental (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list name)
+  (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd)) (sim : Buri.JitLowerStep.sim_statement e pt sealed)
+  (s : store) (m : B.machine) (c : B.code) (ps : list name) (b0 b1 eb : expr) (args : list value) (n : nat)
+  : Lemma (requires d_wf sealed dd /\ kRef sealed dd ps b0 b1 /\ kRef sealed dd ps b1 eb /\ storeHas dd s /\ store_ok s /\
+                    com s m /\ compFn c ps eb /\ length ps = length args /\ entered m c args)
+          (ensures inhabited (pres_src_result e pt sealed n s (cfg (Eval (combine ps args) eb) [] s)
+                                                         (cfg (Eval (combine ps args) b0) [] s) m)) =
+  let rho = combine ps args in
+  let ce = cfg (Eval rho eb) [] s in
+  let c0 = cfg (Eval rho b0) [] s in
+  call_preservation sim s m c ps eb args n;
+  eliminate exists (aa : argsAt m.B.m_stack (m.B.m_fp + 2) args). True
+  with argsAt_combine_fo m.B.m_stack (m.B.m_fp + 2) ps args aa;
+  introduce forall (y : name). mem_l y ps ==> (exists (v : value). lookup y rho == Some v)
+  with introduce _ ==> _ with lookup_combine ps args y;
+  adequacy_of_fundamental sealed dd fF ps b1 eb rho s;
+  adequacy_of_fundamental sealed dd fF ps b0 b1 rho s;
+  eliminate exists (r : pres_result e pt sealed n s ce m). True
+  with (match r with
+    | Still c' m' k ss tn _ ms -> inhabits (SStill #e #pt #sealed #n #s #ce #c0 c' m' k ss tn () ms)
+    | Ended m1 en ts ->
+      (match en with
+       | E_ok v v' m2 ss _ dv ->
+         vr_fo dv;
+         inhabits (sstar_star_nil ss);
+         eliminate exists s1 w2. srun sealed (cfg (Eval rho b1) [] s) [] (cfg (Ret v) [] s1) /\ wext (id_world s) w2 /\ gStore w2 s1 s
+         with eliminate exists s0 w1. srun sealed c0 [] (cfg (Ret v) [] s0) /\ wext (id_world s) w1 /\ gStore w1 s0 s1
+         with eliminate exists (h0 : star (step_r (rr sealed) pr) c0 [] (cfg (Ret v) [] s0)). True
+         with begin
+           wext_compose_id s w1 w2;
+           gStore_trans w1 w2 s0 s1 s;
+           inhabits (SEnded #e #pt #sealed #n #s #ce #c0 m1
+             (ES_ok v v' m2 s0 (compose_world w1 w2) (star_nil_sstar h0) () () () dv) ts)
+         end
+       | E_err x l msg tv m2 ss _ _ _ ->
+         inhabits (sstar_star_nil ss);
+         eliminate exists s1 w2. srun sealed (cfg (Eval rho b1) [] s) [] (cfg (Throw x) [] s1) /\ wext (id_world s) w2 /\ gStore w2 s1 s
+         with eliminate exists s0 w1. srun sealed c0 [] (cfg (Throw x) [] s0) /\ wext (id_world s) w1 /\ gStore w1 s0 s1
+         with eliminate exists (h0 : star (step_r (rr sealed) pr) c0 [] (cfg (Throw x) [] s0)). True
+         with begin
+           wext_compose_id s w1 w2;
+           gStore_trans w1 w2 s0 s1 s;
+           inhabits (SEnded #e #pt #sealed #n #s #ce #c0 m1
+             (ES_err x l msg tv m2 s0 (compose_world w1 w2) (star_nil_sstar h0) () () () () ()) ts)
+         end))
+#pop-options

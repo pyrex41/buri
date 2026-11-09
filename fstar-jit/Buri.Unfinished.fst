@@ -1,16 +1,21 @@
-(* Statements ported from Rocq whose proofs are NOT ported. Each is a type (a proposition as a
-   type, or a prop); nothing here is assumed, and no module uses one except as an explicit
-   hypothesis of an implication (as Rocq's JitLowerEquiv does with fundamental_statement). *)
+(* Every statement ported from Rocq whose proof is NOT ported, in one place. Each is defined in
+   the module that ports its Rocq file (as Rocq defines them in place); this module names them,
+   so `grep` here finds all of them. Nothing is assumed: a theorem that needs one takes it as an
+   explicit hypothesis (an argument), as Rocq's JitLowerEquiv does with fundamental_statement.
+
+   - Buri.JitLowerStep.sim_statement (rocq/JitLowerStep.v, Theorem sim): the one-step simulation.
+     PROVED in Rocq (with about 1,100 lines of lemmas); not ported. JitLowerThm.preservation,
+     related_progress, call_preservation and JitLowerEquiv.call_preservation_src_of_fundamental
+     take it as an argument.
+   - Buri.JitLowerEquiv.fundamental_statement: the fundamental property of KRef. NOT proved in
+     Rocq either. store_refl_of_fundamental, adequacy_of_fundamental and
+     call_preservation_src_of_fundamental take it as an argument.
+   - Buri.JitLowerEquiv compatibility statements (the compat_ ones): NOT proved in Rocq; see the module
+     for the one attempted here. *)
 module Buri.Unfinished
-open Buri.Lib
 open Buri.KLSyntax
 open Buri.KLValue
-open Buri.KLSemantics
-open Buri.JitLowerStep
 module B = Buri.JitBytecode
 
-(* rocq/JitLowerStep.v, Theorem sim: from a related pair, the source takes steps and the bytecode
-   keeps up, or both finish with related results. Proved in Rocq (about 1,100 lines with its
-   lemmas); not proved here. Buri.JitLowerThm proves preservation and call_preservation from it. *)
-let sim_statement (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) : Type0 =
-  s:store -> c:config -> m:B.machine -> mS s c m -> out e pt sealed s c m
+let sim (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) : Type0 = Buri.JitLowerStep.sim_statement e pt sealed
+let fundamental (sealed : list name) (dd : list (name & fundef)) : prop = Buri.JitLowerEquiv.fundamental_statement sealed dd

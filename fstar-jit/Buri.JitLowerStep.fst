@@ -131,6 +131,12 @@ noeq type out (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s :
       squash (B.next e pt m1 == B.MFinal (B.FError (B.VExn l)) m2) ->
       squash (B.tget l m2.B.m_heap == Some (B.OExn msg tv)) -> squash (exn_ok x msg) -> out e pt sealed s c m
 
+(* rocq/JitLowerStep.v, Theorem sim, as a type: the one-step simulation. Proved in Rocq, NOT
+   proved in this port; theorems that need it take it as an explicit argument. Buri.Unfinished
+   lists it. *)
+let sim_statement (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) : Type0 =
+  s:store -> c:config -> m:B.machine -> mS s c m -> out e pt sealed s c m
+
 (* ---------- the lemmas the multi-step theorem uses ---------- *)
 let menv_at (fp : nat) (st : B.tree B.val_) (g : env) (rho : lenv) (x : name) (s : nat)
   : Lemma (requires menv fp st g rho /\ lookup x g == Some s)

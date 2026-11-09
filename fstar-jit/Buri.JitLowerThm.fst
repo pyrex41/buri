@@ -16,7 +16,7 @@ open Buri.JitLowerRel
 open Buri.JitLowerKont
 open Buri.JitLowerPrim
 open Buri.JitLowerStep
-open Buri.Unfinished
+
 module B = Buri.JitBytecode
 
 noeq type tN (e : B.env) (pt : B.tree (B.prim & nat)) : nat -> B.machine -> B.machine -> Type0 =
