@@ -37,6 +37,7 @@ Print Assumptions JitProfile.JitProfile.jit_defun_fixed_refused.
 Print Assumptions JitProfile.JitProfile.jit_defun_sealed_refused.
 Print Assumptions JitLowerPrim.JitLowerPrim.prim_agree.
 Print Assumptions JitLowerStep.JitLowerStep.sim.
+Print Assumptions JitLowerThm.JitLowerThm.Ends_final.
 Print Assumptions JitLowerThm.JitLowerThm.preservation.
 Print Assumptions JitLowerThm.JitLowerThm.related_progress.
 Print Assumptions JitLowerThm.JitLowerThm.call_preservation.

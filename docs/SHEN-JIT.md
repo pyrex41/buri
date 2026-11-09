@@ -129,7 +129,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 42 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 43 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -239,14 +239,20 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerKont.v`, `JitLowerStable.v` | The continuation relation, and that writes above the live slots leave it intact |
 | `rocq/JitLowerPrim.v` | `prim_agree`: the admitted primitives agree on related arguments, or both raise |
 | `rocq/JitLowerStep.v` | `sim`: one step of the simulation, with stuttering bounded by a measure |
-| `rocq/JitLowerThm.v` | `preservation`, `related_progress`, `call_preservation` |
+| `rocq/JitLowerThm.v` | `preservation`, `related_progress`, `call_preservation`, `Ends_final` |
 | `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 
 **The theorem.** `preservation` says: for every store, configuration and machine in the simulation relation, and
 every n, either the bytecode takes at least n steps while the source keeps a related configuration, or both end
-together, with related values or an error both raise. `call_preservation` starts it from a call of an accepted
-function with related arguments. The source is `KLPort.step_r (jit_rules sealed) jit_profile`, the target
+together: the bytecode runs to a machine whose next step returns a value related to the source's, or raises an error
+the source also raises. `call_preservation` starts it from a call of an accepted function with related arguments.
+Until commit "Tie the JIT theorems' end case to the bytecode's final machine" (8 November 2026) the end case did not
+say this: `Ends` bound its final machine inside each constructor, so the machine the bytecode run reached was not
+tied to the machine that returned, and the end case of `preservation`, `related_progress` and `call_preservation`
+held for any source run that ends, whatever the bytecode did. That statement was weaker than this document claimed.
+`Ends` now takes the final machine as a parameter, `Ends_final` checks that it is the one that finishes, and the
+proof mutant `ShenJitLowerEndsDecoupled` (the old form of `E_ok`) is rejected. The source is `KLPort.step_r (jit_rules sealed) jit_profile`, the target
 `JitBytecode.next`, for every environment `E` and primitive table. `Print Assumptions` is closed for all of them.
 
 **What the relation admits:** integer, real, string, symbol, boolean and nil literals; variables in slots; `let`,
@@ -317,7 +323,7 @@ compile waits. Each Rocq file compiles in under 3 minutes under Rocq 9.3.
 | Relation (`JitLowerRel.v`) | 169, then 176 | the fragment above |
 | Continuations and stability (`JitLowerKont.v`, `JitLowerStable.v`) | 269 | |
 | Primitives (`JitLowerPrim.v`) | 176 | 13 primitives |
-| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313, then 1,338 | every case of the fragment |
+| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313, then 1,338, then 1,346 | every case of the fragment |
 | Checker and soundness (`JitLowerCheck.v`) | 428, then 477 | |
 | Stage 0 decoding and tokenizer | 133 | |
 

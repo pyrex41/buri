@@ -16,6 +16,9 @@ ShenJitLowerChainSlot: the checker's cons chain reads any slot, not the one the 
   chain_tail_ok must fail.
 ShenJitLowerChainConst: the checker's cons chain takes any constant as the head. chain_tail_ok
   must fail.
+ShenJitLowerEndsDecoupled: Ends's E_ok binds its own final machine and ignores the machine
+  parameter, as Ends did before the end case was tied to the run, so the machine the run reaches
+  need not be the one that returns. Ends_final must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -65,4 +68,7 @@ mutate('ShenJitLowerChainSlot', 'rocq/JitLowerCheck.v',
 mutate('ShenJitLowerChainConst', 'rocq/JitLowerCheck.v',
        "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q && konst_vr v k then Some r' else None",
        "   if N.eqb d d' && N.eqb d d2 && q_eqb B.PCons q then Some r' else None")
+mutate('ShenJitLowerEndsDecoupled', 'rocq/JitLowerThm.v',
+       " | E_ok v v' m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1",
+       " | E_ok v v' m0 m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1")
 print(' '.join(names))
