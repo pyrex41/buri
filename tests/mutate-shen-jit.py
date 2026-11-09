@@ -25,6 +25,12 @@ ShenJitEquivAdequacyStrict: adequacy claims the source's final store is the targ
   allocate different cells, so adequacy_of_fundamental must fail.
 ShenJitEquivComposeLeft: composing two worlds keeps the first and drops the second, so the composed
   world no longer relates the final stores. In_compose, on which GStore_trans rests, must fail.
+ShenJitLowerEqSym: = agrees against a symbol constant. eq_core must fail.
+ShenJitLowerEqNaN: = agrees against any real constant, NaN included. eq_core must fail
+  (OB-JIT-NAN-IDENTITY).
+ShenJitLowerCheckEqGuard: the checker admits = without a safe constant operand. chk_sound must fail.
+ShenJitSymBase256: symbols as the name's elements in base 256, as before, which merges [1;1] with
+  [65537]. text_of_sym_of_text must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -86,4 +92,14 @@ mutate('ShenJitEquivAdequacyStrict', 'rocq/JitLowerEquiv.v',
 mutate('ShenJitEquivComposeLeft', 'rocq/JitLowerEquiv.v',
        " flat_map (fun p => map (fun q => (fst p, snd q)) (filter (fun q => Nat.eqb (snd p) (fst q)) w2)) w1.",
        " w1.")
+eq_core = "VR a a' -> VR b b' -> existsb eq_safe_val [a'; b'] = true ->\n exists r,"
+mutate('ShenJitLowerEqSym', 'rocq/JitLowerPrim.v', eq_core,
+       "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VSym _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
+mutate('ShenJitLowerEqNaN', 'rocq/JitLowerPrim.v', eq_core,
+       "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VReal _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
+mutate('ShenJitLowerCheckEqGuard', 'rocq/JitLowerCheck.v',
+       "os_eqb ops ops' && pguard c q ops then Some r' else None", "os_eqb ops ops' then Some r' else None")
+mutate('ShenJitSymBase256', 'rocq/JitBytecode.v',
+       ' fold_right (fun n acc => sym_push (N.succ_pos n) acc) xH s.',
+       ' fold_left (fun acc b =>\n   Pos.add (Pos.mul acc 256) (match b with N0 => 256 | Npos p => p end)) s xH.')
 print(' '.join(names))

@@ -756,18 +756,32 @@ Proof. intros. inversion H; subst; eauto. Qed.
 Lemma TA_nil_inv : forall c g s0 t ms r r', CompTA c g s0 t [] ms r r' -> r = map (fun x => B.IMove (fst x) (snd x)) ms ++ r'.
 Proof. intros. inversion H; subst; auto. Qed.
 
+(* The constant pguard asks for is among the values read. *)
+Lemma guard_read : forall m q os ys, B.all_some (map (B.read_op m) os) = Some ys ->
+ pguard (code m) q os = true -> vguard q ys = true.
+Proof.
+ intros m q os ys A G. destruct q; try reflexivity. cbn in G |- *.
+ revert ys A. induction os as [|o os IH]; intros ys A; [discriminate|].
+ cbn in A. destruct (B.read_op m o) as [y|] eqn:Ro; [|discriminate].
+ destruct (B.all_some (map (B.read_op m) os)) as [ys'|]; cbn in A; [|discriminate]. injection A as <-.
+ cbn in G |- *. apply orb_true_iff in G as [G|G].
+ - destruct o as [s0|k]; [discriminate|]. cbn in Ro. unfold eq_safe_op, konst in G. rewrite Ro in G. rewrite G. reflexivity.
+ - rewrite (IH G ys' eq_refl). apply orb_true_r.
+Qed.
+
 Lemma ret_prim : forall s v v' m o f p q vals es rho k1 g top ops dops d r1 w w1,
  Com s m -> read_o (code m) (fp m) (st m) o = Some v' -> VR v v' ->
  prim_of_name f = Some p -> pmap p = Some q ->
  (List.length vals + 1 + List.length es)%nat = prim_arity p ->
  MEnv (fp m) (st m) g rho -> Prot g (fp m) w -> EnvBelow g top ->
  CompOps (code m) g top es ops (B.m_rest m) (B.IPrim d q (rev dops ++ o :: ops) :: r1) ->
+ pguard (code m) q (rev dops ++ o :: ops) = true ->
  DoneR (code m) (fp m) (st m) vals dops -> Forall (o_safe (fp m) w) dops ->
  Forall (o_below top) dops -> o_below top o ->
  Sub w w1 -> Above (fp m) top w1 -> w1 (fp m + d) -> KD (code m) (fp m) (st m) (cs m) w1 (B.OSlot d) r1 k1 ->
  Out s (Cfg (Ret v) (KCallArgs f vals es rho :: k1) s) m.
 Proof.
- intros s v v' m o f p q vals es rho k1 g top ops dops d r1 w w1 Cm Rd Vr Pn Pm Ln Me Pr Eb Co Dr Fs Fb Ob Sb Ab Wd Kd.
+ intros s v v' m o f p q vals es rho k1 g top ops dops d r1 w w1 Cm Rd Vr Pn Pm Ln Me Pr Eb Co Pg Dr Fs Fb Ob Sb Ab Wd Kd.
  assert (Nk1 : notrap k1) by (eapply notrap_kd; eauto).
  destruct es as [|a es].
  - destruct (Ops_nil _ _ _ _ _ _ Co) as [-> Hr]. clear Co.
@@ -785,7 +799,8 @@ Proof.
    + eapply finish_raise with (m1 := B.set_rest m r1) (x := XUser (of_string "out of memory")) (k := KCallArgs f vals [] rho :: k1);
        [exact Hh|exact Nm| |constructor; [exact I|exact Nk1]|reflexivity].
      eapply SS_step; [eapply step_r_resource with (r := RHeap); reflexivity|apply SS_refl].
-   + destruct (prim_agree sealed E pt (B.set_rest m r1) d p q _ _ s Pm Fr Len) as [v0 v0' Hs Ht Hv|x msg tv Hs Ht Hx].
+   + assert (Gv : vguard q (xs ++ [v']) = true) by (eapply guard_read; [exact All|exact Pg]).
+     destruct (prim_agree sealed E pt (B.set_rest m r1) d p q _ _ s Pm Fr Len Gv) as [v0 v0' Hs Ht Hv|x msg tv Hs Ht Hx].
      * eapply O_step with (c' := Cfg (Ret v0) k1 s) (m' := wr m r1 d v0').
        -- eapply S1'. rewrite Nc. rewrite (prim_call s f p _ k1 _ Lk Len Hs). reflexivity.
        -- left. exists (wr m r1 d v0'). split; [unfold TS; rewrite Nm, Ht; reflexivity|apply TS_refl].
@@ -804,6 +819,7 @@ Proof.
    + apply Prot_below; auto.
    + eapply EnvBelow_mono; eauto.
    + cbn [rev]. rewrite <- app_assoc. exact Co2.
+   + cbn [rev]. rewrite <- app_assoc. exact Pg.
    + econstructor; eauto.
    + constructor; [destruct o; cbn in *; [unfold w_top; lia|auto]|apply below_safe; auto].
    + constructor; [eapply o_below_mono; eauto|eapply below_mono; eauto].
@@ -1003,6 +1019,7 @@ Proof.
    + exact Ptop.
    + eapply EnvBelow_mono; eauto.
    + exact Co2.
+   + exact H4.
    + constructor.
    + constructor.
    + constructor.
@@ -1153,6 +1170,7 @@ Proof.
      * intros x0 s0 L0. discriminate L0.
      * intros x0 s0 L0. discriminate L0.
      * constructor.
+     * reflexivity.
      * econstructor; [exact H1|exact H2|constructor].
      * constructor; [exact I|constructor].
      * constructor; [exact I|constructor].

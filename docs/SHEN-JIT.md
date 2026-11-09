@@ -129,10 +129,16 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 43 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 60 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
+
+**Symbols are their names** (`OB-JIT-SYM-INJECTIVE`): the runtime interns by the name's bytes, and
+`JitBytecode.sym_of_text` is a prefix code that `text_of_sym` reads back for every text, whatever its
+elements (`text_of_sym_of_text`), so distinct names are distinct symbols (`sym_of_text_inj`) and the
+machine's symbol test is the name test (`sym_of_text_eqb`). Until 8 November 2026 the name was a base-256
+numeral, which merged names with an element of 257 or more with shorter ones (`[1; 1]` with `[65537]`).
 
 Sources live in `rocq/`, so one copy compiles under both provers: the only rewrite for 9.3 is
 the import line, and the gate refuses any other difference.
@@ -274,8 +280,10 @@ proof mutant `ShenJitLowerEndsDecoupled` (the old form of `E_ok`) is rejected. T
 
 **What the relation admits:** integer, real, string, symbol, boolean and nil literals; variables in slots; `let`,
 including sharing a slot; `if`, `cond`, `and` and `or`, as values and as tests; `type`; the primitives `+ - *`,
-the four comparisons, `cons hd tl cons? number? string?`; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
-`lower.shen`'s in-place argument moves. **Not admitted:** closures, captured variables, `trap-error`, `=`,
+the four comparisons, `cons hd tl cons? number? string?`; `=` when one operand is a constant fixnum, string, boolean, `()` or
+non-NaN real; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
+`lower.shen`'s in-place argument moves. **Not admitted:** closures, captured variables, `trap-error`, `=` on two
+computed values or against a symbol or NaN constant,
 dynamic application, `set` and `value`, the other primitives, `do`, `thaw`, `defun` and `eval-kl`, and every
 rewrite listed under the surprises above.
 
@@ -289,14 +297,15 @@ rewrite listed under the surprises above.
   theorem says nothing about when those happen.
 - `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
 
-**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **61 of 950 definitions
-accepted** at 0.4, 889 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.3 it was 59 of 941. At the
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **110 of 950 definitions
+accepted** at 0.4, 840 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.3 it was 59 of 941. At the
 re-pin to 0.4 it fell to 53: eight definitions accepted at 0.3 were rejected because of the one-slot `cons` chain
 (`(prim D cons (const K) D)`). Admitting the chain (below) brought back exactly those eight and no others:
 `shen.compile-to-kl`, `shen.x.expand-dynamic.wrap-in-defun`, `shen-jit.lower.lets`, `shen.tuple-up`,
 `shen.create-skeleton`, `shen.macro-@ch`, `shen.macro-@c` and `<!>`. Two are new since 0.3: kernel 43.4's
 `shen.precompiled-function?` and `shen.x.expand-dynamic.expand-initializer`. Of the 169 definitions whose code uses the
-chain, 161 are still rejected for other constructs. Each accepted definition is a
+chain, 161 are still rejected for other constructs. Admitting `=` against a safe constant (below) took the count from
+61 to 110 and lost none. Each accepted definition is a
 lowering of its kernel KLambda in the relation's sense; a rejected one is unvalidated, not wrong. A census of the
 forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the rest go:
 
@@ -332,15 +341,55 @@ the inner `cons` in a slot above; then the stage 0 count gate fires
 7 in `JitLowerRel.v`, 25 in `JitLowerStep.v`, 49 net in `JitLowerCheck.v`, 81 in all, under the 100 to 400 projected
 per construct below.
 
+**`=` against a safe constant** (`JitLowerRel.pguard`, `JitLowerPrim.p_eq`). `lower.shen` lowers `(= A B)` as a plain
+`(prim D = A B)`, with a literal as `(const K)`. `pmap` now maps `=` to the bytecode's `PEq`, and `C_prim` and the
+primitive frame `KD_prim` (`JitLowerKont.v`) carry one more premise: for `PEq`, some operand is a constant whose
+value is a fixnum, string, boolean, `()` or a real that is not a NaN. The checker decides it on the code's
+constant table. The value-level lemma `eq_core` shows that against such an atom the source's `eq_depth_r` and the
+model's `eq_val` give the same answer for every pair of `VR`-related values, so `prim_agree` takes the guard as a
+hypothesis that is trivially true for the other primitives. The frame's premise is about the instruction, not
+the values, so it is the same in every frame of one call, and at the call `guard_read` finds the constant among
+the values read. `JitLowerStable.v` needed no change.
+
+How the three sides compare, on the values `VR` relates (numbers, symbols, booleans, strings, `()` and pairs of these):
+
+| Pair | KLambda (`jit_profile`) | Bytecode model (`eq_val`) | C (`sj_equal`, `prims.c`) |
+|---|---|---|---|
+| fixnum, fixnum | `Z.eqb` | `Z.eqb` | identical words |
+| fixnum, real | `compare_fix_real = Eq`, exact | the same | `compare_fix_real == 0`, exact |
+| real, real | `compare = Eq`: -0.0 = 0.0, NaN unequal | the same, except two NaNs: stuck (`RIdentity`) | `==` after testing the words: one NaN object equals itself |
+| string, string | code points equal | the same | header and payload words equal |
+| symbol, symbol | names equal | `sym_of_text` numbers equal; injective since `OB-JIT-SYM-INJECTIVE` | interned: one object per name |
+| pair, pair | heads then tails, structural | the same, structural recursion | tails iterative, heads recursive to depth 256, then a heap work list |
+| different kinds | false | false | false |
+
+Two disagreements were found, and C caused neither. The first is two NaNs (`OB-JIT-NAN-IDENTITY`, already known). The second
+was symbols: `sym_of_text` read a name as digits in base 256, which is injective on bytes but not on the code points
+the KLambda semantics uses, so `[1;1]` and `[65537]` were one symbol, as were `ab` and the one-character name U+16062.
+C interns by name and agrees with the source, so the defect was the model's, and `intern` shared it. Restricting
+`VR_sym` was ruled out, since it would narrow the related states. The encoding was made injective instead
+(`OB-JIT-SYM-INJECTIVE`, discharged; `sym_of_text_eqb`, above). Before that fix, the guard left symbol constants
+out, which cost the most: of the 447 definitions using `=`, 429 compare only against a literal, but only 140 against
+literals that are not symbols.
+
+Fuel plays no part. `eq_val` spends fuel only at absvectors, which `VR` never relates, and pairs recurse
+structurally, so on related values the model never stops with `RCyclic`; the source's depth bound likewise matters
+only for vectors. C's process exit on terms past 2^31 steps or 2 GiB of pending pairs (`OB-JIT-EQ-CYCLE`) is not
+modelled, as before. So no case goes through the resource permission. Three proof mutants are rejected
+(`ShenJitLowerEqSym` and `ShenJitLowerEqNaN`, which widen `eq_core`'s guard to symbols or to every real, and
+`ShenJitLowerCheckEqGuard`, a checker without the guard). Lines, net: 15 in `JitLowerRel.v`, 58 in
+`JitLowerPrim.v` (with the two checked witnesses), 18 in `JitLowerStep.v`, 91 in all, plus one premise in
+`JitLowerKont.v` and three changed lines in `JitLowerCheck.v`.
+
 **Measures.** Lines by hand, first session: about 70 minutes to the first theorem, about 2.5 hours in all, including
 compile waits. Each Rocq file compiles in under 3 minutes under Rocq 9.3.
 
 | Part | Lines, as written | Covers |
 |---|---|---|
-| Relation (`JitLowerRel.v`) | 169, then 176 | the fragment above |
+| Relation (`JitLowerRel.v`) | 169, then 176, then 191 | the fragment above |
 | Continuations and stability (`JitLowerKont.v`, `JitLowerStable.v`) | 269 | |
-| Primitives (`JitLowerPrim.v`) | 176 | 13 primitives |
-| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313, then 1,338, then 1,346 | every case of the fragment |
+| Primitives (`JitLowerPrim.v`) | 176, then 234 | 14 primitives |
+| One step and the theorem (`JitLowerStep.v`, `JitLowerThm.v`) | 1,313, then 1,338, then 1,346, then 1,364 | every case of the fragment |
 | Checker and soundness (`JitLowerCheck.v`) | 428, then 477 | |
 | Stage 0 decoding and tokenizer | 133 | |
 
@@ -355,9 +404,8 @@ was not attempted and is not estimated here.
 
 - The source semantics has no `do`: `do` is an ordinary call of the kernel's definition, and the lowerer compiles
   it inline. Relating them needs the store's `do` to be the kernel's, as `OB-JIT-LOWER-OPTIMIZATIONS` lists.
-- `=` cannot be admitted as it stands: the bytecode model is stuck (`RIdentity`) on two NaNs, where the source
-  answers. Admitting it needs either a stuck outcome in the theorem or identity for reals in the model
-  (`OB-JIT-NAN-IDENTITY`).
+- `=` is admitted only against a safe constant: the bytecode model is stuck (`RIdentity`) on two NaNs, where the
+  source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
 

@@ -65,7 +65,7 @@ Qed.
 Definition q_eqb (a b : B.prim) : bool := match a, b with
  | B.PAdd, B.PAdd | B.PSub, B.PSub | B.PMul, B.PMul | B.PGt, B.PGt | B.PLt, B.PLt | B.PGe, B.PGe
  | B.PLe, B.PLe | B.PCons, B.PCons | B.PHd, B.PHd | B.PTl, B.PTl | B.PConsp, B.PConsp
- | B.PNumberp, B.PNumberp | B.PStringp, B.PStringp | B.PRaiseCond, B.PRaiseCond => true
+ | B.PNumberp, B.PNumberp | B.PStringp, B.PStringp | B.PRaiseCond, B.PRaiseCond | B.PEq, B.PEq => true
  | _, _ => false end.
 Lemma q_eqb_eq : forall a b, q_eqb a b = true -> a = b.
 Proof. destruct a, b; cbn; intro H; try discriminate; reflexivity. Qed.
@@ -217,7 +217,7 @@ Fixpoint chk (n : nat) (g : env) (top : N) (e : expr) (dst : dest) (r : list B.i
        if Nat.eqb (List.length args) (prim_arity p) && negb (Nat.eqb (List.length args) 0) then
          match chkOps n g top args r with
          | Some (ops, B.IPrim d' q' ops' :: r') =>
-           if N.eqb d d' && q_eqb q q' && os_eqb ops ops' then Some r' else None
+           if N.eqb d d' && q_eqb q q' && os_eqb ops ops' && pguard c q ops then Some r' else None
          | _ => None end
        else None end
      | Some _, DRet => match op g top e r with
@@ -433,7 +433,7 @@ Proof.
    all: try (split; [econstructor; eauto|eauto]; fail).
    all: try (split; [eapply C_tail; eauto; lia|eauto]; fail).
    all: try (split; [eapply C_chain; eauto|eauto]; fail).
-   split; [|assumption]. eapply C_prim; [exact E|exact E0|exact H0|intro Ea; subst; exact (H1 eq_refl)|exact H].
+   split; [|assumption]. eapply C_prim; [exact E|exact E0|exact H0|intro Ea; subst; exact (H1 eq_refl)|exact H|assumption].
  - (* chkT *) intros g top e r l r' H S. destruct e; crush H; use IC IT IO IOs IW ITA.
    all: try (split; [econstructor; eauto|eauto]; fail).
    all: try (split; [eapply T_leaf; eauto|eauto]; fail).

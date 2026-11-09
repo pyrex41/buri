@@ -1241,11 +1241,18 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.4, and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Fifty-six statements are in the assumption audit
-in `rocq/Audit_Jit.v`, all about the models. They do not relate the bytecode to KLambda or to machine code. Comparison
-with the binary is test evidence. Shen/JIT is not verified. Thirteen of the fifty-six are in `rocq/JitLowerEquiv.v`:
-the refinement relation for the lowerer's front passes, and the composition of two front links with `call_preservation`,
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Sixty statements are in the assumption audit
+in `rocq/Audit_Jit.v`, all about the models. Some relate the bytecode to KLambda for the fragment the lowerer relation
+admits: `preservation`, `related_progress` and `call_preservation` (`rocq/JitLowerThm.v`) relate runs of
+`KLPort.step_r (jit_rules sealed) jit_profile` to runs of `JitBytecode.next`, with the end case tied to the bytecode's
+final machine (`Ends_final`), and `chk_sound` and `check_fn_sound` make the per-definition checker establish that
+relation. They relate the bytecode to the expression `lower.shen` emits code for, after `share` and `norm`, not yet to
+the source body, and nothing relates either model to machine code. Three of them (`OB-JIT-SYM-INJECTIVE`) make a symbol its name: `sym_of_text` is injective on
+every text, so distinct KLambda symbols are distinct machine symbols; the `ShenJitSymBase256` mutant, the old base-256
+numeral, is rejected. `p_eq` admits `=` against a safe constant. Thirteen are in `rocq/JitLowerEquiv.v`: the
+refinement relation for the lowerer's front passes, and the composition of two front links with `call_preservation`,
 proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
+Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
 its erasure to KLambda, and a judge of the emit pass alone on captured witnesses. 72 of 950 stage 0 definitions are
