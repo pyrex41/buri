@@ -351,6 +351,13 @@ accepted definitions use a counted construct, as when the census flags a call of
 re-pin figure was 135.) The rewrites under the surprises above (sharing, folding, inlining, goto labels) are the likely
 causes, not yet confirmed per definition.
 
+At 0.6, `spikes/pass-split/FEATURES.md` and `features.tsv` (`tests/shen-jit/feature_census.py`, a census, not proof)
+assign each of the 955 definitions the emit features its normal form needs and the front families that fired. Its
+prediction for the current `Comp` matches the Rocq src (111), nf (112) and tf (133) verdicts on every definition. It also
+forecasts what each feature, each family and each residual decision (port primitives, eval-kl, identity, NaN `=`)
+would admit, directly and under the callee-closure limit. That limit cuts today's 111 to 46, because 450 definitions
+reach a 181-definition strongly connected component.
+
 **The one-slot `cons` chain** (`JitLowerRel.C_chain`). `lower.shen` computes `(cons K Tail)`, with K a constant and Tail
 a `cons`, by lowering Tail into D and then emitting `(prim D cons (const K) D)`, which reads D and writes it. The rule
 admits that for any tail expression. The simulation case runs three source steps without a bytecode step: the call
