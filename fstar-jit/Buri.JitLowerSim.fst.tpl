@@ -273,3 +273,130 @@ let named_call (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s 
     end
   | None -> undefined_out e pt sealed s c0 m m' f args k1 (fun cv -> B.do_call e m' d a n r1 cv)
 #pop-options
+
+(* ---------- the moves before a tail call ---------- *)
+let rec loc_notin (ms : list (nat & nat)) (i : nat) : Lemma (requires ~(mem_l i (map fst ms))) (ensures loc ms i = i) =
+  match ms with [] -> () | (u, v) :: ms' -> loc_notin ms' i
+let rec loc_in (ms : list (nat & nat)) (u v : nat)
+  : Lemma (requires nodup_l (map fst ms) /\ mem_l (u, v) ms) (ensures loc ms u = v) =
+  match ms with
+  | (x, y) :: ms' ->
+    if x = u then (if y = v then () else (Buri.JitLowerEquiv.mem_map fst u ms'; assert (mem_l u (map fst ms'))))
+    else loc_in ms' u v
+let rec loc_lim (ms : list (nat & nat)) (j lim : nat)
+  : Lemma (requires forall_l (fun (x : nat & nat) -> fst x < lim /\ lim <= snd x) ms) (ensures loc ms j = j \/ lim <= loc ms j) =
+  match ms with [] -> () | (u, v) :: ms' -> if u = j then () else loc_lim ms' j lim
+
+let rec paramAt_read (#f : nat) (#s0 : B.tree B.val_) (#ms : list (nat & nat)) (#i : nat) (#vs : list value)
+  (p : paramAt f s0 ms i vs) (j : nat)
+  : Lemma (requires i <= j /\ j < i + length vs) (ensures Some? (slotv s0 (f + loc ms j))) (decreases p) =
+  match p with
+  | PA_cons _ _ _ vs' _ _ rest -> if j = i then () else paramAt_read rest j
+
+let moves_cons (u v : nat) (ms : list (nat & nat)) (r : list B.instr)
+  : Lemma (app (moves ((u, v) :: ms)) r == B.IMove u v :: app (moves ms) r) = ()
+
+let rec iout_tstar (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (c : config)
+  (m m2 : B.machine) (t : tStar e pt m m2)
+  : Lemma (requires iout e pt sealed s c m2) (ensures iout e pt sealed s c m) (decreases t) =
+  match t with
+  | TS_refl _ -> ()
+  | TS_step _ m1 _ _ rest -> iout_tstar e pt sealed s c m1 m2 rest; iout_t e pt sealed s c m m1
+
+let moves_inv (m m2 : B.machine) (ms : list (nat & nat)) (r : list B.instr) (lim : nat) : prop =
+  m2.B.m_rest == r /\ fp m2 == fp m /\ code m2 == code m /\ cs m2 == cs m /\
+  m2.B.m_handlers == m.B.m_handlers /\ m2.B.m_gfun == m.B.m_gfun /\ m2.B.m_heap == m.B.m_heap /\
+  (forall (j : nat). j < lim ==> slotv (st m2) (fp m + j) == slotv (st m) (fp m + loc ms j)) /\
+  (forall (a : nat). a < fp m ==> slotv (st m2) a == slotv (st m) a)
+
+#push-options "--z3rlimit 100 --fuel 2 --ifuel 1"
+let rec run_moves (e : B.env) (pt : B.tree (B.prim & nat)) (ms : list (nat & nat)) (r : list B.instr) (m : B.machine) (lim : nat)
+  : Pure (m2 : B.machine & tStar e pt m m2)
+    (requires m.B.m_rest == app (moves ms) r /\ forall_l (fun (x : nat & nat) -> fst x < lim /\ lim <= snd x) ms /\
+              nodup_l (map fst ms) /\ (forall x. mem_l x ms ==> Some? (slotv (st m) (fp m + snd x))))
+    (ensures fun res -> moves_inv m (dfst res) ms r lim) (decreases ms) =
+  match ms with
+  | [] -> (| m, TS_refl m |)
+  | (u, v) :: ms' ->
+    moves_cons u v ms' r;
+    let Some x = slotv (st m) (fp m + v) in
+    let m1 = wr m (app (moves ms') r) u x in
+    slot_facts (st m) (fp m + u) x;
+    assert (tS e pt m m1);
+    Buri.JitLowerEquiv.mem_map fst u ms';
+    let (| m2, t2 |) = run_moves e pt ms' r m1 lim in
+    introduce forall (j : nat). j < lim ==> slotv (st m2) (fp m + j) == slotv (st m) (fp m + loc ms j)
+    with introduce _ ==> _ with begin
+      if u = j then loc_notin ms' j else loc_lim ms' j lim
+    end;
+    (| m2, TS_step m m1 m2 () t2 |)
+#pop-options
+
+let rec pA_to_AA (#f : nat) (#s0 : B.tree B.val_) (#ms : list (nat & nat)) (#i : nat) (#vs : list value)
+  (s2 : B.tree B.val_) (p : paramAt f s0 ms i vs)
+  : Pure (argsAt s2 (f + i) vs)
+    (requires forall (j : nat). i <= j /\ j < i + length vs ==> slotv s2 (f + j) == slotv s0 (f + loc ms j))
+    (ensures fun _ -> True) (decreases p) =
+  match p with
+  | PA_nil _ -> AA_nil (f + i)
+  | PA_cons _ v v' vs' _ dv rest -> AA_cons (f + i) v v' vs' () dv (pA_to_AA s2 rest)
+
+let rec paramAt_snoc (#f : nat) (#s0 : B.tree B.val_) (#ms : list (nat & nat)) (#i : nat) (#vs : list value)
+  (p : paramAt f s0 ms i vs) (v : value) (v' : B.val_) (dv : vr v v')
+  : Pure (paramAt f s0 ms i (app vs [v])) (requires slotv s0 (f + loc ms (i + length vs)) == Some v')
+    (ensures fun _ -> True) (decreases p) =
+  match p with
+  | PA_nil _ -> PA_cons i v v' [] () dv (PA_nil (i + 1))
+  | PA_cons _ x x' xs _ dx rest -> PA_cons i x x' (app xs [v]) () dx (paramAt_snoc rest v v' dv)
+
+let rec paramAt_ms (#f : nat) (#s0 : B.tree B.val_) (#ms : list (nat & nat)) (#i : nat) (#vs : list value)
+  (ms2 : list (nat & nat)) (p : paramAt f s0 ms i vs)
+  : Pure (paramAt f s0 ms2 i vs)
+    (requires forall (j : nat). i <= j /\ j < i + length vs ==> loc ms2 j == loc ms j) (ensures fun _ -> True) (decreases p) =
+  match p with
+  | PA_nil _ -> PA_nil i
+  | PA_cons _ v v' vs' _ dv rest -> PA_cons i v v' vs' () dv (paramAt_ms ms2 rest)
+
+let rec forall_l_weaken (ms : list (nat & nat)) (lim : nat)
+  : Lemma (requires forall_l (fun (x : nat & nat) -> 2 <= fst x /\ fst x < lim /\ lim <= snd x) ms)
+          (ensures forall_l (fun (x : nat & nat) -> fst x < lim /\ lim <= snd x) ms /\
+                   (forall x. mem_l x ms ==> 2 <= fst x /\ fst x < lim /\ lim <= snd x)) =
+  match ms with [] -> () | _ :: r -> forall_l_weaken r lim
+
+#push-options "--z3rlimit 150 --fuel 2 --ifuel 1"
+let tail_fire (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (c0 : config) (k0 : list frame)
+  (m : B.machine) (f : name) (args : list value) (k1 : list frame) (ms : list (nat & nat)) (i : B.instr) (n : nat)
+  (r1 : list B.instr) (lim : nat) (pa : paramAt (fp m) (st m) ms 2 args) (rk : rK (fp m) (st m) (cs m) k1)
+  : Lemma (requires com s m /\ next_r (rr sealed) pr c0 == call_named_r (rr sealed) pr f args k1 s /\
+                    running_state c0 = true /\ c0.kont == k0 /\ c0.mem == s /\ notrap k0 /\ not_prim_name f /\
+                    m.B.m_rest == app (moves ms) (i :: r1) /\ tail_instr i 0 (B.sym_of_text f) n /\
+                    n = length args /\ lim = n + 2 /\
+                    forall_l (fun (x : nat & nat) -> 2 <= fst x /\ fst x < lim /\ lim <= snd x) ms /\ nodup_l (map fst ms))
+          (ensures iout e pt sealed s c0 m) =
+  forall_l_weaken ms lim;
+  introduce forall x. mem_l x ms ==> Some? (slotv (st m) (fp m + snd x))
+  with introduce _ ==> _ with begin
+    loc_in ms (fst x) (snd x);
+    paramAt_read pa (fst x)
+  end;
+  let (| m2, t |) = run_moves e pt ms (i :: r1) m lim in
+  let m' = B.set_rest m2 r1 in
+  com_same s m m';
+  assert (B.next e pt m2 == B.do_tail e m' 0 n (B.callee_named m' (B.sym_of_text f)));
+  rK_notrap rk;
+  (match lookup f s.gfuns with
+   | Some (FPrim p) -> ()
+   | Some (FUser ps b) ->
+     eliminate exists (l : pos) (c : B.code) (caps : list B.val_).
+       B.tget (B.sym_of_text f) m'.B.m_gfun == Some (B.VClo l) /\ B.tget l m'.B.m_heap == Some (B.OClo c caps) /\
+       B.code_arity c = length ps /\ B.code_entry c == None /\ compFn c ps b
+     with begin
+       let st0 = B.tset (B.skey (fp m2 + 1)) (B.VClo l) (st m2) in
+       slot_facts (st m2) (fp m2 + 1) (B.VClo l);
+       let rk' = rK_stable rk st0 in
+       let aa = pA_to_AA st0 pa in
+       enter_out e pt sealed s c0 k0 m2 m' f args k1 ps b l c caps n st0 (fp m2) (cs m2) rk' aa
+     end
+   | None -> undefined_out e pt sealed s c0 m2 m' f args k1 (fun cv -> B.do_tail e m' 0 n cv));
+  iout_tstar e pt sealed s c0 m m2 t
+#pop-options
