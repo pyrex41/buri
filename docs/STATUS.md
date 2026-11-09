@@ -1240,9 +1240,11 @@ the load and for the configuration premises. E2E-20 is not complete.
 ## Shen/JIT lane (E2E-37, in progress)
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
-release 0.4, and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Sixty-five statements are in the assumption audit
-in `rocq/Audit_Jit.v`, all about the models. Some relate the bytecode to KLambda for the fragment the lowerer relation
+release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Seventy statements are in the assumption audit
+in `rocq/Audit_Jit.v`, all about the models; the five added at 0.6 state `shen-jit.write-bytes`, the read-error raise
+and `n->string`'s UTF-8 rule, which 0.6 changed (`write_bytes_io`, `write_bytes_empty`, `read_byte_error_raises`,
+`n_to_string_utf8`, `jit_n_to_string_agrees`). Stage 0: 111 of 955 kernel definitions validated at 0.6. Some relate the bytecode to KLambda for the fragment the lowerer relation
 admits: `preservation`, `related_progress` and `call_preservation` (`rocq/JitLowerThm.v`) relate runs of
 `KLPort.step_r (jit_rules sealed) jit_profile` to runs of `JitBytecode.next`, with the end case tied to the bytecode's
 final machine (`Ends_final`), and `chk_sound` and `check_fn_sound` make the per-definition checker establish that
@@ -1257,6 +1259,6 @@ the budget lemma reduced to one cell step, whose core is open (`OB-JIT-EQ-BUDGET
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
-its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 131 of 950
-stage 0 definitions are accepted on `p2/int`, all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
+its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 133 of 955
+stage 0 definitions are accepted at 0.6 (131 of 950 at 0.4), all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
 Their statements are not in an audit count; `scripts/check-shen-jit-norm.sh` checks that they use no axioms.

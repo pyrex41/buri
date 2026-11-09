@@ -4,6 +4,68 @@ This census counts things. It proves nothing. The witnesses are untrusted hints 
 acceptance number below is a verdict of the **existing** judge (`rocq/JitLowerStage0.v`, `judge`), computed by Rocq.
 Everything else (erasure, blocker classification, rewrite counts) is Shen or Python bookkeeping.
 
+## Rerun at Shen/JIT 0.6 (9 November 2026, branch `p2/v06`)
+
+The sections after this one are the census at 0.4 and are kept as they were. At 0.6 the same pipeline was run again,
+in `buri-lps`, with the worktree at `/work/p2-v06`:
+
+```
+bash tests/shen-jit/capture_passes.sh /tmp/p2-v06-capture                       # CAPTURE_OK
+bash tests/shen-jit/judge_split_rocq.sh /tmp/p2-v06-crocq                       # ROCQ_OK
+JOBS=2 bash tests/shen-jit/judge_split.sh /tmp/p2-v06-crocq /lps/p6/sj/build/stage0 \
+     /tmp/p2-v06-capture/witness /tmp/p2-v06-judge                               # JUDGE_SPLIT_DONE
+diff tests/shen-jit/stage0-accepted.txt /tmp/p2-v06-judge/src.counts             # empty
+python3 tests/shen-jit/pass_census.py /lps/p6/sj/build/stage0 /tmp/p2-v06-capture /tmp/p2-v06-judge
+```
+
+| what | value at 0.6 |
+|---|---|
+| Shen/JIT source | `/lps/p6/sj` at `934cfa56a5723165c63bf679f15d2d5214955a5d` (tag `v0.6`); `src/lowerer` and `src/port` clean, only `src/runtime/{heap,jit}.c` patched |
+| binary | `build/shen-jit`, sha256 `c2d6aa351c6d2f2b7a73320d85efa334225777d3de27cf2a64bf22af588de137` |
+| `src/lowerer/lower.shen` | `0048eebcd7bff8de3a96b23618df363eadecb0bbffb7c2a5b40b463ea8253d6b` |
+| `build/tools/lower.shen` | `504ca2723b212148ecc56e1592f34012e942f94ed3592e660e8d8a2998813043`, the Makefile's rename of `lower.shen` |
+| `src/lowerer/host.shen` | `a3fd9c3b3dc7c5ebbea5945585a58308896abecf1ebd827c15cf5777ac6b4285` (unchanged) |
+| `src/port/shen-jit.kl`, `build/port/lower.kl` | `3fa1be0c5c45aeedb708e6a9fcf3db246a2b5f9050e8f09091b56203ac07f75c`, `0cedff0c7cc0c5001473a3d8cb1b46348afde774328ad784c88174224f62bad5` |
+| `build/stage0/*.forms *.sbc` | sha256 of `LC_ALL=C sha256sum *.forms *.sbc` = `ec9b387204471bfce36162019601b89493eb29abc4e42e8b8424d0ab903ab736`; the build checks them against upstream's `generated.sha256` |
+| kernel 43.4 `klambda/*.kl` | `694236173d0655f12b4d468df79d148d92fe04b75bf70f49a5b24031cfcd71dd` (unchanged) |
+| witness sets (24 files, C order) | share `6881eb294f9a7c90641351ff1a487297e2a6828389354387519ebfc41e97902d`, norm `e45add983f619559649a087a3c8a2c9e4f1fd3061be5d95996d33449a1b69dd1`, nforms `e66ab01a5d023bcc40e67d827fd86e120b817a0f4359d94c00189004ab2d24d6`, tforms `b4a4e7465726007b71e92d2a06f6306ec97429bc425ee1f7bbe929e4d8c847aa` |
+
+**Capture.** 955 definitions (950 at 0.4). Witness and count runs: 955 of 955 code objects byte-identical to stage 0.
+Image run: 944 of 955 (a measurement). `instrument_lower.py` instruments two more sites, the rewrites 0.6 added to
+`norm`: `cut-fail` (THORN's cut then `(when false)`) and `deref-eq` (`(= (shen.deref X B) (shen.deref Y B))` to
+`shen-jit.deref=`). **Neither fires on any stage 0 definition** (0 of 955): kernel code has no such forms, so they
+cannot have changed a stage 0 verdict.
+
+**Judge verdicts (Rocq).** src 111, nf 112, tf 133 of 955. The 0.4 tables below predate `=` with a safe constant (61, 61, 72 of 950); on `p2/int` at 0.4 the src judge accepted 110 and `check-shen-jit-norm.sh` 131 (its tf-like count); nf at 0.4 on `p2/int` was not recorded here.
+src and nf agree except `shen.lambda-entry`, accepted on nf only, as at 0.4. Of the 844 rejected on src, 1 is accepted
+on nf and 22 on tf.
+
+| file | defs | src | nf | tf |
+|---|---:|---:|---:|---:|
+| lower | 123 | 20 | 20 | 26 |
+| prolog | 89 | 11 | 11 | 13 |
+| reader | 122 | 13 | 13 | 14 |
+| shen-jit | 82 | 13 | 13 | 19 |
+| writer | 27 | 3 | 3 | 5 |
+| yacc | 46 | 5 | 5 | 7 |
+| declarations, sequent, sys | 172 | 21 | 22 | 24 |
+| the other 15 files | 294 | 25 | 25 | 25 |
+| **total** | **955** | **111** | **112** | **133** |
+
+**Blockers on nf** (843 rejected; first blocker / definitions using it / sole blocker): `prim =` 314 / 539 / 62, the
+inlining marker 243 / 528 / 11, `prim value` 51 / 221 / 34, `do` 37 / 129 / 6, `lambda` 31 / 98 / 7, `trap` 22 / 36 / 1,
+folded constant list 17 / 96 / 11. `prim shen-jit.write-bytes` appears in one definition (the port's `pr`) and is
+never its first blocker. The census's `ADMITTED` set predates `=` with a safe constant, so it lists 108 "accepted with a
+syntactic blocker" anomalies, all `prim =`; the verdicts are Rocq's and unaffected.
+
+**Rewrite families (count run, definitions).** sugar 534, sealed inlining 528, prim folding 101, freeze copying 23,
+is!/bind! 7, lambda copying 6, share chains 4, cut-fail and deref= 0, dynamic application 40; no family fired in 194.
+Normal-form facts: inlining marker 528, fresh 514, folded 96; `shadow`, `applyhead`, `callshadow` 0 of 955, so erasure
+stays faithful.
+
+The full census output and logs are at
+`/private/tmp/claude-502/-Users-reuben-projects/2d420b2f-bdd4-44a2-b787-ce4910b8299e/scratchpad/v06-evidence/` (not in git).
+
 ## Inputs (bound)
 
 | what | value |

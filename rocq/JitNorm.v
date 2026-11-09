@@ -1,4 +1,4 @@
-(* Shen/JIT Phase 2, pass split: the normal form of src/lowerer/lower.shen (d3348ce), the IR
+(* Shen/JIT Phase 2, pass split: the normal form of src/lowerer/lower.shen (934cfa5; the IR is unchanged since d3348ce, as 0.6's two new norm rewrites build existing nodes), the IR
    between its `norm` pass and its emission (`code`/`expr`). The node shapes are those documented
    above `shen-jit.lower.norm`, plus what norm-cond, open-call, fn-call, unified-now, bound-now
    and the inliner build from them:

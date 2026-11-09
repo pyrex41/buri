@@ -4507,7 +4507,7 @@
    "status": "partial",
    "boundary": "Shen/JIT named build",
    "identity": "",
-   "statement": "Every Shen/JIT claim names one exact static RV64 build at 0.4 with a code arena, and its exclusions.",
+   "statement": "Every Shen/JIT claim names one exact static RV64 build at 0.6 with a code arena, and its exclusions.",
    "premises": [],
    "depends_on": [],
    "evidence": [
@@ -4527,6 +4527,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: re-pinned from 0.3 (b4ccf2d, binary 2d444d92...) to 0.4 (d3348ce, binary 5eb9f433...). A second build in a fresh container gave the same bytes, but only with the same OUT directory: -g records it, so the hash depends on it.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.4 (d3348ce), 6 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-09: re-pinned from 0.4 (d3348ce, binary 5eb9f433...) to 0.6 (commit 934cfa5, tag v0.6 object 68aa54f8, binary c2d6aa35...). The rv64 arena patch applies unchanged. Built in buri-lps with OUT=/lps/p6/sj; a second fresh-container build was not run at 0.6, so reproducibility at this pin is UNKNOWN. Under qemu-riscv64 the binary passes the kernel suite (154 passed, 0 failed), the kernel extension tests (178, 0) and contract/examples.shen (164, 0).",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
     }
    ]
   },
@@ -4722,7 +4727,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
      "establishes": "artifact-correspondence",
-     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 110 of 950 definitions accepted at d3348ce (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 840 rejected are unvalidated, not refuted."
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 111 of 955 definitions accepted at 934cfa5 (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 844 rejected are unvalidated, not refuted."
     }
    ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
@@ -4749,6 +4754,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-08: partial, 110 of 950 definitions accepted at 0.4 (was 61). JitLowerRel admits = when one operand is a constant fixnum, string, boolean, () or non-NaN real (JitLowerRel.pguard); no definition is lost.",
      "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-09: partial, 111 of 955 definitions accepted at 0.6 (110 of 950 at 0.4). By name: shen-jit.lower.constant-index lost (removed upstream), shen-jit.lower.list-key (new) and shen-jit.lower.prim-arity (rewritten) gained; the other 109 accepted at both pins.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
     }
    ]
   },
@@ -5282,7 +5292,7 @@
    "status": "partial",
    "boundary": "Shen/JIT deviation",
    "identity": "",
-   "statement": "Strings are bytes and n->string takes 0 to 255. KLPort's char_ok states it; relating it to the binary is open.",
+   "statement": "Strings are bytes. From 0.6, n->string makes one byte of 0 to 255 and the UTF-8 bytes of any other Unicode scalar value, and raises otherwise. KLPort's char_text states it (char_ok, 0 to 255, until 0.4); relating it to the binary is open.",
    "premises": [],
    "depends_on": [],
    "evidence": [
@@ -5291,6 +5301,12 @@
      "ref": "JitProfile.JitProfile.jit_byte_strings",
      "establishes": "model-proof",
      "note": "about the semantics only, not the binary"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitProfile.JitProfile.jit_n_to_string_agrees",
+     "establishes": "model-proof",
+     "note": "the profile's n->string is the bytecode's utf8_of; about the models only"
     }
    ],
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
@@ -5303,6 +5319,10 @@
     {
      "date": "2026-11-06",
      "note": "Stated through KLPort.port_rules in jit_rules. No correspondence to the binary yet."
+    },
+    {
+     "date": "2026-11-09",
+     "note": "Upstream 0.6 changed n->string to UTF-8 above 255. KLPort option 2 generalized from char_ok : Z -> bool to char_text : Z -> option text; the agreed rule and next_r_agreed are unchanged. jit_byte_strings restated for the 0.6 behavior; this follows the upstream change and weakens nothing."
     }
    ]
   },
@@ -5944,7 +5964,7 @@
    "status": "open",
    "boundary": "KLambda to bytecode",
    "identity": "src/lowerer/lower.shen",
-   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites.",
+   "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites, including 0.6's cut-fail fold and (= (shen.deref X B) (shen.deref Y B)) to shen-jit.deref=.",
    "premises": [],
    "depends_on": [
     "OB-JIT-LOWER-FRAGMENT"
@@ -5969,6 +5989,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-07: the one-slot cons chain is admitted (JitLowerRel.C_chain, with its simulation case and checker case) and leaves this list. lower.shen takes it only when the slot is not a parameter's; the simulation does not need that guard, which the checker keeps to follow lower.shen's dispatch. Of the 178 stage 0 definitions using none of the counted constructs, 128 are still rejected (the 125 recorded at the re-pin assumed every accepted definition was among the 178; by name it was 135).",
      "reconciliation": "Admitting the one-slot cons chain, 7 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-09: 0.6 adds two norm rewrites (THORN cut-fail to (if (shen.unlocked? L) (shen.lock K L) false); deref equality to shen-jit.deref=), neither admitted. Dictionary-keyed constant sharing (NaN never shared) and the instruction counter in mark do not affect JitLowerRel, which reads constants by index and value.",
+     "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
     }
    ]
   },

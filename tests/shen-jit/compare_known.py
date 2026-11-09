@@ -30,7 +30,7 @@ if write:
                 keep[k] = rest
     except FileNotFoundError: pass
     with open(known_path, 'w') as f:
-        f.write('# Differential differences at pin d3348ce: set index | kind | why. Tests, not proof.\n')
+        f.write('# Differential differences at pin 934cfa5: set index | kind | why. Tests, not proof.\n')
         for k in sorted(now, key=lambda s: (s.split()[0], int(s.split()[1]))):
             why = keep.get(k, '').split(' | ', 1)
             f.write('%s | %s | %s\n' % (k, now[k], why[1] if len(why) > 1 else 'UNEXPLAINED'))

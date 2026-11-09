@@ -3,16 +3,16 @@
 # same rocq/Jit*.v sources. This run needs the Rocq in toolchain.lock.json's shen_jit entry
 # and qemu-riscv64, so it runs in the container from spikes/jit-in-model/setup.sh.
 #
-#   SHEN_JIT_SRC  checkout of the pinned Shen/JIT, with build/stage0 (default /lps/p4/sj)
-#   SHEN_JIT_BIN  the named binary (default /lps/p4/sj/build/shen-jit)
+#   SHEN_JIT_SRC  checkout of the pinned Shen/JIT, with build/stage0 (default /lps/p6/sj)
+#   SHEN_JIT_BIN  the named binary (default /lps/p6/sj/build/shen-jit)
 #
 # Acceptance of theorems is decided by rocq and rocqchk. The differential part compares
 # samples with the binary: agreement is test evidence, never proof. Passing does not
 # verify Shen/JIT.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-src=${SHEN_JIT_SRC:-/lps/p4/sj}
-bin=${SHEN_JIT_BIN:-/lps/p4/sj/build/shen-jit}
+src=${SHEN_JIT_SRC:-/lps/p6/sj}
+bin=${SHEN_JIT_BIN:-/lps/p6/sj/build/shen-jit}
 out=${JIT_OUT:-/tmp/p1}; export JIT_OUT="$out"
 want=$(python3 -c "import json;print(json.load(open('$root/toolchain.lock.json'))['shen_jit']['binary_sha256'])")
 got=$(sha256sum "$bin" | cut -d' ' -f1)

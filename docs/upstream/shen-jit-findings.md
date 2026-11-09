@@ -1,5 +1,9 @@
 # Findings against Shen/JIT
 
+The lane moved to 0.6 (`934cfa56a5723165c63bf679f15d2d5214955a5d`, binary `c2d6aa35...de137`) on 9 November 2026.
+These findings were not re-run on that binary; 0.6 still checks `fputc` and `fclose`, and its new `write-bytes`
+checks `fwrite` (source read only).
+
 Rechecked at `tizoc/shen-jit` `d3348cefbb2b209992039c1c0f55751241750364` (0.4), on the named RV64 binary (SHA-256
 `5eb9f433...1872`) under `qemu-riscv64`. The sections below record what was found at 0.3
 (`b4ccf2dff97031ee624692bb32d2addd18cacb39`, binary `2d444d92...7a5a`) and what 0.4 did to each.

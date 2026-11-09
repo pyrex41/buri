@@ -1,5 +1,5 @@
 (* Shen/JIT Phase 2, the lowerer's front passes (wave 1(c)): statements, reviewed and revised.
-   lower.shen (d3348ce) lowers a body in three steps: share (b0 to b1, KLambda to KLambda),
+   lower.shen (934cfa5, as at d3348ce) lowers a body in three steps: share (b0 to b1, KLambda to KLambda),
    norm (b1 to a normal form n, read back as KLambda e), and emission (e to code c, which
    JitLowerRel.CompFn relates). The intermediate outputs are untrusted witnesses: a Rocq check
    decides each link for one definition. This file states what the two front links must

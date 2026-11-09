@@ -1,5 +1,5 @@
 (* Shen/JIT Phase 1: an executable semantics of Shen/JIT's register bytecode, at
-   pin d3348ce (0.4) (docs/bytecode.md, src/runtime/ops.h, loader.c, jit.c, prims.c,
+   pin 934cfa5 (0.6) (docs/bytecode.md, src/runtime/ops.h, loader.c, jit.c, prims.c,
    dict.c). This is a specification of the bytecode level. Nothing here relates
    it to the emitted machine code or to KLambda: those are open obligations in
    spec/obligations.json. `next` is a function, so one state has one move;
@@ -143,7 +143,7 @@ Inductive prim :=
  | PPointerString | PPointerBytes | PErrno | PCErrno | PPointerKill
  | PS32 | PS64 | PF32 | PF64 | PSetS32 | PSetS64 | PSetF32 | PSetF64
  | PPointerSized | PSetPointer | PPointerGuard | PPointerOwner | PPointersDead | PPointerReadOnly
- | PCollect
+ | PCollect | PWriteBytes
  | PRaiseCond.
 
 (* The primitive table in the order of primitive_table in prims.c. A gate compares
@@ -188,7 +188,7 @@ Definition prim_table : list (string * prim * nat) :=
  ;("shen-jit.pointer-sized",PPointerSized,2);("shen-jit.pointer!",PSetPointer,3)
  ;("shen-jit.pointer-guard",PPointerGuard,2);("shen-jit.pointer-owner",PPointerOwner,1)
  ;("shen-jit.pointers-dead",PPointersDead,0);("shen-jit.pointer-read-only",PPointerReadOnly,1)
- ;("shen-jit.collect",PCollect,0)
+ ;("shen-jit.collect",PCollect,0);("shen-jit.write-bytes",PWriteBytes,4)
  ;("raise-cond",PRaiseCond,0)].
 Local Open Scope N_scope.
 
@@ -244,9 +244,11 @@ Record env := Env { e_oom : N -> bool; e_stack : N -> bool; e_hash : text -> Z }
 
 Inductive jreq :=
  | JOpen (path : text) (d : stream_dir) | JClose (h : N)
- | JRead (h : N) | JWrite (h : N) (b : N) | JTime (run : bool) | JReadFile (path : text).
+ | JRead (h : N) | JWrite (h : N) (b : N) | JTime (run : bool) | JReadFile (path : text)
+ | JWrites (h : N) (bs : list N).   (* 0.6: shen-jit.write-bytes, one fwrite of these bytes *)
 Inductive jres :=
- | JOpened (h : N) | JFailed | JDone | JByte (b : N) | JEof | JTimeIs (bits : N) | JFile (bs : list N).
+ | JOpened (h : N) | JFailed | JDone | JByte (b : N) | JEof | JTimeIs (bits : N) | JFile (bs : list N)
+ | JReadFailed.   (* 0.6: a read error after a successful open (read-byte, shen-jit.read-file) *)
 
 Inductive stuck :=
  | RBadSlot (s : N)           (* read of a slot never written: excluded by check.shen's rules *)
@@ -809,6 +811,19 @@ Fixpoint bucket_find (h : tree obj) (k : val) (c : val) : option (option (val * 
    | _ => None end
  | _ => None end.
 
+(* n->string from 0.6 (prims.c P_N_STRING): 0 to 255 as one byte, as the reader passes source bytes
+   through it; any other Unicode scalar value as its UTF-8 bytes; anything else None, which raises. *)
+Definition utf8_of (z : Z) : option (list N) :=
+ if orb (Z.ltb z 0) (orb (Z.ltb 1114111 z) (andb (Z.leb 55296 z) (Z.leb z 57343))) then None
+ else if Z.leb z 255 then Some [Z.to_N z]
+ else if Z.leb z 2047 then
+   Some [Z.to_N (192 + Z.shiftr z 6); Z.to_N (128 + Z.land z 63)]
+ else if Z.leb z 65535 then
+   Some [Z.to_N (224 + Z.shiftr z 12); Z.to_N (128 + Z.land (Z.shiftr z 6) 63); Z.to_N (128 + Z.land z 63)]
+ else
+   Some [Z.to_N (240 + Z.shiftr z 18); Z.to_N (128 + Z.land (Z.shiftr z 12) 63);
+         Z.to_N (128 + Z.land (Z.shiftr z 6) 63); Z.to_N (128 + Z.land z 63)].
+
 Definition bytes_of (m : machine) (l : positive) : list N :=
  match tget l (m_heap m) with Some (OBytes b) => b | _ => [] end.
 Definition put_bytes (m : machine) (l : positive) (b : list N) : machine :=
@@ -925,9 +940,10 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
    | _ => raise_v m "tlstr: ~S is not a non-empty string" a end
  | PStr, [a] => ret (VStr (to_string_atom a))
  | PNString, [a] => match a with
-   | VFix z => if (Z.leb 0 z && Z.leb z 255)%bool then ret (VStr [Z.to_N z])
-               else raise_v m "n->string: ~S is not a byte" a
-   | _ => raise_v m "n->string: ~S is not a byte" a end
+   | VFix z => match utf8_of z with
+     | Some bs => ret (VStr bs)
+     | None => raise_v m "n->string: ~S is not a byte or a Unicode scalar value" a end
+   | _ => raise_v m "n->string: ~S is not a byte or a Unicode scalar value" a end
  | PStringN, [a] => match a with
    | VStr (c :: _) => ret (VFix (Z.of_N c))
    | _ => raise_v m "string->n: ~S is not a non-empty string" a end
@@ -1217,6 +1233,8 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
    | VStream l => match tget l (m_heap m) with
      | Some (OStream h SIn true) => MIO (JRead h) (fun r => match r with
        | JByte b => set_stack m (swrite m d (VFix (Z.of_N b)))
+       (* 0.6: a read error raises (prims.c read_byte); the binary appends strerror. *)
+       | JReadFailed => match raise_s m "read-byte: the read failed" with MTau m' => m' | _ => m end
        | _ => set_stack m (swrite m d (VFix (-1))) end)
      | _ => raise_v m "read-byte: ~S is not an open input stream" s end
    | _ => raise_v m "read-byte: ~S is not an open input stream" s end
@@ -1241,8 +1259,29 @@ Definition prim_step (E : env) (ptab : tree (prim * nat)) (m : machine) (d : N) 
          set_stack m (swrite m d (match as_list with
            | VBool true => of_list (map (fun b => VFix (Z.of_N b)) bs)
            | _ => VStr bs end))
+       (* 0.6: a read error after the open raises, with no partial data (prims.c read_file). *)
+       | JReadFailed => match raise_s m "read-file: the read failed" with MTau m' => m' | _ => m end
        | _ => match raise_v m "open: cannot open ~S" path with MTau m' => m' | _ => m end end)
    | _ => raise_v m "open: ~S is not a string" path end
+ | PWriteBytes, [b; i; n; s] =>
+   (* 0.6, prims.c write_bytes: the buffer, then the range, then the stream, then one fwrite,
+      which N = 0 skips. It returns N. *)
+   match b with
+   | VBytes l => match i, n with
+     | VFix iz, VFix nz =>
+       if orb (orb (Z.ltb iz 0) (Z.ltb nz 0)) (Z.ltb (Z.of_nat (List.length (bytes_of m l))) (iz + nz))
+       then raise_v m "shen-jit.write-bytes: ~S is not a valid range" i
+       else match s with
+         | VStream ls => match tget ls (m_heap m) with
+           | Some (OStream h SOut true) =>
+             if Z.eqb nz 0 then ret n
+             else MIO (JWrites h (firstn (Z.to_nat nz) (skipn (Z.to_nat iz) (bytes_of m l)))) (fun r => match r with
+               | JFailed => match raise_s m "shen-jit.write-bytes: the write failed" with MTau m' => m' | _ => m end
+               | _ => set_stack m (swrite m d n) end)
+           | _ => raise_v m "shen-jit.write-bytes: ~S is not an open output stream" s end
+         | _ => raise_v m "shen-jit.write-bytes: ~S is not an open output stream" s end
+     | _, _ => raise_v m "shen-jit.write-bytes: ~S is not a valid range" i end
+   | _ => raise_v m "bytes: ~S is not a byte buffer" b end
  | q, _ => if is_excluded q then MStuck (RExcluded q) else MStuck RArgs end.
 
 (* ---------- entering a procedure ---------- *)

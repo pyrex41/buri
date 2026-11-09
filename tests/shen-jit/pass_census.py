@@ -24,6 +24,7 @@ FAMILIES = [
     ('open inlining', ['open-inline']),
     ('freeze copying', ['let-frozen-copy', 'let-frozen-keep', 'frozen-late-hoist', 'inline-frozen']),
     ('is!/bind!', ['unified-now', 'bound-now', 'bound-now-frozen']),
+    ('cut-fail and deref= (0.6)', ['cut-fail', 'deref-eq']),
     ('lambda copying', ['let-lambda']),
     ('(not a rewrite) dynamic application', ['dynamic-apply']),
 ]

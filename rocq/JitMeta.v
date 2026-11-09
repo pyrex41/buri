@@ -141,4 +141,54 @@ Proof.
  rewrite Pos.eqb_refl. rewrite H. reflexivity.
 Qed.
 
+(* 0.6: shen-jit.write-bytes asks the environment to write the buffer's bytes from I, all N of them
+   in one request, and returns N; a failed write raises (to a handler, or ends the run, as raise_s
+   says; the machine the continuation gives is then the raise's). *)
+Theorem write_bytes_io : forall E pt m d l i n ls h,
+ tget ls (m_heap m) = Some (OStream h SOut true) ->
+ (0 <= i)%Z -> (0 < n)%Z -> (i + n <= Z.of_nat (List.length (bytes_of m l)))%Z ->
+ exists k, prim_step E pt m d PWriteBytes [VBytes l; VFix i; VFix n; VStream ls] =
+   MIO (JWrites h (firstn (Z.to_nat n) (skipn (Z.to_nat i) (bytes_of m l)))) k /\
+   k JDone = set_stack m (swrite m d (VFix n)) /\
+   k JFailed = match raise_s m "shen-jit.write-bytes: the write failed" with MTau m' => m' | _ => m end.
+Proof.
+ intros E pt m d l i n ls h Hs Hi Hn Hl. cbn [prim_step].
+ replace (orb (orb (Z.ltb i 0) (Z.ltb n 0)) (Z.ltb (Z.of_nat (List.length (bytes_of m l))) (i + n))) with false
+   by (symmetry; repeat rewrite Bool.orb_false_iff; repeat split; apply Z.ltb_ge; lia).
+ rewrite Hs. replace (Z.eqb n 0) with false by (symmetry; apply Z.eqb_neq; lia).
+ eexists. split; [reflexivity|]. split; reflexivity.
+Qed.
+
+(* Writing no bytes asks nothing of the environment. *)
+Theorem write_bytes_empty : forall E pt m d l i ls h,
+ tget ls (m_heap m) = Some (OStream h SOut true) ->
+ (0 <= i <= Z.of_nat (List.length (bytes_of m l)))%Z ->
+ prim_step E pt m d PWriteBytes [VBytes l; VFix i; VFix 0; VStream ls] = ret_to m d (VFix 0).
+Proof.
+ intros E pt m d l i ls h Hs Hi. cbn [prim_step].
+ replace (orb (orb (Z.ltb i 0) (Z.ltb 0 0)) (Z.ltb (Z.of_nat (List.length (bytes_of m l))) (i + 0))) with false
+   by (symmetry; repeat rewrite Bool.orb_false_iff; repeat split; apply Z.ltb_ge; lia).
+ rewrite Hs. reflexivity.
+Qed.
+
+(* 0.6: a read error in read-byte raises, where end of file gives -1. *)
+Theorem read_byte_error_raises : forall E pt m d ls h,
+ tget ls (m_heap m) = Some (OStream h SIn true) ->
+ exists k, prim_step E pt m d PReadByte [VStream ls] = MIO (JRead h) k /\
+   k JEof = set_stack m (swrite m d (VFix (-1))) /\
+   k JReadFailed = match raise_s m "read-byte: the read failed" with MTau m' => m' | _ => m end.
+Proof.
+ intros E pt m d ls h Hs. cbn [prim_step]. rewrite Hs.
+ eexists. split; [reflexivity|]. split; reflexivity.
+Qed.
+
+(* 0.6: n->string makes the UTF-8 bytes of a scalar value past a byte. *)
+Theorem n_to_string_utf8 : forall E pt m d,
+ prim_step E pt m d PNString [VFix 255] = ret_to m d (VStr [255%N]) /\
+ prim_step E pt m d PNString [VFix 955] = ret_to m d (VStr [206%N; 187%N]) /\
+ prim_step E pt m d PNString [VFix 128512] = ret_to m d (VStr [240%N; 159%N; 152%N; 128%N]) /\
+ prim_step E pt m d PNString [VFix 55296] =
+   raise_v m "n->string: ~S is not a byte or a Unicode scalar value" (VFix 55296).
+Proof. intros. repeat split; reflexivity. Qed.
+
 End JitMeta.

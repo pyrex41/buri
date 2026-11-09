@@ -16,8 +16,9 @@ Import Observation.Observation KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLS
 Record port_rules := PortRules {
  (* 1. Integer results outside this range raise XPrim, in place of unbounded integers. *)
  int_range : option (Z * Z);
- (* 2. Which integers n->string takes. *)
- char_ok : Z -> bool;
+ (* 2. The string n->string makes of an integer, or None where it raises. The agreed rule makes a
+    one-unit string of a scalar value; a byte-string port may make several bytes of one. *)
+ char_text : Z -> option text;
  (* 3. Closures carry an identity, one location each, and = compares it. Two exceptions
     remain undefined under =: see `eq_opaque_r`. *)
  object_identity : bool;
@@ -34,7 +35,7 @@ Record port_rules := PortRules {
 
 (* The agreed options: every one is what KLSemantics.v does. *)
 Definition agreed_rules : port_rules := PortRules
- None scalar_ok false false (fun _ _ => true) (fun _ => true) false (fun _ => None).
+ None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None).
 
 (* ---------- 1: integer range ---------- *)
 Definition in_range (R : port_rules) (z : Z) : bool := match int_range R with
@@ -54,7 +55,7 @@ Definition rule_div_r R P args s := match args with
 
 (* ---------- 2: characters ---------- *)
 Definition rule_n_to_string_r R args s := match args with
- | [VNum (NInt z)] => if char_ok R z then ret (VStr [Z.to_N z]) s else dom PNToString
+ | [VNum (NInt z)] => match char_text R z with Some t => ret (VStr t) s | None => dom PNToString end
  | _ => dom PNToString end.
 
 (* ---------- 3: identity ---------- *)
@@ -265,7 +266,11 @@ Proof.
  rewrite in_range_agreed. cbn [negb]. rewrite andb_false_r. reflexivity.
 Qed.
 Lemma rule_n_to_string_agreed : forall args s, rule_n_to_string_r agreed_rules args s = rule_n_to_string args s.
-Proof. reflexivity. Qed.
+Proof.
+ intros args s. unfold rule_n_to_string_r, rule_n_to_string. cbn [char_text agreed_rules].
+ destruct args as [|a [|b args]]; try reflexivity. destruct a; try reflexivity. destruct n; try reflexivity.
+ destruct (scalar_ok z); reflexivity.
+Qed.
 Lemma rule_write_byte_agreed : forall args s, rule_write_byte_r agreed_rules args s = rule_write_byte args s.
 Proof. reflexivity. Qed.
 
@@ -274,7 +279,7 @@ Lemma prim_rule_r_agreed : forall P p args s,
 Proof.
  intros P p args s. destruct p; first
   [ reflexivity | apply rule_equal_agreed | apply rule_get_time_agreed
-  | apply rule_arith_agreed | apply rule_div_agreed ].
+  | apply rule_arith_agreed | apply rule_div_agreed | apply rule_n_to_string_agreed ].
 Qed.
 
 Lemma prim_move_r_agreed : forall P p args rest k s,

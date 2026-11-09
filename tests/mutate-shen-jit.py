@@ -5,7 +5,10 @@ ShenJitAgreedRange, ShenJitAgreedArity, ShenJitAgreedWrites, ShenJitAgreedIdenti
 ShenJitClosureIdentity: closures that always compare equal. closure_identity must fail.
 ShenJitNoOverflow: no integer range in jit_rules. jit_overflow_raises must fail.
 ShenJitRoundedCompare: comparison through a double, as before 0.3. jit_compare_exact must fail.
-ShenJitBigChars: n->string up to 256. jit_byte_strings must fail.
+ShenJitByteChars: n->string takes only 0 to 255, as before 0.6. jit_byte_strings must fail.
+ShenJitAgreedChars: agreed_rules' n->string skips the scalar-value check. rule_n_to_string_agreed must fail.
+ShenJitWriteBytesFrom: write_bytes_io claims the bytes are taken from 0, not from I. It must fail.
+ShenJitReadErrorIgnored: read_byte_error_raises claims a read error gives -1, as before 0.6. It must fail.
 ShenJitUncheckedWrites: jit_rules ignores a failed write, as before 0.4. jit_writes_checked must fail.
 ShenJitNoSealing: defun ignores the sealed set. jit_defun_sealed_refused must fail.
 ShenJitLowerWrongPrim: + related to the bytecode's -. p_add must fail.
@@ -43,12 +46,12 @@ def mutate(name, path, old, new):
     (out / (name + '.v')).write_text(src.replace(old, new))
     names.append(name)
 
-agreed = ' None scalar_ok false false (fun _ _ => true) (fun _ => true) false (fun _ => None).'
+agreed = ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None).'
 for name, new in [
-    ('ShenJitAgreedRange', ' (Some (0%Z, 1%Z)) scalar_ok false false (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
-    ('ShenJitAgreedArity', ' None scalar_ok false true (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
-    ('ShenJitAgreedWrites', ' None scalar_ok false false (fun _ _ => true) (fun _ => true) true (fun _ => None).'),
-    ('ShenJitAgreedIdentity', ' None scalar_ok true false (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
+    ('ShenJitAgreedRange', ' (Some (0%Z, 1%Z)) (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
+    ('ShenJitAgreedArity', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false true (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
+    ('ShenJitAgreedWrites', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) true (fun _ => None).'),
+    ('ShenJitAgreedIdentity', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) true false (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
 ]:
     mutate(name, 'rocq/KLPort.v', agreed, new)
 mutate('ShenJitClosureIdentity', 'rocq/KLPort.v',
@@ -58,7 +61,17 @@ mutate('ShenJitNoOverflow', 'rocq/JitProfile.v',
 mutate('ShenJitRoundedCompare', 'rocq/JitProfile.v',
        ' | NInt x, NFloat y => jit_order p (JitBytecode.JitBytecode.compare_fix_real x y)',
        ' | NInt x, NFloat y => jit_order p (JitFloat.JitFloat.compare (JitFloat.JitFloat.of_Z x) y)')
-mutate('ShenJitBigChars', 'rocq/JitProfile.v', 'Z.leb z 255', 'Z.leb z 256')
+mutate('ShenJitByteChars', 'rocq/JitProfile.v',
+       ':= JitBytecode.JitBytecode.utf8_of z.', ':= if (Z.leb 0 z && Z.leb z 255)%bool then Some [Z.to_N z] else None.')
+mutate('ShenJitAgreedChars', 'rocq/KLPort.v',
+       ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false',
+       ' None (fun z => Some [Z.to_N z]) false false')
+mutate('ShenJitWriteBytesFrom', 'rocq/JitMeta.v',
+       '   MIO (JWrites h (firstn (Z.to_nat n) (skipn (Z.to_nat i) (bytes_of m l)))) k /\\',
+       '   MIO (JWrites h (firstn (Z.to_nat n) (bytes_of m l))) k /\\')
+mutate('ShenJitReadErrorIgnored', 'rocq/JitMeta.v',
+       '   k JReadFailed = match raise_s m "read-byte: the read failed" with MTau m\' => m\' | _ => m end.',
+       '   k JReadFailed = set_stack m (swrite m d (VFix (-1))).')
 mutate('ShenJitUncheckedWrites', 'rocq/JitProfile.v',
        ' false (* 0.4: write-byte and close raise', ' true (* 0.4: write-byte and close raise')
 mutate('ShenJitNoSealing', 'rocq/JitProfile.v',

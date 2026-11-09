@@ -1,6 +1,6 @@
 # Shen/JIT lane (E2E-37 to E2E-41)
 
-Status: **Phase 1 done, re-pinned to 0.4. Nothing about Shen/JIT is verified.** This lane has a written
+Status: **Phase 1 done, re-pinned to 0.6. Nothing about Shen/JIT is verified.** This lane has a written
 scope, a Rocq semantic profile, and an executable bytecode semantics that has been compared
 with the binary on samples. No theorem yet relates that semantics to KLambda or to machine
 code.
@@ -14,11 +14,11 @@ Every claim is about this one build, and not about any upstream release.
 
 | Item | Pin |
 |---|---|
-| Source | `tizoc/shen-jit` `d3348cefbb2b209992039c1c0f55751241750364`, release 0.4, frozen for this phase |
-| Patch | [`ports/shen-jit/shen-jit-rv64-arena.patch`](../ports/shen-jit/shen-jit-rv64-arena.patch), built by [`build.sh`](../ports/shen-jit/build.sh): a static RWX code arena, no `MADV_HUGEPAGE`, and `fsqrt.d` for the RV64 `real-sqrt` emitter, which upstream otherwise refuses to compile. It applies to 0.4 unchanged |
+| Source | `tizoc/shen-jit` `934cfa56a5723165c63bf679f15d2d5214955a5d`, release 0.6 (tag `v0.6`, annotated tag object `68aa54f8390adec792f3538f8902fa23e542fe53`), frozen for this phase. `src/lowerer/lower.shen` SHA-256 `0048eebc...253d6b` |
+| Patch | [`ports/shen-jit/shen-jit-rv64-arena.patch`](../ports/shen-jit/shen-jit-rv64-arena.patch), built by [`build.sh`](../ports/shen-jit/build.sh): a static RWX code arena, no `MADV_HUGEPAGE`, and `fsqrt.d` for the RV64 `real-sqrt` emitter, which upstream otherwise refuses to compile. It applies to 0.6 unchanged (one hunk offset by 113 lines in `jit.c`) |
 | Target | Static `ET_EXEC`, musl, RV64GC, one RWX `PT_LOAD` |
-| Binary | SHA-256 `5eb9f4336aee535b93577c436f589b65262853defc2602aee41d8cc7d6c51872`, including its image (runtime `a06f85d8...`, image `0a135cab...`). Built by `build.sh /lps/p4/sj` in a fresh `ubuntu:24.04` linux/arm64 container, with Zig 0.13.0 (`zig cc`, riscv64-linux-musl); a second fresh build gave the same bytes. The hash depends on the output directory, which `-g` records |
-| Kernel | 43.4, archive SHA-256 `15e7972e...`; Búri's shared lanes are on 43.1 with PR117 (`OB-JIT-KERNEL-43-2`; their move is [parked](KERNEL-43.4-PARKED.md)) |
+| Binary | SHA-256 `c2d6aa351c6d2f2b7a73320d85efa334225777d3de27cf2a64bf22af588de137`, including its image (runtime `c12e97e9...`, image `fd8485a5...`). Built by `JOBS=2 build.sh /lps/p6/sj` in the `buri-lps` linux/arm64 container, with Zig 0.13.0 (`zig cc`, riscv64-linux-musl). A second build in a fresh `ubuntu:24.04` container was **not** run at 0.6, so reproducibility is UNKNOWN at this pin (0.4's was shown). The hash depends on the output directory, which `-g` records |
+| Kernel | 43.4 (unchanged at 0.6, `tools/ci-deps.sh`), archive SHA-256 `15e7972e...`; Búri's shared lanes are on 43.1 with PR117 (`OB-JIT-KERNEL-43-2`; their move is [parked](KERNEL-43.4-PARKED.md)) |
 | SLJIT | `a0020dd49a21020434ff838fc308626c48cd8f05`, as vendored |
 | Process model | `theorem-labs/rocq-linux-process-semantics` `5e13f6b0f82936aa5d006438e07e265c5d9fcfc4` |
 | Prover | Rocq 9.3.0, OCaml 5.2.1 for the process model; the same `rocq/Jit*.v` sources under Coq 8.18.0 in `make prove` |
@@ -33,6 +33,22 @@ accepts them. The lowerer doesn't emit them. The code is still linked in the bin
 **Spikes stay at the old pin.** `spikes/` and its results are evidence about `715bf60` and aren't rewritten.
 Upstream moves quickly, so this pin won't be `main` for long; proofs bind to exact bytes, and moving again is a
 deliberate step.
+
+### What changed at 0.6
+
+`d3348ce..934cfa5`: 132 commits, 238 files (0.5 and 0.6). Kernel, SLJIT and `value.h` are unchanged. The primitive table
+gains one entry, so `check_tables.py` now counts 121 primitives, 76 opcodes, 55 excluded; `raise-cond` moves to index 121.
+
+| Upstream change | In the model |
+|---|---|
+| New primitive `shen-jit.write-bytes` (4): N bytes of a buffer from I to an output stream in one `fwrite`, returning N. The port's `pr` now prints through it | Modeled, not excluded: `PWriteBytes` in `JitBytecode.v`, checks in the C order (buffer, range, stream), one new request `JWrites h bytes`, none when N is 0. `write_bytes_io`, `write_bytes_empty` (audited). Mutation `ShenJitWriteBytesFrom` |
+| `n->string` makes the UTF-8 bytes of a Unicode scalar value above 255; surrogates, negatives and values past U+10FFFF raise, with a new message | Changed in both models. `JitBytecode.utf8_of`; `KLPort` option 2 is now `char_text : Z -> option text` (the agreed rule is unchanged, `rule_n_to_string_agreed`, `next_r_agreed`), and `jit_rules` uses `utf8_of`. `jit_byte_strings` now states the 0.6 behavior (255, 256, 955, a 3- and a 4-byte value, a surrogate, U+110000, -1); `jit_n_to_string_agrees`, `n_to_string_utf8`. Mutations `ShenJitByteChars`, `ShenJitAgreedChars`. This follows an upstream semantic change; no statement was weakened |
+| `read-byte` raises on a read error, where end of file still gives -1; `shen-jit.read-file` raises on a read error after the open instead of returning partial data | Changed: a new response `JReadFailed` raises in both (fixed text; the binary appends `strerror`). `read_byte_error_raises` (audited), mutation `ShenJitReadErrorIgnored` |
+| Lowerer: norm rewrites THORN's cut-fail `(shen.cut B L K (freeze (when false B L K C)))` to `(if (shen.unlocked? L) (shen.lock K L) false)`, and `(= (shen.deref X B) (shen.deref Y B))` to `(shen-jit.deref= X Y B)`, a new port function | Not admitted by `JitLowerRel`, like the other rewrites (front-end obligation, wave 2). No accepted definition was lost; counted in the census as `cut-fail` and `deref-eq` |
+| Lowerer: fixed names looked up in a dictionary; constants shared through a dictionary keyed so that NaN is never shared; an instruction counter in `mark` | No effect on the relation: `C_lit` reads a constant by index and value, never by how the pool was shared, and the counter equals the old list length (every write to the instruction list goes through `emit` or `mark`). Confirmed by stage 0: the only definitions whose verdict changed are lowerer functions upstream rewrote |
+| Loader: a count over 255 has its own message; constants read without `nth` | No effect at this level |
+| Port: `shen-jit.deref=`, `shen.str->bytes` and `shen-jit.buffer->list` added, `pr` overridden | Stage 0 has 955 definitions, from 950 |
+| JIT: up to eight kept memory parameters on arm64; `deref` follows a chain inline | No effect at the bytecode level |
 
 ### What changed at 0.4
 
@@ -157,7 +173,9 @@ checks them in Rocq. This semantics is executable in Rocq and has no Shen counte
 - **Slots read before being written stop** with `RBadSlot`. The real machine reads whatever is there.
   `check.shen`'s rules exclude this for lowered code, but `shen-jit.install` doesn't check it.
 - **IO** is a request and a response at this level. From 0.4 a write or close the environment answers with `JFailed`
-  raises; when buffering lets that happen is the environment's choice.
+  raises; when buffering lets that happen is the environment's choice. From 0.6 `write-bytes` is one request for all its
+  bytes, and a read the environment answers with `JReadFailed` raises. A raise whose handler search ends the run leaves
+  the IO continuation's machine unchanged, as before (a continuation returns a machine, not a move).
 
 ## Port options on the KLambda semantics
 
@@ -170,7 +188,7 @@ also stops this copy drifting from `KLSemantics.v`. `jit_rules` in `rocq/JitProf
 | # | Option | Shen/JIT | Limit |
 |---|---|---|---|
 | 1 | `int_range` | 62-bit fixnums; a result out of range raises | Raises `XPrim`, since messages aren't a compatibility requirement |
-| 2 | `char_ok` | `n->string` takes 0 to 255 | |
+| 2 | `char_text` | From 0.6, `n->string` makes one byte of 0 to 255 and the UTF-8 bytes of any other scalar value (`char_ok`, 0 to 255 only, until 0.4) | |
 | 3 | `object_identity` | Each closure gets a location, an empty heap cell kept in its environment | **Two exceptions stay undefined under `=`**: see below |
 | 4 | `arity_errors` | A named call of the wrong count raises `XArity` | |
 | 5 | `defun_allowed` | `defun` of a primitive, special form, `do`, `thaw`, or sealed name raises | The sealed set is a parameter, not yet related to the image |
@@ -187,7 +205,7 @@ no identity there either (`OB-JIT-NAN-IDENTITY`).
 
 ## Findings against the source
 
-Rechecked at 0.4. Reproductions are in [upstream/shen-jit-findings.md](upstream/shen-jit-findings.md). Finding 1 was filed
+Rechecked at 0.4; at 0.6 only the source diff was read for them (no finding was re-run on the 0.6 binary). Reproductions are in [upstream/shen-jit-findings.md](upstream/shen-jit-findings.md). Finding 1 was filed
 as `tizoc/shen-jit#12`; nothing else has been filed by this work. **None remains at 0.4.**
 
 1. **Unchecked writes: fixed at 0.4.** `write-byte` and `close` raise on a failed write; on `/dev/full` the named binary's
@@ -228,7 +246,7 @@ semantics.
 
 ## Phase 2: KLambda to bytecode (in progress)
 
-Written at 0.3 (`b4ccf2d`) and rechecked at 0.4 (`d3348ce`), 6 November 2026. **Nothing here proves that `lower.shen` is correct.** There is a
+Written at 0.3 (`b4ccf2d`), rechecked at 0.4 (`d3348ce`), 6 November 2026, and at 0.6 (`934cfa5`), 9 November 2026. **Nothing here proves that `lower.shen` is correct.** There is a
 preservation theorem for code a stated relation accepts, a checker proved to decide that relation, and the
 checker's verdict on every stage 0 definition.
 
@@ -297,8 +315,14 @@ rewrite listed under the surprises above.
   theorem says nothing about when those happen.
 - `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
 
-**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **110 of 950 definitions
-accepted** at 0.4, 840 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.3 it was 59 of 941. At the
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **111 of 955 kernel definitions
+validated** at 0.6, 844 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.4 it was 110 of 950.
+Compared by name, the re-pin lost `shen-jit.lower.constant-index` (removed upstream with the dictionary-keyed constant
+pool) and gained `shen-jit.lower.list-key` (new) and `shen-jit.lower.prim-arity` (rewritten as a dictionary lookup);
+the other 109 accepted definitions are accepted at both pins. Net, five definitions more: the lowerer gains
+`constant-key`, `fill-table`, `fixed-entry`, `fixed-names`, `fixed-table` and `list-key` and loses `constant-index`,
+`same-constant?` and `special?`; the port gains `shen-jit.deref=`, `shen-jit.buffer->list` and its own `pr` and
+`shen.str->bytes`, which leave `writer` and `reader`. Of the new ones only `list-key` is accepted. At 0.3 it was 59 of 941. At the
 re-pin to 0.4 it fell to 53: eight definitions accepted at 0.3 were rejected because of the one-slot `cons` chain
 (`(prim D cons (const K) D)`). Admitting the chain (below) brought back exactly those eight and no others:
 `shen.compile-to-kl`, `shen.x.expand-dynamic.wrap-in-defun`, `shen-jit.lower.lets`, `shen.tuple-up`,
@@ -473,7 +497,14 @@ own lowerer reproduces every stage 0 code object byte for byte. On `p2/int` the 
 `38a414a295c1aff39360a73a812591d0862fbc6c0bf32bc24314d8140993de20`, and every per-file hash equals that of the set
 used for the earlier run below. The six statements are closed and `rocqchk` replays both modules.
 
-**131 of 950 definitions accepted** on the erased witness on `p2/int`, where the checker also admits `=` against a
+**At 0.6: 133 of 955 definitions accepted** on the erased witness (`NORM_DIR=/tmp/p2-v06-capture/witness
+JIT_OUT=/tmp/p2-v06-norm scripts/check-shen-jit-norm.sh` in `buri-lps`, witnesses from `capture_passes.sh` on
+`/lps/p6/sj`: witness and count runs 955 of 955 byte-identical, image run 944 of 955; norm witness set sha256
+`e45add98...b69dd1`): 822 rejected, none failing erase, none unreadable, all front end unchecked. The source-body judge
+accepts 111, all also accepted on the witness; the 22 gained are the 21 below plus `shen-jit.lower.fixed?`, now a
+dictionary lookup. The six statements are closed and `rocqchk` replays both modules.
+
+**At 0.4: 131 of 950 definitions accepted** on the erased witness on `p2/int`, where the checker also admits `=` against a
 safe constant (`pass/eq`): 819 rejected, none failing erase, none unreadable. All 131 are front end unchecked. None
 uses a port primitive and none has a folded constant. The stage 0 judge on the source bodies accepts 110, and every
 one of the 110 is also accepted on its witness: none is lost.
@@ -518,7 +549,17 @@ run.
 Tests under `qemu-riscv64` on the named binary, at the pin. Each case's code comes from the real lowerer, and
 Rocq computes the verdict by `vm_compute`. Agreement is sampled evidence, not proof.
 
-**At 0.4: 1,344 cases, 1,238 agree, 106 known differences, 0 new or unexplained** (`tests/shen-jit/known-differences.txt`).
+**At 0.6: 1,406 cases, 1,296 agree, 110 known differences, 0 new or unexplained** (`tests/shen-jit/known-differences.txt`).
+By set: eval cases 1,106 (1,005 agree), ops 138 (all agree), contract 162 (153 agree). By kind: 80 excluded features reached, 6 depending on one, 4 with no identity in the model, 19 IO responses, 1 image state. The known list was carried from 0.4
+by aligning each case's captured code and result between the two runs (every one of the 106 found its 0.6 index;
+references between entries were renumbered with them), then four new differences were classified one by one: three
+eval cases that `open` a file around `shen-jit.write-bytes` (IO responses, not compared) and `t.deref-eq-all`, whose
+`(= (shen.deref X B) (shen.deref Y B))` now lowers to `shen-jit.deref=`, which calls `shen-jit.same?` on two pairs (no
+identity in the model). Of the 63 eval cases new or changed at 0.6 the other 59 agree, among them every `n->string`
+UTF-8 and range case, the `write-bytes` range and buffer errors and the constant-sharing cases; the two new contract
+cases (`n->string` of 955 and of a surrogate) agree. Tests, not proof.
+
+**At 0.4: 1,344 cases, 1,238 agree, 106 known differences, 0 new or unexplained**.
 By set: eval cases 1,045 (948 agree), ops 138 (all agree), contract 161 (152 agree). Of the 106 differences:
 
 | Kind | Cases | Why |

@@ -2,7 +2,7 @@
 # Opt-in, report only: the Shen/JIT emit-pass judge (rocq/JitNormStage0.v) over every stage 0 file.
 # NOT part of `make prove` or scripts/check-shen-jit.sh, and it gates nothing: it prints counts.
 #
-#   SHEN_JIT_SRC  checkout of the pinned Shen/JIT, with build/stage0 (default /lps/p4/sj)
+#   SHEN_JIT_SRC  checkout of the pinned Shen/JIT, with build/stage0 (default /lps/p6/sj)
 #   JIT_OUT       work directory (default /tmp/ir-norm)
 #   NORM_DIR      optional: an existing directory of <file>.norm witnesses. Unset (the default),
 #                 the witnesses are regenerated: tests/shen-jit/capture_passes.sh runs the build's
@@ -16,7 +16,7 @@
 # to its source body (wave 2). Rejection proves nothing.
 set -uo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
-src=${SHEN_JIT_SRC:-/lps/p4/sj}
+src=${SHEN_JIT_SRC:-/lps/p6/sj}
 out=${JIT_OUT:-/tmp/ir-norm}
 if [ -n "${NORM_DIR:-}" ]; then
   norm=$NORM_DIR

@@ -50,6 +50,9 @@ SITES = [
     ('let-frozen-keep', '(shen-jit.lower.frozen-late X E Body))))'),
     ('frozen-late-hoist', '[if [or C1 C2] [let X [freeze E] [if C1 Y1 Y2]] [const false]]'),
     ('bound-now-frozen', '(shen-jit.lower.bound-now A B C E)'),
+    # Prolog rewrites added at 0.6
+    ('cut-fail', '(shen-jit.lower.norm Scope [if [shen.unlocked? L] [shen.lock K L] false])'),
+    ('deref-eq', '(shen-jit.lower.norm Scope [shen-jit.deref= X Y B])'),
     # lambda copying
     ('let-lambda', '(shen-jit.lower.apply-in X Params (shen-jit.lower.lambda-body V) Body)'),
 ]

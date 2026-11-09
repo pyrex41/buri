@@ -3,7 +3,7 @@
 #
 #   capture_passes.sh OUT_DIR [SJ_DIR [BIN]]
 #
-# SJ_DIR defaults to /lps/p4/sj (the pinned Shen/JIT d3348ce with build/stage0), BIN to its
+# SJ_DIR defaults to /lps/p6/sj (the pinned Shen/JIT 934cfa5 with build/stage0), BIN to its
 # build/shen-jit, which must be the named binary of toolchain.lock.json. Nothing is written
 # outside OUT_DIR; the guest runs with OUT_DIR/run as its working directory.
 #
@@ -37,7 +37,7 @@
 #   <f>.ticks   (F ((Key Count) ...))       rewrite counts from the count run
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-out=$1; sj=${2:-/lps/p4/sj}; bin=${3:-$sj/build/shen-jit}
+out=$1; sj=${2:-/lps/p6/sj}; bin=${3:-$sj/build/shen-jit}
 root=$(cd "$here/../.." && pwd)
 want=$(python3 -c "import json;print(json.load(open('$root/toolchain.lock.json'))['shen_jit']['binary_sha256'])")
 got=$(sha256sum "$bin" | cut -d' ' -f1)

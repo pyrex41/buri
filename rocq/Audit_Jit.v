@@ -19,6 +19,10 @@ Print Assumptions JitMeta.JitMeta.jump_if_false_requires_boolean.
 Print Assumptions JitMeta.JitMeta.return_at_top.
 Print Assumptions JitMeta.JitMeta.raise_no_handler_final.
 Print Assumptions JitMeta.JitMeta.install_sealed_refused.
+Print Assumptions JitMeta.JitMeta.write_bytes_io.
+Print Assumptions JitMeta.JitMeta.write_bytes_empty.
+Print Assumptions JitMeta.JitMeta.read_byte_error_raises.
+Print Assumptions JitMeta.JitMeta.n_to_string_utf8.
 Print Assumptions JitProfile.JitProfile.jit_division_by_zero_real.
 Print Assumptions JitProfile.JitProfile.jit_absvector_fill.
 Print Assumptions KLPort.KLPort.next_r_agreed.
@@ -33,6 +37,7 @@ Print Assumptions KLPort.KLPort.step_r_deterministic_tau.
 Print Assumptions JitProfile.JitProfile.jit_overflow_raises.
 Print Assumptions JitProfile.JitProfile.jit_compare_exact.
 Print Assumptions JitProfile.JitProfile.jit_byte_strings.
+Print Assumptions JitProfile.JitProfile.jit_n_to_string_agrees.
 Print Assumptions JitProfile.JitProfile.jit_writes_checked.
 Print Assumptions JitProfile.JitProfile.jit_no_partial.
 Print Assumptions JitProfile.JitProfile.jit_resources_catchable.

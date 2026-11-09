@@ -79,7 +79,9 @@ Theorem jit_absvector_fill : absvector_fill jit_profile = VSym (of_string "shen.
 Proof. reflexivity. Qed.
 
 (* --- The options --- *)
-Definition byte_ok (z : Z) : bool := (Z.leb 0 z && Z.leb z 255)%bool.
+(* n->string from 0.6: a byte as itself, any other scalar value as its UTF-8 bytes (prims.c P_N_STRING),
+   the same function as the bytecode's. *)
+Definition jit_char_text (z : Z) : option Observation.Observation.text := JitBytecode.JitBytecode.utf8_of z.
 
 (* Names defun refuses: every primitive of the table, the special forms, do, thaw and protect (semantics.md s10,
    lower.shen's fixed?). Which kernel names are sealed comes from the image, so it is a parameter here; relating it
@@ -90,7 +92,7 @@ Definition is_fixed_name (f : name) : bool :=
 
 Definition jit_rules (sealed : list name) : port_rules := PortRules
  (Some (JitBytecode.JitBytecode.fix_min, JitBytecode.JitBytecode.fix_max))
- byte_ok
+ jit_char_text
  true
  true
  (fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))
@@ -113,11 +115,24 @@ Theorem jit_compare_exact :
  jit_inexact_cmp PEqual (NInt 9007199254740993) (NFloat (JitFloat.JitFloat.of_Z 9007199254740992)) = false.
 Proof. split; vm_compute; reflexivity. Qed.
 
-(* n->string takes a byte, not a code point. *)
+(* Strings are bytes. From 0.6, n->string makes one byte of 0 to 255 and the UTF-8 bytes of any
+   other Unicode scalar value; a surrogate, a negative number or one past U+10FFFF raises. *)
 Theorem jit_byte_strings : forall sealed s,
- rule_n_to_string_r (jit_rules sealed) [VNum (NInt 256)] s = dom PNToString /\
- rule_n_to_string_r (jit_rules sealed) [VNum (NInt 255)] s = ret (VStr [255%N]) s.
-Proof. intros. split; reflexivity. Qed.
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 255)] s = ret (VStr [255%N]) s /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 256)] s = ret (VStr [196%N; 128%N]) s /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 955)] s = ret (VStr [206%N; 187%N]) s /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 8364)] s = ret (VStr [226%N; 130%N; 172%N]) s /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 128512)] s = ret (VStr [240%N; 159%N; 152%N; 128%N]) s /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 55296)] s = dom PNToString /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt 1114112)] s = dom PNToString /\
+ rule_n_to_string_r (jit_rules sealed) [VNum (NInt (-1))] s = dom PNToString.
+Proof. intros. repeat split; reflexivity. Qed.
+
+(* The profile's n->string is the bytecode's: each integer the one accepts, the other turns into
+   the same bytes, and each one rejects, the other rejects. *)
+Theorem jit_n_to_string_agrees : forall z,
+ jit_char_text z = JitBytecode.JitBytecode.utf8_of z.
+Proof. reflexivity. Qed.
 
 (* From 0.4, a failed write raises (tizoc/shen-jit#12), so write-byte follows the agreed rule. *)
 Theorem jit_writes_checked : forall sealed args s,
@@ -169,7 +184,7 @@ Definition deviations : list deviation :=
   Dev "nan-identity" "a NaN is = to itself as one object and to nothing else" In_bytecode "OB-JIT-NAN-IDENTITY";
   Dev "literals" "reader overrides make out-of-range literals reals (s3)" Ledger_only "OB-JIT-DEV-LITERALS";
   Dev "printing" "reals print shortest round-trip digits (s3)" In_profile "OB-JIT-DEV-PRINTING";
-  Dev "byte-strings" "strings are bytes; n->string takes 0 to 255 (s4)" In_port_rules "OB-JIT-DEV-BYTES";
+  Dev "byte-strings" "strings are bytes; n->string makes one byte of 0 to 255 and UTF-8 of other scalar values (s4, 0.6)" In_port_rules "OB-JIT-DEV-BYTES";
   Dev "hash" "hash is consistent with = and hashes 8 and 8.0 alike (s6)" In_bytecode "OB-JIT-DEV-HASH";
   Dev "closure-equality" "closures and streams compare by identity; two exceptions stay undefined here (s6)" Partly_stated "OB-JIT-DEV-IDENTITY";
   Dev "error-to-string" "error-to-string of a non-exception raises (s8)" In_bytecode "OB-JIT-DEV-ETS";
