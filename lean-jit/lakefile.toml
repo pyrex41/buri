@@ -3,3 +3,7 @@ defaultTargets = ["LeanJit"]
 
 [[lean_lib]]
 name = "LeanJit"
+
+[[lean_lib]]
+name = "Stage0Gen"
+srcDir = "gen"
