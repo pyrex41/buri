@@ -1,0 +1,15 @@
+Buri.JitMeta.fst rc=0 wall=3s cpu=2.91s --z3seed 1
+Buri.JitMeta.fst rc=0 wall=2s cpu=2.27s --z3seed 2
+Buri.JitMeta.fst rc=0 wall=3s cpu=2.13s --z3seed 3
+Buri.JitMeta.fst rc=0 wall=2s cpu=2.48s --z3seed 4
+Buri.JitMeta.fst rc=0 wall=3s cpu=2.5s --z3seed 5
+Buri.JitLowerCheck.fst rc=0 wall=20s cpu=19.86s --z3seed 1
+Buri.JitLowerCheck.fst rc=0 wall=23s cpu=22.47s --z3seed 2
+Buri.JitLowerCheck.fst rc=0 wall=21s cpu=18.51s --z3seed 3
+Buri.JitLowerCheck.fst rc=0 wall=22s cpu=20.87s --z3seed 4
+Buri.JitLowerCheck.fst rc=0 wall=29s cpu=26.2s --z3seed 5
+Buri.JitLowerEquiv.fst rc=0 wall=12s cpu=9.66s --z3seed 1
+Buri.JitLowerEquiv.fst rc=0 wall=8s cpu=7.51s --z3seed 2
+Buri.JitLowerEquiv.fst rc=0 wall=8s cpu=7.31s --z3seed 3
+Buri.JitLowerEquiv.fst rc=0 wall=8s cpu=7.2s --z3seed 4
+Buri.JitLowerEquiv.fst rc=0 wall=6s cpu=6.77s --z3seed 5

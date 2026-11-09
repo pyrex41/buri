@@ -10,8 +10,10 @@
    - Buri.JitLowerEquiv.fundamental_statement: the fundamental property of KRef. NOT proved in
      Rocq either. store_refl_of_fundamental, adequacy_of_fundamental and
      call_preservation_src_of_fundamental take it as an argument.
-   - Buri.JitLowerEquiv compatibility statements (the compat_ ones): NOT proved in Rocq; see the module
-     for the one attempted here. *)
+   - The other JitLowerEquiv statements Rocq leaves unproved (eq_budget, jit_eq_per,
+     sealed_stable, storehas_stable, VRel_down, VRel_wext, ERel_down, KRef_refl, KRef_scope and
+     the compat_ lemmas other than compat_type) are NOT ported, not even as statements.
+     compat_type_statement IS proved here (compat_type_proved); Rocq leaves it unproved. *)
 module Buri.Unfinished
 open Buri.KLSyntax
 open Buri.KLValue
