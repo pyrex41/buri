@@ -3,10 +3,11 @@
    so `grep` here finds all of them. Nothing is assumed: a theorem that needs one takes it as an
    explicit hypothesis (an argument), as Rocq's JitLowerEquiv does with fundamental_statement.
 
-   - Buri.JitLowerStep.sim_statement (rocq/JitLowerStep.v, Theorem sim): the one-step simulation.
-     PROVED in Rocq (with about 1,100 lines of lemmas); not ported. JitLowerThm.preservation,
-     related_progress, call_preservation and JitLowerEquiv.call_preservation_src_of_fundamental
-     take it as an argument.
+   - (No longer unfinished.) rocq/JitLowerStep.v's Theorem sim is proved as
+     Buri.JitLowerSimEval.sim, and Buri.JitLowerFinal proves preservation, related_progress,
+     call_preservation and call_preservation_src_of_fundamental outright from it.
+     Buri.JitLowerStep.sim_statement (the informative, Type-valued form) is still only a
+     hypothesis, of JitLowerThm's Type-returning versions; it is kept for that comparison.
    - Buri.JitLowerEquiv.fundamental_statement: the fundamental property of KRef. NOT proved in
      Rocq either. store_refl_of_fundamental, adequacy_of_fundamental and
      call_preservation_src_of_fundamental take it as an argument.

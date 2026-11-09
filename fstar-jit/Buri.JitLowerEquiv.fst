@@ -887,19 +887,20 @@ let rec lookup_combine (ps : list name) (args : list value) (y : name)
   | p :: ps', v :: args' -> if text_eqb y p then () else (text_eqb_eq y p; lookup_combine ps' args' y)
 
 (* Rocq: call_preservation_src_statement, proved there from fundamental_statement. Here it is
-   proved from fundamental_statement AND the one-step simulation `sim` (proved in Rocq, not here). *)
+   proved from fundamental_statement and call_preservation's conclusion for eb (a requires);
+   Buri.JitLowerFinal discharges that with call_preservation, proved outright from sim. *)
 #push-options "--z3rlimit 80 --fuel 1 --ifuel 1"
 let call_preservation_src_of_fundamental (#e : B.env) (#pt : B.tree (B.prim & nat)) (#sealed : list name)
-  (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd)) (sim : Buri.JitLowerStep.sim_statement e pt sealed)
+  (dd : list (name & fundef)) (fF : squash (fundamental_statement sealed dd))
   (s : store) (m : B.machine) (c : B.code) (ps : list name) (b0 b1 eb : expr) (args : list value) (n : nat)
   : Lemma (requires d_wf sealed dd /\ kRef sealed dd ps b0 b1 /\ kRef sealed dd ps b1 eb /\ storeHas dd s /\ store_ok s /\
-                    com s m /\ compFn c ps eb /\ length ps = length args /\ entered m c args)
+                    com s m /\ compFn c ps eb /\ length ps = length args /\ entered m c args /\
+                    inhabited (pres_result e pt sealed n s (cfg (Eval (combine ps args) eb) [] s) m))
           (ensures inhabited (pres_src_result e pt sealed n s (cfg (Eval (combine ps args) eb) [] s)
                                                          (cfg (Eval (combine ps args) b0) [] s) m)) =
   let rho = combine ps args in
   let ce = cfg (Eval rho eb) [] s in
   let c0 = cfg (Eval rho b0) [] s in
-  call_preservation sim s m c ps eb args n;
   eliminate exists (aa : argsAt m.B.m_stack (m.B.m_fp + 2) args). True
   with argsAt_combine_fo m.B.m_stack (m.B.m_fp + 2) ps args aa;
   introduce forall (y : name). mem_l y ps ==> (exists (v : value). lookup y rho == Some v)

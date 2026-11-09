@@ -7,7 +7,7 @@ out=timings-all.txt; : > $out
 t0=$(date +%s)
 for m in Lib LibTest Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitFloatTest JitBytecode JitMeta \
          JitProfile JitLowerRel JitLowerCheck JitLowerStage0 JitLowerKont JitLowerStable JitLowerPrim \
-         JitLowerStep JitLowerThm JitLowerEquiv Unfinished; do
+         JitLowerStep JitLowerThm JitLowerSim JitLowerSimEval JitLowerEquiv JitLowerFinal Unfinished; do
   ./check.sh Buri.$m.fst 2>/dev/null | tail -1 | tee -a $out
 done
 echo "modules total wall $(( $(date +%s) - t0 ))s" | tee -a $out
