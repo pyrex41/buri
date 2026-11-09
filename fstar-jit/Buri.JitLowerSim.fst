@@ -774,3 +774,92 @@ let ret_tail (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : 
     inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
       (ta_start #s m rho e1 es' ms r1 i (s0 + 1) t f (v :: vals) k1 g n ct pa2 rk))
 #pop-options
+
+(* ---------- a value arrives ---------- *)
+let rec tk_label (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool)
+  (#l : nat) (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k)
+  : Lemma (ensures Some? (lbl c l)) (decreases tk) =
+  match tk with
+  | TK_and _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_label tk1
+  | TK_andr _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_label tk1
+  | TK_orr _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_label tk1
+  | TK_jump _ _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_label tk1
+  | TK_label _ _ _ _ _ _ _ _ _ _ tk1 -> tk_label tk1
+  | _ -> ()
+
+let vr_bool_inv (#v : value) (#v' : B.val_) (dv : vr v v') (b : bool)
+  : Lemma (requires v' == B.VBool b) (ensures v == VBool b) =
+  match dv with VR_bool _ -> ()
+let vr_nonbool (#v : value) (#v' : B.val_) (dv : vr v v') : Lemma (requires not (B.VBool? v')) (ensures not (VBool? v)) =
+  match dv with _ -> ()
+
+#push-options "--z3rlimit 200 --fuel 2 --ifuel 1"
+let rec step_ret (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#o : B.operand)
+  (#r : list B.instr) (#k : list frame) (kd : kD c f s0 ks w o r k) (s : store) (v : value) (v' : B.val_) (m : B.machine)
+  (dv : vr v v')
+  : Lemma (requires com s m /\ code m == c /\ fp m == f /\ st m == s0 /\ cs m == ks /\ m.B.m_rest == r /\
+                    read_o c f s0 o == Some v')
+          (ensures iout e pt sealed s (cfg (Ret v) k s) m) (decreases kd) =
+  let c0 = cfg (Ret v) k s in
+  match kd with
+  | KD_ret _ _ _ _ _ _ r0 _ _ rk ->
+    n_ret e pt m o r0 v';
+    (match rk with
+     | RK_top _ _ ->
+       inhabits (O_ok #e #pt #sealed #s #c0 #m v v' m (B.set_rest m r0) (SS_refl c0) (TS_refl m) () dv)
+     | RK_call _ _ c1 r1 d a cs1 _ w1 _ _ kd1 _ ->
+       let st1 = B.tset (B.skey (fp m - a + d)) v' (st m) in
+       let m1 = B.set_ctl (B.set_rest m r0) st1 (fp m - a) c1 r1 cs1 in
+       slot_facts (st m) (fp m - a + d) v';
+       com_same s m m1;
+       inhabits (O_step #e #pt #sealed #s #c0 #m c0 m1 (SS_refl c0) (Inl (TPlus m1 () (TS_refl m1)))
+         (MS_ret v v' (B.OSlot d) k w1 m1 () () dv (kD_stable kd1 st1))))
+  | KD_jump _ _ _ _ _ _ e0 r0 r1 _ _ d1 ->
+    com_rest s m r1; n_jump e pt m e0 r0 r1;
+    step_ret e pt sealed d1 s v v' (B.set_rest m r1) dv; iout_t e pt sealed s c0 m (B.set_rest m r1)
+  | KD_label _ _ _ _ _ _ l r0 _ d1 ->
+    com_rest s m r0; n_label e pt m l r0;
+    step_ret e pt sealed d1 s v v' (B.set_rest m r0) dv; iout_t e pt sealed s c0 m (B.set_rest m r0)
+  | KD_let _ _ _ _ _ d _ x b rho k1 g top dst r2 w1 _ _ _ _ cb _ _ kc ->
+    vrp_of_vr dv;
+    menv_cons (fp m) (st m) g rho x d v v';
+    envBelow_cons g top x d;
+    let c' = cfg (Eval ((x, v) :: rho) b) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval ((x, d) :: g) top b dst r2 ((x, v) :: rho) k1 w1 m () cb () () () kc))
+  | KD_lett _ _ _ _ _ d _ x b rho k1 g top l r2 w1 _ _ _ _ cb _ _ tk ->
+    vrp_of_vr dv;
+    menv_cons (fp m) (st m) g rho x d v v';
+    envBelow_cons g top x d;
+    let c' = cfg (Eval ((x, v) :: rho) b) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_test ((x, d) :: g) top b l r2 ((x, v) :: rho) k1 w1 m () cb () () () tk))
+  | KD_test _ _ _ _ _ _ l r0 _ tk ->
+    let m' = B.set_rest m r0 in
+    com_rest s m r0;
+    read_eq m' o;
+    (match v' with
+     | B.VBool true ->
+       vr_bool_inv dv true;
+       assert (tS e pt m m');
+       tk_true e pt sealed tk s m'; iout_t e pt sealed s c0 m m'
+     | B.VBool false ->
+       vr_bool_inv dv false;
+       tk_label tk;
+       let Some re = lbl c l in
+       let m2 = B.set_rest m' re in
+       com_rest s m' re;
+       assert (tS e pt m m2);
+       tk_false e pt sealed tk s m2 re; iout_t e pt sealed s c0 m m2
+     | _ ->
+       vr_nonbool dv;
+       let (| k', ss |) = tk_nb sealed tk s v in
+       inhabits (finish_raise #e #pt #sealed s c0 m m' XNotBoolean k' (B.t "~S is not a boolean") v' ss))
+  | KD_prim _ _ _ _ _ o0 r0 f0 p q vals es rho k1 g top ops dops d r1 w1 _ _ _ _ _ _ co dr _ _ _ _ _ _ kd1 ->
+    ret_prim e pt sealed s v v' m o f0 p q vals es rho k1 g top ops dops d r1 w w1 dv co dr kd1
+  | KD_call _ _ _ _ _ _ f0 vals es rho k1 g a s1 d n i r1 w1 _ _ _ _ _ _ cw _ aa _ _ _ _ kd1 ->
+    ret_call e pt sealed s v v' m f0 vals es rho k1 g a s1 d n i r1 w1 dv cw aa kd1
+  | KD_tail _ _ _ _ _ _ _ f0 vals es rho k1 g s1 t _ ms n i r1 _ _ _ _ _ _ _ _ ct _ _ _ _ _ _ pa _ rk ->
+    ret_tail e pt sealed s v v' m f0 vals es rho k1 g s1 t ms n i r1 dv ct pa rk
+#pop-options
