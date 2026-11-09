@@ -400,3 +400,93 @@ let tail_fire (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s :
    | None -> undefined_out e pt sealed s c0 m2 m' f args k1 (fun cv -> B.do_tail e m' 0 n cv));
   iout_tstar e pt sealed s c0 m m2 t
 #pop-options
+
+(* ---------- starting an argument of a tail call ---------- *)
+let rec kill_lookup_gen (g : env) (s0 : nat) (x : name) (l : env)
+  : Lemma (lookup x (filter (fun (p : name & nat) -> not (slot_is (lookup (fst p) g) s0)) l) ==
+           (if slot_is (lookup x g) s0 then None else lookup x l)) =
+  match l with
+  | [] -> ()
+  | (y, u) :: l' -> text_eqb_eq x y; kill_lookup_gen g s0 x l'
+let kill_lookup (g : env) (s0 : nat) (x : name)
+  : Lemma (lookup x (kill s0 g) == (if slot_is (lookup x g) s0 then None else lookup x g)) =
+  kill_lookup_gen g s0 x g
+let kill_sub (g : env) (s0 : nat) (x : name) (u : nat)
+  : Lemma (requires lookup x (kill s0 g) == Some u) (ensures lookup x g == Some u /\ u <> s0) = kill_lookup g s0 x
+let menv_kill (f : nat) (s1 : B.tree B.val_) (g : env) (rho : lenv) (s0 : nat)
+  : Lemma (requires menv f s1 g rho) (ensures menv f s1 (kill s0 g) rho) =
+  introduce forall (x : name). (match lookup x (kill s0 g) with
+    | Some s -> exists v v'. lookup x rho == Some v /\ slotv s1 (f + s) == Some v' /\ vrp v v'
+    | None -> True)
+  with kill_lookup g s0 x
+let envBelow_kill (g : env) (t s0 : nat) : Lemma (requires envBelow g t) (ensures envBelow (kill s0 g) t) =
+  introduce forall (x : name) (u : nat). lookup x (kill s0 g) == Some u ==> u < t
+  with introduce _ ==> _ with kill_sub g s0 x u
+
+let w_tail (f s t : nat) (a : nat) : prop = a = f + s \/ f + t <= a
+
+let rec loc_range2 (ms : list (nat & nat)) (j n t : nat)
+  : Lemma (requires forall_l (fun (x : nat & nat) -> n + 2 <= snd x /\ snd x < t) ms)
+          (ensures loc ms j = j \/ (n + 2 <= loc ms j /\ loc ms j < t)) =
+  match ms with [] -> () | (u, v) :: ms' -> if u = j then () else loc_range2 ms' j n t
+let rec ta_forall (ms : list (nat & nat)) (s0 n t : nat)
+  : Lemma (requires forall_l (fun (x : nat & nat) -> 2 <= fst x /\ fst x < s0 /\ n + 2 <= snd x /\ snd x < t) ms)
+          (ensures forall_l (fun (m : nat & nat) -> 2 <= fst m /\ fst m < s0 + 1 /\ n + 2 <= snd m /\ snd m < t) ms /\
+                   forall_l (fun (m : nat & nat) -> 2 <= fst m /\ fst m < s0 + 1 /\ n + 2 <= snd m /\ snd m < t + 1) ms /\
+                   forall_l (fun (x : nat & nat) -> n + 2 <= snd x /\ snd x < t) ms /\
+                   ~(mem_l s0 (map fst ms))) =
+  match ms with [] -> () | _ :: r -> ta_forall r s0 n t
+
+#push-options "--z3rlimit 150 --fuel 2 --ifuel 1"
+let ta_start (#s : store) (m : B.machine) (rho : lenv) (a : expr) (es : list expr) (ms : list (nat & nat))
+  (r1 : list B.instr) (i : B.instr) (s0 t : nat) (f : name) (vals : list value) (k1 : list frame) (g : env) (n : nat)
+  (ct : compTA (code m) g s0 t (a :: es) ms m.B.m_rest (i :: r1))
+  (pa : paramAt (fp m) (st m) ms 2 (rev vals)) (rk : rK (fp m) (st m) (cs m) k1)
+  : Pure (mS s (cfg (Eval rho a) (KCallArgs f vals es rho :: k1) s) m)
+    (requires com s m /\ menv (fp m) (st m) g rho /\ envBelow g t /\ not_prim_name f /\ s0 = 2 + length vals /\
+              n = length vals + 1 + length es /\ n + 2 <= t /\ tail_instr i 0 (B.sym_of_text f) n /\
+              forall_l (fun (x : nat & nat) -> 2 <= fst x /\ fst x < s0 /\ n + 2 <= snd x /\ snd x < t) ms /\
+              nodup_l (map fst ms))
+    (ensures fun _ -> True) =
+  ta_forall ms s0 n t; rev_length vals;
+  loc_notin ms s0;
+  introduce forall (j : nat). loc ms j = j \/ (n + 2 <= loc ms j /\ loc ms j < t) with loc_range2 ms j n t;
+  let k = KCallArgs f vals es rho :: k1 in
+  match ct with
+  | TA_same _ _ _ x _ _ _ _ _ cta ->
+    let w = w_top (fp m) t in
+    prot_below g (fp m) t w;
+    let kd = KD_tail (code m) (fp m) (st m) (cs m) w (B.OSlot s0) m.B.m_rest f vals es rho k1 g s0 t t ms n i r1
+      () () () () () () () () cta () () () () () () pa () rk in
+    MS_op g t (EVar x) (B.OSlot s0) t m.B.m_rest rho k w m () (O_var g t x s0 m.B.m_rest () ()) () () () kd
+  | TA_temp _ _ _ _ _ _ _ r1' _ cmp cta ->
+    let w = w_top (fp m) t in
+    prot_below g (fp m) t w;
+    let ms2 = (s0, t) :: ms in
+    let pa2 = paramAt_ms ms2 pa in
+    let kd = KD_tail (code m) (fp m) (st m) (cs m) w (B.OSlot t) r1' f vals es rho k1 g s0 (t + 1) t ms2 n i r1
+      () () () () () () () () cta () () () () () () pa2 () rk in
+    MS_eval g (t + 1) a (DSlot t) r1' rho k w m () cmp () () () (KC_slot (code m) (fp m) (st m) (cs m) w t r1' k () kd)
+  | TA_direct _ _ _ _ _ _ _ r1' _ cmp cta ->
+    let w1 = w_tail (fp m) s0 t in
+    menv_kill (fp m) (st m) g rho s0;
+    envBelow_kill g t s0;
+    introduce forall (x : name) (u : nat). lookup x (kill s0 g) == Some u ==> ~(w1 (fp m + u))
+    with introduce _ ==> _ with kill_sub g s0 x u;
+    let kd = KD_tail (code m) (fp m) (st m) (cs m) w1 (B.OSlot s0) r1' f vals es rho k1 (kill s0 g) s0 t t ms n i r1
+      () () () () () () () () cta () () () () () () pa () rk in
+    MS_eval g t a (DSlot s0) r1' rho k w1 m () cmp () () () (KC_slot (code m) (fp m) (st m) (cs m) w1 s0 r1' k () kd)
+#pop-options
+
+(* ---------- instruction by instruction ---------- *)
+let n_const (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (d k : nat) (r : list B.instr) (v : B.val_)
+  : Lemma (requires m.B.m_rest == B.IConst d k :: r /\ konst (code m) k == Some v) (ensures tS e pt m (wr m r d v)) = ()
+let n_move (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (d s0 : nat) (r : list B.instr) (v : B.val_)
+  : Lemma (requires m.B.m_rest == B.IMove d s0 :: r /\ slotv (st m) (fp m + s0) == Some v) (ensures tS e pt m (wr m r d v)) = ()
+let n_jump (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (l : nat) (r r1 : list B.instr)
+  : Lemma (requires m.B.m_rest == B.IJump l :: r /\ lbl (code m) l == Some r1) (ensures tS e pt m (B.set_rest m r1)) = ()
+let n_label (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (l : nat) (r : list B.instr)
+  : Lemma (requires m.B.m_rest == B.ILabel l :: r) (ensures tS e pt m (B.set_rest m r)) = ()
+let n_ret (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (o : B.operand) (r : list B.instr) (v : B.val_)
+  : Lemma (requires m.B.m_rest == B.IReturn o :: r /\ read_o (code m) (fp m) (st m) o == Some v)
+          (ensures B.next e pt m == B.do_return (B.set_rest m r) v) = ()
