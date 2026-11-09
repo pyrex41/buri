@@ -35,7 +35,9 @@ All checks are `nice -n 19` and verify one module at a time.
 - `./check_all.sh` verifies every module from an empty cache, in dependency order, and writes
   `timings-all.txt`.
 - `./run_stage0.sh` runs the stage 0 judge on all 24 files and writes `stage0-timings.txt`.
-- `./seeds.sh` reruns the three hardest modules with `--z3seed 1..5` and writes `seeds.txt`.
+- `./seeds.sh` reruns the six hardest modules with `--z3seed 1..5` and writes `seeds.txt`.
+- `./gen_sim.sh` regenerates `Buri.JitLowerSim.fst` and `Buri.JitLowerSimEval.fst` from their `.fst.tpl`
+  templates (see the sim section).
 - `./gen_stage0.sh` regenerates `stage0/` from pinned Shen/JIT d3348ce (see Stage 0 below).
 
 ## Fidelity rules kept
@@ -75,14 +77,57 @@ In the table below:
 | JitLowerKont.v | 170 | 194 | 3/3 | 5 | 3.8 | KD/TK/KC/RK are mutual inductive types; MEnv is restated with a pattern (see below). |
 | JitLowerStable.v | 99 | 120 | 6/6 (`K_stable`) | 40 (used 1.3) | 2.6 | `K_stable` is a mutually recursive function on the derivation, with no combined scheme. About 70 lines against Rocq's 60, with no tactic scripting. |
 | JitLowerPrim.v | 176 | 227 | 15/16 (1 subsumed) | 100 (used 1.3) | 6.8 | All `p_*` lemmas and `prim_agree`. |
-| JitLowerStep.v | 1242 | 169 | 8/83 | 5 | 1.5 | Definitions (msr, Sstar, TStar, FunRel, Com, MS, Out) and 8 small lemmas. **`sim` and its 75 supporting lemmas are not ported.** |
-| JitLowerThm.v (670d29d) | 96 (base) / 104 | 131 | 5/5, from `sim` | 5 | 2.1 | `preservation`, `related_progress`, `call_preservation` and `Ends_final`, each taking `sim` as an argument. |
-| JitLowerEquiv.v (670d29d) | 953 | 1010 | 41/52 (+1 Rocq leaves open) | 100 (used 2.6) | 8.3 | All definitions. Premise specs, worlds, ground relation, `KRel_top`, `vrefl`, `store_refl_of_fundamental`, `adequacy_of_fundamental`, `call_preservation_src_of_fundamental` (also from `sim`). **`compat_type`, unproved in Rocq, is proved.** |
+| JitLowerStep.v | 1242 | 169 + 865 + 291 | `sim` proved (all 83 Rocq lemmas covered; inversion lemmas become matches) | 300 (used 15.2) | 1.8 + 41.8 + 35.9 | Definitions in `JitLowerStep`; proofs in `JitLowerSim` and `JitLowerSimEval` (see below). |
+| JitLowerThm.v (670d29d) | 96 (base) / 104 | 131 + 86 | 5/5, outright | 60 (used 1.6) | 2.6 + 5.6 | `JitLowerFinal` proves `preservation`, `related_progress` and `call_preservation` outright from `sim`. The `JitLowerThm` versions, which take an informative Type-valued `sim`, are kept. |
+| JitLowerEquiv.v (670d29d) | 953 | 1010 | 41/52 (+1 Rocq leaves open) | 100 (used 2.6) | 8.3 | All definitions. Premise specs, worlds, ground relation, `KRel_top`, `vrefl`, `store_refl_of_fundamental`, `adequacy_of_fundamental`, `call_preservation_src_of_fundamental` (outright in `JitLowerFinal`, from `fundamental_statement` only, as in Rocq). **`compat_type`, unproved in Rocq, is proved.** |
+| (Rocq leaves these unproved) | | 321 (`JitLowerCompat`) | `compat_let`, `compat_if`, `VRel_wext`, `VRel_down` | 150 (used 1.6) | 6.1 | All four are unproved in Rocq; proved here. |
 | Helpers (`Buri.Lib`, `LibTest`) | n/a | 189 + 388 | n/a | 5 | 1.0 | Rocq standard-library semantics: truncated N subtraction, `Z.quot`/`Z.div`, two's-complement bit ops, list edge cases. 380 test vectors. |
-| **Total, without tests or generated data** (F* includes `Buri.Lib`, `Buri.Unfinished`) | **6,855** | **5,909** | | | **69.9 for all modules** | Rocq's `JitLowerStep` proof (about 1,100 lines) is the missing bulk. |
+| **Total, without tests or generated data** (F* includes `Buri.Lib`, `Buri.Unfinished`) | **6,855** | **7,795** | | | **183 for all modules** | Every Rocq theorem in scope is proved, plus four that Rocq leaves open. |
 
-The whole port, every module from an empty cache, took 76 s wall and 70 s CPU, nice'd on a loaded
-machine.
+The whole port, every module from an empty cache, took 251 s wall and 183 s CPU, nice'd on a
+loaded machine (load average 25 to 35). The first pilot, before `sim` and the compat lemmas,
+took 76 s wall.
+
+## The simulation `sim` (follow-up)
+
+`rocq/JitLowerStep.v`'s proof part (about 1,130 lines, 83 lemmas) is ported as `Buri.JitLowerSim`
+(865 lines) and `Buri.JitLowerSimEval` (291 lines). `Buri.JitLowerFinal` (86 lines) then proves
+JitLowerThm's theorems and `call_preservation_src_of_fundamental` outright.
+- Wall clock: about 65 minutes of agent time for all of it (reading the Rocq, writing, checking),
+  in nine committed steps. CPU to check: 41.8 s and 35.9 s for the two modules.
+- Form: Rocq's `Out` is a Prop, and `FunRel` holds CompFn as a proposition. Building `MS` for a
+  called function needs the derivation, which only a proof (ghost) context can take out of a
+  proposition. So the simulation lemmas conclude `iout` (an `out` derivation exists), as Rocq's
+  `Out`. `sim` is `Lemma (iout e pt sealed s c m)` given `h : mS s c m`, and `preservation` is a
+  recursive lemma on `%[n; msr c]` concluding `inhabited (pres_result ...)`.
+- Inversion: Rocq's `inversion` on Comp/KD/TK becomes a `match` on the F* derivation.
+  Constructors have up to 38 arguments, and F* has no named or partial constructor patterns, so
+  the proof files are written as templates (`.fst.tpl`) with patterns like `KD_tail 29=ct 38=rk`
+  inside double-percent markers. `expand_patterns.py` expands them with arities read from the
+  declarations. The generated `.fst` files are committed; regenerate with `./gen_sim.sh`.
+  Hand-counted patterns failed twice before this was in place.
+- Z3 trouble was small:
+  - one `msr` arithmetic fact (the cons chain) needed three explicit equations;
+  - two pattern-position slips were caught by the checker;
+  - one wrong argument (`s - 1` for `s`) was caught by a subtyping failure;
+  - everything else went through as written, including `run_moves`, `tail_fire`, `ta_start` and
+    the 19-case `step_eval0`. `ret_tail` is the hardest query (15.2 rlimit used of 150).
+
+## Compatibility lemmas for `if` and `let` (follow-up)
+
+`Buri.JitLowerCompat` (321 lines) proves `compat_let_statement` and `compat_if_statement`, both
+unproved in Rocq. They need `VRel_wext_statement` and `VRel_down_statement`, also unproved in
+Rocq, which are proved here too.
+- Structure: a one-step-back lemma (`obsT_back`, the generalization of `compat_type`'s
+  `obsT_tau_back` to Ret and Throw configurations), the frame lemmas `kRel_let` and `kRel_if`
+  (continuation relatedness for a pushed `KLet`/`KIf`), `throw_frame`, `kRel_mono`, `kRef_at`,
+  `envRel_mono`/`envRel_cons`, and then `compat_let`/`compat_if`.
+- Wall clock: about 20 minutes, mostly writing. The module checked on the first run, in 6.1 s.
+  A negative control (swapping the `if` branches in `kRel_if`) fails as it should.
+- Why Z3 was not brittle here: the earlier lessons were applied from the start. Every
+  quantified subformula has a name (`equiv_upto`, `equiv_below`, `not_final_shape`), relations
+  are only ever compared pointwise, and each step instantiates the KRef/KRel quantifiers
+  explicitly with `introduce`. No restatement was needed.
 
 ## Stage 0 judge (item 3)
 
@@ -112,13 +157,17 @@ machine.
 
 ## Stability (z3seed 1 to 5)
 
-The three hardest lemmas, by consumed rlimit, are:
+The hardest lemmas, by consumed rlimit, are:
 - `JitMeta.excluded_prims_stuck` (20.1 used of 60);
+- `JitLowerSim.ret_tail` (15.2 of 150) and `ret_call` (10.7);
 - the mutual `JitLowerCheck.chk_sound` block (9.7 of 40);
-- `JitLowerEquiv.compat_type` (2.6 of 100).
+- the `JitLowerSimEval.step_eval0`/`step_op` block (8.0 of 300);
+- `JitLowerEquiv.compat_type` (2.6 of 100);
+- `JitLowerCompat.compat_if` and `kRel_if` (1.6 of 150).
 
-`seeds.sh` reran each of their modules with `--z3seed` 1 to 5: **15 of 15 runs pass**. Module CPU
-spread was 2.1 to 2.9 s, 18.5 to 26.2 s and 6.8 to 9.7 s respectively.
+`seeds.sh` reran each of their six modules with `--z3seed` 1 to 5: **30 of 30 runs pass**. Module
+CPU spread was 2.8 to 3.1 s (JitMeta), 26 to 30 s (JitLowerCheck), 10 to 12 s (JitLowerEquiv),
+41 to 50 s (JitLowerSim), 33 to 34 s (JitLowerSimEval) and 6.4 to 7.2 s (JitLowerCompat).
 
 ## Encoding differences (statements unchanged in meaning)
 
@@ -194,24 +243,23 @@ spread was 2.1 to 2.9 s, 18.5 to 26.2 s and 6.8 to 9.7 s respectively.
      mechanical `rewrite`.
    - Once stated well, all hard modules passed 5 of 5 seeds.
 
-**Overall:** for computation-heavy validation and for definitional or structural proofs, F* looks
-faster both to write and to check. For the still-unproved compatibility lemmas the outcome is
-still open:
-- they are multi-step simulations over a nondeterministic `step_r`;
-- the one proved here (`compat_type`) is the easiest, with one step on each side;
-- `if` and `let` need continuation-relatedness for pushed frames, as `KRel` for `KIf`/`KLet`
-  frames, and those are exactly the quantifier-heavy shapes where Z3 was brittle.
+**Overall (after the follow-up):**
+- `sim` took about 65 minutes for about 1,150 lines, against about 1,130 lines of Rocq. The size
+  is about the same; the cost is in constructor patterns (now handled by a template), not in Z3.
+- `compat_if` and `compat_let`, plus the `VRel_wext`/`VRel_down` they need (all four unproved in
+  Rocq), took about 20 minutes and checked on the first run.
+- For this project, F* was at least as fast to write, once quantified statements are named and
+  relations compared pointwise. Checking stays small: 183 s CPU for the whole port.
+- The caveat: the first time each Z3 failure mode appeared (lambdas, function equality,
+  multi-variable instantiation) cost 10 to 30 minutes. A Rocq user would not have hit them.
 
 ## What remains unported
 
-- **`JitLowerStep.sim`** (Rocq: about 1,100 lines, 75 lemmas such as `step_eval0`, `step_ret`,
-  `ret_prim`, `ret_call`, `ret_tail`, `tail_fire`, `ta_start` and `run_moves`). This is the largest
-  gap. `preservation`, `related_progress`, `call_preservation` and
-  `call_preservation_src_of_fundamental` are proved here only from it.
 - **JitLowerEquiv:**
-  - The unproved Rocq statements are not ported, not even as definitions: `eq_budget`,
-    `jit_eq_per`, `sealed_stable`, `storehas_stable`, `VRel_down`, `VRel_wext`, `ERel_down`,
-    `KRef_refl`, `KRef_scope`, and the `compat_*` statements other than `compat_type`.
+  - Unproved in Rocq and not ported here, not even as definitions: `eq_budget`, `jit_eq_per`,
+    `sealed_stable`, `storehas_stable`, `ERel_down`, `KRef_refl`, `KRef_scope`, and the
+    compat lemmas for `and`, `or`, `cond`, `trap`, `lambda`, `freeze`, `call`, `app` and
+    `defun`. Now proved here: `compat_type`, `compat_let`, `compat_if`, `VRel_wext`, `VRel_down`.
   - These small helper lemmas are not needed by the ported proofs: `nodup_fst_uniq`,
     `filter_fst_nil`, `GVal_partial`, `VBody_partial`, `leb_S_false`, `SRel_with_wf`,
     `Forall2_refl_env` and `lookup_In`.
@@ -221,8 +269,10 @@ still open:
 
 ## Effort
 
-- **Wall clock:** about 1 h 55 min of one agent, 11:08 to 13:05 CST, including downloading F*,
-  regenerating the pinned stage 0, and the clean timing and seed runs.
+- **Wall clock:** pilot about 1 h 55 min (11:08 to 13:05 CST, including downloading F*,
+  regenerating the pinned stage 0, and the timing and seed runs). Follow-up about 1 h 30 min:
+  `sim` about 65 min, compat about 20 min, timing and seeds after that. A network outage
+  interrupted the follow-up near its start.
 - **Tokens:** not measured. A rough estimate is 0.15 M output tokens and about 6 to 8 M input
   tokens processed across the session; most of the input is re-reading the growing context, not
   new reading.
