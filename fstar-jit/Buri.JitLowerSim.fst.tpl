@@ -707,3 +707,70 @@ let ret_prim (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : 
     inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
       (MS_op g top a o2 top2 r1' rho k' wt m () co1 () () () kd'))
 #pop-options
+
+#push-options "--z3rlimit 150 --fuel 2 --ifuel 1"
+let ret_call (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (v : value) (v' : B.val_)
+  (m : B.machine) (f : name) (vals : list value) (es : list expr) (rho : lenv) (k1 : list frame) (g : env)
+  (a s0 d n : nat) (i : B.instr) (r1 : list B.instr) (w1 : nat -> prop) (dv : vr v v')
+  (cw : compW (code m) g (s0 + 1) es m.B.m_rest (i :: r1)) (aa : argsAt (st m) (fp m + a + 2) (rev vals))
+  (kd : kD (code m) (fp m) (st m) (cs m) w1 (B.OSlot d) r1 k1)
+  : Lemma (requires com s m /\ slotv (st m) (fp m + s0) == Some v' /\ not_prim_name f /\
+                    s0 = a + 2 + length vals /\ n = length vals + 1 + length es /\
+                    menv (fp m) (st m) g rho /\ envBelow g (s0 + 1) /\ call_instr i d a (B.sym_of_text f) n /\
+                    above (fp m) a w1 /\ w1 (fp m + d))
+          (ensures iout e pt sealed s (cfg (Ret v) (KCallArgs f vals es rho :: k1) s) m) =
+  let c0 = cfg (Ret v) (KCallArgs f vals es rho :: k1) s in
+  kD_notrap kd;
+  rev_length vals;
+  let aa2 : argsAt (st m) (fp m + a + 2) (app (rev vals) [v]) = argsAt_snoc aa v v' dv in
+  assert (rev (v :: vals) == app (rev vals) [v]);
+  match cw with
+  | %%W_nil%% ->
+    rev_length (v :: vals);
+    named_call e pt sealed s c0 c0.kont m f (rev (v :: vals)) k1 i d a n r1 w1 aa2 kd
+  | %%W_cons 3=e1 4=es' 6=r1' 8=c1 9=c2%% ->
+    let k' = KCallArgs f (v :: vals) es' rho :: k1 in
+    let c' = cfg (Eval rho e1) k' s in
+    let wt = w_top (fp m) (s0 + 1) in
+    prot_below g (fp m) (s0 + 1) wt;
+    let kd' = KD_call (code m) (fp m) (st m) (cs m) wt r1' f (v :: vals) es' rho k1 g a (s0 + 1) d n i r1 w1
+      () () () () () () c2 () aa2 () () () () kd in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g (s0 + 1 + 1) e1 (DSlot (s0 + 1)) r1' rho k' wt m () c1 () () ()
+        (KC_slot (code m) (fp m) (st m) (cs m) wt (s0 + 1) r1' k' () kd')))
+
+let rec ta_weaken (ms : list (nat & nat)) (s0 n t lim : nat)
+  : Lemma (requires forall_l (fun (m : nat & nat) -> 2 <= fst m /\ fst m < s0 + 1 /\ n + 2 <= snd m /\ snd m < t) ms /\
+                    lim = n + 2 /\ s0 + 1 <= lim)
+          (ensures forall_l (fun (x : nat & nat) -> 2 <= fst x /\ fst x < lim /\ lim <= snd x) ms /\
+                   forall_l (fun (x : nat & nat) -> 2 <= fst x /\ fst x < s0 + 1 /\ n + 2 <= snd x /\ snd x < t) ms) =
+  match ms with [] -> () | _ :: r -> ta_weaken r s0 n t lim
+
+let ret_tail (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name) (s : store) (v : value) (v' : B.val_)
+  (m : B.machine) (f : name) (vals : list value) (es : list expr) (rho : lenv) (k1 : list frame) (g : env)
+  (s0 t : nat) (ms : list (nat & nat)) (n : nat) (i : B.instr) (r1 : list B.instr) (dv : vr v v')
+  (ct : compTA (code m) g (s0 + 1) t es ms m.B.m_rest (i :: r1)) (pa : paramAt (fp m) (st m) ms 2 (rev vals))
+  (rk : rK (fp m) (st m) (cs m) k1)
+  : Lemma (requires com s m /\ slotv (st m) (fp m + loc ms s0) == Some v' /\ not_prim_name f /\
+                    s0 = 2 + length vals /\ n = length vals + 1 + length es /\ n + 2 <= t /\
+                    menv (fp m) (st m) g rho /\ envBelow g t /\ tail_instr i 0 (B.sym_of_text f) n /\
+                    forall_l (fun (m : nat & nat) -> 2 <= fst m /\ fst m < s0 + 1 /\ n + 2 <= snd m /\ snd m < t) ms /\
+                    nodup_l (map fst ms))
+          (ensures iout e pt sealed s (cfg (Ret v) (KCallArgs f vals es rho :: k1) s) m) =
+  let c0 = cfg (Ret v) (KCallArgs f vals es rho :: k1) s in
+  rK_notrap rk;
+  rev_length vals;
+  let pa2 : paramAt (fp m) (st m) ms 2 (app (rev vals) [v]) = paramAt_snoc pa v v' dv in
+  assert (rev (v :: vals) == app (rev vals) [v]);
+  match ct with
+  | %%TA_nil%% ->
+    rev_length (v :: vals);
+    ta_weaken ms s0 n t (n + 2);
+    tail_fire e pt sealed s c0 c0.kont m f (rev (v :: vals)) k1 ms i n r1 (n + 2) pa2 rk
+  | %%TA_same%% | %%TA_temp%% | %%TA_direct%% ->
+    let (e1 :: es') = es in
+    let k' = KCallArgs f (v :: vals) es' rho :: k1 in
+    let c' = cfg (Eval rho e1) k' s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (ta_start #s m rho e1 es' ms r1 i (s0 + 1) t f (v :: vals) k1 g n ct pa2 rk))
+#pop-options
