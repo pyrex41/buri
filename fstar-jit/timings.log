@@ -263,3 +263,4 @@ Buri.JitLowerThm.fst rc=0 wall=2s cpu=2.2s
 Buri.JitLowerEquiv.fst rc=0 wall=13s cpu=9.34s 
 Buri.Unfinished.fst rc=1 wall=0s cpu=0.03s 
 Buri.Unfinished.fst rc=0 wall=7s cpu=4.11s 
+Buri.JitLowerEquiv.fst rc=0 wall=25s cpu=11.42s 

@@ -935,3 +935,76 @@ let call_preservation_src_of_fundamental (#e : B.env) (#pt : B.tree (B.prim & na
              (ES_err x l msg tv m2 s0 (compose_world w1 w2) (star_nil_sstar h0) () () () () ()) ts)
          end))
 #pop-options
+
+(* ======================= a compatibility lemma (NOT proved in Rocq) ======================= *)
+(* Rocq states compat_type_statement and leaves it unproved, with the other compat_ lemmas. *)
+let compat_type_statement (sealed : list name) (dd : list (name & fundef)) : prop =
+  forall g a0 a. kRef sealed dd g a0 a ==> kRef sealed dd g (EType a0) (EType a)
+
+let srun_cons (sealed : list name) (c c1 c2 : config) (t : trace)
+  : Lemma (requires next_r (rr sealed) pr c == MTau c1 /\ srun sealed c1 t c2) (ensures srun sealed c t c2) =
+  eliminate exists (h : star (step_r (rr sealed) pr) c1 t c2). True
+  with inhabits (Star_step c Tau c1 t c2 (Step_r_tau c c1 ()) h)
+let srun_cons_res (sealed : list name) (c : config) (r : resource) (x : exn) (c2 : config) (t : trace)
+  : Lemma (requires running_state c = true /\ (rr sealed).resource_exn r == Some x /\
+                    srun sealed (cfg (Throw x) c.kont c.mem) t c2) (ensures srun sealed c t c2) =
+  eliminate exists (h : star (step_r (rr sealed) pr) (cfg (Throw x) c.kont c.mem) t c2). True
+  with inhabits (Star_step c Tau (cfg (Throw x) c.kont c.mem) t c2 (Step_r_resource c r x () ()) h)
+
+(* One internal step on each side, from running states that are evaluations: observation after it
+   gives observation before it, provided resource errors (which either side may raise at any
+   running state) are related too. *)
+#push-options "--z3rlimit 100 --fuel 1 --ifuel 1"
+let obsT_tau_back (sealed : list name) (j : nat) (w : world) (c0 c0' c c1 : config)
+  : Lemma (requires Eval? c.ctl /\ Eval? c0.ctl /\
+                    next_r (rr sealed) pr c0 == MTau c0' /\ next_r (rr sealed) pr c == MTau c1 /\
+                    obsT sealed j w c0' c1 /\
+                    (forall (x : exn). obsT sealed j w (cfg (Throw x) c0.kont c0.mem) (cfg (Throw x) c.kont c.mem)))
+          (ensures obsT sealed j w c0 c) =
+  introduce forall (n : nat) (t : trace) (c' : config). n < j ==> (forall (h : runs sealed n c t c').
+   (forall v s. c' == cfg (Ret v) [] s ==> (exists v0 s0 w'.
+      srun sealed c0 t (cfg (Ret v0) [] s0) /\ wext w w' /\ gVal w' v0 v /\ gStore w' s0 s)) /\
+   (forall x s. c' == cfg (Throw x) [] s ==> (exists s0 w'.
+      srun sealed c0 t (cfg (Throw x) [] s0) /\ wext w w' /\ gStore w' s0 s)) /\
+   (forall why. next_r (rr sealed) pr c' == MWrong why ==> (exists c0' why0.
+      srun sealed c0 t c0' /\ next_r (rr sealed) pr c0' == MWrong why0)))
+  with introduce _ ==> _ with
+  introduce forall (h : runs sealed n c t c'). _
+  with (match h with
+    | Runs_0 _ -> ()
+    | Runs_S n1 _ l c1' t1 _ st rest ->
+      (match st with
+       | Step_r_tau _ _ _ ->
+         assert (c1' == c1);
+         introduce forall (c2 : config). srun sealed c0' t1 c2 ==> srun sealed c0 t1 c2
+         with introduce _ ==> _ with srun_cons sealed c0 c0' c2 t1
+       | Step_r_resource _ r x _ _ ->
+         introduce forall (c2 : config). srun sealed (cfg (Throw x) c0.kont c0.mem) t1 c2 ==> srun sealed c0 t1 c2
+         with introduce _ ==> _ with srun_cons_res sealed c0 r x c2 t1))
+#pop-options
+
+#push-options "--z3rlimit 100 --fuel 2 --ifuel 1"
+let compat_type (sealed : list name) (dd : list (name & fundef)) (g : list name) (a0 a : expr)
+  : Lemma (requires kRef sealed dd g a0 a) (ensures kRef sealed dd g (EType a0) (EType a)) =
+  introduce forall (k : nat) w rho0 rho. wf_world w ==> envRel_with (vRel sealed dd k) w g rho0 rho ==>
+    eRel sealed dd k w rho0 (EType a0) rho (EType a)
+  with introduce _ ==> _ with introduce _ ==> _ with
+  introduce forall (j : nat). j <= k ==> (forall w'. wext w w' ==> (forall k0 kk. kRel_with sealed dd (vRelF sealed dd k) j w' k0 kk ==>
+   (forall s0 s. sRel_with dd (vRelF sealed dd k j) w' s0 s ==>
+     obsT sealed j w' (cfg (Eval rho0 (EType a0)) k0 s0) (cfg (Eval rho (EType a)) kk s))))
+  with introduce _ ==> _ with
+  introduce forall w'. wext w w' ==> _ with introduce _ ==> _ with
+  introduce forall k0 kk. kRel_with sealed dd (vRelF sealed dd k) j w' k0 kk ==> _ with introduce _ ==> _ with
+  introduce forall s0 s. sRel_with dd (vRelF sealed dd k j) w' s0 s ==> _ with introduce _ ==> _ with begin
+    assert (eRel sealed dd k w rho0 a0 rho a);
+    assert (obsT sealed j w' (cfg (Eval rho0 a0) k0 s0) (cfg (Eval rho a) kk s));
+    wext_refl w';
+    assert (forall (x : exn). obsT sealed j w' (cfg (Throw x) k0 s0) (cfg (Throw x) kk s));
+    obsT_tau_back sealed j w' (cfg (Eval rho0 (EType a0)) k0 s0) (cfg (Eval rho0 a0) k0 s0)
+      (cfg (Eval rho (EType a)) kk s) (cfg (Eval rho a) kk s)
+  end
+#pop-options
+
+let compat_type_proved (sealed : list name) (dd : list (name & fundef)) : Lemma (compat_type_statement sealed dd) =
+  introduce forall g a0 a. kRef sealed dd g a0 a ==> kRef sealed dd g (EType a0) (EType a)
+  with introduce _ ==> _ with compat_type sealed dd g a0 a
