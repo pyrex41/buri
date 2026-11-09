@@ -1241,9 +1241,11 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.4, and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Forty-three statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Fifty-six statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. They do not relate the bytecode to KLambda or to machine code. Comparison
-with the binary is test evidence. Shen/JIT is not verified.
+with the binary is test evidence. Shen/JIT is not verified. Thirteen of the fifty-six are in `rocq/JitLowerEquiv.v`:
+the refinement relation for the lowerer's front passes, and the composition of two front links with `call_preservation`,
+proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
 its erasure to KLambda, and a judge of the emit pass alone on captured witnesses. 72 of 950 stage 0 definitions are
