@@ -490,3 +490,96 @@ let n_label (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (l : nat) (
 let n_ret (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (o : B.operand) (r : list B.instr) (v : B.val_)
   : Lemma (requires m.B.m_rest == B.IReturn o :: r /\ read_o (code m) (fp m) (st m) o == Some v)
           (ensures B.next e pt m == B.do_return (B.set_rest m r) v) = ()
+
+(* ---------- tests ---------- *)
+let com_rest (s : store) (m : B.machine) (r : list B.instr) : Lemma (requires com s m) (ensures com s (B.set_rest m r)) = ()
+
+#push-options "--z3rlimit 100 --fuel 2 --ifuel 1"
+let rec tk_true (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool) (#l : nat)
+  (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k) (s : store) (m : B.machine)
+  : Lemma (requires com s m /\ code m == c /\ fp m == f /\ st m == s0 /\ cs m == ks /\ m.B.m_rest == r)
+          (ensures iout e pt sealed s (cfg (Ret (VBool true)) k s) m) (decreases tk) =
+  let c0 = cfg (Ret (VBool true)) k s in
+  match tk with
+  | TK_if _ _ _ _ _ _ _ a _ rho k1 g top dst r2 _ _ w1 _ _ _ ca _ _ _ _ kc1 _ ->
+    let c' = cfg (Eval rho a) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top a dst r2 rho k1 w1 m () ca () () () kc1))
+  | TK_cond _ _ _ _ _ _ _ a _ rho k1 g top dst r2 _ _ w1 _ _ _ ca _ _ _ _ kc1 _ ->
+    let c' = cfg (Eval rho a) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top a dst r2 rho k1 w1 m () ca () () () kc1))
+  | TK_and _ _ _ _ _ gd1 l1 _ y rho k1 g top r2 w1 _ _ _ cy _ _ tk1 ->
+    let c' = cfg (Eval rho y) (KAndR :: k1) s in
+    let tk2 = TK_andr c f s0 ks w1 gd1 l1 r2 k1 w1 () tk1 in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_test g top y l1 r2 rho (KAndR :: k1) w1 m () cy () () () tk2))
+  | TK_andr _ _ _ _ _ _ _ _ k1 _ _ tk1 ->
+    tk_true e pt sealed tk1 s m; iout_s e pt sealed s c0 (cfg (Ret (VBool true)) k1 s) m
+  | TK_or _ _ _ _ _ _ _ _ _ _ _ k1 _ _ _ _ _ _ _ _ _ _ _ _ _ tk2 ->
+    tk_true e pt sealed tk2 s m; iout_s e pt sealed s c0 (cfg (Ret (VBool true)) k1 s) m
+  | TK_orr _ _ _ _ _ _ _ _ k1 _ _ tk1 ->
+    tk_true e pt sealed tk1 s m; iout_s e pt sealed s c0 (cfg (Ret (VBool true)) k1 s) m
+  | TK_jump _ _ _ _ _ _ _ e0 r0 r1 _ _ tk1 ->
+    com_rest s m r1; n_jump e pt m e0 r0 r1;
+    tk_true e pt sealed tk1 s (B.set_rest m r1); iout_t e pt sealed s c0 m (B.set_rest m r1)
+  | TK_label _ _ _ _ _ _ _ x r0 _ tk1 ->
+    com_rest s m r0; n_label e pt m x r0;
+    tk_true e pt sealed tk1 s (B.set_rest m r0); iout_t e pt sealed s c0 m (B.set_rest m r0)
+  | TK_value _ _ _ _ _ _ d kt _ r2 _ _ w1 _ _ _ _ _ kd1 _ ->
+    n_const e pt m d kt r2 (B.VBool true);
+    let m1 = wr m r2 d (B.VBool true) in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c0 m1 (SS_refl c0) (Inl (TPlus m1 () (TS_refl m1)))
+      (ms_write #s #m (KC_slot c f s0 ks w1 d r2 k () kd1) (VR_bool true)))
+
+let rec tk_false (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool) (#l : nat)
+  (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k) (s : store) (m : B.machine) (re : list B.instr)
+  : Lemma (requires com s m /\ code m == c /\ fp m == f /\ st m == s0 /\ cs m == ks /\ lbl c l == Some re /\ m.B.m_rest == re)
+          (ensures iout e pt sealed s (cfg (Ret (VBool false)) k s) m) (decreases tk) =
+  let c0 = cfg (Ret (VBool false)) k s in
+  match tk with
+  | TK_if _ _ _ _ _ _ _ _ b rho k1 g top dst _ r3 r4 w1 _ _ _ _ _ cb _ _ _ kc2 ->
+    let c' = cfg (Eval rho b) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top b dst r4 rho k1 w1 m () cb () () () kc2))
+  | TK_cond _ _ _ _ _ _ _ _ rest rho k1 g top dst _ r3 r4 w1 _ _ _ _ _ cb _ _ _ kc2 ->
+    let c' = cfg (Eval rho (ECond rest)) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top (ECond rest) dst r4 rho k1 w1 m () cb () () () kc2))
+  | TK_and _ _ _ _ _ _ _ _ _ _ k1 _ _ _ _ _ _ _ _ _ _ tk1 ->
+    tk_false e pt sealed tk1 s m re; iout_s e pt sealed s c0 (cfg (Ret (VBool false)) k1 s) m
+  | TK_andr _ _ _ _ _ _ _ _ k1 _ _ tk1 ->
+    tk_false e pt sealed tk1 s m re; iout_s e pt sealed s c0 (cfg (Ret (VBool false)) k1 s) m
+  | TK_or _ _ _ _ _ gd1 l1 _ _ y rho k1 g top r2 r3 w1 _ _ _ _ cy _ _ tk1 _ ->
+    let c' = cfg (Eval rho y) (KOrR :: k1) s in
+    let tk2 = TK_orr c f s0 ks w1 gd1 l1 r3 k1 w1 () tk1 in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_test g top y l1 r3 rho (KOrR :: k1) w1 m () cy () () () tk2))
+  | TK_orr _ _ _ _ _ _ _ _ k1 _ _ tk1 ->
+    tk_false e pt sealed tk1 s m re; iout_s e pt sealed s c0 (cfg (Ret (VBool false)) k1 s) m
+  | TK_jump _ _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_false e pt sealed tk1 s m re
+  | TK_label _ _ _ _ _ _ _ _ _ _ tk1 -> tk_false e pt sealed tk1 s m re
+  | TK_value _ _ _ _ _ _ d _ kf _ r4 _ w1 _ _ _ _ _ _ kd2 ->
+    n_const e pt m d kf r4 (B.VBool false);
+    let m1 = wr m r4 d (B.VBool false) in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c0 m1 (SS_refl c0) (Inl (TPlus m1 () (TS_refl m1)))
+      (ms_write #s #m (KC_slot c f s0 ks w1 d r4 k () kd2) (VR_bool false)))
+
+let rec tk_nb (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool) (#l : nat)
+  (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k) (s : store) (v : value)
+  : Pure (k' : list frame & sstar sealed (cfg (Ret v) k s) (cfg (Throw XNotBoolean) k' s))
+    (requires gd = true /\ not (VBool? v)) (ensures fun res -> notrap (dfst res)) (decreases tk) =
+  let c0 = cfg (Ret v) k s in
+  match tk with
+  | TK_if _ _ _ _ _ _ _ _ _ _ k1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ kc1 _ -> kC_notrap kc1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | TK_cond _ _ _ _ _ _ _ _ _ _ k1 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ kc1 _ -> kC_notrap kc1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | TK_and _ _ _ _ _ _ _ _ _ _ k1 _ _ _ _ _ _ _ _ _ _ tk1 -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | TK_andr _ _ _ _ _ _ _ _ k1 _ _ tk1 -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | TK_or _ _ _ _ _ _ _ _ _ _ _ k1 _ _ _ _ _ _ _ _ _ _ _ _ tk1 _ -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | TK_orr _ _ _ _ _ _ _ _ k1 _ _ tk1 -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | TK_jump _ _ _ _ _ _ _ _ _ _ _ _ tk1 -> tk_nb sealed tk1 s v
+  | TK_label _ _ _ _ _ _ _ _ _ _ tk1 -> tk_nb sealed tk1 s v
+#pop-options

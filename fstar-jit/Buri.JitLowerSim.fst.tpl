@@ -490,3 +490,96 @@ let n_label (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (l : nat) (
 let n_ret (e : B.env) (pt : B.tree (B.prim & nat)) (m : B.machine) (o : B.operand) (r : list B.instr) (v : B.val_)
   : Lemma (requires m.B.m_rest == B.IReturn o :: r /\ read_o (code m) (fp m) (st m) o == Some v)
           (ensures B.next e pt m == B.do_return (B.set_rest m r) v) = ()
+
+(* ---------- tests ---------- *)
+let com_rest (s : store) (m : B.machine) (r : list B.instr) : Lemma (requires com s m) (ensures com s (B.set_rest m r)) = ()
+
+#push-options "--z3rlimit 100 --fuel 2 --ifuel 1"
+let rec tk_true (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool) (#l : nat)
+  (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k) (s : store) (m : B.machine)
+  : Lemma (requires com s m /\ code m == c /\ fp m == f /\ st m == s0 /\ cs m == ks /\ m.B.m_rest == r)
+          (ensures iout e pt sealed s (cfg (Ret (VBool true)) k s) m) (decreases tk) =
+  let c0 = cfg (Ret (VBool true)) k s in
+  match tk with
+  | %%TK_if 8=a 10=rho 11=k1 12=g 13=top 14=dst 15=r2 18=w1 22=ca 27=kc1%% ->
+    let c' = cfg (Eval rho a) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top a dst r2 rho k1 w1 m () ca () () () kc1))
+  | %%TK_cond 8=a 10=rho 11=k1 12=g 13=top 14=dst 15=r2 18=w1 22=ca 27=kc1%% ->
+    let c' = cfg (Eval rho a) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top a dst r2 rho k1 w1 m () ca () () () kc1))
+  | %%TK_and 6=gd1 7=l1 9=y 10=rho 11=k1 12=g 13=top 14=r2 15=w1 19=cy 22=tk1%% ->
+    let c' = cfg (Eval rho y) (KAndR :: k1) s in
+    let tk2 = TK_andr c f s0 ks w1 gd1 l1 r2 k1 w1 () tk1 in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_test g top y l1 r2 rho (KAndR :: k1) w1 m () cy () () () tk2))
+  | %%TK_andr 9=k1 12=tk1%% ->
+    tk_true e pt sealed tk1 s m; iout_s e pt sealed s c0 (cfg (Ret (VBool true)) k1 s) m
+  | %%TK_or 12=k1 26=tk2%% ->
+    tk_true e pt sealed tk2 s m; iout_s e pt sealed s c0 (cfg (Ret (VBool true)) k1 s) m
+  | %%TK_orr 9=k1 12=tk1%% ->
+    tk_true e pt sealed tk1 s m; iout_s e pt sealed s c0 (cfg (Ret (VBool true)) k1 s) m
+  | %%TK_jump 8=e0 9=r0 10=r1 13=tk1%% ->
+    com_rest s m r1; n_jump e pt m e0 r0 r1;
+    tk_true e pt sealed tk1 s (B.set_rest m r1); iout_t e pt sealed s c0 m (B.set_rest m r1)
+  | %%TK_label 8=x 9=r0 11=tk1%% ->
+    com_rest s m r0; n_label e pt m x r0;
+    tk_true e pt sealed tk1 s (B.set_rest m r0); iout_t e pt sealed s c0 m (B.set_rest m r0)
+  | %%TK_value 7=d 8=kt 10=r2 13=w1 19=kd1%% ->
+    n_const e pt m d kt r2 (B.VBool true);
+    let m1 = wr m r2 d (B.VBool true) in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c0 m1 (SS_refl c0) (Inl (TPlus m1 () (TS_refl m1)))
+      (ms_write #s #m (KC_slot c f s0 ks w1 d r2 k () kd1) (VR_bool true)))
+
+let rec tk_false (e : B.env) (pt : B.tree (B.prim & nat)) (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool) (#l : nat)
+  (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k) (s : store) (m : B.machine) (re : list B.instr)
+  : Lemma (requires com s m /\ code m == c /\ fp m == f /\ st m == s0 /\ cs m == ks /\ lbl c l == Some re /\ m.B.m_rest == re)
+          (ensures iout e pt sealed s (cfg (Ret (VBool false)) k s) m) (decreases tk) =
+  let c0 = cfg (Ret (VBool false)) k s in
+  match tk with
+  | %%TK_if 9=b 10=rho 11=k1 12=g 13=top 14=dst 16=r3 17=r4 18=w1 24=cb 28=kc2%% ->
+    let c' = cfg (Eval rho b) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top b dst r4 rho k1 w1 m () cb () () () kc2))
+  | %%TK_cond 9=rest 10=rho 11=k1 12=g 13=top 14=dst 16=r3 17=r4 18=w1 24=cb 28=kc2%% ->
+    let c' = cfg (Eval rho (ECond rest)) k1 s in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_eval g top (ECond rest) dst r4 rho k1 w1 m () cb () () () kc2))
+  | %%TK_and 11=k1 22=tk1%% ->
+    tk_false e pt sealed tk1 s m re; iout_s e pt sealed s c0 (cfg (Ret (VBool false)) k1 s) m
+  | %%TK_andr 9=k1 12=tk1%% ->
+    tk_false e pt sealed tk1 s m re; iout_s e pt sealed s c0 (cfg (Ret (VBool false)) k1 s) m
+  | %%TK_or 6=gd1 7=l1 10=y 11=rho 12=k1 13=g 14=top 15=r2 16=r3 17=w1 22=cy 25=tk1%% ->
+    let c' = cfg (Eval rho y) (KOrR :: k1) s in
+    let tk2 = TK_orr c f s0 ks w1 gd1 l1 r3 k1 w1 () tk1 in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c' m (s1' c0 c' ()) (Inr ())
+      (MS_test g top y l1 r3 rho (KOrR :: k1) w1 m () cy () () () tk2))
+  | %%TK_orr 9=k1 12=tk1%% ->
+    tk_false e pt sealed tk1 s m re; iout_s e pt sealed s c0 (cfg (Ret (VBool false)) k1 s) m
+  | %%TK_jump 13=tk1%% -> tk_false e pt sealed tk1 s m re
+  | %%TK_label 11=tk1%% -> tk_false e pt sealed tk1 s m re
+  | %%TK_value 7=d 9=kf 11=r4 13=w1 20=kd2%% ->
+    n_const e pt m d kf r4 (B.VBool false);
+    let m1 = wr m r4 d (B.VBool false) in
+    inhabits (O_step #e #pt #sealed #s #c0 #m c0 m1 (SS_refl c0) (Inl (TPlus m1 () (TS_refl m1)))
+      (ms_write #s #m (KC_slot c f s0 ks w1 d r4 k () kd2) (VR_bool false)))
+
+let rec tk_nb (sealed : list name)
+  (#c : B.code) (#f : nat) (#s0 : B.tree B.val_) (#ks : list B.cont) (#w : nat -> prop) (#gd : bool) (#l : nat)
+  (#r : list B.instr) (#k : list frame) (tk : tK c f s0 ks w gd l r k) (s : store) (v : value)
+  : Pure (k' : list frame & sstar sealed (cfg (Ret v) k s) (cfg (Throw XNotBoolean) k' s))
+    (requires gd = true /\ not (VBool? v)) (ensures fun res -> notrap (dfst res)) (decreases tk) =
+  let c0 = cfg (Ret v) k s in
+  match tk with
+  | %%TK_if 11=k1 27=kc1%% -> kC_notrap kc1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | %%TK_cond 11=k1 27=kc1%% -> kC_notrap kc1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | %%TK_and 11=k1 22=tk1%% -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | %%TK_andr 9=k1 12=tk1%% -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | %%TK_or 12=k1 25=tk1%% -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | %%TK_orr 9=k1 12=tk1%% -> tK_notrap tk1; (| k1, s1' c0 (cfg (Throw XNotBoolean) k1 s) () |)
+  | %%TK_jump 13=tk1%% -> tk_nb sealed tk1 s v
+  | %%TK_label 11=tk1%% -> tk_nb sealed tk1 s v
+#pop-options
