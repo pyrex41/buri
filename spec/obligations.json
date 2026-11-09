@@ -5850,6 +5850,29 @@
    "history": []
   },
   {
+   "id": "OB-JIT-PORT-PRIMS",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-37",
+   "packages": [],
+   "status": "open",
+   "boundary": "Shen/JIT port primitives",
+   "identity": "rocq/JitProfile.v",
+   "statement": "Each port primitive the normal form calls (an NPrim operator that is not a KL primitive: 35 at v0.6, by census) has a meaning in the KLambda semantics through KLPort.port_prim in jit_rules, that meaning follows src/runtime/prims.c as JitBytecode.prim_step models it, and the bytecode's primitive refines it; or it stays a named residual with its reason.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-PORT-OPTIONS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Reuben's decision on JitProfile.jit_port_prims_proposed (18 candidates, sanity lemmas closed) wired into jit_rules, a carrier decided for byte buffers and Prolog variables or those operators kept residual, and a JitLowerPrim-style refinement lemma per wired operator.",
+   "sources": [
+    "rocq/KLPort.v",
+    "rocq/JitProfile.v",
+    "docs/SHEN-JIT.md"
+   ],
+   "history": []
+  },
+  {
    "id": "OB-JIT-EQ-CYCLE",
    "kind": "implementation-correspondence",
    "scope": "instance",

@@ -181,7 +181,8 @@ checks them in Rocq. This semantics is executable in Rocq and has no Shen counte
 ## Port options on the KLambda semantics
 
 `rocq/KLPort.v` opens the eight points where Búri's KLambda rules contradicted this port at 0.3, as a `port_rules` record.
-At 0.4 the seventh no longer applies to Shen/JIT.
+At 0.4 the seventh no longer applies to Shen/JIT. A ninth, `port_prim`, gives the port's own primitives a meaning; it is
+off in both instances (below).
 `rocq/KLSemantics.v` and `rocq/KLValue.v` are unchanged, so no existing statement changed. `next_r_agreed` and
 `step_r_agreed` prove that `agreed_rules` gives exactly `next` and `step` for every profile and configuration, which
 also stops this copy drifting from `KLSemantics.v`. `jit_rules` in `rocq/JitProfile.v` is the Shen/JIT instance.
@@ -196,6 +197,44 @@ also stops this copy drifting from `KLSemantics.v`. `jit_rules` in `rocq/JitProf
 | 6 | `time_kind_ok`, and the profile's `jit_time` | `run` and `unix` only, and `RTime`'s integer is read as binary64 bits | No theorem yet |
 | 7 | `unchecked_writes` | False from 0.4: `write-byte` follows the agreed rule (`jit_writes_checked`) | True at 0.3, when `fputc`'s result was unchecked |
 | 8 | `resource_exn` | Out of memory and stack overflow raise `XUser` with their message | `step_r_resource` lets them happen at any evaluation or return, which is broader than the binary (`OB-JIT-RESOURCES`) |
+| 9 | `port_prim` | None: a call of a name the store binds to no function raises `XUndefinedFun`, as agreed (`jit_port_prims_off`) | A candidate for 18 operators waits on a decision (`OB-JIT-PORT-PRIMS`, below) |
+
+**Port primitives.** `port_prim : name -> option (nat * rule)` is consulted only where `lookup` finds no function, and
+then is called as a table primitive is: arity check, `VPartial` below the arity, the rule's result through
+`pout_config` (`undefined_without_port_prim`, `port_prim_called`). `agreed_rules` sets it to `fun _ => None`, so
+`next_r_agreed` and `step_r_agreed` keep their statements; the mutant `ShenJitAgreedPortPrim`, which gives
+`shen-jit.write-bytes` a rule in `agreed_rules`, is rejected there.
+
+*Census, not evidence* (a walk of the 955 erased v0.6 witnesses, `/tmp/p2-v06-capture/witness`, set sha256
+`e45add98...b69dd1`; `tally_norm`'s `port_prims_used` counts only accepted definitions and is empty at 0.6): 35 operators
+of `NPrim` nodes are neither KL primitives nor `raise-cond`. Occurrences / definitions:
+`shen-jit.deref` 662/37, `shen-jit.pvar-offset` 88/13, `shen-jit.append` 72/41, `shen-jit.symbol-kind` 70/50,
+`shen-jit.pvar?` 60/12, `shen-jit.absvector3` 36/22, `char-stream?` 15/11, `shen-jit.integer?` 15/14,
+`shen-jit.tagged?` 14/12, `read-unit-string` 13/9, `shen-jit.symbol?` 11/4, `shen-jit.sealed?` 10/4,
+`shen-jit.dict-put` 5/5, `shen-jit.read-file` 5/4, `shen-jit.same?` 4/4, `shen-jit.vector?` 4/4,
+`shen-jit.dict-entries` 3/3, `shen-jit.dict-find` 3/3, `shen-jit.quiet?` 3/2; 2/2 each `shen-jit.bytes-length`,
+`.decimal`, `.exit`, `.hash`, `.inline-body`, `.pvar`, `.string->bytes` and `write-string`; 2/1 `shen-jit.install`
+and `.sealing`; 1/1 each `shen-jit.dict-remove`, `.filled-vector`, `.mark-toplevel`, `.trace-text`, `.u8` and
+`.write-bytes` (the port's `pr`). `shen-jit.inlined?` and `shen-jit.arity?` occur 0 times.
+
+*Proposal, not wired in.* `jit_port_prims_proposed hash` in `rocq/JitProfile.v` gives 18 of them a rule in KL values,
+following `prims.c` as `JitBytecode.prim_step` models it: `symbol?`, `integer?`, `append`, `absvector3`,
+`filled-vector`, `tagged?`, `vector?`, `symbol-kind`, `same?`, `char-stream?`, `read-unit-string`, `write-string`,
+`hash`, `decimal` and the four dictionary operators. Each has a closed sanity lemma (`pp_*_ok`, `pp_dict_ok`);
+`jit_port_prims_arity` checks each against the bytecode table's name and arity, and `jit_port_prims_partition` that
+every census operator, and `inlined?` and `arity?`, has a candidate or a reason in `jit_port_prims_residual`, not both.
+The choices it makes: errors raise `XUser` with the message unformatted (`OB-JIT-ERROR-TEXT`); the hash, and so bucket
+order, is a parameter (the environment's `sj_hash`); `same?` and `tagged?` are undefined (`OWrong`) on pairs, strings,
+reals, exceptions and partial applications, where the bytecode is stuck on identity; dictionary keys compare by `=`
+with closure identity. No candidate: the byte-buffer operators (`write-bytes`, `string->bytes`, `bytes-length`, `u8`)
+and Prolog variables (`pvar`, `pvar?`, `pvar-offset`, `deref`), for want of a KL value to carry them; `read-file` (one
+request for a whole file); `exit` (no such outcome); `quiet?` (handler state); `mark-toplevel`, `trace-text`
+(excluded); and the operators that read code objects or the image (`install`, `inline-body`, `sealed?`, `sealing`,
+`inlined?`, `arity?`). Wiring in the 14 that need no hash (`jit_port_prims_core`: all but `hash`, `dict-find`,
+`dict-put`, `dict-remove`) replaces `(fun _ => None)` at the end of `jit_rules` with `jit_port_prims_core`; all 18
+need `(jit_port_prims_proposed hash)` and `hash` as a new parameter of `jit_rules`, as `sealed` is, at each use site.
+The mutant `ShenJitPortPrimsWired` (the core wired in) shows `jit_port_prims_off` stops that being done by accident. Even wired, no definition gains
+a verdict until `JitLowerRel` has a rule and a refinement lemma for the operator.
 
 **Exception identity isn't stated.** An `exn` has nowhere to hold a location, and adding a constructor breaks the
 exhaustive case splits in `rocq/KLambdaEvaluatorComplete.v` and `KLambdaEvaluatorRefinement.v`. So `=` on two exceptions
@@ -470,7 +509,7 @@ constants at run time. Stage 0's writer refuses to print those, so no stage 0 wi
 | `[do X Y]` | `ECall do [X; Y]` (`erase_do`) | This is the named call the source `(do X Y)` is in KLSemantics, which is how `JitLowerEquiv` (pass-equiv) states the front end, so that step is congruence. The emitter instead inlines it: X goes into a temporary, then Y is lowered in place in tail position. `check_fn` expects a call, so it rejects every `do`. Admitting the inlining is the emission relation's job, under the premise that the store's `do` is the kernel's: `do` is sealed at stage 0, and its code `(return 3)` is the kind `check_fn` accepts, so `FunRel` can cover it. An earlier version erased `do` as a fresh `let`, which `check_fn` accepted in 3 more definitions (`shen-jit.lower.finish`, `.value`, `shen.repl`). It was switched to the named call to match the front end's interface. |
 | `[prim raise-cond []]` | `ECond []` | none: it raises `XCondFail`, as `norm-cond`'s end does, and `C_cond_nil` admits it. `raise-cond` is not a KL name. |
 | `[prim Op Args]`, Op a KL primitive | `ECall Op Args`; None if the count is not Op's arity | A primitive call is a named call in `KLSemantics`, resolved in `gfuns`. This is correct under the store invariant `JitLowerStep` already assumes (`fr_prim`/`fr_name`: primitive names are bound to their `FPrim`). |
-| `[prim Op Args]`, any other Op | `ECall Op Args`, listed by `port_prims` | **Port primitive, no KL meaning**: the KL store defines no such name, so the call raises `XUndefinedFun`. Each one needs a primitive spec and a ledger entry. These include `shen-jit.inlined?` (`open-call`'s guard) and `shen-jit.arity?` (`fn-call`'s test). Both are C primitives (`src/runtime/prims.c`, `P_INLINEDP`/`P_ARITYP`) that read a function's current code object, and their specs must make the guard's two branches agree. |
+| `[prim Op Args]`, any other Op | `ECall Op Args`, listed by `port_prims` | **Port primitive, no KL meaning**: the KL store defines no such name, and `jit_rules`' `port_prim` is off, so the call raises `XUndefinedFun` (see Port primitives above). Each one needs a primitive spec and a ledger entry. These include `shen-jit.inlined?` (`open-call`'s guard) and `shen-jit.arity?` (`fn-call`'s test). Both are C primitives (`src/runtime/prims.c`, `P_INLINEDP`/`P_ARITYP`) that read a function's current code object, and their specs must make the guard's two branches agree. |
 | `[call F Args]` | `ECall F Args` | none for erase. Port functions called this way are ordinary KL defuns in `src/port/shen-jit.kl`, so the store's definitions give their meaning: `shen-jit.eval-kl` (line 10), `shen-jit.undo` (196), `shen-jit.unify=` (201), `shen-jit.unify=!` (234), `shen-jit.deref=` (177, 0.6), `shen.bindv`. Relating `unified-now`/`bound-now`'s expansions to `is`, `is!` and `shen.bind!` belongs to the front end. One semantic difference goes in the ledger rather than being left as a pending proof: `shen-jit.eval-kl` returns any non-pair unchanged, while KL's `eval-kl` raises `XEvalKL` on a closure or vector (`parse` fails). |
 | `[apply F]` | `EApp F []`, the thaw of a frozen value | Also `norm-apply`'s zero-argument dynamic call. Relating it to the source's `(thaw X)` needs the kernel's `thaw` (front end). |
 | `[apply F X]` | `EApp F [X]` | Uncurrying back to `(F A B)` belongs to the front end. |
