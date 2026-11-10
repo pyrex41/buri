@@ -157,6 +157,7 @@ Print Assumptions JitKRefBase.JitKRefBase.SRel_with_cell.
 Print Assumptions JitKRefBase.JitKRefBase.ERel_anti_app_lam.
 Print Assumptions JitKRefBase.JitKRefBase.VRel_ptrs.
 Print Assumptions JitKRefBase.JitKRefBase.world_closed.
+Print Assumptions JitKRefBase.JitKRefBase.world_closed_alloc.
 Print Assumptions JitKRefBase.JitKRefBase.prim_gfuns.
 Print Assumptions JitKRefBase.JitKRefBase.jit_port_prim_none.
 Print Assumptions JitKRefBase.JitKRefBase.sealed_step.

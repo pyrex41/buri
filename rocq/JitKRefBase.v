@@ -5,8 +5,8 @@
    No Definition here changes a JitKRef statement; the helper Definitions (ObsTr, nonterm, nontrap,
    swap_ok, AppRel, AppAll, sval, vptrs) are used by lemma statements only.
 
-   What is proved (every theorem is in Audit_Jit and prints "Closed under the global context"):
-   - Index and world structure. VRel_down, VRel_wext, ERel_down (the JitKRef statements); SRel,
+   What is proved (every Theorem and Corollary is in Audit_Jit and prints "Closed under the global context"):
+   - Index and world structure. VRel_down, VRel_wext, ERel_down, KRef_scope (JitKRef statements); SRel,
      KRel, ERel, EnvRel down in the index; KRel, ERel, EnvRel up in wext; ObsT down in the index
      and ANTITONE in the world (ObsT_wext_anti). Two directions the task listed are false and are
      refuted in Rocq instead: SRel is not monotone up in wext (SRel_wext_refuted: a new pair needs
@@ -29,15 +29,17 @@
    - World reachability (world_closed): under SRel, the world's source locations are closed under
      the vector pointers in their cells, as are its target locations, both duplicate-free, of equal
      size (length w), allocated, and so at most each heap's length; related values point into the
-     world, pointwise related (VRel_ptrs). vptrs is JitEqBudgetWalk.data_ptrs's text; this file does
-     not import JitEqBudgetWalk, which would load JitKRef a second way.
+     world, pointwise related (VRel_ptrs); world_closed_alloc is the same in JitEqBudgetStep's closed_in
+     form. vptrs, closed_set, dptr and closed_alloc are JitEqBudgetWalk's data_ptrs and closed_in and
+     JitEqBudgetStep's din and closed_in, same text; this file does not import those files, which would
+     load JitKRef a second way. JitEqBudgetStep's S-local lok (lok_in) does NOT follow from SRel.
    - sealed_stable and storehas_stable, by induction on star: under jit_rules no step changes a
      sealed name's function (sealed_step); defun_allowed refuses a sealed name, eval-kl's defun goes
      through the same eval_move_r rule, primitives never change gfuns (prim_gfuns), and port_prim is
      None (jit_port_prim_none).
 
    Does NOT prove: any compatibility lemma, the fundamental property, AppRel for any function value,
-   or anything about the = budget. *)
+   fv against scoped (listed for this file in JitKRef.v's file map), or anything about the = budget. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitProfile JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround.
 Import ListNotations.
@@ -1064,6 +1066,36 @@ Proof.
  - split; [exact A0|split; [exact A1|split]].
    + rewrite <- (len_map fst w). apply below_length; assumption.
    + rewrite <- (len_map snd w). apply below_length; assumption.
+Qed.
+
+(* JitEqBudgetStep.din and closed_in, same text: each cell of S is allocated and its data points into S. *)
+Fixpoint dptr (A : nat -> Prop) (v : value) : Prop := match v with
+ | VCons a b => dptr A a /\ dptr A b
+ | VVec l => A l
+ | _ => True end.
+Definition closed_alloc (h : list (list value)) (S : list nat) : Prop :=
+ forall p, In p S -> exists xs, nth_error h p = Some xs /\ Forall (dptr (fun l => In l S)) xs.
+
+Lemma dptr_vptrs : forall (A : nat -> Prop) v, (forall l, In l (vptrs v) -> A l) -> dptr A v.
+Proof.
+ intros A v. induction v; intro H; cbn [vptrs dptr] in *; auto.
+ split; [apply IHv1|apply IHv2]; intros l I; apply H; apply in_or_app; auto.
+Qed.
+
+(* world_closed in JitEqBudgetStep's form (closed_in), on each side. Not derivable from SRel:
+   JitEqBudgetStep's S-local lok (lok_in), since VRel relates closures by behaviour and identity,
+   not by the contents of their environments, which may point anywhere. *)
+Theorem world_closed_alloc : forall k w s0 s, SRel k w s0 s ->
+ closed_alloc (heap s0) (map fst w) /\ closed_alloc (heap s) (map snd w).
+Proof.
+ intros k w s0 s HS. destruct (world_closed k w s0 s HS) as (C0 & C1 & _ & _ & _ & A0 & A1 & _).
+ split.
+ - intros p I. pose proof (A0 p I) as L. destruct (nth_error (heap s0) p) as [xs|] eqn:N; [|apply nth_error_None in N; lia].
+   exists xs. split; [reflexivity|]. apply Forall_forall. intros x Ix. apply dptr_vptrs. intros l Il.
+   apply (C0 p xs I N). apply in_flat_map. exists x. auto.
+ - intros p I. pose proof (A1 p I) as L. destruct (nth_error (heap s) p) as [xs|] eqn:N; [|apply nth_error_None in N; lia].
+   exists xs. split; [reflexivity|]. apply Forall_forall. intros x Ix. apply dptr_vptrs. intros l Il.
+   apply (C1 p xs I N). apply in_flat_map. exists x. auto.
 Qed.
 
 (* ======================= sealed definitions are stable ======================= *)
