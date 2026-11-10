@@ -75,17 +75,20 @@ PROPOSALS = collections.OrderedDict([
     ('P2-wire', ('wire jit_port_prims_proposed, rule_param per rule, hash_go transcribed as the hash instance',
                  CAND_CORE | HASHED)),
     ('P2b-wire-id', ('same?/tagged? from the proposal, admitted with P1\'s RIdentity limit', ID_CAND)),
-    ('P3-stop-evalkl', ('stop outcome at a call of shen-jit.eval-kl; install is then unreached', EVALKL |
+    ('P3-stop-evalkl', ('stop outcome at shen-jit.eval-kl calls and at install (limit points)', EVALKL |
                         {'port:shen-jit.install'})),
     ('P4-sealed', ('sealed? reads jit_rules\' sealed parameter', {'port:shen-jit.sealed?'})),
     ('P5-inline-body', ('inline-body as a parameter tied to D\'s inline forms', {'port:shen-jit.inline-body'})),
     ('P6-quiet', ('quiet? read from the source continuation\'s innermost trap frame', {'port:shen-jit.quiet?'})),
-    ('P7-bytes', ('byte buffers: stop at string->bytes (P7a) or kernel-reference proofs (P7b)', BYTES)),
+    ('P7-bytes', ('byte buffers: stop at string->bytes and u8 (P7a) or kernel-reference proofs (P7b)', BYTES)),
     ('P8-stop-misc', ('stop outcomes for exit, sealing, read-file', {'port:shen-jit.exit', 'port:shen-jit.sealing',
                                                                     'port:shen-jit.read-file'})),
     ('P9-pvar', ('a Prolog-variable carrier, and same? on pairs in unify=/occurs-in?/deref=', PVAR)),
 ])
 
+# Planned ticks whose round-2 task spec may not cover them (REPORT section 2.2).
+RISKY = ['inline-int-arg', 'share-chain', 'frozen-late-hoist', 'inline-frozen', 'let-lambda', 'let-frozen-copy',
+         'bound-now', 'bound-now-frozen', 'unified-now', 'trap-other']
 PLANNED_ITEMS = None  # filled in main: every item cover() maps
 
 # ------------------------------------------------------------------ extra walk
@@ -435,11 +438,12 @@ def main(s0, cap, judge, out_tsv):
     # ---- TSV
     with open(out_tsv, 'w') as o:
         o.write('# hard_defs.py: census, not proof. One row per stage 0 definition, .forms order.\n')
+        o.write('# at_risk: planned ticks whose task spec may not cover them (inline-int-arg has no owning task spec).\n')
         o.write('# blockers: unplanned items the definition itself needs (class:item). closure-blocked-by: '
                 'definitions in its closure (not itself) that are self-blocked, up to 8, then a count.\n')
         o.write('\t'.join(['file', 'index', 'name', 'rocq_src', 'norm_nodes', 'ticks', 'in_scc', 'closure',
                            'planned_items', 'planned_coverage', 'blockers', 'decision_items',
-                           'closure_blocked_by', 'status_plan', 'proposal']) + '\n')
+                           'closure_blocked_by', 'status_plan', 'proposal', 'at_risk']) + '\n')
         selfblocked = {n for n in names if not D[n]['need'] <= planned}
         for n in names:
             r = D[n]
@@ -463,7 +467,8 @@ def main(s0, cap, judge, out_tsv):
                                ','.join(sorted({klass(x)[1] for x in un})) or '-',
                                (','.join(cb[:8]) + ('...(%d)' % len(cb) if len(cb) > 8 else '')) or '-',
                                st,
-                               (','.join(props) or '-') + ((' | closure:' + ','.join(cbprops)) if cbprops else '')])
+                               (','.join(props) or '-') + ((' | closure:' + ','.join(cbprops)) if cbprops else ''),
+                               ','.join(k for k in RISKY if r['keys'].get(k)) or '-'])
                     + '\n')
 
 if __name__ == '__main__':

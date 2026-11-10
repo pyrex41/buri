@@ -131,11 +131,11 @@ drops the call edge to the stopped callee (the claim never enters its body).
 | P1-lim | limit outcome in call_preservation_src' for a target stuck on RIdentity/RCyclic/RExcluded | 737 | 364 | 364 | 342 |
 | P2-wire | wire jit_port_prims_proposed, rule_param per rule, hash_go transcribed as the hash instance | 869 | 453 | 453 | 423 |
 | P2b-wire-id | same?/tagged? from the proposal, admitted with P1's RIdentity limit | 879 | 455 | 455 | 423 |
-| P3-stop-evalkl | stop outcome at a call of shen-jit.eval-kl; install is then unreached | 895 | 457 | 457 | 423 |
+| P3-stop-evalkl | stop outcome at shen-jit.eval-kl calls and at install (limit points) | 895 | 457 | 457 | 423 |
 | P4-sealed | sealed? reads jit_rules' sealed parameter | 897 | 458 | 458 | 424 |
 | P5-inline-body | inline-body as a parameter tied to D's inline forms | 899 | 460 | 460 | 426 |
 | P6-quiet | quiet? read from the source continuation's innermost trap frame | 901 | 460 | 460 | 426 |
-| P7-bytes | byte buffers: stop at string->bytes (P7a) or kernel-reference proofs (P7b) | 904 | 868 | 868 | 432 |
+| P7-bytes | byte buffers: stop at string->bytes and u8 (P7a) or kernel-reference proofs (P7b) | 904 | 868 | 868 | 432 |
 | P8-stop-misc | stop outcomes for exit, sealing, read-file | 910 | 876 | 876 | 435 |
 | P9-pvar | a Prolog-variable carrier, and same? on pairs in unify=/occurs-in?/deref= | 955 | 955 | 955 | 955 |
 
