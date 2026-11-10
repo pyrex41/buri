@@ -32,7 +32,8 @@
      world, pointwise related (VRel_ptrs); world_closed_alloc is the same in JitEqBudgetStep's closed_in
      form. vptrs, closed_set, dptr and closed_alloc are JitEqBudgetWalk's data_ptrs and closed_in and
      JitEqBudgetStep's din and closed_in, same text; this file does not import those files, which would
-     load JitKRef a second way. JitEqBudgetStep's S-local lok (lok_in) does NOT follow from SRel.
+     load JitKRef a second way. JitEqBudgetStep's S-local lok (lok_in) does NOT follow from SRel
+     (SRel_lok_refuted).
    - sealed_stable and storehas_stable, by induction on star: under jit_rules no step changes a
      sealed name's function (sealed_step); defun_allowed refuses a sealed name, eval-kl's defun goes
      through the same eval_move_r rule, primitives never change gfuns (prim_gfuns), and port_prim is
@@ -1085,7 +1086,7 @@ Qed.
 
 (* world_closed in JitEqBudgetStep's form (closed_in), on each side. Not derivable from SRel:
    JitEqBudgetStep's S-local lok (lok_in), since VRel relates closures by behaviour and identity,
-   not by the contents of their environments, which may point anywhere. *)
+   not by the contents of their environments (SRel_lok_refuted, below). *)
 Theorem world_closed_alloc : forall k w s0 s, SRel k w s0 s ->
  closed_alloc (heap s0) (map fst w) /\ closed_alloc (heap s) (map snd w).
 Proof.
@@ -1255,4 +1256,22 @@ Proof.
  destruct (Hr VNil s eq_refl) as (v0 & s0 & w' & _ & [Iw _] & _ & _ & _ & Hc).
  destruct (Hc 0%nat 0%nat (Iw _ (or_introl eq_refl))) as (c1 & c2 & _ & N & _). discriminate.
 Qed.
+(* S-local lok (JitEqBudgetStep.lok_in) does not follow from SRel: at index 0 two frozen closures are
+   related by identity alone, so a world cell may hold one whose environment points past the heap. *)
+Theorem SRel_lok_refuted : forall sealed,
+ ~ (forall k w s0 s, JitKRef.JitKRef.SRel sealed [] k w s0 s -> forall p xs, In p (map fst w) ->
+     nth_error (heap s0) p = Some xs -> lok (List.length (heap s0)) xs).
+Proof.
+ intros sealed H. set (v := VFrozen ENil [([], VVec 1)]). set (s := Store [[v]] [] []).
+ assert (A : JitKRef.JitKRef.SRel sealed [] 0 [(0%nat, 0%nat)] s s).
+ { unfold JitKRef.JitKRef.SRel, JitKRef.JitKRef.SRel_with.
+   split; [split; (constructor; [intros []|constructor])|].
+   split; [intros f d []|split; [intros f d []|split; [reflexivity|split; [constructor|]]]].
+   intros l0 l [E|[]]. injection E as <- <-. exists [v], [v]. split; [reflexivity|split; [reflexivity|]].
+   constructor; [|constructor]. rewrite (JitKRefGround.JitKRefGround.VRel_unfold sealed [] 0).
+   split; [exact I|intros j L; lia]. }
+ pose proof (H 0%nat [(0%nat, 0%nat)] s s A 0%nat [v] (or_introl eq_refl) eq_refl) as Ok.
+ inversion Ok as [|? ? Hv _]. cbn in Hv. lia.
+Qed.
+
 End JitKRefBase.

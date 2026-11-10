@@ -165,3 +165,4 @@ Print Assumptions JitKRefBase.JitKRefBase.sealed_stable.
 Print Assumptions JitKRefBase.JitKRefBase.storehas_stable.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.ObsT_wext_refuted.
+Print Assumptions JitKRefBase.JitKRefBase.SRel_lok_refuted.

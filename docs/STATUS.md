@@ -1261,13 +1261,13 @@ Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/Jit
 `rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
 and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
 will be proved through (`fv`, `fund_below`, `fund_gen_statement`, `PrimOutRel`, `prim_compat_statement`).
-Fifty-six are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
+Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
 `ObsT_wext_refuted`); source anti-reduction with and without an IO prefix and in ERel form for let, if, cond, type, a named
 call of a D function and lambda application; target-step reduction with a target resource step matched by the source's;
 wrong-state matching; the bind lemma `ERel_push` and a KRel lemma for every frame kind, the application frames under
-`AppRel`, which is a hypothesis there; and `world_closed`, world reachability for the `=` budget. No compatibility lemma
+`AppRel`, which is a hypothesis there; and `world_closed`, world reachability for the `=` budget (S-local lok does not follow from SRel: `SRel_lok_refuted`). No compatibility lemma
 and not the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is open (`OB-JIT-EQ-BUDGET-CORE`).
