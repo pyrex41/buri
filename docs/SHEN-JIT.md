@@ -154,7 +154,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families need (handler, dynamic-call window, do, closure-entry return, all primitives) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 173 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 179 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -531,11 +531,16 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   - `Out'`, with IO and generic raising cases.
 
   `sim_X_statement` per family takes the nested IH as `Rule_X_All Comp SimC ...`. The file also states
-  `preservation'`, `call_preservation'`, `call_preservation_src'` and the old-fragment corollaries, each a
-  `Definition ... : Prop` with a "Does NOT say" note. None is proved. `ev_of` translates no `JTime`,
+  `preservation'`, `call_preservation'` and `call_preservation_src'`, each a `Definition ... : Prop` with a
+  "Does NOT say" note. None of these is proved.
+- **Old fragment.** The old invariant embeds at mu = []. `kont_embed`, `sm_embed` and `ms_embed` are
+  proved, given that the globals are related and the store has the kernel's `do`. The slot-1 write
+  restriction applies only to code that captures. Each old-fragment statement (the old premises, the new
+  conclusion) is proved from its new statement (`*_old_of_new`). `ev_of` translates no `JTime`,
   `JReadFile` or `JWrites` event. An `open` path matches only when `*home-directory*` is empty.
-- **Evidence.** 64 statements were added to `Audit_Jit` (173 in all), each closed. There are 7 new
-  mutants: the mutation pin is 191, each mutant compiled and refused under Rocq 9.3. Lane result: in the
+- **Evidence.** 70 statements were added to `Audit_Jit` (179 in all), each closed. There are 8 new
+  mutants, among them `ShenJitEmitSMNonEmpty`, which `ms_embed` refuses. The mutation pin is 192, each
+  mutant compiled and refused under Rocq 9.3. Lane result: in the
   task report.
 
 ### Pass split: the normal form (wave 1b)

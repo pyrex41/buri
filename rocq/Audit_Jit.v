@@ -112,7 +112,8 @@ Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_pred.
 Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound.
 Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_needs_trans.
 (* emit-spec: the family rule hooks' map/all lemmas, the hand-written nested Comp_ind', comp_embed,
-   the non-empty nested dummy and its lemma by induction, VR_VRh, Ends'_final. *)
+   the non-empty nested dummy and its lemma by induction, trap_has_handler, VR_VRh, VRh_no_partial,
+   Ends'_final, the old invariant's embedding at mu = [] and the old-fragment implications. *)
 Print Assumptions JitEmitKont.JitEmitKont.pmapx_pmap.
 Print Assumptions JitEmitRuleEq.JitEmitRuleEq.Rule_Eq_map.
 Print Assumptions JitEmitRuleEq.JitEmitRuleEq.Rule_Eq_all.
@@ -177,3 +178,9 @@ Print Assumptions JitEmitKont.JitEmitKont.trap_has_handler.
 Print Assumptions JitEmitInv.JitEmitInv.VR_VRh.
 Print Assumptions JitEmitInv.JitEmitInv.VRh_no_partial.
 Print Assumptions JitEmitInv.JitEmitInv.Ends'_final.
+Print Assumptions JitEmitInv.JitEmitInv.kont_embed.
+Print Assumptions JitEmitInv.JitEmitInv.sm_embed.
+Print Assumptions JitEmitInv.JitEmitInv.ms_embed.
+Print Assumptions JitEmitInv.JitEmitInv.preservation_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_new.

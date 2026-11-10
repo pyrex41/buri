@@ -1,8 +1,9 @@
 (* Shen/JIT Phase 2, emit-spec: the generalized invariant of the back end, and the statements the
    emission families (emit-sim) and checkers (emit-check) must prove. Statements only, each a
    `Definition ... : Prop` with a "Does NOT say" note; NOTHING here is assumed or Admitted.
-   Proved here (closed): VR_VRh (JitLowerRel's VR is VRh under every partial bijection and heap)
-   and Ends'_final (Ends' names the machine that finishes).
+   Proved here (closed): VR_VRh (JitLowerRel's VR is VRh under every partial bijection and heap),
+   VRh_no_partial, Ends'_final (Ends' names the machine that finishes), the embedding of the old
+   invariant at mu = [] (kont_embed, sm_embed, ms_embed), and the three *_old_of_new implications.
 
    What the old invariant (JitLowerStep.MS, JitLowerThm) fixes, and what this one lets evolve:
    - mu, a partial bijection between KLambda heap locations (nat) and bytecode heap keys
@@ -33,11 +34,13 @@
    call_preservation'_statement           JitLowerThm.call_preservation
    EndsSrc'                               JitKRef.EndsSrc
    call_preservation_src'_statement       JitKRef.call_preservation_src_statement
-   preservation_old_statement             new => JitLowerThm.preservation on the old fragment
-   call_preservation_old_statement        new => JitLowerThm.call_preservation, old fragment
-   call_preservation_src_old_statement    new => JitKRef.call_preservation_src_statement, old fragment
-   The old fragment: empty mu, no handlers, a store that no step changes, no IO: what MS, Com
-   and JitLowerRel.CompFn describe. *)
+   preservation_old_statement             JitLowerThm.preservation's premises (MS), new conclusion
+   call_preservation_old_statement        JitLowerThm.call_preservation's premises, new conclusion
+   call_preservation_src_old_statement    JitKRef.call_preservation_src_statement's premises, new
+                                            conclusion
+   ms_embed, sm_embed, kont_embed         MS, Com, KD/TK/KC/RK are MS', SM, KD'/... at mu = []
+   The old fragment: empty mu, no handlers, no capture, what MS, Com and JitLowerRel.CompFn
+   describe. Each *_old_statement is proved from its new statement, by the *_old_of_new theorems (closed). *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitProfile
  JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef
@@ -147,21 +150,22 @@ Notation V mu m := (VRh mu (B.m_heap m)).
 Notation HC m := (HeapClo (B.m_heap m)).
 
 (* What a code position needs besides its own derivation: the store, the environment (slots and
-   captures), the writable addresses (never the closure in slot 1), and the continuation. *)
+   captures), the writable addresses (never the closure in slot 1 of a code that captures), and the
+   continuation. *)
 Definition EvalCtx (mu : kmap) (cv : list name) (caps : list B.val) (g : env) (top : N) (dst : dest)
     (r2 : list B.instr) (rho : lenv) (k : list frame) (s : store) (w : N -> Prop) (m : B.machine) : Prop :=
  SM mu s k m /\ MEnv' (V mu m) (fp m) (st m) cv caps g rho /\ EnvBelow g top /\ Above (fp m) top w /\
- CCtx (HC m) (code m) cv caps (fp m) (st m) /\ ~ w (fp m + 1) /\
+ CCtx (HC m) (code m) cv caps (fp m) (st m) /\ (cv = [] \/ ~ w (fp m + 1)) /\
  KC' (V mu m) (HC m) (code m) cv caps (fp m) (st m) (cs m) (hs m) w dst r2 k.
 Definition TestCtx (mu : kmap) (cv : list name) (caps : list B.val) (g : env) (top : N) (l : N)
     (r2 : list B.instr) (rho : lenv) (k : list frame) (s : store) (w : N -> Prop) (m : B.machine) : Prop :=
  SM mu s k m /\ MEnv' (V mu m) (fp m) (st m) cv caps g rho /\ EnvBelow g top /\ Above (fp m) top w /\
- CCtx (HC m) (code m) cv caps (fp m) (st m) /\ ~ w (fp m + 1) /\
+ CCtx (HC m) (code m) cv caps (fp m) (st m) /\ (cv = [] \/ ~ w (fp m + 1)) /\
  TK' (V mu m) (HC m) (code m) cv caps (fp m) (st m) (cs m) (hs m) w true l r2 k.
 Definition OpCtx (mu : kmap) (cv : list name) (caps : list B.val) (g : env) (top : N) (o : B.operand)
     (r2 : list B.instr) (rho : lenv) (k : list frame) (s : store) (w : N -> Prop) (m : B.machine) : Prop :=
  SM mu s k m /\ MEnv' (V mu m) (fp m) (st m) cv caps g rho /\ EnvBelow g top /\ Above (fp m) top w /\
- CCtx (HC m) (code m) cv caps (fp m) (st m) /\ ~ w (fp m + 1) /\
+ CCtx (HC m) (code m) cv caps (fp m) (st m) /\ (cv = [] \/ ~ w (fp m + 1)) /\
  KD' (V mu m) (HC m) (code m) cv caps (fp m) (st m) (cs m) (hs m) w o r2 k.
 
 (* The relation between a source configuration (with its own, evolving store) and a machine.
@@ -179,9 +183,103 @@ Inductive MS' (mu : kmap) : config -> B.machine -> Prop :=
      MS' mu (Cfg (Eval rho e) k s) m
  | MS'_ret cv caps v v' o k s w m :
      SM mu s k m -> read_o (code m) (fp m) (st m) o = Some v' -> VRh mu (B.m_heap m) v v' ->
-     CCtx (HC m) (code m) cv caps (fp m) (st m) -> ~ w (fp m + 1) ->
+     CCtx (HC m) (code m) cv caps (fp m) (st m) -> (cv = [] \/ ~ w (fp m + 1)) ->
      KD' (V mu m) (HC m) (code m) cv caps (fp m) (st m) (cs m) (hs m) w o (B.m_rest m) k ->
      MS' mu (Cfg (Ret v) k s) m.
+
+
+(* ---------- the old invariant embeds (mu = [], no handler, no capture) ---------- *)
+Lemma menv_embed : forall h fp st g rho, MEnv fp st g rho -> MEnv' (VRh [] h) fp st [] [] g rho.
+Proof.
+ intros h fp st g rho M. split.
+ - intros x s L. destruct (M x s L) as (v & v' & A & B0 & C). exists v, v'. repeat split; auto. apply VR_VRh; auto.
+ - intros i x N. destruct i; discriminate.
+Qed.
+Lemma doner_embed : forall h c fp st vals dops, DoneR c fp st vals dops -> DoneR' (VRh [] h) c fp st vals dops.
+Proof. intros h c fp st vals dops H; induction H; econstructor; eauto using VR_VRh. Qed.
+Lemma argsat_embed : forall h st a vals, ArgsAt st a vals -> ArgsAt' (VRh [] h) st a vals.
+Proof. intros h st a vals H; induction H; econstructor; eauto using VR_VRh. Qed.
+Lemma paramat_embed : forall h fp st ms i vals, ParamAt fp st ms i vals -> ParamAt' (VRh [] h) fp st ms i vals.
+Proof. intros h fp st ms i vals H; induction H; econstructor; eauto using VR_VRh. Qed.
+Lemma ce_C : forall c g top e d r r', JitLowerRel.Comp c g top e d r r' -> Comp c [] g top e d r r'.
+Proof. intros. apply (proj1 (comp_embed c)); auto. Qed.
+Lemma ce_T : forall c g top e l r r', JitLowerRel.CompT c g top e l r r' -> CompT c [] g top e l r r'.
+Proof. intros. apply (proj1 (proj2 (comp_embed c))); auto. Qed.
+Lemma ce_S : forall c g top es os r r', JitLowerRel.CompOps c g top es os r r' -> CompOps c [] g top es os r r'.
+Proof. intros. apply (proj1 (proj2 (proj2 (proj2 (comp_embed c))))); auto. Qed.
+Lemma ce_W : forall c g s es r r', JitLowerRel.CompW c g s es r r' -> CompW c [] g s es r r'.
+Proof. intros. apply (proj1 (proj2 (proj2 (proj2 (proj2 (comp_embed c)))))); auto. Qed.
+Lemma ce_A : forall c g s t es ms r r', JitLowerRel.CompTA c g s t es ms r r' -> CompTA c [] g s t es ms r r'.
+Proof. intros. apply (proj2 (proj2 (proj2 (proj2 (proj2 (comp_embed c)))))); auto. Qed.
+Create HintDb emb.
+Local Hint Resolve menv_embed doner_embed argsat_embed paramat_embed ce_C ce_T ce_S ce_W ce_A pmapx_pmap : emb.
+
+(* JitLowerKont's frames are JitEmitKont's, with no capture and no handler, under VRh [] h. *)
+Theorem kont_embed : forall h (HC : positive -> B.code -> list B.val -> Prop),
+ (forall c fp st cs w o r k, KD c fp st cs w o r k -> KD' (VRh [] h) HC c [] [] fp st cs [] w o r k) /\
+ (forall c fp st cs w gd l r k, TK c fp st cs w gd l r k -> TK' (VRh [] h) HC c [] [] fp st cs [] w gd l r k) /\
+ (forall c fp st cs w dst r k, KC c fp st cs w dst r k -> KC' (VRh [] h) HC c [] [] fp st cs [] w dst r k) /\
+ (forall fp st cs k, RK fp st cs k -> RK' (VRh [] h) HC fp st cs [] k).
+Proof.
+ intros h HC. apply K_mut; intros;
+  [ eapply KD'_ret | eapply KD'_jump | eapply KD'_label | eapply KD'_let | eapply KD'_lett | eapply KD'_test
+  | eapply KD'_prim | eapply KD'_call | eapply KD'_tail
+  | eapply TK'_if | eapply TK'_cond | eapply TK'_and | eapply TK'_andr | eapply TK'_or | eapply TK'_orr
+  | eapply TK'_jump | eapply TK'_label | eapply TK'_value
+  | eapply KC'_ret | eapply KC'_slot | eapply RK'_top | eapply RK'_call ];
+  eauto with emb; left; reflexivity.
+Qed.
+
+Lemma funrel_embed : forall s m, FunRel s m -> FunRel' s m.
+Proof.
+ intros s m [A1 A2 A3 A4]. constructor; auto.
+ intros f ps b L. destruct (A1 f ps b L) as (l & c & caps & G & H & Ar & En & Cf).
+ exists l, c, caps. repeat split; auto. apply comp_embed_fn; exact Cf.
+Qed.
+
+Lemma notrap_frames : forall k, notrap k -> trap_frames k = [].
+Proof. intros k N; induction N as [|f k F N IH]; [reflexivity|destruct f; cbn; auto; contradiction]. Qed.
+
+Lemma pbij_nil : pbij [].
+Proof. split; apply NoDup_nil. Qed.
+
+Lemma sm_embed : forall s k m, Com s m -> notrap k -> GvalsRel [] s m -> DoOK s -> SM [] s k m.
+Proof.
+ intros s k m [Hh Fr] Nt G Dk. split.
+ - constructor; auto.
+   + exact pbij_nil.
+   + intros l p I; destruct I.
+   + apply funrel_embed; auto.
+ - unfold HK. rewrite Hh, (notrap_frames k Nt). constructor.
+Qed.
+
+(* JitLowerStep's MS is MS' at mu = [], given the two facts the old invariant does not carry. *)
+Theorem ms_embed : forall s c m, MS s c m -> GvalsRel [] s m -> DoOK s -> MS' [] c m.
+Proof.
+ intros s c m H G Dk. destruct (kont_embed (B.m_heap m) (HeapClo (B.m_heap m))) as (EKD & ETK & EKC & ERK).
+ destruct H as [g top e dst r2 rho k w m Cm Cc Me Eb Ab Kc|g top e l r2 rho k w m Cm Ct Me Eb Ab Tk
+   |g top e o top2 r2 rho k w m Cm Co Me Eb Ab Kd|v v' o k w m Cm Ro Vr Kd];
+   pose proof Cm as [Hh _].
+ - eapply MS'_eval with (cv := []) (caps := []) (w := w); [apply ce_C; exact Cc|].
+   unfold EvalCtx. split; [apply sm_embed; auto; eapply notrap_kc; exact Kc|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKC; auto.
+ - eapply MS'_test with (cv := []) (caps := []) (w := w); [apply ce_T; exact Ct|].
+   unfold TestCtx. split; [apply sm_embed; auto; eapply notrap_tk; exact Tk|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply ETK; auto.
+ - eapply MS'_op with (cv := []) (caps := []) (w := w); [apply (proj1 (proj2 (proj2 (comp_embed _)))); exact Co|].
+   unfold OpCtx. split; [apply sm_embed; auto; eapply notrap_kd; exact Kd|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKD; auto.
+ - eapply MS'_ret with (cv := []) (caps := []) (o := o) (v' := v') (w := w).
+   + apply sm_embed; auto. eapply notrap_kd; exact Kd.
+   + exact Ro.
+   + apply VR_VRh; auto.
+   + left; reflexivity.
+   + left; reflexivity.
+   + rewrite Hh. apply EKD; auto.
+Qed.
 
 Section Inv.
 Variables (E : B.env) (pt : B.tree (B.prim * nat)) (sealed : list name).
@@ -442,36 +540,64 @@ Definition call_preservation_src'_statement : Prop := forall mu s m c ps b0 b1 e
  (exists m1 k tS tT, EndsSrc' mu s c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
 (* ---------- the old fragment ---------- *)
-(* The new statements specialize to the old on the old fragment: mu = [], no handler, the store
-   constant (no global, vector or definition changes it), no IO. Each is an implication from the
-   new statement to the old theorem's statement, verbatim, under two hypotheses the old invariant
-   does not carry because the old fragment never reads them: the globals are related (GvalsRel
-   [] s m) and the store has the kernel's do (DoOK s).
-   Does NOT say: that the old theorems need the new ones (they are proved, JitLowerThm and
-   JitKRefCompose); these are the checks that the generalization keeps them. *)
-Definition preservation_old_statement : Prop :=
- preservation'_statement -> forall n s c m, MS s c m -> GvalsRel [] s m -> DoOK s ->
- (exists c' m' k, Sstar c c' /\ TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
- (exists m1, Ends E pt sealed s c m1 /\ TStar m m1).
+(* The new statements specialize to the old fragment: from the old invariant's states (MS; Com,
+   JitLowerRel.CompFn and entered for a call) they conclude the new conclusion at mu = [], through
+   ms_embed and sm_embed. Two hypotheses the old invariant does not carry, because the old fragment
+   never reads them: the globals are related (GvalsRel [] s m) and the store has the kernel's do
+   (DoOK s). preservation_old_of_new, call_preservation_old_of_new and
+   call_preservation_src_old_of_new prove each from the new statement (closed).
+   Does NOT say: that the new conclusion, on the old fragment, gives back the old one (MS at the
+   end, a constant store, no IO); the old theorems stay proved on their own (JitLowerThm,
+   JitKRefCompose). *)
+Definition preservation_old_statement : Prop := forall n s c m (rs : nat -> B.jres),
+ MS s c m -> GvalsRel [] s m -> DoOK s ->
+ (exists c' m' k tS tT mu', Srun c tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext [] mu' /\ MS' mu' c' m') \/
+ (exists m1 k tS tT, Ends' [] c m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
-Definition call_preservation_old_statement : Prop :=
- call_preservation'_statement -> forall s m c ps b args n,
+Definition call_preservation_old_statement : Prop := forall s m c ps b args n (rs : nat -> B.jres),
  Com s m -> JitLowerRel.CompFn c ps b -> List.length ps = List.length args -> entered m c args ->
  GvalsRel [] s m -> DoOK s ->
  let c0 := Cfg (Eval (combine ps args) b) [] s in
- (exists c' m' k, Sstar c0 c' /\ TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
- (exists m1, Ends E pt sealed s c0 m1 /\ TStar m m1).
+ (exists c' m' k tS tT mu', Srun c0 tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext [] mu' /\ MS' mu' c' m') \/
+ (exists m1 k tS tT, Ends' [] c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
-Definition call_preservation_src_old_statement : Prop :=
- call_preservation_src'_statement -> forall s m c ps b0 b1 e args n,
+Definition call_preservation_src_old_statement : Prop := forall s m c ps b0 b1 e args n (rs : nat -> B.jres),
  JitKRef.JitKRef.D_wf sealed D -> JitKRef.JitKRef.KRef sealed D ps b0 b1 -> JitKRef.JitKRef.KRef sealed D ps b1 e ->
  JitKRef.JitKRef.StoreHas D s -> store_ok s ->
  Com s m -> JitLowerRel.CompFn c ps e -> List.length ps = List.length args -> entered m c args ->
  GvalsRel [] s m -> DoOK s ->
  let c0 := Cfg (Eval (combine ps args) b0) [] s in
  let ce := Cfg (Eval (combine ps args) e) [] s in
- (exists c' m' k, Sstar ce c' /\ TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
- (exists m1, JitKRef.JitKRef.EndsSrc sealed E pt s c0 m1 /\ TStar m m1).
+ (exists c' m' k tS tT mu', Srun ce tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext [] mu' /\ MS' mu' c' m') \/
+ (exists m1 k tS tT, EndsSrc' [] s c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+
+Lemma entered_embed : forall s m c args, Com s m -> entered m c args -> entered' [] m c args.
+Proof.
+ intros s m c args [Hh _] (Hc & Hr & Hk & Aa). repeat split; auto. apply argsat_embed; exact Aa.
+Qed.
+
+Theorem preservation_old_of_new : preservation'_statement -> preservation_old_statement.
+Proof. intros Pr n s c m rs H G Dk. apply Pr. eapply ms_embed; eauto. Qed.
+
+Theorem call_preservation_old_of_new : call_preservation'_statement -> call_preservation_old_statement.
+Proof.
+ intros Cp s m c ps b args n rs Cm Cf L En G Dk c0. apply (Cp [] s m c ps b args n rs).
+ - apply sm_embed; auto. constructor.
+ - apply comp_embed_fn; exact Cf.
+ - exact L.
+ - eapply entered_embed; eauto.
+Qed.
+
+Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> call_preservation_src_old_statement.
+Proof.
+ intros Cp s m c ps b0 b1 e args n rs Dw K1 K2 Sh So Cm Cf L En G Dk c0 ce. apply (Cp [] s m c ps b0 b1 e args n rs); auto.
+ - apply sm_embed; auto. constructor.
+ - apply comp_embed_fn; exact Cf.
+ - eapply entered_embed; eauto.
+Qed.
 End Src.
 End Inv.
 End JitEmitInv.

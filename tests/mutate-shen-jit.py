@@ -62,6 +62,8 @@ ShenJitEmitPmapx: pmapx relates + to the bytecode's -. pmapx_pmap must fail.
 ShenJitEmitVRhPartial: VRh relates a partial application to a closure. VRh_no_partial must fail.
 ShenJitEmitEndsDecoupled: Ends''s E'_ok binds its own final machine, as ShenJitLowerEndsDecoupled
   does for Ends. Ends'_final must fail.
+ShenJitEmitSMNonEmpty: SM asks for a non-empty partial bijection, which no state of the old fragment
+  has. sm_embed (and ms_embed) must fail.
 """
 import re
 from pathlib import Path
@@ -208,4 +210,5 @@ mutate('ShenJitEmitVRhPartial', 'rocq/JitEmitInv.v',
 mutate('ShenJitEmitEndsDecoupled', 'rocq/JitEmitInv.v',
        " | E'_ok v v' s' m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 ->",
        " | E'_ok v v' s' m0 m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 ->")
+mutate('ShenJitEmitSMNonEmpty', 'rocq/JitEmitInv.v', " sm_bij : pbij mu;", " sm_bij : pbij mu /\\ mu <> [];")
 print(' '.join(names))

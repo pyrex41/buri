@@ -265,7 +265,7 @@ with KC' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B.cont
 with RK' : N -> B.tree B.val -> list B.cont -> list B.handler -> list frame -> Prop :=
  | RK'_top fp st : RK' fp st [] [] []
  | RK'_call fp st c cv caps r d a cs hs k w : a <= fp -> Above (fp - a) a w ->
-     CCtx c cv caps (fp - a) st -> ~ w (fp - a + 1) ->
+     CCtx c cv caps (fp - a) st -> (cv = [] \/ ~ w (fp - a + 1)) ->
      KD' c cv caps (fp - a) st cs hs w (B.OSlot d) r k -> w (fp - a + d) ->
      RK' fp st (B.Cont c r d a :: cs) hs k
  | RK'_do2 fp st cs hs v rho k1 : RK' fp st cs hs k1 -> RK' fp st cs hs (KCallArgs do_name [v] [] rho :: k1).
