@@ -1323,6 +1323,6 @@ the lane or in `Audit_Jit`. `OB-JIT-IMAGE` is partial and split into `-CODE`, `-
 initialisation), `-SEALING` (65 extension names unsealed in the image), `-READER` and `-FILE`.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
-its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 133 of 955
-stage 0 definitions are accepted at 0.6 (131 of 950 at 0.4), all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
+its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 174 of 955
+stage 0 definitions are accepted at 0.6 since `=` against a symbol constant was admitted (133 before; 131 of 950 at 0.4), all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
 Their statements are not in an audit count; `scripts/check-shen-jit-norm.sh` checks that they use no axioms.

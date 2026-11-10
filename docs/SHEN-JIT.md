@@ -461,11 +461,12 @@ re-pin figure was 135.) The rewrites under the surprises above (sharing, folding
 causes, not yet confirmed per definition.
 
 At 0.6, `spikes/pass-split/FEATURES.md` and `features.tsv` (`tests/shen-jit/feature_census.py`, a census, not proof)
-assign each of the 955 definitions the emit features its normal form needs and the front families that fired. Its
-prediction for the current `Comp` matches the Rocq src (111), nf (112) and tf (133) verdicts on every definition. It also
-forecasts what each feature, each family and each residual decision (port primitives, eval-kl, identity, NaN `=`)
-would admit, directly and under the callee-closure limit. That limit cuts today's 111 to 46, because 450 definitions
-reach a 181-definition strongly connected component.
+assign each of the 955 definitions the emit features its normal form needs and the front families that fired. Rerun
+after `=` against a symbol constant was admitted (branch `p2/eq-guard-merge`, 10 November 2026), its prediction for the
+current `Comp` matches the Rocq src (148), nf (150) and tf (174) verdicts on every definition (at the re-pin, before that
+change: 111, 112 and 133). It also forecasts what each feature, each family and each residual decision (port
+primitives, eval-kl, identity, NaN `=`) would admit, directly and under the callee-closure limit. That limit cuts the
+current 148 to 63 (111 to 46 before), because 450 definitions reach a 181-definition strongly connected component.
 
 **The one-slot `cons` chain** (`JitLowerRel.C_chain`). `lower.shen` computes `(cons K Tail)`, with K a constant and Tail
 a `cons`, by lowering Tail into D and then emitting `(prim D cons (const K) D)`, which reads D and writes it. The rule
@@ -617,6 +618,8 @@ own lowerer reproduces every stage 0 code object byte for byte. On `p2/int` the 
 `38a414a295c1aff39360a73a812591d0862fbc6c0bf32bc24314d8140993de20`, and every per-file hash equals that of the set
 used for the earlier run below. The six statements are closed and `rocqchk` replays both modules.
 
+**At 0.6, after `=` against a symbol constant was admitted: 174 of 955 definitions accepted** on the erased witness, 781 rejected, none failing erase, none unreadable, all front end unchecked; the source-body judge accepts 148, none lost on the witness (`NORM_DIR=/tmp/p2-T02-capture/witness JIT_OUT=/tmp/p2-eq-guard-merge-norm scripts/check-shen-jit-norm.sh` in `buri-lps`, branch `p2/eq-guard-merge`, exit 0, log sha256 `94659a70a4376134860069f7be23f9a151a27cf24f6d2f7d035f3c0612287aab`; witness set the same `e45add98...b69dd1`). Before that change:
+
 **At 0.6: 133 of 955 definitions accepted** on the erased witness (`NORM_DIR=/tmp/p2-v06-capture/witness
 JIT_OUT=/tmp/p2-v06-norm scripts/check-shen-jit-norm.sh` in `buri-lps`, witnesses from `capture_passes.sh` on
 `/lps/p6/sj`: witness and count runs 955 of 955 byte-identical, image run 944 of 955; norm witness set sha256
@@ -717,19 +720,23 @@ again, and the bytecode semantics stays Rocq-only. `#12`, filed from [the findin
 **Lane status in the charter.** The packages are `mandatory_for_closed_deployment: false`, and the charter
 target stays closed deployment on both ports. Making this the lead track doesn't change that target.
 
-**Stage 0 residuals and the four decision items** (10 November 2026, `r1-residual-ledger`).
-`tests/shen-jit/stage0-residuals.txt` lists every stage 0 definition the Rocq source judge does not accept: 844, as
-the source judge accepts 111 of 955 (the count `stage0-accepted.txt` pins; no full-pipeline judge exists yet, so the
+**Stage 0 residuals and the four decision items** (10 November 2026, `r1-residual-ledger`; regenerated the same day
+after `=` against a symbol constant was admitted, `eq-guard-merge`).
+`tests/shen-jit/stage0-residuals.txt` lists every stage 0 definition the Rocq source judge does not accept: 807, as
+the source judge accepts 148 of 955 (the count `stage0-accepted.txt` pins; no full-pipeline judge exists yet, so the
 full-pipeline validated count is UNKNOWN). `tests/shen-jit/stage0_residuals.py` writes it from `judge_split.sh`'s
-Rocq verdict files, run at `p2/int` 2e45d67 on the pinned stage 0 set (`ec9b3872...`) and norm witness
-(`e45add98...b69dd1`); src, nf and tf come to 111, 112 and 133, as in `spikes/pass-split/CENSUS.md`. The file records
-those hashes, the verdict-file hashes and the scripts' hashes; its own sha256 is
-`c56f2881de4788b81d6bccf7f001b0dcbf3919ee7b9b5246a3d5522edc095d09`. Evidence kinds stay apart in it: the src, nf and tf
+Rocq verdict files, run on branch `p2/eq-guard-merge` (on `p2/int` 335348c) on the pinned stage 0 set (`ec9b3872...`)
+and norm witness (`e45add98...b69dd1`); src, nf and tf come to 148, 150 and 174 (111, 112 and 133 at `p2/int`
+2e45d67, as in `spikes/pass-split/CENSUS.md`, before the change). The file records those hashes, the verdict-file
+hashes and the scripts' hashes; its own sha256 is
+`9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e`. Compared by name with the 844 rows at 2e45d67, 37
+rows are gone (the 37 newly accepted definitions) and none is new. Evidence kinds stay apart in it: the src, nf and tf
 columns are Rocq verdicts; the first blocker is a census label from a syntactic walk of the norm witness (Comp gaps,
 `=` outside `pguard`, calls of `shen-jit.eval-kl`), checked only in that no definition Rocq accepts on nf gets an emit
-label; the ledger, reason and decision columns are bookkeeping. By first label: `OB-JIT-LOWER-FRAGMENT` 463,
-`OB-JIT-LOWER-OPTIMIZATIONS` 306, `OB-JIT-NAN-IDENTITY` 43, `OB-JIT-PORT-PRIMS` 24, `OB-JIT-IDENTITY-MODEL` 5,
-`OB-JIT-LOWER-GENERAL` 3.
+label; the ledger, reason and decision columns are bookkeeping. By first label: `OB-JIT-LOWER-FRAGMENT` 368,
+`OB-JIT-LOWER-OPTIMIZATIONS` 343, `OB-JIT-NAN-IDENTITY` 59, `OB-JIT-PORT-PRIMS` 26, `OB-JIT-LOWER-GENERAL` 6,
+`OB-JIT-IDENTITY-MODEL` 5 (at 2e45d67: 463, 306, 43, 24, 3 and 5; the definitions first blocked by `=` against a
+symbol now show their next label).
 
 The four decision items are Reuben's decision. Each has an open ledger entry and, until he decides, defaults to a named
 residual. The counts are definitions any of whose labels touch the item (census):
@@ -742,6 +749,7 @@ residual. The counts are definitions any of whose labels touch the item (census)
 | `=` on two possibly-NaN operands | `OB-JIT-NAN-IDENTITY` | 206 | a proved static non-real judgment in Rocq, a NaN identity rule, or a named limit |
 
 For NaN `=`, a Rocq non-real judgment means extending `JitLowerRel.pguard` and redoing the `Comp` simulation, so it is
-not cheap and was not attempted here; `feature_census.py`'s `NONREAL` set is a census and decides nothing. A further 152
-definitions are first blocked by `=` against a symbol constant only: a symbol is never a NaN, so that is an emit gap
-under `OB-JIT-LOWER-FRAGMENT`, not this decision.
+not cheap and was not attempted here; `feature_census.py`'s `NONREAL` set is a census and decides nothing. `=` against
+a symbol constant is no longer a residual label: a symbol is never a NaN, and `pguard` now admits symbol constants
+(`OB-JIT-SYM-INJECTIVE`). Of the 152 definitions first blocked by it at 2e45d67, 37 are now accepted by the source
+judge and 115 are filed under their next census label.
