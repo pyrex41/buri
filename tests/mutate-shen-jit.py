@@ -38,6 +38,8 @@ ShenJitLowerEqNaN: = agrees against any real constant, NaN included. eq_core mus
 ShenJitLowerCheckEqGuard: the checker admits = without a safe constant operand. chk_sound must fail.
 ShenJitSymBase256: symbols as the name's elements in base 256, as before, which merges [1;1] with
   [65537]. text_of_sym_of_text must fail.
+ShenJitEqStepNotLeast: least_true_pointers without its 'least d' premise: a true pair at any budget
+  need not have identical pointers. least_true_pointers must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -123,4 +125,8 @@ mutate('ShenJitLowerCheckEqGuard', 'rocq/JitLowerCheck.v',
 mutate('ShenJitSymBase256', 'rocq/JitBytecode.v',
        ' fold_right (fun n acc => sym_push (N.succ_pos n) acc) xH s.',
        ' fold_left (fun acc b =>\n   Pos.add (Pos.mul acc 256) (match b with N0 => 256 | Npos p => p end)) s xH.')
+mutate('ShenJitEqStepNotLeast', 'rocq/JitEqBudgetStep.v',
+       " (forall d' p q, d' < d -> In p cs -> In q cs -> p <> q -> cellcmp R P h d' p q <> Some true) ->\n"
+       " list_eq (leaf_eq R P) xs ys = Some true.\nProof.\n intros R P h cs d x y xs ys C Ix Iy Ex Ey T Lst.",
+       " list_eq (leaf_eq R P) xs ys = Some true.\nProof.\n intros R P h cs d x y xs ys C Ix Iy Ex Ey T.")
 print(' '.join(names))

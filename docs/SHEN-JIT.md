@@ -318,7 +318,7 @@ each lambda and freeze allocates a cell and the passes add and remove them. It i
 rewrites rely on (sealed, `D_wf`) and a well-formed store; adequacy and store reflexivity from the same premise; the
 ground relation's lemmas, `KRel_top`, and the premise checks' specifications. The source's final store is related to
 the start by `GStore` under a world fixing the old locations, not equal to it. Not proved: the fundamental property, the
-compatibility lemmas, the `=` budget lemma (`JitEqBudget.v`, separate work), and any front-link checker. Under Com's
+compatibility lemmas, the `=` budget lemma (`JitEqBudget.v`, separate work; its induction step is proved in `JitEqBudgetStep.v`, the base and assembly are open), and any front-link checker. Under Com's
 FunRel the callees b0 calls are the lowered bodies, not the kernel's source definitions. A checker must reject norm's
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
