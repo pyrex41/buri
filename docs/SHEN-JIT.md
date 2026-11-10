@@ -599,7 +599,7 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   reflection obligation above. The counterexamples behind the narrowing are hand-argued, and the
   agreement of the newly admitted primitives (str, intern, pos, tlstr, cn, n->string, string->n,
   set, value, simple-error, <-address, address->, absvector?, /) is hand-checked: both UNKNOWN.
-- **Evidence.** 92 statements were added to `Audit_Jit` (201 in all), each closed. There are 30
+- **Evidence.** 92 statements were added to `Audit_Jit` (201 in all), each closed. There are 31
   emit-spec mutants, at least one per new relation or definition:
   - `MS'`, `Out'`, `EndsSrc'`, `TRun` and the six `Sim*`;
   - `HK`, `GvalsRel`, `DoOK`, `FunRel'` and `StoreRel`;
@@ -607,7 +607,7 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   - the reflection obligations, the old-fragment premise, the `TRun` bridge, and the refused
     uniform-code nesting.
 
-  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 214. Lane
+  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 215 (fix 1 recorded 209 for 26 added mutants; the history gives 184 + 31). Lane
   result: in the task report.
 
 ### Pass split: the normal form (wave 1b)
