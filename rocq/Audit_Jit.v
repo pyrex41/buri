@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitEqBudget.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitEqBudget JitEqBudgetStep.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -88,3 +88,16 @@ Print Assumptions JitEqBudget.JitEqBudget.jit_num_eq_iff.
 Print Assumptions JitEqBudget.JitEqBudget.jit_eq_per.
 Print Assumptions JitEqBudget.JitEqBudget.budget_from_step.
 Print Assumptions JitEqBudget.JitEqBudget.eq_budget_from_core.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.least_true_pointers.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.closed_after.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.same_budget_sim.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.shifted_sim.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.xy_answers_true.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.xy_true_from_1.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.step_settled.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.least_true_exists.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.remove_length.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.remove_nodup.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.surgery_in.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.surgery_out.
+Print Assumptions JitEqBudgetStep.JitEqBudgetStep.surgery_length.

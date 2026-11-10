@@ -1259,6 +1259,12 @@ refinement relation for the lowerer's front passes, and the composition of two f
 proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is open (`OB-JIT-EQ-BUDGET-CORE`).
+Thirteen are in `rocq/JitEqBudgetStep.v`: the step of the core's induction on a closed set of cells, under S-relativized
+hypotheses only (`closed_in`, `lok_in`; no global lok). For the least-budget true pair x, y: their pointers are identical and
+their other leaves agree (`least_true_pointers`; the `ShenJitEqStepNotLeast` mutant, without the least premise, is rejected), the
+surgery redirecting y to x keeps the rest closed (`closed_after`), it simulates at the same budget (`same_budget_sim`) and back
+with one more (`shifted_sim`), and `step_settled` carries settledness from S minus y at n to S at n + 1. The base case and the
+assembly are open, so `OB-JIT-EQ-BUDGET-CORE` stays open.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
