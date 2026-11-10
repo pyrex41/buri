@@ -4579,18 +4579,38 @@
    "scope": "instance",
    "owner": "E2E-41",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Heap image",
    "identity": "",
    "statement": "The heap image in the binary denotes the KLambda store reached after stage 0 and initialisation.",
    "premises": [],
-   "depends_on": [],
-   "evidence": [],
+   "depends_on": [
+    "OB-JIT-IMAGE-CODE",
+    "OB-JIT-IMAGE-INIT",
+    "OB-JIT-IMAGE-SEALING",
+    "OB-JIT-IMAGE-READER",
+    "OB-JIT-IMAGE-FILE"
+   ],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "scope and feasibility verdict from measured image facts (binary e0acd513..., image fd8485a5..., heap 87059 words, 2371 code objects); split into the five sub-obligations it depends on"
+    }
+   ],
    "completion_evidence": "Image bytes decoded in Rocq and related to that store, or stage 1 proved an instance of the main theorem.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "docs/SHEN-JIT-IMAGE.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: open -> partial. Code objects: a Rocq decoder (spikes/image-decode, not in the lane) relates 955 of 955 stage 0 definitions to the code in their function cells; 7 code objects made by initialisation, all data initialisation built, the 18-vs-24 sealing gap and the reader stay open as sub-obligations."
+    }
+   ]
   },
   {
    "id": "OB-JIT-IMAGE-FILE",
@@ -4598,19 +4618,142 @@
    "scope": "instance",
    "owner": "E2E-41",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Reading the image",
    "identity": "",
    "statement": "The run reads its image from its own executable file, which the process model's file system does not relate to the loaded binary.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
-   "completion_evidence": "The image embedded in the ELF, or a stated premise that the file holds those bytes.",
+   "evidence": [
+    {
+     "kind": "identity-hash",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "measured: the binary e0acd513... (5440856 bytes) is the runtime 13afde42... (4657760 bytes) followed by the image fd8485a5... (783096 bytes), found from the SJHI-END trailer; the run opens argv[0] (resolved through PATH) unless SHEN_JIT_IMAGE is set. No premise about the file system is stated in any theorem yet"
+    }
+   ],
+   "completion_evidence": "A stated premise, used by the top theorem, that the file the run opens (argv[0] resolved through PATH, SHEN_JIT_IMAGE unset) holds the pinned binary, whose final image is fd8485a5...; or the image embedded in the ELF.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "spikes/riscv-build/RESULTS.md"
+    "spikes/riscv-build/RESULTS.md",
+    "docs/SHEN-JIT-IMAGE.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: open -> partial. Measured the split of the pinned binary into runtime and image and how main.c finds its image (executable_file over argv[0] and PATH, overridden by SHEN_JIT_IMAGE); the premise is still not stated."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-CODE",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Image code objects",
+   "identity": "",
+   "statement": "For each of the 955 stage 0 definitions (defun F Code), the closure in F's function cell of the pinned image has no captures and its code object, decoded with its constants, nested code objects, sealed call targets and inline field, equals the code object JitBytecode.build_code makes from Code.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-IMAGE-READER"
+   ],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spikes/image-decode/JitImage.v",
+     "establishes": "artifact-correspondence",
+     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context"
+    }
+   ],
+   "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-INIT",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Image state built by initialisation",
+   "identity": "",
+   "statement": "Everything stage 1 built by running shen.initialise, shen.x.features.initialise, shen.x.programmable-pattern-matching.initialise, shen.x.namespaces.initialise and shen-jit.initialise denotes the KLambda store those calls reach: the 7 code objects not reachable from the 955 function cells (thread, defined by eval-kl in shen-jit.initialise, and 6 lambda code objects of the lambda-form entries in *property-vector*), every global value, the property vector, dictionaries and streams.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Stage 1 proved an instance of the main theorem over validated initialisation code, or the initialised store decoded and related in Rocq.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-SEALING",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Sealing at stage 0 and in the image",
+   "identity": "",
+   "statement": "Stage 0 lowered all 24 files with every definition sealed, but stage 1 seals only the first 18: in the image, 890 of the 955 names carry the sealed bit and the 65 definitions of the 6 extension files do not, while 115 call-sealed sites in 45 definitions are bound to extension closures at load. The claim either excludes redefining those 65 names or shows sealed calls to them still agree with the source's late binding.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A stated premise or exclusion in the top theorem for redefinition of the 65 unsealed extension names, or Rocq evidence that FunRel survives it.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-READER",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Reading and loading the image",
+   "identity": "",
+   "statement": "The trusted reader (spikes/image-decode/image_to_rocq.py) gives the image's bytes as little-endian 64-bit words, and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "The loader's rebasing and raw-field reconstruction modelled or reviewed against image.c, and the reader reviewed as a word split only.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
   },
   {
    "id": "OB-JIT-BYTECODE-SEMANTICS",
