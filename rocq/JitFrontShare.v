@@ -21,9 +21,10 @@
    frame by frame (kif_base, kand_frame), and a chain let binds the same name on both sides
    (chain_sound). The thaw steps go through the store's thaw, so the soundness takes, as a
    premise, that D defines thaw as the kernel does: (defun thaw (V) (V)) (Section hypothesis HT).
-   HT is necessary: share_rule_needs_thaw (below) proves that KRef_refl at D = [] refutes
-   share_rule_sound there, so the FrontHyps-only form the spec asked for holds only if FrontHyps
-   fails at D = [] (share_rule_sound_needs_thaw), which kref-fund is to prove false.
+   HT is necessary: share_rule_needs_thaw (below, no premise) proves that share_rule is not
+   rule_sound at D = [], so the FrontHyps-only form the spec asked for holds at D = [] only
+   vacuously, if FrontHyps sealed [] is false (share_rule_sound_needs_thaw); kref-fund is to prove
+   FrontHyps for every D_wf D, D = [] included.
 
    NOT covered: share's REUSE of a chain-bound variable for a hd/tl the chain already took (the
    `reuse` / `canon` part of lower.shen's share, "share chains"). Relating (hd V) on the source to
@@ -660,24 +661,56 @@ Theorem check_share_sound : FrontHyps sealed D -> forall ps b0 b, check_share ps
 Proof. intros FH ps b0 b E. exact (fchk_sound sealed D FH share_rules share_rules_sound _ ps b0 b E). Qed.
 End Share.
 
+(* ---------- a literal refines itself, for every D ----------
+   Proved directly (one tau step to Ret on each side, then the continuations' Ret clause), with no
+   FrontHyps premise: the counterexample below uses it so that it needs no KRef_refl. *)
+Section Lit.
+Variables (sealed : list name) (D : list (name * fundef)).
+Notation R := (jit_rules sealed).
+Notation P := jit_profile.
+Notation VRel := (JitKRef.JitKRef.VRel sealed D).
+Notation KRef := (JitKRef.JitKRef.KRef sealed D).
+
+Lemma lit_vrel : forall e v k w, lit_val e = Some v -> VRel k w v v.
+Proof.
+ intros e v k w H. rewrite (JitKRefGround.JitKRefGround.VRel_unfold sealed D k).
+ destruct e; cbn in H; try discriminate; injection H as <-; cbn; reflexivity || exact I.
+Qed.
+
+Theorem lit_kref : forall g e v, lit_val e = Some v -> KRef g e e.
+Proof.
+ intros g e v Hl k w rho0 rho _ _. apply KB.ERel_iff. intros j L w' W K0 K HK s0 s HS.
+ assert (Hv : forall r, KB.sval r e = Some v) by (intros r; destruct e; cbn in Hl |- *; try discriminate; exact Hl).
+ destruct j as [|j]; [apply KB.ObsT_0|]. apply KB.ObsT_running.
+ - destruct e; cbn in Hl; try discriminate; reflexivity.
+ - unfold KB.nonterm. rewrite (KB.sval_next sealed rho e v K s (Hv rho)). exact I.
+ - intros x. cbn [kont mem]. apply (KB.KRel_throw sealed D); [eapply KB.KRel_down; [|exact HK]; lia|eapply KB.SRel_down; [|exact HS]; lia].
+ - intros c1 E1. rewrite (KB.sval_next sealed rho e v K s (Hv rho)) in E1. injection E1 as <-.
+   exists (Cfg (Ret v) K0 s0). split; [eapply KB.srun_tau; [apply (KB.sval_next sealed rho0 e v K0 s0 (Hv rho0))|apply KB.srun_refl]|].
+   apply (KB.KRel_ret sealed D); [eapply KB.KRel_down; [|exact HK]; lia|exact (lit_vrel e v j w' Hl)|eapply KB.SRel_down; [|exact HS]; lia].
+ - intros q kk r E1. rewrite (KB.sval_next sealed rho e v K s (Hv rho)) in E1. discriminate.
+Qed.
+End Lit.
+
 (* ---------- HT is necessary: share_rule_sound fails for a D without thaw ----------
-   The FrontHyps-only form of share_rule_sound holds only if FrontHyps fails at D = []. Take D = [] (D_wf holds) and the empty
-   store, which meets it. The pair
+   Take D = [] (D_wf holds) and the empty store, which meets it. The pair
        (if false 0 1)   against   (let G (freeze 1) (if false 0 (thaw G)))
-   is accepted by share_rule with rec = syntactic equality in scope, a sound rec by KRef_refl (a
-   FrontHyps field). The source returns 1. The target, in 9 steps, reaches (thaw G), finds no
-   function thaw in the store and raises (XUndefinedFun thaw); every throw the source can reach is
-   a resource error (XUser "out of memory" / "stack overflow"). KRef demands the source match the
-   target's throw, so the pair is not in KRef and share_rule is not rule_sound for this D.
+   is accepted by share_rule with rec = cx_rec, syntactic equality of literals, sound at every D by
+   lit_kref (proved above, no FrontHyps). The source returns 1. The target, in 9 steps, reaches
+   (thaw G), finds no function thaw in the store and raises (XUndefinedFun thaw); every throw the
+   source can reach is a resource error (XUser "out of memory" / "stack overflow"). KRef demands
+   the source match the target's throw, so the pair is not in KRef and share_rule is not
+   rule_sound for this D: share_rule_needs_thaw, with no premise.
    SRel forces both stores to share one function table but D = [] says nothing of thaw, so no
    FrontHyps field constrains what (thaw G) does: a premise on thaw's definition in D (HT) is
-   needed. share_rule_needs_thaw proves it from KRef_refl alone; share_rule_sound_needs_thaw
-   restates it against the FrontHyps-only statement: that statement, at D = [], refutes
-   FrontHyps sealed [], which kref-fund is to prove for every D_wf store spec. *)
+   needed. share_rule_sound_needs_thaw restates it against the FrontHyps-only statement: that
+   statement, at D = [], refutes FrontHyps sealed [], which kref-fund is to prove for every D_wf
+   store spec. *)
 Definition cx_G : name := of_string "G".
 Definition cx_src : expr := EIf (EBool false) (ENum (NInt 0)) (ENum (NInt 1)).
 Definition cx_tgt : expr := ELet cx_G (EFreeze (ENum (NInt 1))) (EIf (EBool false) (ENum (NInt 0)) (thaw_e cx_G)).
-Definition cx_rec (g : list name) (a b : expr) : bool := expr_eqb a b && scoped g b.
+Definition cx_rec (g : list name) (a b : expr) : bool :=
+ expr_eqb a b && match lit_val b with Some _ => true | None => false end.
 Definition cx_s : store := Store [] [] [].
 Definition cx_kif : frame := KIf (ENum (NInt 0)) (ENum (NInt 1)) [].
 Definition cx_det : list config :=
@@ -725,13 +758,12 @@ Lemma cx_tgt_runs : JitKRef.JitKRef.runs sealed 9 (Cfg (Eval [] cx_tgt) [] cx_s)
  (Cfg (Throw (XUndefinedFun thaw_name)) [] (Store [[]] [] [])).
 Proof. do 9 (eapply cx_runs_tau; [reflexivity|]). constructor. Qed.
 
-Theorem share_rule_needs_thaw : JitKRef.JitKRef.KRef_refl_statement sealed [] ->
- ~ JitFrontCheck.rule_sound sealed [] share_rule.
+Theorem share_rule_needs_thaw : ~ JitFrontCheck.rule_sound sealed [] share_rule.
 Proof.
- intros Hrefl H.
+ intros H.
  assert (Hs : JitFrontCheck.chk_sound sealed [] cx_rec).
  { intros g a b E. apply andb_true_iff in E as [E1 E2]. apply expr_eqb_eq in E1. subst b.
-   apply Hrefl; [split; constructor|exact E2]. }
+   destruct (lit_val a) as [v|] eqn:Hl; [|discriminate]. exact (lit_kref sealed [] g a v Hl). }
  assert (W0 : wf_world []) by (split; constructor).
  pose proof (H cx_rec Hs [] cx_src cx_tgt cx_accepted 20%nat [] [] [] W0 (fun x I => match I with end)) as K.
  assert (HK : JitKRef.JitKRef.KRel sealed [] 20 [] [] []) by exact (JitKRefGround.JitKRefGround.KRel_top sealed [] 20 [] W0).
@@ -752,7 +784,7 @@ Qed.
 Corollary share_rule_sound_needs_thaw :
  (JitFrontCheck.FrontHyps sealed [] -> JitFrontCheck.rule_sound sealed [] share_rule) ->
  ~ JitFrontCheck.FrontHyps sealed [].
-Proof. intros H FH. exact (share_rule_needs_thaw (JitFrontCheck.fh_refl sealed [] FH) (H FH)). Qed.
+Proof. intros H FH. exact (share_rule_needs_thaw (H FH)). Qed.
 End Cx.
 
 (* fresh_ok's premise gives the checker's freshness tests for the lowerer's own names: a name the

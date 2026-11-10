@@ -153,7 +153,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
 | `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
 | `rocq/JitFrontShare.v` | share's checker (`check_share`), `share_rule_sound`, and the stage 0 share tally |
-| `rocq/Audit_Jit.v` | Assumption audit of 212 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 214 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -661,16 +661,17 @@ defines `thaw` as the kernel does, `(defun thaw (V) (V))`; `kernel_thaw_parses` 
 form of thaw parses to exactly that definition.
 
 **HT is a spec amendment, and it is necessary.** The spec asked for share_rule_sound closed modulo FrontHyps alone.
-That statement holds only if FrontHyps fails at D = [], which kref-fund is to prove it does not. Rocq proves the
-implication (`share_rule_needs_thaw`, closed, from the premise KRef_refl at D = []): for D = [] (D_wf holds) and the
-empty store, share_rule with rec = syntactic equality in scope (sound by KRef_refl, a FrontHyps field) accepts
-`(if false 0 1)` against `(let G (freeze 1) (if false 0 (thaw G)))`. The source returns 1. The target, in 9 steps
-(`cx_tgt_runs`), calls thaw, which the store does not bind, and raises `XUndefinedFun thaw`, a throw no source run can
-match (`cx_inv_star`: the source reaches only its own run and resource throws). SRel makes both stores share one
-function table, but nothing in FrontHyps says what that table's thaw does. `share_rule_sound_needs_thaw` (closed, no premise
-beyond its statement) gives the conditional form: the FrontHyps-only statement at D = [] implies `~ FrontHyps sealed
-[]`. This is a proof of an implication, not an unconditional refutation: that needs KRef_refl (or compat_lit) at D = [],
-which is kref-fund's (kref-ctl's) to prove. Discharging HT for
+Rocq refutes that statement at D = [] outright: `share_rule_needs_thaw` (closed, no premise) proves `~ rule_sound sealed
+[] share_rule`. For D = [] (D_wf holds) and the empty store, share_rule with rec = syntactic equality of literals
+(`cx_rec`, sound at every D by `lit_kref`, proved here directly with no FrontHyps: one step to `Ret` on each side, then
+the continuations' Ret clause) accepts `(if false 0 1)` against `(let G (freeze 1) (if false 0 (thaw G)))`. The source
+returns 1. The target, in 9 steps (`cx_tgt_runs`), calls thaw, which the store does not bind, and raises
+`XUndefinedFun thaw`, a throw no source run can match (`cx_inv_star`: the source reaches only its own run and resource
+throws). SRel makes both stores share one function table, but nothing in FrontHyps says what that table's thaw does.
+`share_rule_sound_needs_thaw` (closed) restates it against FrontHyps: the FrontHyps-only statement at D = [] implies
+`~ FrontHyps sealed []`, so it can hold there only vacuously; kref-fund's `front_hyps` is to prove FrontHyps for every
+D_wf D, D = [] included, at which point the FrontHyps-only statement is false. HT is decidable membership for a
+concrete D. Discharging HT for
 the real D is open: stage 0's source judge rejects thaw's own body, a 0-ary dynamic apply `(V)`, so a D that holds
 thaw does not meet `D_compiled` until emission (Comp) admits a dynamic apply. Whether to accept HT as an amendment, or
 to require that discharge, is the spec owner's decision. `check_share ps b0 b` is fchk with this rule at fuel
@@ -706,7 +707,7 @@ script: `ShenJitFrontNoScope` (equality without `scoped`: `fchk_rejects_unscoped
 `share_rejects_thaw_other` fails); `ShenJitFrontSameFuel` (rules get the same fuel) is refused at the Fixpoint's guard,
 which is the property itself (the check's termination, and the fuel induction of fchk_sound).
 
-Checked under Rocq 9.3 only (lane: 212 audited statements closed, rocqchk passed, stage 0 111 of 955 as recorded).
+Checked under Rocq 9.3 only (lane: 214 audited statements closed, rocqchk passed, stage 0 111 of 955 as recorded).
 The Coq 8.18 compile of the three files and of the four mutants (`make prove`, `scripts/proof-mutations`) was not run:
 UNKNOWN.
 

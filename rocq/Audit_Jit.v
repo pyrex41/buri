@@ -207,6 +207,8 @@ Print Assumptions JitFrontShare.JitFrontShare.kernel_thaw_parses.
 Print Assumptions JitFrontShare.JitFrontShare.share_accepts_basic.
 Print Assumptions JitFrontShare.JitFrontShare.share_rejects_swap.
 Print Assumptions JitFrontShare.JitFrontShare.share_rejects_thaw_other.
+Print Assumptions JitFrontShare.JitFrontShare.lit_vrel.
+Print Assumptions JitFrontShare.JitFrontShare.lit_kref.
 Print Assumptions JitFrontShare.JitFrontShare.cx_accepted.
 Print Assumptions JitFrontShare.JitFrontShare.cx_tgt_runs.
 Print Assumptions JitFrontShare.JitFrontShare.cx_inv_star.
