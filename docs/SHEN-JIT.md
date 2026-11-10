@@ -588,8 +588,10 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
     whose rule overlaps the old fragment (Eq's `=` beside `C_prim` with `pguard`) puts the
     reflection at risk; whether such a family must re-prove it, beside its map and all lemmas, is
     a review decision.
-  - `GvalsRel [] s m` cannot be dropped (`ShenJitEmitOldGvalsDropped`): MS and Com leave the
-    machine's globals unconstrained, and the new invariant needs them related.
+  - `GvalsRel [] s m` is added because MS and Com leave the machine's globals unconstrained, and
+    the new invariant needs them related. The corollaries' proofs use it to build
+    `StoreRel [] s m` for `ms_embed`/`sm_embed` (`ShenJitEmitOldGvalsDropped`, the premise
+    replaced by `True`, is refused there).
   - The old theorems are unchanged and stay proved on their own.
 - **Pending review (not signed off).** The index shape above; the frame exclusions and the
   `env_ok` / one-argument-window narrowing (spec item 4 asks for all frames, so the affected

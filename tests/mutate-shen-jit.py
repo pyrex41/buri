@@ -94,11 +94,13 @@ ShenJitEmitEvOfTime: ev_of translates no clock answer, as before the get-time co
 ShenJitEmitStoreRelNonEmpty: StoreRel asks for a non-empty bijection, which the old fragment at
   mu = [] has not. storerel_nil must fail.
 ShenJitEmitReflectTrace: old_reflect_statement no longer says the old-fragment run takes no source
-  IO, so its conclusion is no silent run. preservation_old_of_new must fail.
+  IO (True in place of tS = []), so its conclusion is no silent run. preservation_old_of_new must
+  fail (at subst tS).
 ShenJitEmitReflectSrcTrace: the same for old_reflect_src_statement. call_preservation_src_old_of_new
-  must fail.
-ShenJitEmitOldGvalsDropped: preservation_old_statement drops GvalsRel [] s m, which the new
-  invariant needs at mu = []. preservation_old_of_new must fail.
+  must fail (at subst tS).
+ShenJitEmitOldGvalsDropped: preservation_old_statement's GvalsRel [] s m premise becomes True. The
+  proof builds StoreRel [] s m from it for ms_embed, so preservation_old_of_new must fail (at
+  storerel_nil).
 ShenJitEmitTRunIOSilent: TRun's IO step records no event, so an IO-free trace no longer means a
   silent run. trun_nil_tn must fail.
 ShenJitEmitNestShapeAccepted: the uniform-code nesting of JitEmitNestTest.NestShape is asserted
@@ -270,9 +272,9 @@ mutate('ShenJitEmitFunRelCaps', 'rocq/JitEmitInv.v', "   B.tget l (B.m_heap m) =
 mutate('ShenJitEmitTimeRefused', 'rocq/JitEmitInv.v', " | B.JTime _, B.JTimeIs b => (b < 18446744073709551616)%N", " | B.JTime _, B.JTimeIs b => False")
 mutate('ShenJitEmitEvOfTime', 'rocq/JitEmitInv.v', "   if (b <? 18446744073709551616)%N\n   then Some", "   if false\n   then Some")
 mutate('ShenJitEmitStoreRelNonEmpty', 'rocq/JitEmitInv.v', " pbij mu /\\ HeapRel mu s m /\\ GvalsRel mu s m.", " pbij mu /\\ mu <> [] /\\ HeapRel mu s m /\\ GvalsRel mu s m.")
-mutate('ShenJitEmitReflectTrace', 'rocq/JitEmitInv.v', "-> tS = [] /\\ MS s c' m1) /\\", "-> MS s c' m1) /\\")
-mutate('ShenJitEmitReflectSrcTrace', 'rocq/JitEmitInv.v', " tS = [] /\\ JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg", " JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg")
-mutate('ShenJitEmitOldGvalsDropped', 'rocq/JitEmitInv.v', "forall n s c m, MS s c m -> GvalsRel [] s m ->", "forall n s c m, MS s c m ->")
+mutate('ShenJitEmitReflectTrace', 'rocq/JitEmitInv.v', "-> tS = [] /\\ MS s c' m1) /\\", "-> True /\\ MS s c' m1) /\\")
+mutate('ShenJitEmitReflectSrcTrace', 'rocq/JitEmitInv.v', " tS = [] /\\ JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg", " True /\\ JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg")
+mutate('ShenJitEmitOldGvalsDropped', 'rocq/JitEmitInv.v', "forall n s c m, MS s c m -> GvalsRel [] s m ->", "forall n s c m, MS s c m -> True ->")
 mutate('ShenJitEmitTRunIOSilent', 'rocq/JitEmitInv.v', " TRun rs (S n) m (ev_of q (rs O q) :: t) m2", " TRun rs (S n) m t m2")
 mutate('ShenJitEmitNestShapeAccepted', 'rocq/JitEmitNestTest.v', "Fail Inductive Tree", "Inductive Tree")
 print(' '.join(names))
