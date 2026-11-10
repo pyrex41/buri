@@ -60,6 +60,13 @@ ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a c
 ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
   JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
   deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
+ShenJitKRefAbsvectorNoWext: absvector's result is claimed at the same world w, without the pair of new
+  locations. The new vector is then related to nothing (its locations are fresh on both sides), so
+  absvector_param (JitKRefPrim) must fail.
+ShenJitKRefEqBudgetFree: the = case compares the two sides at their raw budgets S (length heap), which
+  differ by the one-sided cells, without eq_budget_closed moving each to S (length w). The lockstep
+  walk eq_lock is at one budget, so kl_eq_rel_from (JitKRefPrim) must fail. The statement itself is
+  true: this is a rejected proof, showing the = case rests on eq_budget_closed.
 """
 import re
 from pathlib import Path
@@ -193,4 +200,17 @@ mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v',
 mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
        '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
+prim = 'rocq/JitKRefPrim.v'
+mutate('ShenJitKRefAbsvectorNoWext', prim,
+       "   | exists ((List.length (heap s0), List.length (heap s)) :: w);\n"
+       "     split; [exact (wext_alloc k w s0 s HS)|split; [apply VRel_vec; left; reflexivity|]];\n",
+       "   | exists w;\n"
+       "     split; [eapply Bs.wext_self; exact HS|split; [apply VRel_vec; left; reflexivity|]];\n")
+mutate('ShenJitKRefEqBudgetFree', prim,
+       " unfold kl_eq_r.\n rewrite (EBC P (heap s0) (map fst w) Sy Tr N0 (closed_bridge _ _ C0) a0 b0 (din_src _ _ _ _ Ha) (din_src _ _ _ _ Hb)\n"
+       "   (S (List.length (heap s0)))) by (rewrite Bs.len_map; lia).\n"
+       " rewrite (EBC P (heap s) (map snd w) Sy Tr N1 (closed_bridge _ _ C1) a b (din_tgt _ _ _ _ Ha) (din_tgt _ _ _ _ Hb)\n"
+       "   (S (List.length (heap s)))) by (rewrite Bs.len_map; lia).\n"
+       " rewrite L. apply (eq_lock sealed w).\n",
+       " unfold kl_eq_r.\n apply (eq_lock sealed w).\n")
 print(' '.join(names))

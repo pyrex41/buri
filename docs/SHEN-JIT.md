@@ -312,6 +312,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
 | `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
+| `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 
@@ -346,7 +347,7 @@ with a new environment and one-sided cells) and its instances for let, if, cond,
 lambda application. `world_closed` and `VRel_ptrs`: under SRel each side of the world is closed under the vector
 pointers of its cells, duplicate-free, of size `length w`, so at most either heap's length, and related values point
 into it pointwise, for the `=` budget (`world_closed_alloc` in JitEqBudgetStep's form). JitEqBudgetStep's S-local lok
-does not follow from SRel (`SRel_lok_refuted`): the `=` budget path needs `store_ok` alongside SRel, or a change to SRel. Under `jit_rules` no step changes a sealed name's function (`sealed_step`: defun
+does not follow from SRel (`SRel_lok_refuted`); the `=` case of `prim_compat` does not need it, since `JitEqBudgetCore.eq_budget_closed` takes no lok (below). Under `jit_rules` no step changes a sealed name's function (`sealed_step`: defun
 and eval-kl's defun are refused, primitives keep gfuns, `port_prim` is None). Mutants `ShenJitKRefKRelStrict` (KRel
 at j < k) and `ShenJitKRefDefunSealed` (defun admits sealed names) are rejected, each first by an existing proof
 (`KRel_top`; `jit_defun_fixed_refused`; with JitProfile.v's refusal theorems deleted in a throwaway build, `sealed_step` fails). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
@@ -354,6 +355,29 @@ fundamental property below index k in scope-and-free-variable form; `fund_gen_st
 index given `D_wf`; and `prim_compat_statement`, that every primitive maps related arguments and stores to related
 results (`PrimOutRel`: a related value and store at a larger world, the same exception, both wrong, the same
 eval-kl expression or resource, or the same IO request with related continuations).
+`rocq/JitKRefPrim.v` proves `prim_compat_statement` (`prim_compat`, Closed under the global context, 16 audited
+statements). One lemma per family: arithmetic, comparisons and conversions (`prim_param_arith`: equal numbers in, equal
+results out, through the integer range and the profile's inexact slots); lists, strings and symbols (`prim_param_data`;
+`str` of a closure or a vector is the constant text `#<procedure>` or `#<absvector>`, so `jit_str_other` reads no
+location and no body); vectors (`prim_param_vector`: `absvector` extends the world by the pair of new locations, fresh on
+both sides because SRel allocates every world location; `address->` writes the partner cell the bijection gives;
+`<-address`, `absvector?`); globals (`prim_param_globals`: `value` finds Forall2-positional partners, `set` adds a head
+entry on both sides); IO (`prim_param_io`: the same request, outcomes related for every response); errors
+(`prim_param_error`); `=` (`prim_param_eq`); and eval-kl's primitive step (`prim_param_eval_kl`: `parse_sk`, parse
+reads only the first-order skeleton, so related data parse to the same expression; running it is the fundamental
+property's job). The `=` case is `prim_param_eq_from`, whose only hypothesis is
+`JitEqBudgetCore.eq_budget_closed_statement (jit_rules sealed)`, instantiated with `eq_budget_closed`: on each side
+S is the world's side (`map fst w`, `map snd w`), closed, duplicate-free, of length `length w` and no longer than the
+heap (`world_closed`, `world_closed_alloc`), so each side's budget `S (length heap)` moves to `S (length w)`; the
+operands point into S (`VRel_ptrs`); then `eq_lock` walks the two comparisons at that one budget in lockstep (vectors
+through the bijection, closures through `same_id`, numbers equal under GVal). `jit_eq_per` gives eq_budget_closed's
+hypotheses on number equality; `eq_budget_statement`, with its global lok, is not used. The port half is
+`port_compat_of`, for any port_prim table whose rules are each parametric (`rule_param`), with `port_param_jit`
+discharging it vacuously for `jit_rules`, which gives none: wiring in an approved table (`OB-JIT-PORT-PRIMS`) needs
+`rule_param` for each of its rules. No proposed rule is proved parametric; those that hash a key read the environment's
+hash of heap and value, parametric only if the hash is invariant under the world's bijection. Mutants
+`ShenJitKRefAbsvectorNoWext` (absvector at the same world) and `ShenJitKRefEqBudgetFree` (the `=` case at the two raw
+budgets, without eq_budget_closed; a true statement whose proof then fails) are rejected.
 
 **The theorem.** `preservation` says: for every store, configuration and machine in the simulation relation, and
 every n, either the bytecode takes at least n steps while the source keeps a related configuration, or both end

@@ -5870,7 +5870,13 @@
     "rocq/JitProfile.v",
     "docs/SHEN-JIT.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "rocq/JitKRefPrim.v",
+     "recorded": "2026-11-09: open. JitKRefPrim.port_compat_of gives the port half of prim_compat_statement for any port_prim table whose rules each satisfy rule_param (parametricity under VRel/SRel); jit_rules gives none, so it holds vacuously (port_param_jit). Wiring in a table needs rule_param for each of its rules. Not proved for any proposed rule; the hashing rules (shen-jit.hash, dict-find, dict-put, dict-remove) are parametric only if the environment's hash is invariant under the world's bijection (a hash reading a vector's location is not).",
+     "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-EQ-CYCLE",
@@ -6049,7 +6055,8 @@
     "rocq/JitKRef.v",
     "rocq/JitKRefGround.v",
     "rocq/JitKRefCompose.v",
-    "rocq/JitKRefBase.v"
+    "rocq/JitKRefBase.v",
+    "rocq/JitKRefPrim.v"
    ],
    "history": [
     {
@@ -6071,6 +6078,11 @@
      "source": "rocq/JitKRefBase.v",
      "recorded": "2026-11-09: open. kref-base proved and audited (57 statements in rocq/Audit_Jit.v, each Closed under the global context): the JitKRef statements VRel_down, VRel_wext, ERel_down, KRef_scope, sealed_stable and storehas_stable; SRel/KRel/ERel/EnvRel down in the index, KRel/ERel/EnvRel up in wext, ObsT down in the index and antitone in the world; source anti-reduction ObsT_anti and ObsT_anti_io (traces concatenate), target-step reduction ObsT_step and ObsT_running (a target resource step matched by the source's, through KRel's Throw clause), resource_match, wrong_match; the bind lemma ERel_push and one KRel lemma per frame kind (KLet, KIf, KCond, KAnd, KAndR, KOr, KOrR, KTrap, KHead, KArgs, KCallArgs, KApply), the application frames under AppRel, a hypothesis whose proof is compat_app's and compat_call's; ERel_anti and its instances for let, if, cond, type, a named call of a D function and lambda application; world_closed, world_closed_alloc and VRel_ptrs (world reachability for the = budget; JitEqBudgetStep's S-local lok does not follow from SRel: SRel_lok_refuted, so the = budget path needs store_ok or an SRel interface change). Refuted in Rocq, so not proved: SRel monotone up in wext (SRel_wext_refuted; SRel_wext_cells is the true form) and ObsT monotone up in wext (ObsT_wext_refuted; ObsT_wext_anti is the true direction). Mutants ShenJitKRefKRelStrict and ShenJitKRefDefunSealed are rejected, each first by an existing proof (KRel_top in rocq/JitKRefGround.v; jit_defun_fixed_refused in rocq/JitProfile.v; with JitProfile.v's two defun-refusal theorems deleted, in a throwaway build, the chain compiles up to JitKRefBase.v and sealed_step fails). Not proved: any compatibility lemma, the fundamental property, AppRel for any function value.",
      "reconciliation": "kref-base, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefPrim.v",
+     "recorded": "2026-11-09: open. kref-prim proved and audited (16 statements in rocq/Audit_Jit.v, each Closed under the global context): prim_compat (JitKRef.prim_compat_statement, no hypothesis); per-family lemmas prim_param_arith, prim_param_data, prim_param_vector, prim_param_globals, prim_param_io, prim_param_error, prim_param_eq and prim_param_eval_kl; prim_compat_table; port_compat_of and port_param_jit (port half vacuous for jit_rules); eq_lock, the lockstep walk of = at one budget; kl_eq_rel_from and prim_param_eq_from, the = case from JitEqBudgetCore.eq_budget_closed_statement, instantiated with eq_budget_closed (no lok, not eq_budget_statement); parse_sk, eval-kl's parse step. Mutants ShenJitKRefAbsvectorNoWext and ShenJitKRefEqBudgetFree rejected. Not proved: the compatibility lemmas and the fundamental property.",
+     "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
     }
    ]
   },
