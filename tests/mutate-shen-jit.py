@@ -60,6 +60,10 @@ ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a c
 ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
   JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
   deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
+ShenJitKRefLamNoSameId: VBody's VLam clause without same_id, so two related lambdas need not have
+  corresponding identities. Built as JitKRef.v + JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v;
+  rejected first by VBody_ground (JitKRefGround.v): = on closures compares identities, so the ground
+  relation needs same_id. JitKRefCompatClo's lemmas only establish same_id (lam_core), never use it.
 """
 import re
 from pathlib import Path
@@ -193,4 +197,7 @@ mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v',
 mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
        '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
+mutate_chain('ShenJitKRefLamNoSameId', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v', 'rocq/JitKRefCompatClo.v'],
+       " | VLam x0 b0 r0, VLam x b r => same_id w r0 r /\\\n     forall j, (j < k)%nat -> forall w', wext w w' -> forall a0 a, V j w' a0 a ->",
+       " | VLam x0 b0 r0, VLam x b r =>\n     forall j, (j < k)%nat -> forall w', wext w w' -> forall a0 a, V j w' a0 a ->")
 print(' '.join(names))

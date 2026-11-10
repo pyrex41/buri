@@ -26,8 +26,10 @@
      storehas_stable. fv against scoped is not yet proved there.
    - JitKRefCompatCtl.v (planned): the control compatibility lemmas, compat_lit, var, let, if,
      and, or, cond, type and trap, each from fund_below at its index.
-   - JitKRefCompatClo.v (planned): closures, calls and store code: compat_lambda, freeze, app,
-     call and defun (sealed_stable and storehas_stable are proved in JitKRefBase.v).
+   - JitKRefCompatClo.v (exists): compat_lambda and compat_freeze outright; app as
+     compat_app_lt at index k and compat_app_of_fund (from fund_gen_statement and
+     prim_compat_statement). compat_call and compat_defun are still planned (sealed_stable and
+     storehas_stable are proved in JitKRefBase.v).
    - JitKRefPrim.v (planned): prim_compat_statement, using eq_budget_statement (JitEqBudget's
      eq_budget_from_core) and jit_eq_per_statement.
    - JitKRefFund.v (planned): fund_gen_statement by induction on the index from the compatibility

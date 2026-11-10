@@ -150,7 +150,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 169 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 183 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -312,6 +312,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
 | `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
+| `rocq/JitKRefCompatClo.v` | KRef compatibility for lambda, freeze and dynamic application: `compat_lambda`, `compat_freeze` (no induction hypothesis), the `_lt` forms from `fund_below`, `app_rel`, and `compat_app_of_fund` from `fund_gen_statement` and `prim_compat_statement` |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 
@@ -331,7 +332,11 @@ FunRel the callees b0 calls are the lowered bodies, not the kernel's source defi
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
 `ShenJitEquivComposeLeft` are rejected (since K00 each is the chain JitKRef.v, JitKRefGround.v[, JitKRefCompose.v]
-with the statement mutated). `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
+with the statement mutated). `rocq/JitKRefCompatClo.v` (14 audited statements) proves `compat_lambda` and
+`compat_freeze` outright, their reflexive forms `compat_lambda_lt` and `compat_freeze_lt` from `fund_below k`, `AppAll` for
+related continuations (`app_rel`, from `fund_below k` and `prim_compat_statement`), `compat_app_lt`, and
+`compat_app_statement` only as an implication from `fund_gen_statement` and `prim_compat_statement`
+(`compat_app_of_fund`); mutant `ShenJitKRefLamNoSameId` is rejected. `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
 SRel up in wext and ObsT up in wext are false and refuted in Rocq (`SRel_wext_refuted`, `ObsT_wext_refuted`; a pair the
