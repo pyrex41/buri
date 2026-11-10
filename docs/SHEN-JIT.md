@@ -661,13 +661,16 @@ defines `thaw` as the kernel does, `(defun thaw (V) (V))`; `kernel_thaw_parses` 
 form of thaw parses to exactly that definition.
 
 **HT is a spec amendment, and it is necessary.** The spec asked for share_rule_sound closed modulo FrontHyps alone.
-That statement is false, and Rocq shows it (`share_rule_needs_thaw`, closed): for D = [] (D_wf holds) and the empty
-store, share_rule with rec = syntactic equality in scope (sound by KRef_refl, a FrontHyps field) accepts
+That statement holds only if FrontHyps fails at D = [], which kref-fund is to prove it does not. Rocq proves the
+implication (`share_rule_needs_thaw`, closed, from the premise KRef_refl at D = []): for D = [] (D_wf holds) and the
+empty store, share_rule with rec = syntactic equality in scope (sound by KRef_refl, a FrontHyps field) accepts
 `(if false 0 1)` against `(let G (freeze 1) (if false 0 (thaw G)))`. The source returns 1. The target, in 9 steps
 (`cx_tgt_runs`), calls thaw, which the store does not bind, and raises `XUndefinedFun thaw`, a throw no source run can
 match (`cx_inv_star`: the source reaches only its own run and resource throws). SRel makes both stores share one
-function table, but nothing in FrontHyps says what that table's thaw does. `share_rule_sound_needs_thaw` restates it:
-the FrontHyps-only form at D = [] would refute `FrontHyps sealed []`, which kref-fund is to prove. Discharging HT for
+function table, but nothing in FrontHyps says what that table's thaw does. `share_rule_sound_needs_thaw` (closed, no premise
+beyond its statement) gives the conditional form: the FrontHyps-only statement at D = [] implies `~ FrontHyps sealed
+[]`. This is a proof of an implication, not an unconditional refutation: that needs KRef_refl (or compat_lit) at D = [],
+which is kref-fund's (kref-ctl's) to prove. Discharging HT for
 the real D is open: stage 0's source judge rejects thaw's own body, a 0-ary dynamic apply `(V)`, so a D that holds
 thaw does not meet `D_compiled` until emission (Comp) admits a dynamic apply. Whether to accept HT as an amendment, or
 to require that discharge, is the spec owner's decision. `check_share ps b0 b` is fchk with this rule at fuel

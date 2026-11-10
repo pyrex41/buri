@@ -21,8 +21,9 @@
    frame by frame (kif_base, kand_frame), and a chain let binds the same name on both sides
    (chain_sound). The thaw steps go through the store's thaw, so the soundness takes, as a
    premise, that D defines thaw as the kernel does: (defun thaw (V) (V)) (Section hypothesis HT).
-   HT is necessary: share_rule_needs_thaw (below) refutes share_rule_sound without it, at D = [],
-   from KRef_refl alone, so the FrontHyps-only form the spec asked for is false.
+   HT is necessary: share_rule_needs_thaw (below) proves that KRef_refl at D = [] refutes
+   share_rule_sound there, so the FrontHyps-only form the spec asked for holds only if FrontHyps
+   fails at D = [] (share_rule_sound_needs_thaw), which kref-fund is to prove false.
 
    NOT covered: share's REUSE of a chain-bound variable for a hd/tl the chain already took (the
    `reuse` / `canon` part of lower.shen's share, "share chains"). Relating (hd V) on the source to
@@ -97,18 +98,19 @@ Definition check_share (ps : list name) (b0 b : expr) : bool := fchk share_rules
    - share_swap: (let G (freeze 1) (if p (thaw G) 0))   rejected: then and else swapped;
    - share_thaw_other: (let G (freeze 1) (if p 0 (thaw p)))  rejected: the else thaws a variable
      that is not the ElseN the let binds.
-   They come before every proof, so a mutant that changes one of these decisions fails here. *)
+   They come before every proof, so a mutant that changes one of these decisions fails here; the
+   rejections come first, so a mutant that accepts a wrong shape fails at the rejection it breaks. *)
 Definition sx_p : name := of_string "p".
 Definition sx_G : name := of_string "G".
 Definition share_src : expr := EIf (EVar sx_p) (ENum (NInt 0)) (ENum (NInt 1)).
 Definition share_ok : expr := ELet sx_G (EFreeze (ENum (NInt 1))) (EIf (EVar sx_p) (ENum (NInt 0)) (thaw_e sx_G)).
 Definition share_swap : expr := ELet sx_G (EFreeze (ENum (NInt 1))) (EIf (EVar sx_p) (thaw_e sx_G) (ENum (NInt 0))).
 Definition share_thaw_other : expr := ELet sx_G (EFreeze (ENum (NInt 1))) (EIf (EVar sx_p) (ENum (NInt 0)) (thaw_e sx_p)).
-Theorem share_accepts_basic : check_share [sx_p] share_src share_ok = true.
-Proof. vm_compute. reflexivity. Qed.
 Theorem share_rejects_swap : check_share [sx_p] share_src share_swap = false.
 Proof. vm_compute. reflexivity. Qed.
 Theorem share_rejects_thaw_other : check_share [sx_p] share_src share_thaw_other = false.
+Proof. vm_compute. reflexivity. Qed.
+Theorem share_accepts_basic : check_share [sx_p] share_src share_ok = true.
 Proof. vm_compute. reflexivity. Qed.
 
 (* A rejection trace: the path of target constructors from the root to the deepest node where
@@ -659,7 +661,7 @@ Proof. intros FH ps b0 b E. exact (fchk_sound sealed D FH share_rules share_rule
 End Share.
 
 (* ---------- HT is necessary: share_rule_sound fails for a D without thaw ----------
-   The FrontHyps-only form of share_rule_sound is false. Take D = [] (D_wf holds) and the empty
+   The FrontHyps-only form of share_rule_sound holds only if FrontHyps fails at D = []. Take D = [] (D_wf holds) and the empty
    store, which meets it. The pair
        (if false 0 1)   against   (let G (freeze 1) (if false 0 (thaw G)))
    is accepted by share_rule with rec = syntactic equality in scope, a sound rec by KRef_refl (a
