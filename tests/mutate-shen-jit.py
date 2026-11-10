@@ -62,8 +62,37 @@ ShenJitEmitPmapx: pmapx relates + to the bytecode's -. pmapx_pmap must fail.
 ShenJitEmitVRhPartial: VRh relates a partial application to a closure. VRh_no_partial must fail.
 ShenJitEmitEndsDecoupled: Ends''s E'_ok binds its own final machine, as ShenJitLowerEndsDecoupled
   does for Ends. Ends'_final must fail.
-ShenJitEmitSMNonEmpty: SM asks for a non-empty partial bijection, which no state of the old fragment
-  has. sm_embed (and ms_embed) must fail.
+ShenJitEmitSMNonEmpty: SM asks for a non-empty partial bijection, which StoreRel does not give (the
+  old fragment at mu = [] has none). sm_embed (and ms_embed) must fail.
+ShenJitEmitFrameEqGuard: frame_prim drops JitLowerRel's guard on =, so a frame admits = on two NaNs.
+  frame_prim_pmap must fail.
+ShenJitEmitTRunZero: a run of 0 steps may end at any machine. TRun_0 must fail.
+ShenJitEmitSimCRest, ShenJitEmitSimTRest, ShenJitEmitSimORest: SimC/SimT/SimO no longer ask the
+  machine to be at the derivation's code position. SimC_of_sim' (SimT_, SimO_) must fail.
+ShenJitEmitSimSDrop: SimS's cons case drops the head operand. SimS_of_sim' must fail.
+ShenJitEmitSimWSlot: SimW's element IH is at s, not s + 1, where CompW evaluates it. SimW_of_sim'
+  must fail.
+ShenJitEmitSimAKill: SimA's direct case keeps the environment, where CompTA kills slot s.
+  SimA_of_sim' must fail.
+ShenJitEmitMSRetCapture: MS'_ret asks for captures, which no old return state has. ms_embed must
+  fail.
+ShenJitEmitOutRaiseNoHK: O'_raise relates the store only (SMs), not the handlers (SM's HK), so the
+  raise may leave the machine stuck on a missing label. Out'_not_stuck must fail.
+ShenJitEmitEndsSrcDecoupled: EndsSrc''s ok case binds its own final machine. EndsSrc'_final must
+  fail.
+ShenJitEmitHKTwice: HK asks two handlers per KTrap frame. HK_length must fail.
+ShenJitEmitGvalsCleared: GvalsRel lets a bound global be cleared in the machine, where value raises.
+  value_bound must fail.
+ShenJitEmitDoSame: DoOK lets do's two parameters be the same name, so do returns its first argument.
+  do_body_second must fail.
+ShenJitEmitFunRelCaps: FunRel' asks a function's closure to have no captures, which the old
+  invariant does not carry. funrel_embed (and sm_embed) must fail.
+ShenJitEmitTimeRefused: resp_ok admits no clock answer, so no environment is well formed and every
+  statement under env_ok is vacuous. env_ok_inhabited must fail.
+ShenJitEmitEvOfTime: ev_of translates no clock answer, as before the get-time counterexample.
+  ev_of_time must fail.
+ShenJitEmitStoreRelNonEmpty: StoreRel asks for a non-empty bijection, which the old fragment at
+  mu = [] has not. storerel_nil must fail.
 """
 import re
 from pathlib import Path
@@ -211,4 +240,24 @@ mutate('ShenJitEmitEndsDecoupled', 'rocq/JitEmitInv.v',
        " | E'_ok v v' s' m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 ->",
        " | E'_ok v v' s' m0 m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 ->")
 mutate('ShenJitEmitSMNonEmpty', 'rocq/JitEmitInv.v', " sm_bij : pbij mu;", " sm_bij : pbij mu /\\ mu <> [];")
+mutate('ShenJitEmitFrameEqGuard', 'rocq/JitEmitKont.v', " | _ => pguard c q ops end.", " | _ => true end.")
+mutate('ShenJitEmitTRunZero', 'rocq/JitEmitInv.v', " | TR_0 rs m : TRun rs 0 m [] m", " | TR_0 rs m m' : TRun rs 0 m [] m'")
+mutate('ShenJitEmitSimCRest', 'rocq/JitEmitInv.v', "code m = c -> B.m_rest m = r -> EvalCtx", "code m = c -> EvalCtx")
+mutate('ShenJitEmitSimTRest', 'rocq/JitEmitInv.v', "code m = c -> B.m_rest m = r -> TestCtx", "code m = c -> TestCtx")
+mutate('ShenJitEmitSimORest', 'rocq/JitEmitInv.v', "code m = c -> B.m_rest m = r -> OpCtx", "code m = c -> OpCtx")
+mutate('ShenJitEmitSimSDrop', 'rocq/JitEmitInv.v', "     SimS c cv g top (e :: es) (o :: os) r r'.", "     SimS c cv g top (e :: es) os r r'.")
+mutate('ShenJitEmitSimWSlot', 'rocq/JitEmitInv.v', " : SimC c cv g (s + 1) e (DSlot s) r r1 -> SimW", " : SimC c cv g s e (DSlot s) r r1 -> SimW")
+mutate('ShenJitEmitSimAKill', 'rocq/JitEmitInv.v', "     SimA c cv (kill s g) (s + 1) t es ms r1 r' -> SimA", "     SimA c cv g (s + 1) t es ms r1 r' -> SimA")
+mutate('ShenJitEmitMSRetCapture', 'rocq/JitEmitInv.v', " | MS'_ret cv caps v v' o k s w m :\n     SM mu s k m ->", " | MS'_ret cv caps v v' o k s w m :\n     SM mu s k m -> cv <> [] ->")
+mutate('ShenJitEmitOutRaiseNoHK', 'rocq/JitEmitInv.v', "exn_ok x msg -> mext mu mu' -> SM mu' s' k m2 ->", "exn_ok x msg -> mext mu mu' -> SMs mu' s' m2 ->")
+mutate('ShenJitEmitEndsSrcDecoupled', 'rocq/JitEmitInv.v',
+       " | ES'_ok v0 v v' s0 s' w m2 mu' : Srun c0 t (Cfg (Ret v0) [] s0) ->\n     JitKRef.JitKRef.wext (JitKRef.JitKRef.id_world s) w -> JitKRef.JitKRef.GVal w v0 v ->\n     JitKRef.JitKRef.GStore w s0 s' ->\n     B.next E pt m1 =",
+       " | ES'_ok v0 v v' s0 s' w m0 m2 mu' : Srun c0 t (Cfg (Ret v0) [] s0) ->\n     JitKRef.JitKRef.wext (JitKRef.JitKRef.id_world s) w -> JitKRef.JitKRef.GVal w v0 v ->\n     JitKRef.JitKRef.GStore w s0 s' ->\n     B.next E pt m0 =")
+mutate('ShenJitEmitHKTwice', 'rocq/JitEmitInv.v', " B.h_quiet hd = quiet_of r) hs (trap_frames k).", " B.h_quiet hd = quiet_of r) hs (trap_frames k ++ trap_frames k).")
+mutate('ShenJitEmitGvalsCleared', 'rocq/JitEmitInv.v', "Some v' /\\ v' <> B.VCleared /\\ VRh mu", "Some v' /\\ VRh mu")
+mutate('ShenJitEmitDoSame', 'rocq/JitEmitInv.v', " exists x y, x <> y /\\ lookup do_name (gfuns s) = Some (FUser [x; y] (EVar y)).\n", " exists x y, lookup do_name (gfuns s) = Some (FUser [x; y] (EVar y)).\n")
+mutate('ShenJitEmitFunRelCaps', 'rocq/JitEmitInv.v', "   B.tget l (B.m_heap m) = Some (B.OClo c caps) /\\\n", "   B.tget l (B.m_heap m) = Some (B.OClo c caps) /\\ caps = [] /\\\n")
+mutate('ShenJitEmitTimeRefused', 'rocq/JitEmitInv.v', " | B.JTime _, B.JTimeIs b => (b < 18446744073709551616)%N", " | B.JTime _, B.JTimeIs b => False")
+mutate('ShenJitEmitEvOfTime', 'rocq/JitEmitInv.v', "   if (b <? 18446744073709551616)%N\n   then Some", "   if false\n   then Some")
+mutate('ShenJitEmitStoreRelNonEmpty', 'rocq/JitEmitInv.v', " pbij mu /\\ HeapRel mu s m /\\ GvalsRel mu s m.", " pbij mu /\\ mu <> [] /\\ HeapRel mu s m /\\ GvalsRel mu s m.")
 print(' '.join(names))

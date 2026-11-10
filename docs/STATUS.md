@@ -1241,12 +1241,16 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and seventy-nine statements are in the assumption audit
-in `rocq/Audit_Jit.v`, all about the models (70 added by emit-spec: the family hooks' map and all lemmas, the hand-written
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and ninety-six statements are in the assumption audit
+in `rocq/Audit_Jit.v`, all about the models (87 added by emit-spec: the family hooks' map and all lemmas, the hand-written
 nested `Comp_ind'` of `rocq/JitEmitRel.v` and of its non-empty test copy with `suffix`, `comp_embed`, `pmapx_pmap`,
-`trap_has_handler`, `VR_VRh`, `VRh_no_partial`, `Ends'_final`, the old invariant's embedding at mu = [] (`kont_embed`,
-`sm_embed`, `ms_embed`) and the three old-fragment implications (`*_old_of_new`); the back-end statements of `rocq/JitEmitInv.v`
-are stated, not proved, see [SHEN-JIT](SHEN-JIT.md)). Eighteen are the port-primitive option (`port_prim`, a ninth field of
+`frame_prim_pmap`, `trap_has_handler`, `VR_VRh`, `VRh_no_partial`, the old invariant's embedding at any `mu` that relates the
+store's cells and globals (`kont_embed`, `sm_embed`, `ms_embed`), sanity lemmas for each new relation (`HK_length`,
+`do_body_second`, `storerel_nil`, `env_ok_inhabited`, `ev_of_time`, `TRun_0`, `Out'_not_stuck`, `value_bound`, `value_unbound`, the six
+`Sim*_of_sim'`, `Ends'_final`, `EndsSrc'_final`) and the three old-fragment implications (`*_old_of_new`, which conclude the new
+statements' conclusion, not the old one); the back-end statements of `rocq/JitEmitInv.v`
+are stated, not proved, and a first version of them was false (counterexamples recorded in `rocq/JitEmitKont.v`'s `frame_prim`
+and in `rocq/JitEmitInv.v`'s `resp_ok`), see [SHEN-JIT](SHEN-JIT.md)). Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
 `OB-JIT-PORT-PRIMS`). The five added at 0.6 state `shen-jit.write-bytes`, the read-error raise

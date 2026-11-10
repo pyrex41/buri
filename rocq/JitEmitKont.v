@@ -1,6 +1,8 @@
 (* Shen/JIT Phase 2, emit-spec: the continuation relation of the extended emission relation, with
-   EVERY frame the emission families need, defined once here. JitLowerKont's KD, TK, KC and RK are
-   copied with these changes:
+   every frame the emission families get, defined once here. It is not every frame they need:
+   frame_prim lists the primitives that have no frame, each refuted by a counterexample, and the
+   dynamic-call window takes at most one argument. JitLowerKont's KD, TK, KC and RK are copied
+   with these changes:
    - the code's capture names cv and capture values caps are indices next to the code, so that a
      closure body's environment (MEnv') reads captured variables from caps;
    - the machine's handler list hs is an index, threaded through every frame, so that each KTrap
@@ -8,8 +10,11 @@
    - the value relation is a Section variable V, and the heap fact a frame needs about a
      closure is a Section variable HeapClo, so that JitEmitInv instantiates them with VRh mu h and
      the machine's heap (VRh needs the heap, which grows);
-   - the comparison of primitives goes through pmapx, every primitive stage 0 calls, without
-     JitLowerRel's pguard (a family rule states its own guard);
+   - a primitive's frame goes through pmapx, every primitive stage 0 calls, and frame_prim, which
+     keeps JitLowerRel's guard on = and admits no frame for absvector, error-to-string, open,
+     close, read-byte and write-byte (each refuted by a counterexample, see frame_prim);
+   - the do frames ask DoK (the store's do is the kernel's), a Section variable, so that a
+     continuation without a do frame never needs it;
    - Comp is JitEmitRel's.
    The frames, against what the families need (a family may not add one later: a missing frame
    stops the family and goes back through emit-spec):
@@ -18,10 +23,14 @@
      handler                KD'_trap: the protected value in slot S, pop-handler, the handler's
                             code at its label (with or without exception), the shared continuation
      global-set, value      KD'_prim with pmapx PSet = B.PSet, pmapx PValue = B.PValue
-     vector ops             KD'_prim with pmapx PAbsvector/PAddressGet/PAddressSet/PAbsvectorP
+     vector ops             KD'_prim with pmapx PAddressGet/PAddressSet/PAbsvectorP; NOT absvector
+                            (frame_prim: a counterexample), which goes back through emit-spec
      dynamic-call window    KD'_head_call/_tail (head in window slot a+1), KD'_args_call/_tail
                             (argument i in slot a+2+i), KD'_hbind (apply-all and variable heads:
-                            the head in a slot, the rest of a chain of one-argument applications)
+                            the head in a slot, the rest of a chain of one-argument applications).
+                            At most one argument: the source over-applies a one-parameter lambda
+                            to two arguments (a KApply frame), the bytecode's call-value of 2
+                            raises "expected 1 argument", so a wider window would be refuted.
      do                     KD'_do1/KD'_do1t (X's value dropped, Y next), KD'_do2/TK'_do2/RK'_do2
                             (the source's pending call of do on X's value is transparent)
    The KApply frame is related nowhere: emitted code never over-applies (erase makes EApp with at
@@ -58,6 +67,35 @@ Definition pmapx (p : prim) : option B.prim := match p with
 Lemma pmapx_pmap : forall p q, pmap p = Some q -> pmapx p = Some q.
 Proof. intros p q H; destruct p; cbn in H |- *; congruence. Qed.
 
+(* The primitives a KD'_prim frame admits, with their guard. pmapx lists every primitive stage 0
+   calls; a frame admits those whose bytecode and source rules agree on every related argument
+   list, as far as emit-spec has checked, and JitLowerRel's guard on = (a constant operand it
+   cannot misjudge). The others have NO frame, each for a counterexample to sim'_statement that
+   a frame for it would make (the source rule is KLSemantics.prim_rule under jit_rules, the
+   bytecode's is JitBytecode.prim_step):
+   - absvector: (absvector 281474976710656) allocates in the source (jit_profile has no heap
+     limit, and the length is a fixnum), while the bytecode raises "not a valid length".
+   - error-to-string: on an exception the bytecode raised, e.g. (hd 1)'s, the source answers
+     jit_sys_message's "error", the bytecode the exception's own message; VRh_str needs equal
+     text (OB-JIT-ERROR-TEXT).
+   - open: the bytecode opens *home-directory* ++ path, the source opens path, so the two IO
+     events differ once a program sets *home-directory* (open in OB-JIT-LOWER-FRAGMENT).
+   - close, read-byte, write-byte: the source's stream is a bare handle, the bytecode's a heap
+     object with a direction and an open flag. On a closed stream (or the wrong direction) the
+     bytecode returns () or raises with no request, while the source sends the request.
+   - = beyond pguard: two NaNs, or a cyclic pair, leave the bytecode stuck (RIdentity, RCyclic)
+     where the source answers (OB-JIT-NAN-IDENTITY, OB-JIT-EQ-CYCLE).
+   A family that needs one of these goes back through emit-spec (open in OB-JIT-LOWER-FRAGMENT).
+   Does NOT say: that the admitted primitives agree; that is sim_Prim/sim_Store's business, and
+   a counterexample found there sends the frame back here. get-time is admitted: its request is
+   translated by JitEmitInv.ev_of, and only well-formed clock answers are considered (resp_ok). *)
+Definition frame_prim (c : B.code) (q : B.prim) (ops : list B.operand) : bool := match q with
+ | B.PAbsvector | B.PErrorToString | B.POpen | B.PClose | B.PReadByte | B.PWriteByte => false
+ | _ => pguard c q ops end.
+
+Lemma frame_prim_pmap : forall c p q ops, pmap p = Some q -> frame_prim c q ops = pguard c q ops.
+Proof. intros c p q ops H; destruct p; cbn in H; try discriminate; inversion H; reflexivity. Qed.
+
 (* The kernel's do, which the emitter lowers as value-X-then-Y (erase reads it back as a call). *)
 Definition do_name : name := kw "do".
 
@@ -74,6 +112,9 @@ Section Kont.
 Variable V : value -> B.val -> Prop.
 (* HeapClo p c caps: the object at heap key p is a closure of code c with captures caps. *)
 Variable HeapClo : positive -> B.code -> list B.val -> Prop.
+(* DoK: the store's do is the kernel's (JitEmitInv instantiates it with DoOK of the current
+   store). Only the do frames ask it, so a continuation without one never needs it. *)
+Variable DoK : Prop.
 
 (* The source environment against the frame: g's variables in their slots, and the variables the
    code captures (cv, numbered) in caps, except where g binds the name, as lower.shen's load-var
@@ -128,6 +169,7 @@ Inductive KD' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B
      (List.length vals + 1 + List.length es)%nat = prim_arity p ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g top ->
      CompOps c cv g top es ops r (B.IPrim d q (rev dops ++ o :: ops) :: r1) ->
+     frame_prim c q (rev dops ++ o :: ops) = true ->
      DoneR' c fp st vals dops -> Forall (o_safe fp w) dops ->
      Forall (o_below top) dops -> o_below top o ->
      Sub w w1 -> Above fp top w1 -> w1 (fp + d) -> KD' c cv caps fp st cs hs w1 (B.OSlot d) r1 k1 ->
@@ -166,13 +208,13 @@ Inductive KD' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B
  (* dynamic-call window, head: the head's value in slot a+1, then the arguments from a+2, then
     call-value (its result to d) or tail-call-value. *)
  | KD'_head_call c cv caps fp st cs hs w r args rho k1 g a s d n r1 w1 :
-     s = a + 1 -> n = N.of_nat (List.length args) ->
+     s = a + 1 -> n = N.of_nat (List.length args) -> (List.length args <= 1)%nat ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g (s + 1) ->
      CompW c cv g (s + 1) args r (B.ICallValue d a n :: r1) -> Sub w (fun x => fp + s <= x) ->
      Sub w w1 -> Above fp a w1 -> w1 (fp + d) -> KD' c cv caps fp st cs hs w1 (B.OSlot d) r1 k1 ->
      KD' c cv caps fp st cs hs w (B.OSlot s) r (KHead args rho :: k1)
  | KD'_head_tail c cv caps fp st cs hs w r args rho k1 g a s n r1 :
-     s = a + 1 -> n = N.of_nat (List.length args) ->
+     s = a + 1 -> n = N.of_nat (List.length args) -> (List.length args <= 1)%nat ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g (s + 1) ->
      CompW c cv g (s + 1) args r (B.ITailValue a n :: r1) -> Sub w (fun x => fp + s <= x) ->
      Sub w (fun x => fp <= x) -> RK' fp st cs hs k1 ->
@@ -181,14 +223,14 @@ Inductive KD' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B
     one in s, the rest after it. *)
  | KD'_args_call c cv caps fp st cs hs w r fv fv' done rest rho k1 g a s d n r1 w1 :
      s = a + 2 + N.of_nat (List.length done) -> n = N.of_nat (List.length done + 1 + List.length rest) ->
-     slotv st (fp + a + 1) = Some fv' -> V fv fv' -> ArgsAt' st (fp + a + 2) (rev done) ->
+     done = [] -> rest = [] -> slotv st (fp + a + 1) = Some fv' -> V fv fv' -> ArgsAt' st (fp + a + 2) (rev done) ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g (s + 1) ->
      CompW c cv g (s + 1) rest r (B.ICallValue d a n :: r1) -> Sub w (fun x => fp + s <= x) ->
      Sub w w1 -> Above fp a w1 -> w1 (fp + d) -> KD' c cv caps fp st cs hs w1 (B.OSlot d) r1 k1 ->
      KD' c cv caps fp st cs hs w (B.OSlot s) r (KArgs fv done rest rho :: k1)
  | KD'_args_tail c cv caps fp st cs hs w r fv fv' done rest rho k1 g a s n r1 :
      s = a + 2 + N.of_nat (List.length done) -> n = N.of_nat (List.length done + 1 + List.length rest) ->
-     slotv st (fp + a + 1) = Some fv' -> V fv fv' -> ArgsAt' st (fp + a + 2) (rev done) ->
+     done = [] -> rest = [] -> slotv st (fp + a + 1) = Some fv' -> V fv fv' -> ArgsAt' st (fp + a + 2) (rev done) ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g (s + 1) ->
      CompW c cv g (s + 1) rest r (B.ITailValue a n :: r1) -> Sub w (fun x => fp + s <= x) ->
      Sub w (fun x => fp <= x) -> RK' fp st cs hs k1 ->
@@ -197,21 +239,22 @@ Inductive KD' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B
     the chain of one-argument applications with the head as a fresh variable x in s. *)
  | KD'_hbind c cv caps fp st cs hs w s r x ass rho k1 g top dst r2 w1 :
      ~ In x (flat_map JitLowerCheck.JitLowerCheck.vars (List.concat ass)) -> ass <> [] ->
+     Forall (fun as1 => (List.length as1 <= 1)%nat) ass ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g top -> s < top ->
      Comp c cv ((x, s) :: g) top (chain (EVar x) ass) dst r r2 ->
      Sub w w1 -> Above fp top w1 -> KC' c cv caps fp st cs hs w1 dst r2 k1 ->
      KD' c cv caps fp st cs hs w (B.OSlot s) r (map (fun as1 => KHead as1 rho) ass ++ k1)
  (* do: X's value, dropped; Y next, as a value or as a test. *)
- | KD'_do1 c cv caps fp st cs hs w o r y rho k1 g top dst r2 w1 :
+ | KD'_do1 c cv caps fp st cs hs w o r y rho k1 g top dst r2 w1 : DoK ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g top ->
      Comp c cv g top y dst r r2 -> Sub w w1 -> Above fp top w1 -> KC' c cv caps fp st cs hs w1 dst r2 k1 ->
      KD' c cv caps fp st cs hs w o r (KCallArgs do_name [] [y] rho :: k1)
- | KD'_do1t c cv caps fp st cs hs w o r y rho k1 g top l r2 w1 :
+ | KD'_do1t c cv caps fp st cs hs w o r y rho k1 g top l r2 w1 : DoK ->
      MEnv' fp st cv caps g rho -> Prot g fp w -> EnvBelow g top ->
      CompT c cv g top y l r r2 -> Sub w w1 -> Above fp top w1 -> TK' c cv caps fp st cs hs w1 true l r2 k1 ->
      KD' c cv caps fp st cs hs w o r (KCallArgs do_name [] [y] rho :: k1)
  (* do: Y's value goes where (do X Y)'s goes; the source's call of do on X's value is transparent. *)
- | KD'_do2 c cv caps fp st cs hs w o r v rho k1 : KD' c cv caps fp st cs hs w o r k1 ->
+ | KD'_do2 c cv caps fp st cs hs w o r v rho k1 : DoK -> KD' c cv caps fp st cs hs w o r k1 ->
      KD' c cv caps fp st cs hs w o r (KCallArgs do_name [v] [] rho :: k1)
 
 with TK' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B.cont -> list B.handler ->
@@ -249,7 +292,7 @@ with TK' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B.cont
      lbl c l = Some (B.IConst d kf :: r4) -> Sub w w1 -> w1 (fp + d) ->
      KD' c cv caps fp st cs hs w1 (B.OSlot d) r2 k -> KD' c cv caps fp st cs hs w1 (B.OSlot d) r4 k ->
      TK' c cv caps fp st cs hs w false l (B.IConst d kt :: r2) k
- | TK'_do2 c cv caps fp st cs hs w gd l r v rho k1 : TK' c cv caps fp st cs hs w gd l r k1 ->
+ | TK'_do2 c cv caps fp st cs hs w gd l r v rho k1 : DoK -> TK' c cv caps fp st cs hs w gd l r k1 ->
      TK' c cv caps fp st cs hs w gd l r (KCallArgs do_name [v] [] rho :: k1)
 
 with KC' : B.code -> list name -> list B.val -> N -> B.tree B.val -> list B.cont -> list B.handler ->
@@ -268,7 +311,7 @@ with RK' : N -> B.tree B.val -> list B.cont -> list B.handler -> list frame -> P
      CCtx c cv caps (fp - a) st -> (cv = [] \/ ~ w (fp - a + 1)) ->
      KD' c cv caps (fp - a) st cs hs w (B.OSlot d) r k -> w (fp - a + d) ->
      RK' fp st (B.Cont c r d a :: cs) hs k
- | RK'_do2 fp st cs hs v rho k1 : RK' fp st cs hs k1 -> RK' fp st cs hs (KCallArgs do_name [v] [] rho :: k1).
+ | RK'_do2 fp st cs hs v rho k1 : DoK -> RK' fp st cs hs k1 -> RK' fp st cs hs (KCallArgs do_name [v] [] rho :: k1).
 
 Scheme KD'_m := Induction for KD' Sort Prop
  with TK'_m := Induction for TK' Sort Prop
@@ -280,16 +323,16 @@ End Kont.
 (* A KTrap frame is always matched by a handler: whatever the position, a continuation whose
    innermost frame is a KTrap has at least one handler installed (the one KD'_trap consumes, in
    this frame or a caller's). *)
-Theorem trap_has_handler : forall V HC,
- (forall c cv caps fp st cs hs w o r k, KD' V HC c cv caps fp st cs hs w o r k ->
+Theorem trap_has_handler : forall V HC DK,
+ (forall c cv caps fp st cs hs w o r k, KD' V HC DK c cv caps fp st cs hs w o r k ->
    forall h rho k1, k = KTrap h rho :: k1 -> hs <> []) /\
- (forall c cv caps fp st cs hs w gd l r k, TK' V HC c cv caps fp st cs hs w gd l r k ->
+ (forall c cv caps fp st cs hs w gd l r k, TK' V HC DK c cv caps fp st cs hs w gd l r k ->
    forall h rho k1, k = KTrap h rho :: k1 -> hs <> []) /\
- (forall c cv caps fp st cs hs w dst r k, KC' V HC c cv caps fp st cs hs w dst r k ->
+ (forall c cv caps fp st cs hs w dst r k, KC' V HC DK c cv caps fp st cs hs w dst r k ->
    forall h rho k1, k = KTrap h rho :: k1 -> hs <> []) /\
- (forall fp st cs hs k, RK' V HC fp st cs hs k -> forall h rho k1, k = KTrap h rho :: k1 -> hs <> []).
+ (forall fp st cs hs k, RK' V HC DK fp st cs hs k -> forall h rho k1, k = KTrap h rho :: k1 -> hs <> []).
 Proof.
- intros V HC. apply K'_mut; intros; subst; try discriminate; eauto.
+ intros V HC DK. apply K'_mut; intros; subst; try discriminate; eauto.
  destruct ass; [contradiction|discriminate].
 Qed.
 End JitEmitKont.

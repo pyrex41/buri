@@ -115,6 +115,7 @@ Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_needs_trans.
    the non-empty nested dummy and its lemma by induction, trap_has_handler, VR_VRh, VRh_no_partial,
    Ends'_final, the old invariant's embedding at mu = [] and the old-fragment implications. *)
 Print Assumptions JitEmitKont.JitEmitKont.pmapx_pmap.
+Print Assumptions JitEmitKont.JitEmitKont.frame_prim_pmap.
 Print Assumptions JitEmitRuleEq.JitEmitRuleEq.Rule_Eq_map.
 Print Assumptions JitEmitRuleEq.JitEmitRuleEq.Rule_Eq_all.
 Print Assumptions JitEmitRuleEq.JitEmitRuleEq.RuleT_Eq_map.
@@ -184,3 +185,19 @@ Print Assumptions JitEmitInv.JitEmitInv.ms_embed.
 Print Assumptions JitEmitInv.JitEmitInv.preservation_old_of_new.
 Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_of_new.
 Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.HK_length.
+Print Assumptions JitEmitInv.JitEmitInv.do_body_second.
+Print Assumptions JitEmitInv.JitEmitInv.storerel_nil.
+Print Assumptions JitEmitInv.JitEmitInv.env_ok_inhabited.
+Print Assumptions JitEmitInv.JitEmitInv.ev_of_time.
+Print Assumptions JitEmitInv.JitEmitInv.TRun_0.
+Print Assumptions JitEmitInv.JitEmitInv.Out'_not_stuck.
+Print Assumptions JitEmitInv.JitEmitInv.value_bound.
+Print Assumptions JitEmitInv.JitEmitInv.value_unbound.
+Print Assumptions JitEmitInv.JitEmitInv.SimC_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimT_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimO_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimS_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimW_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimA_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.EndsSrc'_final.

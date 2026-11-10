@@ -152,9 +152,9 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEmitRule<X>.v` | Seven emission families (Eq, Store, Prim, DoFold, Clo, App, Trap): each family's three empty rule hooks with their map and all lemmas |
 | `rocq/JitEmitRel.v` | JitLowerRel's relations indexed by code object and capture names, with the family hooks; hand-written nested `Comp_ind'`; `comp_embed` |
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
-| `rocq/JitEmitKont.v` | Every continuation frame the families need (handler, dynamic-call window, do, closure-entry return, all primitives) |
+| `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 179 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 196 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -514,34 +514,76 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   `ShenJitEmitRuleOpaque` mutant, an opaque `*_all`, is refused by the guard checker.
   `rocq/JitEmitNestTest.v` checks the design on a non-empty rule that nests three derivations at the
   same code and one at another code. Its `Comp_ind'` proves `suffix`.
-- **Frames.** `rocq/JitEmitKont.v` defines every frame once, generic in the value relation and the
-  closure heap fact:
+- **Frames.** `rocq/JitEmitKont.v` defines every frame once, generic in the value relation, the
+  closure heap fact, and `DoK` (the store's `do` is the kernel's, asked only by the `do` frames):
   - the handler (`KD'_trap`, which consumes the handler its trap pushed; `trap_has_handler`);
-  - the dynamic-call window (`KD'_head_*`, `KD'_args_*`, `KD'_hbind`);
+  - the dynamic-call window (`KD'_head_*`, `KD'_args_*`, `KD'_hbind`), at most one argument;
   - `do` (`KD'_do1`, `KD'_do1t` and the transparent `*_do2`);
   - closure-entry return (`RK'_call`, with the caller's captures);
-  - every primitive through `pmapx`, without `pguard`.
+  - a primitive's pending argument, for the primitives `frame_prim` admits.
 
   `KApply` is related nowhere (see the file).
+- **Counterexamples (fix round 1).** An adversarial review found that the first version of
+  `sim'_statement`, and of `preservation'_statement` at n >= 1, was false with every rule empty: a
+  frame admitted `get-time`, whose request `ev_of` did not translate, and `O'_io` quantified over
+  every response. Checking the other frames found more of the same kind. Each is argued by hand
+  from `KLSemantics.prim_rule`/`apply_value` and `JitBytecode.prim_step`/`enter`; none is
+  mechanized (a Rocq reproduction of these states is UNKNOWN, not done):
+  - `absvector` of 2^48 allocates in the source, while the bytecode raises.
+  - `error-to-string` of a primitive's exception is `"error"` in the source but the message in
+    the bytecode.
+  - `open` prefixes `*home-directory*` in the bytecode only.
+  - `close`, `read-byte` and `write-byte` on a closed stream, or one with the wrong direction,
+    send a request in the source and none in the bytecode.
+  - `=` without `pguard`: two NaNs, or a cycle, leave the bytecode stuck.
+  - A dynamic call of two arguments over-applies in the source (a `KApply` frame), while the
+    bytecode raises an arity error.
+  - An IO failure with no handler: JitBytecode's continuation resumes the machine where it was,
+    while the source ends in an error.
+
+  The fix narrows what the frames and statements cover. It weakens no proved theorem:
+  - `frame_prim` keeps `pguard` on `=` and admits no frame for the six primitives above.
+  - The window takes at most one argument.
+  - `ev_of` translates the clock (`JTimeIs b` with b < 2^64, which `jit_time` reads back as the
+    same bits).
+  - The run statements quantify over environments `env_ok` admits: responses of the request's kind,
+    and no failure. `env_ok_inhabited` shows the premise is satisfiable.
+
+  A family that needs an excluded frame goes back through emit-spec. These residuals are open in
+  `OB-JIT-LOWER-FRAGMENT`. Whether the new statements are true is UNKNOWN until emit-sim proves
+  them.
 - **Invariant and statements.** `rocq/JitEmitInv.v` defines:
   - `mu`, a partial bijection between KLambda locations and bytecode keys;
   - `VRh` (`VR_VRh`; it relates no partial application, `VRh_no_partial`);
-  - `SM`, an evolving store, and target runs under every environment oracle, with traces compared as
-    equal lists through `ev_of`;
+  - `SM`: the globals (`GvalsRel`), the cells `mu` tracks, `FunRel'`, and the handlers against
+    the KTrap frames (`HK`, with labels and quiet flags);
+  - an evolving store, and target runs under every environment `env_ok` admits, with traces
+    compared as equal lists through `ev_of`;
   - `Out'`, with IO and generic raising cases.
 
   `sim_X_statement` per family takes the nested IH as `Rule_X_All Comp SimC ...`. The file also states
   `preservation'`, `call_preservation'` and `call_preservation_src'`, each a `Definition ... : Prop` with a
-  "Does NOT say" note. None of these is proved.
-- **Old fragment.** The old invariant embeds at mu = []. `kont_embed`, `sm_embed` and `ms_embed` are
-  proved, given that the globals are related and the store has the kernel's `do`. The slot-1 write
-  restriction applies only to code that captures. Each old-fragment statement (the old premises, the new
-  conclusion) is proved from its new statement (`*_old_of_new`). `ev_of` translates no `JTime`,
-  `JReadFile` or `JWrites` event. An `open` path matches only when `*home-directory*` is empty.
-- **Evidence.** 70 statements were added to `Audit_Jit` (179 in all), each closed. There are 8 new
-  mutants, among them `ShenJitEmitSMNonEmpty`, which `ms_embed` refuses. The mutation pin is 192, each
-  mutant compiled and refused under Rocq 9.3. Lane result: in the
-  task report.
+  "Does NOT say" note. None of these is proved. `FunRel'` does not mention `VRh`: a source function
+  is not a value, and its code is related at no captures.
+- **Old fragment.** The old invariant embeds at any `mu` that relates the store's cells and
+  globals (`StoreRel`). `kont_embed`, `sm_embed` and `ms_embed` are proved. The kernel's `do` is no
+  longer a premise, because only the `do` frames ask it.
+  - Each `*_old_statement` takes the old theorem's premises plus `StoreRel mu s m`, and concludes
+    the **new** conclusion (`MS'`/`Ends'`, a growing mu, an evolving store). It follows from its
+    new statement (`*_old_of_new`). It does **not** recover the old theorems: the old conclusion
+    (`MS`, a constant store) needs a reverse embedding that emit-spec does not prove. So spec item 3
+    is not met.
+  - `StoreRel` cannot be dropped. MS and Com leave the machine's globals unconstrained, and a
+    store with a vector-valued global needs a `mu` that tracks its cell.
+  - The old theorems are unchanged and stay proved on their own.
+- **Evidence.** 87 statements were added to `Audit_Jit` (196 in all), each closed. There are 25
+  emit-spec mutants, at least one per new relation or definition:
+  - `MS'`, `Out'`, `EndsSrc'`, `TRun` and the six `Sim*`;
+  - `HK`, `GvalsRel`, `DoOK`, `FunRel'` and `StoreRel`;
+  - `resp_ok`, `ev_of` and `frame_prim`.
+
+  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 209. Lane
+  result: in the task report.
 
 ### Pass split: the normal form (wave 1b)
 
