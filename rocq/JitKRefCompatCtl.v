@@ -33,7 +33,11 @@
      (ECall p [EVar y1; ...]), and that config reaches prim_rule_r only after at least one target
      step, so it relates the outcome at j - 1 at best: one index short. Relating the primitives'
      outcomes directly is prim_compat_statement, which JitKRefPrim owns (it needs the = budget).
-     JitKRefCompatClo's app_rel takes the same two premises for the same reason.
+     JitKRefCompatClo's app_rel and compat_app_of_fund take the same two premises for the same
+     reason. The fund_below-only form is expected to be TRUE, not refutable: it is
+     (compat_trap_lt H) for any proof H of prim_compat_statement, so it closes as a one-line
+     corollary once JitKRefPrim proves prim_compat_statement. Whether trap's acceptance is
+     amended to this shape or the last step moves to kref-fund is an orchestrator decision.
 
    Does NOT prove: compat_lambda, freeze, app, call (JitKRefCompatClo), prim_compat_statement
    (JitKRefPrim), the fundamental property or compat_trap_statement unconditionally (JitKRefFund). *)

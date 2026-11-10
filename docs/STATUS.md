@@ -1265,7 +1265,10 @@ Twenty-four are in `rocq/JitKRefCompatCtl.v` (branch `p2/kref-ctl`): the JitKRef
 `compat_let`, `compat_if`, `compat_and`, `compat_or`, `compat_cond`, `compat_type` and `compat_defun`, closed, with their
 ERel-level lemmas; trap only conditionally: `compat_trap_lt` takes `fund_below k` AND `prim_compat_statement` (a handler
 may be a partial primitive), and `compat_trap_of_fund` derives `compat_trap_statement` from `prim_compat_statement` and
-`fund_gen_statement`. Not the closure compatibility lemmas or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
+`fund_gen_statement`. The trap acceptance criterion (closed with `fund_below` as the only hypothesis) is NOT met; the
+fund_below-only form is expected true (it is `compat_trap_lt` applied to a proof of `prim_compat_statement`, the same premise
+shape as the merged `JitKRefCompatClo.app_rel`) and awaits kref-prim or an orchestrator decision. Not the closure
+compatibility lemmas or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,

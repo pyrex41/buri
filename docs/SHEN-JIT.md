@@ -338,7 +338,8 @@ compat_and, compat_or, compat_cond, compat_type and compat_defun with no hypothe
 and the frame lemmas. Trap is NOT closed with `fund_below` alone: applying the handler to the exception may apply a
 partial primitive (a handler `(+ 1)` is `VPartial "+" [1]`), which runs `prim_rule_r`, so `compat_trap_lt` takes
 `fund_below k` and `prim_compat_statement`; `compat_trap_of_fund` gives `compat_trap_statement` from
-`prim_compat_statement` and `fund_gen_statement`. Mutant `ShenJitKRefCondSwap` (a copy of compat_cond with the target's
+`prim_compat_statement` and `fund_gen_statement`. The fund_below-only form is expected true, not refuted: it is
+`compat_trap_lt` applied to a proof of `prim_compat_statement`, a one-line corollary once kref-prim lands. Mutant `ShenJitKRefCondSwap` (a copy of compat_cond with the target's
 clauses reversed) is rejected.
 `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
