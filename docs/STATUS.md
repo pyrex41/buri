@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Eighty-eight statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Ninety-six statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1259,6 +1259,12 @@ refinement relation for the lowerer's front passes, and the composition of two f
 proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is open (`OB-JIT-EQ-BUDGET-CORE`).
+Eight are in `rocq/JitEqBudgetWalk.v`, the core's base case (branch `p2/eq-walk`): for a set S of cells closed under the
+pointers in their data, with no two distinct cells ever comparing true, a cell comparison that answers at some budget
+answers the same at budget |S| - 1 (`walk_bound_pred`, and `walk_bound` at |S|). It needs only that number equality is
+symmetric and transitive, and no lok hypothesis. `walk_bound_needs_trans` refutes it without transitivity (the
+tolerance profile on h5). The step case (merging a true pair) and the assembly of `eq_core_statement` remain open.
+Proof mutants `ShenJitWalkNoTrans`, `ShenJitWalkTolInstance` and `ShenJitWalkPrefixAbove` are rejected.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
