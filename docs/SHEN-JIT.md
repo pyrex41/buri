@@ -705,3 +705,32 @@ again, and the bytecode semantics stays Rocq-only. `#12`, filed from [the findin
 
 **Lane status in the charter.** The packages are `mandatory_for_closed_deployment: false`, and the charter
 target stays closed deployment on both ports. Making this the lead track doesn't change that target.
+
+**Stage 0 residuals and the four decision items** (10 November 2026, `r1-residual-ledger`).
+`tests/shen-jit/stage0-residuals.txt` lists every stage 0 definition the Rocq source judge does not accept: 844, as
+the source judge accepts 111 of 955 (the count `stage0-accepted.txt` pins; no full-pipeline judge exists yet, so the
+full-pipeline validated count is UNKNOWN). `tests/shen-jit/stage0_residuals.py` writes it from `judge_split.sh`'s
+Rocq verdict files, run at `p2/int` 2e45d67 on the pinned stage 0 set (`ec9b3872...`) and norm witness
+(`e45add98...b69dd1`); src, nf and tf come to 111, 112 and 133, as in `spikes/pass-split/CENSUS.md`. The file records
+those hashes, the verdict-file hashes and the scripts' hashes; its own sha256 is
+`c56f2881de4788b81d6bccf7f001b0dcbf3919ee7b9b5246a3d5522edc095d09`. Evidence kinds stay apart in it: the src, nf and tf
+columns are Rocq verdicts; the first blocker is a census label from a syntactic walk of the norm witness (Comp gaps,
+`=` outside `pguard`, calls of `shen-jit.eval-kl`), checked only in that no definition Rocq accepts on nf gets an emit
+label; the ledger, reason and decision columns are bookkeeping. By first label: `OB-JIT-LOWER-FRAGMENT` 463,
+`OB-JIT-LOWER-OPTIMIZATIONS` 306, `OB-JIT-NAN-IDENTITY` 43, `OB-JIT-PORT-PRIMS` 24, `OB-JIT-IDENTITY-MODEL` 5,
+`OB-JIT-LOWER-GENERAL` 3.
+
+The four decision items are Reuben's decision. Each has an open ledger entry and, until he decides, defaults to a named
+residual. The counts are definitions any of whose labels touch the item (census):
+
+| item | ledger entry | definitions | options |
+|---|---|---|---|
+| port primitives | `OB-JIT-PORT-PRIMS` | 178 | wire `jit_port_prims_proposed` (adds a hash parameter to the rules), or named exceptions; the operators with no carrier (byte buffers, Prolog variables and the rest of `jit_port_prims_residual`) stay residual either way. `jit_port_prims_proposed` is not wired. |
+| eval-kl | `OB-JIT-LOWER-GENERAL` | 16 | prove it, or exclude it as a named exception |
+| identity primitives | `OB-JIT-IDENTITY-MODEL` | 48 | model identity, or named exceptions (`same?`, `tagged?`, `deref`, `deref=`) |
+| `=` on two possibly-NaN operands | `OB-JIT-NAN-IDENTITY` | 206 | a proved static non-real judgment in Rocq, a NaN identity rule, or a named limit |
+
+For NaN `=`, a Rocq non-real judgment means extending `JitLowerRel.pguard` and redoing the `Comp` simulation, so it is
+not cheap and was not attempted here; `feature_census.py`'s `NONREAL` set is a census and decides nothing. A further 152
+definitions are first blocked by `=` against a symbol constant only: a symbol is never a NaN, so that is an emit gap
+under `OB-JIT-LOWER-FRAGMENT`, not this decision.
