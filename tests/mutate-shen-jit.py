@@ -71,6 +71,61 @@ ShenJitKRefEqBudgetFree: the = case compares the two sides at their raw budgets 
   differ by the one-sided cells, without eq_budget_closed moving each to S (length w). The lockstep
   walk eq_lock is at one budget, so kl_eq_rel_from (JitKRefPrim) must fail. The statement itself is
   true: this is a rejected proof, showing the = case rests on eq_budget_closed.
+ShenJitEmitRuleOpaque: a family's *_all lemma made opaque (Qed). JitEmitRel's hand-written Comp_ind'
+  recurses through it, so the guard checker refuses Comp_ind' (mutate_chain over the rule file and
+  JitEmitRel).
+ShenJitEmitEmbedCaptures: JitEmitRel's copy of C_move asks for no captures (cv = []), in the
+  constructor and in Comp_ind''s case alike. comp_embed must fail: a JitLowerRel move embeds at any cv.
+ShenJitEmitNestSwap: the non-empty dummy rule of JitEmitNestTest ends with its code lists swapped.
+  suffix, proved by the dummy's Comp_ind' through the nested premises, must fail.
+ShenJitEmitTrapNoHandler: KD'_trap no longer consumes a handler. trap_has_handler must fail.
+ShenJitEmitPmapx: pmapx relates + to the bytecode's -. pmapx_pmap must fail.
+ShenJitEmitVRhPartial: VRh relates a partial application to a closure. VRh_no_partial must fail.
+ShenJitEmitEndsDecoupled: Ends''s E'_ok binds its own final machine, as ShenJitLowerEndsDecoupled
+  does for Ends. Ends'_final must fail.
+ShenJitEmitSMNonEmpty: SM asks for a non-empty partial bijection, which StoreRel does not give (the
+  old fragment at mu = [] has none). sm_embed (and ms_embed) must fail.
+ShenJitEmitFrameEqGuard: frame_prim drops JitLowerRel's guard on =, so a frame admits = on two NaNs.
+  frame_prim_pmap must fail.
+ShenJitEmitTRunZero: a run of 0 steps may end at any machine. TRun_0 must fail.
+ShenJitEmitSimCRest, ShenJitEmitSimTRest, ShenJitEmitSimORest: SimC/SimT/SimO no longer ask the
+  machine to be at the derivation's code position. SimC_of_sim' (SimT_, SimO_) must fail.
+ShenJitEmitSimSDrop: SimS's cons case drops the head operand. SimS_of_sim' must fail.
+ShenJitEmitSimWSlot: SimW's element IH is at s, not s + 1, where CompW evaluates it. SimW_of_sim'
+  must fail.
+ShenJitEmitSimAKill: SimA's direct case keeps the environment, where CompTA kills slot s.
+  SimA_of_sim' must fail.
+ShenJitEmitMSRetCapture: MS'_ret asks for captures, which no old return state has. ms_embed must
+  fail.
+ShenJitEmitOutRaiseNoHK: O'_raise relates the store only (SMs), not the handlers (SM's HK), so the
+  raise may leave the machine stuck on a missing label. Out'_not_stuck must fail.
+ShenJitEmitEndsSrcDecoupled: EndsSrc''s ok case binds its own final machine. EndsSrc'_final must
+  fail.
+ShenJitEmitHKTwice: HK asks two handlers per KTrap frame. HK_length must fail.
+ShenJitEmitGvalsCleared: GvalsRel lets a bound global be cleared in the machine, where value raises.
+  value_bound must fail.
+ShenJitEmitDoSame: DoOK lets do's two parameters be the same name, so do returns its first argument.
+  do_body_second must fail.
+ShenJitEmitFunRelCaps: FunRel' asks a function's closure to have no captures, which the old
+  invariant does not carry. funrel_embed (and sm_embed) must fail.
+ShenJitEmitTimeRefused: resp_ok admits no clock answer, so no environment is well formed and every
+  statement under env_ok is vacuous. env_ok_inhabited must fail.
+ShenJitEmitEvOfTime: ev_of translates no clock answer, as before the get-time counterexample.
+  ev_of_time must fail.
+ShenJitEmitStoreRelNonEmpty: StoreRel asks for a non-empty bijection, which the old fragment at
+  mu = [] has not. storerel_nil must fail.
+ShenJitEmitReflectTrace: old_reflect_statement no longer says the old-fragment run takes no source
+  IO (True in place of tS = []), so its conclusion is no silent run. preservation_old_of_new must
+  fail (at subst tS).
+ShenJitEmitReflectSrcTrace: the same for old_reflect_src_statement. call_preservation_src_old_of_new
+  must fail (at subst tS).
+ShenJitEmitOldGvalsDropped: preservation_old_statement's GvalsRel [] s m premise becomes True. The
+  proof builds StoreRel [] s m from it for ms_embed, so preservation_old_of_new must fail (at
+  storerel_nil).
+ShenJitEmitTRunIOSilent: TRun's IO step records no event, so an IO-free trace no longer means a
+  silent run. trun_nil_tn must fail.
+ShenJitEmitNestShapeAccepted: the uniform-code nesting of JitEmitNestTest.NestShape is asserted
+  accepted (Fail removed). Rocq refuses it (non strictly positive), so the file must fail.
 """
 import re
 from pathlib import Path
@@ -100,6 +155,13 @@ def mutate_chain(name, paths, old, new):
             texts[i] = req.sub(lambda g: g.group(1), texts[i])
             texts[i] = re.sub(r'(?<![\w.])' + m + r'\.' + m + r'(?!\w)', m, texts[i])
     (out / (name + '.v')).write_text('\n'.join(texts))
+    names.append(name)
+
+def mutate_all(name, path, old, new, count):
+    """mutate, where the text occurs exactly `count` times and every occurrence changes."""
+    src = Path(path).read_text()
+    assert src.count(old) == count, (name, old, src.count(old))
+    (out / (name + '.v')).write_text(src.replace(old, new))
     names.append(name)
 
 agreed = ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'
@@ -220,4 +282,49 @@ mutate('ShenJitKRefEqBudgetFree', prim,
        "   (S (List.length (heap s)))) by (rewrite Bs.len_map; lia).\n"
        " rewrite L. apply (eq_lock sealed w).\n",
        " unfold kl_eq_r.\n apply (eq_lock sealed w).\n")
+# emit-spec: the family hooks, the copied block, the nested dummy, the frames and the invariant.
+mutate_chain('ShenJitEmitRuleOpaque', ['rocq/JitEmitRuleEq.v', 'rocq/JitEmitRel.v'],
+       "c cv g top e o top2 r r' :=\n match H with end.\nEnd JitEmitRuleEq.",
+       "c cv g top e o top2 r r'.\nProof. destruct H. Qed.\nEnd JitEmitRuleEq.")
+mutate_all('ShenJitEmitEmbedCaptures', 'rocq/JitEmitRel.v',
+       "lookup x g = Some s -> s <> d ->", "lookup x g = Some s -> s <> d /\\ cv = [] ->", 2)
+mutate('ShenJitEmitNestSwap', 'rocq/JitEmitNestTest.v',
+       "Rule_Dummy Cp Ct Co Cs Cw Ca c cv g top (EApp t [a; b]) (DSlot d) r r'.",
+       "Rule_Dummy Cp Ct Co Cs Cw Ca c cv g top (EApp t [a; b]) (DSlot d) r' r.")
+mutate('ShenJitEmitTrapNoHandler', 'rocq/JitEmitKont.v',
+       "KD' c cv caps fp st cs (B.Handler c lH fp cs (quiet_of rh) :: hs) w (B.OSlot s) (B.IPopHandler :: r1)",
+       "KD' c cv caps fp st cs hs w (B.OSlot s) (B.IPopHandler :: r1)")
+mutate('ShenJitEmitPmapx', 'rocq/JitEmitKont.v', " | PAdd => Some B.PAdd |", " | PAdd => Some B.PSub |")
+mutate('ShenJitEmitVRhPartial', 'rocq/JitEmitInv.v',
+       " | VRh_stream hd p d o :",
+       " | VRh_partial f args p : VRh mu h (VPartial f args) (B.VClo p)\n | VRh_stream hd p d o :")
+mutate('ShenJitEmitEndsDecoupled', 'rocq/JitEmitInv.v',
+       " | E'_ok v v' s' m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 ->",
+       " | E'_ok v v' s' m0 m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 ->")
+mutate('ShenJitEmitSMNonEmpty', 'rocq/JitEmitInv.v', " sm_bij : pbij mu;", " sm_bij : pbij mu /\\ mu <> [];")
+mutate('ShenJitEmitFrameEqGuard', 'rocq/JitEmitKont.v', " | _ => pguard c q ops end.", " | _ => true end.")
+mutate('ShenJitEmitTRunZero', 'rocq/JitEmitInv.v', " | TR_0 rs m : TRun rs 0 m [] m", " | TR_0 rs m m' : TRun rs 0 m [] m'")
+mutate('ShenJitEmitSimCRest', 'rocq/JitEmitInv.v', "code m = c -> B.m_rest m = r -> EvalCtx", "code m = c -> EvalCtx")
+mutate('ShenJitEmitSimTRest', 'rocq/JitEmitInv.v', "code m = c -> B.m_rest m = r -> TestCtx", "code m = c -> TestCtx")
+mutate('ShenJitEmitSimORest', 'rocq/JitEmitInv.v', "code m = c -> B.m_rest m = r -> OpCtx", "code m = c -> OpCtx")
+mutate('ShenJitEmitSimSDrop', 'rocq/JitEmitInv.v', "     SimS c cv g top (e :: es) (o :: os) r r'.", "     SimS c cv g top (e :: es) os r r'.")
+mutate('ShenJitEmitSimWSlot', 'rocq/JitEmitInv.v', " : SimC c cv g (s + 1) e (DSlot s) r r1 -> SimW", " : SimC c cv g s e (DSlot s) r r1 -> SimW")
+mutate('ShenJitEmitSimAKill', 'rocq/JitEmitInv.v', "     SimA c cv (kill s g) (s + 1) t es ms r1 r' -> SimA", "     SimA c cv g (s + 1) t es ms r1 r' -> SimA")
+mutate('ShenJitEmitMSRetCapture', 'rocq/JitEmitInv.v', " | MS'_ret cv caps v v' o k s w m :\n     SM mu s k m ->", " | MS'_ret cv caps v v' o k s w m :\n     SM mu s k m -> cv <> [] ->")
+mutate('ShenJitEmitOutRaiseNoHK', 'rocq/JitEmitInv.v', "exn_ok x msg -> mext mu mu' -> SM mu' s' k m2 ->", "exn_ok x msg -> mext mu mu' -> SMs mu' s' m2 ->")
+mutate('ShenJitEmitEndsSrcDecoupled', 'rocq/JitEmitInv.v',
+       " | ES'_ok v0 v v' s0 s' w m2 mu' : Srun c0 t (Cfg (Ret v0) [] s0) ->\n     JitKRef.JitKRef.wext (JitKRef.JitKRef.id_world s) w -> JitKRef.JitKRef.GVal w v0 v ->\n     JitKRef.JitKRef.GStore w s0 s' ->\n     B.next E pt m1 =",
+       " | ES'_ok v0 v v' s0 s' w m0 m2 mu' : Srun c0 t (Cfg (Ret v0) [] s0) ->\n     JitKRef.JitKRef.wext (JitKRef.JitKRef.id_world s) w -> JitKRef.JitKRef.GVal w v0 v ->\n     JitKRef.JitKRef.GStore w s0 s' ->\n     B.next E pt m0 =")
+mutate('ShenJitEmitHKTwice', 'rocq/JitEmitInv.v', " B.h_quiet hd = quiet_of r) hs (trap_frames k).", " B.h_quiet hd = quiet_of r) hs (trap_frames k ++ trap_frames k).")
+mutate('ShenJitEmitGvalsCleared', 'rocq/JitEmitInv.v', "Some v' /\\ v' <> B.VCleared /\\ VRh mu", "Some v' /\\ VRh mu")
+mutate('ShenJitEmitDoSame', 'rocq/JitEmitInv.v', " exists x y, x <> y /\\ lookup do_name (gfuns s) = Some (FUser [x; y] (EVar y)).\n", " exists x y, lookup do_name (gfuns s) = Some (FUser [x; y] (EVar y)).\n")
+mutate('ShenJitEmitFunRelCaps', 'rocq/JitEmitInv.v', "   B.tget l (B.m_heap m) = Some (B.OClo c caps) /\\\n", "   B.tget l (B.m_heap m) = Some (B.OClo c caps) /\\ caps = [] /\\\n")
+mutate('ShenJitEmitTimeRefused', 'rocq/JitEmitInv.v', " | B.JTime _, B.JTimeIs b => (b < 18446744073709551616)%N", " | B.JTime _, B.JTimeIs b => False")
+mutate('ShenJitEmitEvOfTime', 'rocq/JitEmitInv.v', "   if (b <? 18446744073709551616)%N\n   then Some", "   if false\n   then Some")
+mutate('ShenJitEmitStoreRelNonEmpty', 'rocq/JitEmitInv.v', " pbij mu /\\ HeapRel mu s m /\\ GvalsRel mu s m.", " pbij mu /\\ mu <> [] /\\ HeapRel mu s m /\\ GvalsRel mu s m.")
+mutate('ShenJitEmitReflectTrace', 'rocq/JitEmitInv.v', "-> tS = [] /\\ MS s c' m1) /\\", "-> True /\\ MS s c' m1) /\\")
+mutate('ShenJitEmitReflectSrcTrace', 'rocq/JitEmitInv.v', " tS = [] /\\ JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg", " True /\\ JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg")
+mutate('ShenJitEmitOldGvalsDropped', 'rocq/JitEmitInv.v', "forall n s c m, MS s c m -> GvalsRel [] s m ->", "forall n s c m, MS s c m -> True ->")
+mutate('ShenJitEmitTRunIOSilent', 'rocq/JitEmitInv.v', " TRun rs (S n) m (ev_of q (rs O q) :: t) m2", " TRun rs (S n) m t m2")
+mutate('ShenJitEmitNestShapeAccepted', 'rocq/JitEmitNestTest.v', "Fail Inductive Tree", "Inductive Tree")
 print(' '.join(names))

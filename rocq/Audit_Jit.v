@@ -1,5 +1,7 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim
+ JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
+ JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -199,3 +201,98 @@ Print Assumptions JitKRefPrim.JitKRefPrim.prim_compat_table.
 Print Assumptions JitKRefPrim.JitKRefPrim.port_compat_of.
 Print Assumptions JitKRefPrim.JitKRefPrim.port_param_jit.
 Print Assumptions JitKRefPrim.JitKRefPrim.prim_compat.
+(* emit-spec: the family rule hooks' map/all lemmas, the hand-written nested Comp_ind', comp_embed,
+   the non-empty nested dummy and its lemma by induction, trap_has_handler, VR_VRh, VRh_no_partial,
+   Ends'_final, the old invariant's embedding at mu = [] and the old-fragment implications. *)
+Print Assumptions JitEmitKont.JitEmitKont.pmapx_pmap.
+Print Assumptions JitEmitKont.JitEmitKont.frame_prim_pmap.
+Print Assumptions JitEmitRuleEq.JitEmitRuleEq.Rule_Eq_map.
+Print Assumptions JitEmitRuleEq.JitEmitRuleEq.Rule_Eq_all.
+Print Assumptions JitEmitRuleEq.JitEmitRuleEq.RuleT_Eq_map.
+Print Assumptions JitEmitRuleEq.JitEmitRuleEq.RuleT_Eq_all.
+Print Assumptions JitEmitRuleEq.JitEmitRuleEq.RuleO_Eq_map.
+Print Assumptions JitEmitRuleEq.JitEmitRuleEq.RuleO_Eq_all.
+Print Assumptions JitEmitRuleStore.JitEmitRuleStore.Rule_Store_map.
+Print Assumptions JitEmitRuleStore.JitEmitRuleStore.Rule_Store_all.
+Print Assumptions JitEmitRuleStore.JitEmitRuleStore.RuleT_Store_map.
+Print Assumptions JitEmitRuleStore.JitEmitRuleStore.RuleT_Store_all.
+Print Assumptions JitEmitRuleStore.JitEmitRuleStore.RuleO_Store_map.
+Print Assumptions JitEmitRuleStore.JitEmitRuleStore.RuleO_Store_all.
+Print Assumptions JitEmitRulePrim.JitEmitRulePrim.Rule_Prim_map.
+Print Assumptions JitEmitRulePrim.JitEmitRulePrim.Rule_Prim_all.
+Print Assumptions JitEmitRulePrim.JitEmitRulePrim.RuleT_Prim_map.
+Print Assumptions JitEmitRulePrim.JitEmitRulePrim.RuleT_Prim_all.
+Print Assumptions JitEmitRulePrim.JitEmitRulePrim.RuleO_Prim_map.
+Print Assumptions JitEmitRulePrim.JitEmitRulePrim.RuleO_Prim_all.
+Print Assumptions JitEmitRuleDoFold.JitEmitRuleDoFold.Rule_DoFold_map.
+Print Assumptions JitEmitRuleDoFold.JitEmitRuleDoFold.Rule_DoFold_all.
+Print Assumptions JitEmitRuleDoFold.JitEmitRuleDoFold.RuleT_DoFold_map.
+Print Assumptions JitEmitRuleDoFold.JitEmitRuleDoFold.RuleT_DoFold_all.
+Print Assumptions JitEmitRuleDoFold.JitEmitRuleDoFold.RuleO_DoFold_map.
+Print Assumptions JitEmitRuleDoFold.JitEmitRuleDoFold.RuleO_DoFold_all.
+Print Assumptions JitEmitRuleClo.JitEmitRuleClo.Rule_Clo_map.
+Print Assumptions JitEmitRuleClo.JitEmitRuleClo.Rule_Clo_all.
+Print Assumptions JitEmitRuleClo.JitEmitRuleClo.RuleT_Clo_map.
+Print Assumptions JitEmitRuleClo.JitEmitRuleClo.RuleT_Clo_all.
+Print Assumptions JitEmitRuleClo.JitEmitRuleClo.RuleO_Clo_map.
+Print Assumptions JitEmitRuleClo.JitEmitRuleClo.RuleO_Clo_all.
+Print Assumptions JitEmitRuleApp.JitEmitRuleApp.Rule_App_map.
+Print Assumptions JitEmitRuleApp.JitEmitRuleApp.Rule_App_all.
+Print Assumptions JitEmitRuleApp.JitEmitRuleApp.RuleT_App_map.
+Print Assumptions JitEmitRuleApp.JitEmitRuleApp.RuleT_App_all.
+Print Assumptions JitEmitRuleApp.JitEmitRuleApp.RuleO_App_map.
+Print Assumptions JitEmitRuleApp.JitEmitRuleApp.RuleO_App_all.
+Print Assumptions JitEmitRuleTrap.JitEmitRuleTrap.Rule_Trap_map.
+Print Assumptions JitEmitRuleTrap.JitEmitRuleTrap.Rule_Trap_all.
+Print Assumptions JitEmitRuleTrap.JitEmitRuleTrap.RuleT_Trap_map.
+Print Assumptions JitEmitRuleTrap.JitEmitRuleTrap.RuleT_Trap_all.
+Print Assumptions JitEmitRuleTrap.JitEmitRuleTrap.RuleO_Trap_map.
+Print Assumptions JitEmitRuleTrap.JitEmitRuleTrap.RuleO_Trap_all.
+Print Assumptions JitEmitRel.JitEmitRel.Comp_ind'.
+Print Assumptions JitEmitRel.JitEmitRel.CompT_ind'.
+Print Assumptions JitEmitRel.JitEmitRel.CompOp_ind'.
+Print Assumptions JitEmitRel.JitEmitRel.CompOps_ind'.
+Print Assumptions JitEmitRel.JitEmitRel.CompW_ind'.
+Print Assumptions JitEmitRel.JitEmitRel.CompTA_ind'.
+Print Assumptions JitEmitRel.JitEmitRel.comp_embed.
+Print Assumptions JitEmitRel.JitEmitRel.comp_embed_fn.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.Rule_Dummy_map.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.Rule_Dummy_all.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.Comp_ind'.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.CompT_ind'.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.CompOp_ind'.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.CompOps_ind'.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.CompW_ind'.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.CompTA_ind'.
+Print Assumptions JitEmitNestTest.JitEmitNestTest.JitEmitRelDummy.suffix.
+Print Assumptions JitEmitKont.JitEmitKont.trap_has_handler.
+Print Assumptions JitEmitInv.JitEmitInv.VR_VRh.
+Print Assumptions JitEmitInv.JitEmitInv.VRh_no_partial.
+Print Assumptions JitEmitInv.JitEmitInv.Ends'_final.
+Print Assumptions JitEmitInv.JitEmitInv.kont_embed.
+Print Assumptions JitEmitInv.JitEmitInv.sm_embed.
+Print Assumptions JitEmitInv.JitEmitInv.ms_embed.
+Print Assumptions JitEmitInv.JitEmitInv.preservation_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.srun_nil_sstar.
+Print Assumptions JitEmitInv.JitEmitInv.trun_nil_tn.
+Print Assumptions JitEmitInv.JitEmitInv.tn_tstar.
+Print Assumptions JitEmitInv.JitEmitInv.ms_entered.
+Print Assumptions JitEmitInv.JitEmitInv.entered_embed.
+Print Assumptions JitEmitInv.JitEmitInv.HK_length.
+Print Assumptions JitEmitInv.JitEmitInv.do_body_second.
+Print Assumptions JitEmitInv.JitEmitInv.storerel_nil.
+Print Assumptions JitEmitInv.JitEmitInv.env_ok_inhabited.
+Print Assumptions JitEmitInv.JitEmitInv.ev_of_time.
+Print Assumptions JitEmitInv.JitEmitInv.TRun_0.
+Print Assumptions JitEmitInv.JitEmitInv.Out'_not_stuck.
+Print Assumptions JitEmitInv.JitEmitInv.value_bound.
+Print Assumptions JitEmitInv.JitEmitInv.value_unbound.
+Print Assumptions JitEmitInv.JitEmitInv.SimC_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimT_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimO_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimS_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimW_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.SimA_of_sim'.
+Print Assumptions JitEmitInv.JitEmitInv.EndsSrc'_final.

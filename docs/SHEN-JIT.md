@@ -150,7 +150,12 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 183 statements |
+| `rocq/JitEmitRule<X>.v` | Seven emission families (Eq, Store, Prim, DoFold, Clo, App, Trap): each family's three empty rule hooks with their map and all lemmas |
+| `rocq/JitEmitRel.v` | JitLowerRel's relations indexed by code object and capture names, with the family hooks; hand-written nested `Comp_ind'`; `comp_embed` |
+| `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
+| `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
+| `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
+| `rocq/Audit_Jit.v` | Assumption audit of 291 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -541,6 +546,122 @@ was not attempted and is not estimated here.
   source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
+
+### Extended back end: statements (emit-spec)
+
+Branch `p2/emit-spec`. Statements and design for the emission families; no family is simulated yet,
+and stage 0 is unchanged: 111 of 955 kernel definitions validated.
+
+- **Shape.** `rocq/JitEmitRel.v` copies JitLowerRel's six relations and indexes each by the code
+  object and its capture names. JitLowerRel has the code as a Section variable instead. The spec asked
+  for the old index shape, but a closure's body is nested code, and stating its derivation inside the
+  same block needs the code as an index. With the code fixed, a second inductive over codes would have to
+  nest through Comp's own parameter, and Rocq 9.3 refuses that ("Non strictly positive
+  occurrence"). The evidence is now in the tree: `JitEmitNestTest.NestShape` reproduces the refused
+  definition under `Fail` (the lane compiles it, and the `ShenJitEmitNestShapeAccepted` mutant,
+  without `Fail`, is refused), and `JitEmitNestTest.NestIdx` is the accepted code-indexed form.
+  The rules take all six relations, not three, for a second reason: family premises nest operand
+  lists (`CompOps`) and windows (`CompW`, `CompTA`). **This deviation from the spec's index shape
+  needs a review decision; it is not signed off.**
+  Each of the seven families has an empty rule for Comp, CompT and CompOp (21 hooks), over relation
+  variables for all six relations. lower.shen needs the CompT and CompOp hooks: its `test` lowers
+  `(do X Y)` as value then test, and its `operand` lowers a folded list as `(const K)`.
+- **Induction.** `Comp_ind'` is written by hand, one Fixpoint per relation, and recurses through each
+  rule's `*_all` lemma. It is closed. A family's `*_all` must stay transparent: the
+  `ShenJitEmitRuleOpaque` mutant, an opaque `*_all`, is refused by the guard checker.
+  `rocq/JitEmitNestTest.v` checks the design on a non-empty rule that nests three derivations at the
+  same code and one at another code. Its `Comp_ind'` proves `suffix`.
+- **Frames.** `rocq/JitEmitKont.v` defines every frame once, generic in the value relation, the
+  closure heap fact, and `DoK` (the store's `do` is the kernel's, asked only by the `do` frames):
+  - the handler (`KD'_trap`, which consumes the handler its trap pushed; `trap_has_handler`);
+  - the dynamic-call window (`KD'_head_*`, `KD'_args_*`, `KD'_hbind`), at most one argument;
+  - `do` (`KD'_do1`, `KD'_do1t` and the transparent `*_do2`);
+  - closure-entry return (`RK'_call`, with the caller's captures);
+  - a primitive's pending argument, for the primitives `frame_prim` admits.
+
+  `KApply` is related nowhere (see the file).
+- **Counterexamples (fix round 1).** An adversarial review found that the first version of
+  `sim'_statement`, and of `preservation'_statement` at n >= 1, was false with every rule empty: a
+  frame admitted `get-time`, whose request `ev_of` did not translate, and `O'_io` quantified over
+  every response. Checking the other frames found more of the same kind. Each is argued by hand
+  from `KLSemantics.prim_rule`/`apply_value` and `JitBytecode.prim_step`/`enter`; none is
+  mechanized (a Rocq reproduction of these states is UNKNOWN, not done):
+  - `absvector` of 2^48 allocates in the source, while the bytecode raises.
+  - `error-to-string` of a primitive's exception is `"error"` in the source but the message in
+    the bytecode.
+  - `open` prefixes `*home-directory*` in the bytecode only.
+  - `close`, `read-byte` and `write-byte` on a closed stream, or one with the wrong direction,
+    send a request in the source and none in the bytecode.
+  - `=` without `pguard`: two NaNs, or a cycle, leave the bytecode stuck.
+  - A dynamic call of two arguments over-applies in the source (a `KApply` frame), while the
+    bytecode raises an arity error.
+  - An IO failure with no handler: JitBytecode's continuation resumes the machine where it was,
+    while the source ends in an error.
+
+  The fix narrows what the frames and statements cover. It weakens no proved theorem:
+  - `frame_prim` keeps `pguard` on `=` and admits no frame for the six primitives above.
+  - The window takes at most one argument.
+  - `ev_of` translates the clock (`JTimeIs b` with b < 2^64, which `jit_time` reads back as the
+    same bits).
+  - The run statements quantify over environments `env_ok` admits: responses of the request's kind,
+    and no failure. `env_ok_inhabited` shows the premise is satisfiable.
+
+  A family that needs an excluded frame goes back through emit-spec. These residuals are open in
+  `OB-JIT-LOWER-FRAGMENT`. Whether the new statements are true is UNKNOWN until emit-sim proves
+  them.
+- **Invariant and statements.** `rocq/JitEmitInv.v` defines:
+  - `mu`, a partial bijection between KLambda locations and bytecode keys;
+  - `VRh` (`VR_VRh`; it relates no partial application, `VRh_no_partial`);
+  - `SM`: the globals (`GvalsRel`), the cells `mu` tracks, `FunRel'`, and the handlers against
+    the KTrap frames (`HK`, with labels and quiet flags);
+  - an evolving store, and target runs under every environment `env_ok` admits, with traces
+    compared as equal lists through `ev_of`;
+  - `Out'`, with IO and generic raising cases.
+
+  `sim_X_statement` per family takes the nested IH as `Rule_X_All Comp SimC ...`. The file also states
+  `preservation'`, `call_preservation'` and `call_preservation_src'`, each a `Definition ... : Prop` with a
+  "Does NOT say" note. None of these is proved. `FunRel'` does not mention `VRh`: a source function
+  is not a value, and its code is related at no captures.
+- **Old fragment.** The old invariant embeds at any `mu` that relates the store's cells and
+  globals (`StoreRel`). `kont_embed`, `sm_embed` and `ms_embed` are proved. The kernel's `do` is no
+  longer a premise, because only the `do` frames ask it.
+  - Fix round 2: each `*_old_statement` now has the **old** conclusion verbatim (`Sstar`, `TN`,
+    `MS s` with the store constant, `JitLowerThm.Ends` / `JitKRef.EndsSrc`), at `mu = []` with no
+    handler, and the old premises plus `GvalsRel [] s m`. `*_old_of_new` proves each (closed) from
+    its new statement **and a reflection obligation** (`old_reflect_statement`,
+    `old_reflect_src_statement`), through `ms_embed`/`sm_embed` at `mu = []` and proved bridges
+    (`srun_nil_sstar`, `trun_nil_tn`, `tn_tstar`, `ms_entered`, `entered_embed`). The proofs do
+    not use the old theorems.
+  - The reflection is stated, not proved; its truth is UNKNOWN. It is needed: the new conclusions
+    pick some JitEmitRel derivation, some `mu'` and some trace, and nothing keeps an old-fragment
+    run inside the old fragment, so the old conclusion does not follow from the new statements
+    alone. Reflecting JitEmitRel derivations would invert the rules outside their files. A family
+    whose rule overlaps the old fragment (Eq's `=` beside `C_prim` with `pguard`) puts the
+    reflection at risk; whether such a family must re-prove it, beside its map and all lemmas, is
+    a review decision.
+  - `GvalsRel [] s m` is added because MS and Com leave the machine's globals unconstrained, and
+    the new invariant needs them related. The corollaries' proofs use it to build
+    `StoreRel [] s m` for `ms_embed`/`sm_embed` (`ShenJitEmitOldGvalsDropped`, the premise
+    replaced by `True`, is refused there).
+  - The old theorems are unchanged and stay proved on their own.
+- **Pending review (not signed off).** The index shape above; the frame exclusions and the
+  `env_ok` / one-argument-window narrowing (spec item 4 asks for all frames, so the affected
+  families, Store, Prim, Eq, App and IO, go back through emit-spec until the open source-model or
+  bytecode decisions are made: absvector bound, error-to-string text, stream state, the
+  home-directory prefix on open, the raise continuation of an IO failure with no handler); the
+  reflection obligation above. The counterexamples behind the narrowing are hand-argued, and the
+  agreement of the newly admitted primitives (str, intern, pos, tlstr, cn, n->string, string->n,
+  set, value, simple-error, <-address, address->, absvector?, /) is hand-checked: both UNKNOWN.
+- **Evidence.** 92 statements were added to `Audit_Jit` (201 in all), each closed. There are 31
+  emit-spec mutants, at least one per new relation or definition:
+  - `MS'`, `Out'`, `EndsSrc'`, `TRun` and the six `Sim*`;
+  - `HK`, `GvalsRel`, `DoOK`, `FunRel'` and `StoreRel`;
+  - `resp_ok`, `ev_of` and `frame_prim`;
+  - the reflection obligations, the old-fragment premise, the `TRun` bridge, and the refused
+    uniform-code nesting.
+
+  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 215 (fix 1 recorded 209 for 26 added mutants; the history gives 184 + 31). Lane
+  result: in the task report.
 
 ### Pass split: the normal form (wave 1b)
 

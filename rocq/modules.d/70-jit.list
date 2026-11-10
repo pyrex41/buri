@@ -24,3 +24,14 @@ JitKRefPrim
 JitLowerStage0
 JitNorm
 JitNormStage0
+JitEmitRuleEq
+JitEmitRuleStore
+JitEmitRulePrim
+JitEmitRuleDoFold
+JitEmitRuleClo
+JitEmitRuleApp
+JitEmitRuleTrap
+JitEmitRel
+JitEmitNestTest
+JitEmitKont
+JitEmitInv
