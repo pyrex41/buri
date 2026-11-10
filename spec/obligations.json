@@ -6045,7 +6045,10 @@
    "evidence": [],
    "completion_evidence": "The statements of rocq/JitLowerEquiv.v proved with no axioms and audited, and front-link checkers proved to establish KRef.",
    "sources": [
-    "rocq/JitLowerEquiv.v"
+    "rocq/JitLowerEquiv.v",
+    "rocq/JitKRef.v",
+    "rocq/JitKRefGround.v",
+    "rocq/JitKRefCompose.v"
    ],
    "history": [
     {
@@ -6057,6 +6060,11 @@
      "source": "rocq/JitLowerEquiv.v",
      "recorded": "2026-11-08: open. Proved and audited: call_preservation_src_of_fundamental, adequacy_of_fundamental and store_refl_of_fundamental, each an implication from fundamental_statement, with the ground lemmas, KRel_top and the premise specifications. The fundamental property and the compatibility lemmas are not proved.",
      "reconciliation": "Composition from the fundamental property, 8 November 2026."
+    },
+    {
+     "source": "rocq/JitKRef.v",
+     "recorded": "2026-11-09: open. K00 restructure, no proof added: every statement of rocq/JitLowerEquiv.v moved byte-identical to rocq/JitKRef.v, the proofs to rocq/JitKRefGround.v and rocq/JitKRefCompose.v, each constant with its old type (Check output compared); rocq/JitLowerEquiv.v keeps the old qualified names as abbreviations, so Audit_Jit's 13 JitLowerEquiv lines audit the moved constants and K00 leaves its count unchanged (109 after the merge into p2/int). JitKRef.v adds, unproved, fv, fund_below, fund_gen_statement (taking D_wf), PoutRel, PrimOutRel and prim_compat_statement.",
+     "reconciliation": "KRef interface split (K00), 9 November 2026."
     }
    ]
   },

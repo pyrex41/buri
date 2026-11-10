@@ -10,6 +10,9 @@ JitLowerPrim
 JitLowerStep
 JitLowerThm
 JitLowerCheck
+JitKRef
+JitKRefGround
+JitKRefCompose
 JitLowerEquiv
 JitEqBudget
 JitEqBudgetStep

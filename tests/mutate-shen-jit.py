@@ -32,6 +32,9 @@ ShenJitEquivAdequacyStrict: adequacy claims the source's final store is the targ
   allocate different cells, so adequacy_of_fundamental must fail.
 ShenJitEquivComposeLeft: composing two worlds keeps the first and drops the second, so the composed
   world no longer relates the final stores. In_compose, on which GStore_trans rests, must fail.
+  Since K00 these three statements are in rocq/JitKRef.v and their proofs in JitKRefGround.v and
+  JitKRefCompose.v; the runner compiles one file, so each mutant is the chain of files
+  (mutate_chain), the first one mutated.
 ShenJitLowerEqSym: = agrees against a symbol constant. eq_core must fail.
 ShenJitLowerEqNaN: = agrees against any real constant, NaN included. eq_core must fail
   (OB-JIT-NAN-IDENTITY).
@@ -48,6 +51,7 @@ ShenJitWalkTolInstance: the statement walk_bound_needs_trans refutes now carries
 ShenJitWalkPrefixAbove: the order on stop paths puts a prefix above its extensions, which breaks
   the threshold equivalence's monotonicity. ltl_total must fail.
 """
+import re
 from pathlib import Path
 out = Path('_build/mutations')
 out.mkdir(parents=True, exist_ok=True)
@@ -57,6 +61,24 @@ def mutate(name, path, old, new):
     src = Path(path).read_text()
     assert src.count(old) == 1, (name, old)
     (out / (name + '.v')).write_text(src.replace(old, new))
+    names.append(name)
+
+def mutate_chain(name, paths, old, new):
+    """A statement in paths[0] whose proof is in a later file. The runner compiles one file, so the
+    mutant is the files concatenated in order, the first mutated, each later file's Require of an
+    earlier one dropped and its paths Mod.Mod.x shortened to Mod.x (the module is now in the same
+    file). Text assembly only; Rocq decides."""
+    mods = [Path(p).stem for p in paths]
+    texts = [Path(p).read_text() for p in paths]
+    assert texts[0].count(old) == 1, (name, old)
+    texts[0] = texts[0].replace(old, new)
+    for i in range(1, len(texts)):
+        for m in mods[:i]:
+            req = re.compile(r'^(From Buri Require Import .*) ' + m + r'(?=[ .])', re.M)
+            assert len(req.findall(texts[i])) == 1, (name, m)
+            texts[i] = req.sub(lambda g: g.group(1), texts[i])
+            texts[i] = re.sub(r'(?<![\w.])' + m + r'\.' + m + r'(?!\w)', m, texts[i])
+    (out / (name + '.v')).write_text('\n'.join(texts))
     names.append(name)
 
 agreed = ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'
@@ -113,13 +135,13 @@ mutate('ShenJitLowerChainConst', 'rocq/JitLowerCheck.v',
 mutate('ShenJitLowerEndsDecoupled', 'rocq/JitLowerThm.v',
        " | E_ok v v' m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1",
        " | E_ok v v' m0 m2 : Sstar sealed c (Cfg (Ret v) [] s) -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 -> VR v v' -> Ends s c m1")
-mutate('ShenJitEquivEndsSameStore', 'rocq/JitLowerEquiv.v',
+mutate_chain('ShenJitEquivEndsSameStore', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefCompose.v'],
        " | ES_ok v v' m2 s0 w : Sstar sealed c (Cfg (Ret v) [] s0)",
        " | ES_ok v v' m2 s0 w : Sstar sealed c (Cfg (Ret v) [] s)")
-mutate('ShenJitEquivAdequacyStrict', 'rocq/JitLowerEquiv.v',
+mutate_chain('ShenJitEquivAdequacyStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
        "    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s0) /\\ wext (id_world s) w /\\ GStore w s0 s') /\\",
        "    exists s0 w, srun (Cfg (Eval rho e0) [] s) [] (Cfg (Ret v) [] s') /\\ wext (id_world s) w /\\ GStore w s0 s') /\\")
-mutate('ShenJitEquivComposeLeft', 'rocq/JitLowerEquiv.v',
+mutate_chain('ShenJitEquivComposeLeft', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
        " flat_map (fun p => map (fun q => (fst p, snd q)) (filter (fun q => Nat.eqb (snd p) (fst q)) w2)) w1.",
        " w1.")
 eq_core = "VR a a' -> VR b b' -> existsb eq_safe_val [a'; b'] = true ->\n exists r,"
