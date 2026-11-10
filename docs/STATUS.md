@@ -1258,19 +1258,26 @@ numeral, is rejected. `p_eq` admits `=` against a safe constant. Thirteen are in
 refinement relation for the lowerer's front passes, and the composition of two front links with `call_preservation`,
 proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
-the budget lemma reduced to one cell step, whose core is open (`OB-JIT-EQ-BUDGET-CORE`).
+the budget lemma reduced to one cell step, whose core is proved in `JitEqBudgetCore.v` (below).
 Thirteen are in `rocq/JitEqBudgetStep.v`: the step of the core's induction on a closed set of cells, under S-relativized
 hypotheses only (`closed_in`, `lok_in`; no global lok). For the least-budget true pair x, y: their pointers are identical and
 their other leaves agree (`least_true_pointers`; the `ShenJitEqStepNotLeast` mutant, without the least premise, is rejected), the
 surgery redirecting y to x keeps the rest closed (`closed_after`), it simulates at the same budget (`same_budget_sim`) and back
 with one more (`shifted_sim`), and `step_settled` carries settledness from S minus y at n to S at n + 1. The base case is proved
-in `JitEqBudgetWalk.v` (below); the assembly is open, so `OB-JIT-EQ-BUDGET-CORE` stays open.
+in `JitEqBudgetWalk.v` (below) and the assembly in `JitEqBudgetCore.v`.
 Eight are in `rocq/JitEqBudgetWalk.v`, the core's base case (branch `p2/eq-walk`): for a set S of cells closed under the
 pointers in their data, with no two distinct cells ever comparing true, a cell comparison that answers at some budget
 answers the same at budget |S| - 1 (`walk_bound_pred`, and `walk_bound` at |S|). It needs only that number equality is
 symmetric and transitive, and no lok hypothesis. `walk_bound_needs_trans` refutes it without transitivity (the
-tolerance profile on h5). The step case is the `JitEqBudgetStep.v` work above; the assembly of `eq_core_statement` remains open.
+tolerance profile on h5). The step case is the `JitEqBudgetStep.v` work above.
 Proof mutants `ShenJitWalkNoTrans`, `ShenJitWalkTolInstance` and `ShenJitWalkPrefixAbove` are rejected.
+Three are in `rocq/JitEqBudgetCore.v`, the assembly (branch `p2/eq-assembly`), which discharges `OB-JIT-EQ-BUDGET-CORE`:
+`eq_budget_closed` says that for number equality symmetric and transitive, a heap h and a NoDup set S of allocated cells
+closed under the pointers in their data, = on two operands whose pointers lie in S answers at every budget >= |S| + 1 what it
+answers at |S| + 1 (no lok hypothesis, global or S-local; induction on |S| with the step and `walk_bound`, and a case split
+on the decidable goal, so no excluded middle). `eq_core` is `eq_core_statement (jit_rules sealed)`, with S all cells, and
+`eq_budget` is `JitLowerEquiv.eq_budget_statement sealed`, through `eq_budget_from_core`. Proof mutants `ShenJitEqCoreNoTrans`
+and `ShenJitEqCoreNoClosure` are rejected.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,

@@ -47,6 +47,11 @@ ShenJitWalkTolInstance: the statement walk_bound_needs_trans refutes now carries
   on h5 needs a transitivity proof tol does not have, so walk_bound_needs_trans must fail.
 ShenJitWalkPrefixAbove: the order on stop paths puts a prefix above its extensions, which breaks
   the threshold equivalence's monotonicity. ltl_total must fail.
+ShenJitEqCoreNoTrans: the assembly of the = budget core drops transitivity of number equality
+  (eq_budget_refuted shows the budget statement false without it), so the base case walk_bound
+  cannot be applied. core_settled, and with it eq_core, must fail.
+ShenJitEqCoreNoClosure: eq_budget_closed_statement without the S-closure hypothesis
+  (closed_in h cs replaced by True): the cells of cs may point outside cs. eq_budget_closed must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -148,4 +153,11 @@ mutate('ShenJitWalkTolInstance', walk,
 mutate('ShenJitWalkPrefixAbove', walk,
        ' | [], _ :: _ => true\n | _ :: _, [] => false\n',
        ' | [], _ :: _ => false\n | _ :: _, [] => true\n')
+core = 'rocq/JitEqBudgetCore.v'
+mutate('ShenJitEqCoreNoTrans', core,
+       'Hypothesis Tr : forall x y z, num_cmp P PEqual x y = true -> num_cmp P PEqual y z = true -> num_cmp P PEqual x z = true.',
+       'Hypothesis Tr : True.')
+mutate('ShenJitEqCoreNoClosure', core,
+       ' NoDup cs -> St.closed_in h cs ->\n forall a b,',
+       ' NoDup cs -> True ->\n forall a b,')
 print(' '.join(names))
