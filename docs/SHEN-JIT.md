@@ -305,10 +305,12 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerStep.v` | `sim`: one step of the simulation, with stuttering bounded by a measure |
 | `rocq/JitLowerThm.v` | `preservation`, `related_progress`, `call_preservation`, `Ends_final` |
 | `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
-| `rocq/JitLowerEquiv.v` | `KRef`, the front passes' refinement relation; its statements; the composition with `call_preservation`, proved from the fundamental property |
+| `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
+| `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
+| `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 
-**The front passes** (`rocq/JitLowerEquiv.v`, `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
+**The front passes** (`rocq/JitKRef.v` with proofs in `JitKRefGround.v` and `JitKRefCompose.v`; old names in `rocq/JitLowerEquiv.v`; `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
 (b1 to e) before it emits code for e. `KRef g e0 e` is a step-indexed Kripke refinement on KLambda expressions under
 `step_r (jit_rules sealed) jit_profile`: every terminating run of e, after any IO trace, is matched by one of e0 with a
 related value or the same exception and related stores. Worlds are partial bijections between heap locations, because
@@ -322,7 +324,12 @@ compatibility lemmas, the `=` budget lemma (`JitEqBudget.v`, separate work), and
 FunRel the callees b0 calls are the lowered bodies, not the kernel's source definitions. A checker must reject norm's
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
-`ShenJitEquivComposeLeft` are rejected.
+`ShenJitEquivComposeLeft` are rejected (since K00 each is the chain JitKRef.v, JitKRefGround.v[, JitKRefCompose.v]
+with the statement mutated). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
+fundamental property below index k in scope-and-free-variable form; `fund_gen_statement`, that it holds at every
+index given `D_wf`; and `prim_compat_statement`, that every primitive maps related arguments and stores to related
+results (`PrimOutRel`: a related value and store at a larger world, the same exception, both wrong, the same
+eval-kl expression or resource, or the same IO request with related continuations).
 
 **The theorem.** `preservation` says: for every store, configuration and machine in the simulation relation, and
 every n, either the bytecode takes at least n steps while the source keeps a related configuration, or both end

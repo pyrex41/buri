@@ -1254,9 +1254,13 @@ final machine (`Ends_final`), and `chk_sound` and `check_fn_sound` make the per-
 relation. They relate the bytecode to the expression `lower.shen` emits code for, after `share` and `norm`, not yet to
 the source body, and nothing relates either model to machine code. Three of them (`OB-JIT-SYM-INJECTIVE`) make a symbol its name: `sym_of_text` is injective on
 every text, so distinct KLambda symbols are distinct machine symbols; the `ShenJitSymBase256` mutant, the old base-256
-numeral, is rejected. `p_eq` admits `=` against a safe constant. Thirteen are in `rocq/JitLowerEquiv.v`: the
+numeral, is rejected. `p_eq` admits `=` against a safe constant. Thirteen are about the
 refinement relation for the lowerer's front passes, and the composition of two front links with `call_preservation`,
 proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
+Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/JitKRefGround.v` and
+`rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
+and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
+will be proved through (`fv`, `fund_below`, `fund_gen_statement`, `PrimOutRel`, `prim_compat_statement`).
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is open (`OB-JIT-EQ-BUDGET-CORE`).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
