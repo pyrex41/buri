@@ -1,6 +1,6 @@
 (* Per-port options on the KLambda semantics (E2E-06, E2E-37). KLSemantics.next is the agreed
    semantics, unchanged, and every theorem about it stands. `next_r R` is the same machine with
-   the eight points listed in docs/SHEN-JIT.md open to a port, and `next_r_agreed` proves that
+   the nine points listed in docs/SHEN-JIT.md open to a port, and `next_r_agreed` proves that
    the agreed options give exactly `next`, for every profile and configuration. So the options
    cannot alter what the Scheme and CL lanes rely on, and a drift of this copy from KLSemantics.v
    stops that proof.
@@ -31,11 +31,16 @@ Record port_rules := PortRules {
  (* 7. write-byte returns its byte whatever the environment answers. *)
  unchecked_writes : bool;
  (* 8. The catchable error this resource failure raises, if it is catchable. *)
- resource_exn : resource -> option exn }.
+ resource_exn : resource -> option exn;
+ (* 9. A port primitive: what a call of a name the store binds to no function does, with its
+    arity, in place of XUndefinedFun. The agreed rule has none. A port's own primitives
+    (shen-jit.append, ...) are named calls with no KL meaning until this gives them one. *)
+ port_prim : name -> option (nat * (profile -> list value -> store -> presult)) }.
 
 (* The agreed options: every one is what KLSemantics.v does. *)
 Definition agreed_rules : port_rules := PortRules
- None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None).
+ None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None)
+ (fun _ => None).
 
 (* ---------- 1: integer range ---------- *)
 Definition in_range (R : port_rules) (z : Z) : bool := match int_range R with
@@ -152,7 +157,15 @@ Definition arity_mismatch (R : port_rules) (given want : nat) : bool :=
 
 Definition call_named_r R P (g : name) (args : list value) (k : list frame) (s : store) : move :=
  match lookup g (gfuns s) with
- | None => MTau (Cfg (Throw (XUndefinedFun g)) k s)
+ | None => match port_prim R g with
+   (* 9: a port primitive, called as a table primitive is. *)
+   | Some (n, rule) =>
+     if arity_mismatch R (List.length args) n then MTau (Cfg (Throw XArity) k s)
+     else if Nat.ltb (List.length args) n then MTau (Cfg (Ret (VPartial g args)) k s)
+     else match rule P (firstn n args) s with
+       | PDone o => MTau (pout_config P o (skipn n args) k s)
+       | PIO q kont => MIO q (fun r => pout_config P (kont r) (skipn n args) k s) end
+   | None => MTau (Cfg (Throw (XUndefinedFun g)) k s) end
  | Some (FUser ps body) =>
    if arity_mismatch R (List.length args) (List.length ps) then MTau (Cfg (Throw XArity) k s)
    else if Nat.ltb (List.length args) (List.length ps) then MTau (Cfg (Ret (VPartial g args)) k s)
@@ -373,6 +386,22 @@ Qed.
 Theorem catchable_resource : forall R P r x k s,
  resource_exn R r = Some x -> next_r R P (Cfg (Fail r) k s) = MTau (Cfg (Throw x) k s).
 Proof. intros R P r x k s H. cbn. rewrite H. reflexivity. Qed.
+
+(* 9: with no port primitive of that name, a name with no function raises, as in the agreed rule;
+   with one, a saturated call is that rule's result. *)
+Theorem undefined_without_port_prim : forall R P g args k s,
+ lookup g (gfuns s) = None -> port_prim R g = None ->
+ call_named_r R P g args k s = MTau (Cfg (Throw (XUndefinedFun g)) k s).
+Proof. intros R P g args k s L N. unfold call_named_r. rewrite L, N. reflexivity. Qed.
+
+Theorem port_prim_called : forall R P g n rule args k s o,
+ lookup g (gfuns s) = None -> port_prim R g = Some (n, rule) -> List.length args = n ->
+ rule P args s = PDone o ->
+ call_named_r R P g args k s = MTau (pout_config P o [] k s).
+Proof.
+ intros R P g n rule args k s o L N A H. unfold call_named_r, arity_mismatch. rewrite L, N.
+ subst n. rewrite Nat.eqb_refl, andb_false_r, Nat.ltb_irrefl, firstn_all, skipn_all, H. reflexivity.
+Qed.
 
 (* Two closures made one after the other are different objects, and each equals itself. *)
 Theorem closure_identity : forall R P h x b r1 r2,

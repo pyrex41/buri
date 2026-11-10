@@ -2,6 +2,10 @@
 
 ShenJitAgreedRange, ShenJitAgreedArity, ShenJitAgreedWrites, ShenJitAgreedIdentity: an option of
   agreed_rules that isn't what KLSemantics does. next_r_agreed must fail.
+ShenJitAgreedPortPrim: agreed_rules gives shen-jit.write-bytes a port primitive, so a call of it
+  no longer raises XUndefinedFun. next_r_agreed must fail.
+ShenJitPortPrimsWired: jit_rules takes the proposed (hash-free) port primitives before Reuben's decision.
+  jit_port_prims_off must fail.
 ShenJitClosureIdentity: closures that always compare equal. closure_identity must fail.
 ShenJitNoOverflow: no integer range in jit_rules. jit_overflow_raises must fail.
 ShenJitRoundedCompare: comparison through a double, as before 0.3. jit_compare_exact must fail.
@@ -46,14 +50,18 @@ def mutate(name, path, old, new):
     (out / (name + '.v')).write_text(src.replace(old, new))
     names.append(name)
 
-agreed = ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None).'
+agreed = ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'
 for name, new in [
-    ('ShenJitAgreedRange', ' (Some (0%Z, 1%Z)) (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
-    ('ShenJitAgreedArity', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false true (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
-    ('ShenJitAgreedWrites', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) true (fun _ => None).'),
-    ('ShenJitAgreedIdentity', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) true false (fun _ _ => true) (fun _ => true) false (fun _ => None).'),
+    ('ShenJitAgreedRange', ' (Some (0%Z, 1%Z)) (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'),
+    ('ShenJitAgreedArity', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false true (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'),
+    ('ShenJitAgreedWrites', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) true (fun _ => None)\n (fun _ => None).'),
+    ('ShenJitAgreedIdentity', ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) true false (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'),
 ]:
     mutate(name, 'rocq/KLPort.v', agreed, new)
+mutate('ShenJitAgreedPortPrim', 'rocq/KLPort.v', agreed,
+       agreed.replace('\n (fun _ => None).', '\n (fun g => if text_eqb g (kw "shen-jit.write-bytes"%string) then Some (4%nat, fun _ _ s => ret VNil s) else None).'))
+mutate('ShenJitPortPrimsWired', 'rocq/JitProfile.v',
+       ' (fun _ => None) (* port primitives: none until', ' jit_port_prims_core (* port primitives: none until')
 mutate('ShenJitClosureIdentity', 'rocq/KLPort.v',
        '| Some x, Some y => Some (Nat.eqb x y)', '| Some x, Some y => Some true')
 mutate('ShenJitNoOverflow', 'rocq/JitProfile.v',
