@@ -25,8 +25,7 @@
    Does NOT say: anything about the semantics of the code (JitEmitInv states that), or that
    lower.shen's output is accepted (the family checkers, emit-check, decide that per definition). *)
 From Coq Require Import List ZArith NArith PArith Bool String.
-From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitProfile JitLowerRel
- JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap.
+From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitProfile JitLowerRel JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap.
 Import ListNotations.
 Module JitEmitRel.
 Import KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLSemantics JitLowerRel.JitLowerRel.

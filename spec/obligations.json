@@ -5953,7 +5953,10 @@
    "evidence": [],
    "completion_evidence": "The constructs added to JitLowerRel.Comp with their simulation cases proved.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "rocq/JitEmitRel.v",
+    "rocq/JitEmitKont.v",
+    "rocq/JitEmitInv.v"
    ],
    "history": [
     {
@@ -5975,6 +5978,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-08: open, narrowed. = is admitted when one operand is a constant fixnum, string, boolean, () or non-NaN real, decided by the checker on the code's constant (JitLowerRel.pguard, JitLowerPrim.p_eq). Of the 447 stage 0 definitions using =, 429 use it only with a literal operand but 140 only with a literal that is not a symbol; = on two variables, and against a symbol, stay here (OB-JIT-NAN-IDENTITY, OB-JIT-SYM-INJECTIVE).",
      "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    },
+    {
+     "source": "rocq/JitEmitInv.v",
+     "recorded": "2026-11-09: open. Statements and design only (emit-spec): JitEmitRel extends a copy of Comp, indexed by code object and capture names, with one empty rule per family (Eq, Store, Prim, DoFold, Clo, App, Trap) for each of Comp, CompT and CompOp, and a hand-written nested induction principle Comp_ind' (proved, closed; JitEmitNestTest checks it on a non-empty nested rule). JitEmitKont defines every frame the families need; JitEmitInv states the generalized invariant (mu, VRh, SM, evolving store, equal IO traces) and sim_X_statement per family, preservation', call_preservation', call_preservation_src' and the old-fragment corollaries, none proved. JitLowerRel's derivations embed (comp_embed) and VR is VRh (VR_VRh). No construct this entry lists is simulated yet.",
+     "reconciliation": "Back-end statements for the extended emission relation (emit-spec), 9 November 2026."
     }
    ]
   },

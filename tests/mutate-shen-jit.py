@@ -50,6 +50,18 @@ ShenJitWalkTolInstance: the statement walk_bound_needs_trans refutes now carries
   on h5 needs a transitivity proof tol does not have, so walk_bound_needs_trans must fail.
 ShenJitWalkPrefixAbove: the order on stop paths puts a prefix above its extensions, which breaks
   the threshold equivalence's monotonicity. ltl_total must fail.
+ShenJitEmitRuleOpaque: a family's *_all lemma made opaque (Qed). JitEmitRel's hand-written Comp_ind'
+  recurses through it, so the guard checker refuses Comp_ind' (mutate_chain over the rule file and
+  JitEmitRel).
+ShenJitEmitEmbedCaptures: JitEmitRel's copy of C_move asks for no captures (cv = []), in the
+  constructor and in Comp_ind''s case alike. comp_embed must fail: a JitLowerRel move embeds at any cv.
+ShenJitEmitNestSwap: the non-empty dummy rule of JitEmitNestTest ends with its code lists swapped.
+  suffix, proved by the dummy's Comp_ind' through the nested premises, must fail.
+ShenJitEmitTrapNoHandler: KD'_trap no longer consumes a handler. trap_has_handler must fail.
+ShenJitEmitPmapx: pmapx relates + to the bytecode's -. pmapx_pmap must fail.
+ShenJitEmitVRhPartial: VRh relates a partial application to a closure. VRh_no_partial must fail.
+ShenJitEmitEndsDecoupled: Ends''s E'_ok binds its own final machine, as ShenJitLowerEndsDecoupled
+  does for Ends. Ends'_final must fail.
 """
 import re
 from pathlib import Path
@@ -79,6 +91,13 @@ def mutate_chain(name, paths, old, new):
             texts[i] = req.sub(lambda g: g.group(1), texts[i])
             texts[i] = re.sub(r'(?<![\w.])' + m + r'\.' + m + r'(?!\w)', m, texts[i])
     (out / (name + '.v')).write_text('\n'.join(texts))
+    names.append(name)
+
+def mutate_all(name, path, old, new, count):
+    """mutate, where the text occurs exactly `count` times and every occurrence changes."""
+    src = Path(path).read_text()
+    assert src.count(old) == count, (name, old, src.count(old))
+    (out / (name + '.v')).write_text(src.replace(old, new))
     names.append(name)
 
 agreed = ' None (fun z => if scalar_ok z then Some [Z.to_N z] else None) false false (fun _ _ => true) (fun _ => true) false (fun _ => None)\n (fun _ => None).'
@@ -170,4 +189,23 @@ mutate('ShenJitWalkTolInstance', walk,
 mutate('ShenJitWalkPrefixAbove', walk,
        ' | [], _ :: _ => true\n | _ :: _, [] => false\n',
        ' | [], _ :: _ => false\n | _ :: _, [] => true\n')
+# emit-spec: the family hooks, the copied block, the nested dummy, the frames and the invariant.
+mutate_chain('ShenJitEmitRuleOpaque', ['rocq/JitEmitRuleEq.v', 'rocq/JitEmitRel.v'],
+       "c cv g top e o top2 r r' :=\n match H with end.\nEnd JitEmitRuleEq.",
+       "c cv g top e o top2 r r'.\nProof. destruct H. Qed.\nEnd JitEmitRuleEq.")
+mutate_all('ShenJitEmitEmbedCaptures', 'rocq/JitEmitRel.v',
+       "lookup x g = Some s -> s <> d ->", "lookup x g = Some s -> s <> d /\\ cv = [] ->", 2)
+mutate('ShenJitEmitNestSwap', 'rocq/JitEmitNestTest.v',
+       "Rule_Dummy Cp Ct Co Cs Cw Ca c cv g top (EApp t [a; b]) (DSlot d) r r'.",
+       "Rule_Dummy Cp Ct Co Cs Cw Ca c cv g top (EApp t [a; b]) (DSlot d) r' r.")
+mutate('ShenJitEmitTrapNoHandler', 'rocq/JitEmitKont.v',
+       "KD' c cv caps fp st cs (B.Handler c lH fp cs (quiet_of rh) :: hs) w (B.OSlot s) (B.IPopHandler :: r1)",
+       "KD' c cv caps fp st cs hs w (B.OSlot s) (B.IPopHandler :: r1)")
+mutate('ShenJitEmitPmapx', 'rocq/JitEmitKont.v', " | PAdd => Some B.PAdd |", " | PAdd => Some B.PSub |")
+mutate('ShenJitEmitVRhPartial', 'rocq/JitEmitInv.v',
+       " | VRh_stream hd p d o :",
+       " | VRh_partial f args p : VRh mu h (VPartial f args) (B.VClo p)\n | VRh_stream hd p d o :")
+mutate('ShenJitEmitEndsDecoupled', 'rocq/JitEmitInv.v',
+       " | E'_ok v v' s' m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 ->",
+       " | E'_ok v v' s' m0 m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m0 = B.MFinal (B.FReturn v') m2 ->")
 print(' '.join(names))

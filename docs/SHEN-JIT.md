@@ -149,7 +149,12 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudget.v` | `=` on jit numbers a PER; the `=` budget lemma reduced to one cell step (`eq_core_statement`, open) |
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
-| `rocq/Audit_Jit.v` | Assumption audit of 109 statements |
+| `rocq/JitEmitRule<X>.v` | Seven emission families (Eq, Store, Prim, DoFold, Clo, App, Trap): each family's three empty rule hooks with their map and all lemmas |
+| `rocq/JitEmitRel.v` | JitLowerRel's relations indexed by code object and capture names, with the family hooks; hand-written nested `Comp_ind'`; `comp_embed` |
+| `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
+| `rocq/JitEmitKont.v` | Every continuation frame the families need (handler, dynamic-call window, do, closure-entry return, all primitives) |
+| `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
+| `rocq/Audit_Jit.v` | Assumption audit of 173 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -490,6 +495,48 @@ was not attempted and is not estimated here.
   source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
+
+### Extended back end: statements (emit-spec)
+
+Branch `p2/emit-spec`. Statements and design for the emission families; no family is simulated yet,
+and stage 0 is unchanged: 111 of 955 kernel definitions validated.
+
+- **Shape.** `rocq/JitEmitRel.v` copies JitLowerRel's six relations and indexes each by the code
+  object and its capture names. JitLowerRel has the code as a Section variable instead. The spec asked
+  for the old index shape, but a closure's body is nested code, and stating its derivation inside the
+  same block needs the code as an index. With the code fixed, a second inductive over codes would have to
+  nest through Comp's own parameter, and Rocq 9.3 refuses that (a spike, recorded in the task report).
+  Each of the seven families has an empty rule for Comp, CompT and CompOp (21 hooks), over relation
+  variables for all six relations. lower.shen needs the CompT and CompOp hooks: its `test` lowers
+  `(do X Y)` as value then test, and its `operand` lowers a folded list as `(const K)`.
+- **Induction.** `Comp_ind'` is written by hand, one Fixpoint per relation, and recurses through each
+  rule's `*_all` lemma. It is closed. A family's `*_all` must stay transparent: the
+  `ShenJitEmitRuleOpaque` mutant, an opaque `*_all`, is refused by the guard checker.
+  `rocq/JitEmitNestTest.v` checks the design on a non-empty rule that nests three derivations at the
+  same code and one at another code. Its `Comp_ind'` proves `suffix`.
+- **Frames.** `rocq/JitEmitKont.v` defines every frame once, generic in the value relation and the
+  closure heap fact:
+  - the handler (`KD'_trap`, which consumes the handler its trap pushed; `trap_has_handler`);
+  - the dynamic-call window (`KD'_head_*`, `KD'_args_*`, `KD'_hbind`);
+  - `do` (`KD'_do1`, `KD'_do1t` and the transparent `*_do2`);
+  - closure-entry return (`RK'_call`, with the caller's captures);
+  - every primitive through `pmapx`, without `pguard`.
+
+  `KApply` is related nowhere (see the file).
+- **Invariant and statements.** `rocq/JitEmitInv.v` defines:
+  - `mu`, a partial bijection between KLambda locations and bytecode keys;
+  - `VRh` (`VR_VRh`; it relates no partial application, `VRh_no_partial`);
+  - `SM`, an evolving store, and target runs under every environment oracle, with traces compared as
+    equal lists through `ev_of`;
+  - `Out'`, with IO and generic raising cases.
+
+  `sim_X_statement` per family takes the nested IH as `Rule_X_All Comp SimC ...`. The file also states
+  `preservation'`, `call_preservation'`, `call_preservation_src'` and the old-fragment corollaries, each a
+  `Definition ... : Prop` with a "Does NOT say" note. None is proved. `ev_of` translates no `JTime`,
+  `JReadFile` or `JWrites` event. An `open` path matches only when `*home-directory*` is empty.
+- **Evidence.** 64 statements were added to `Audit_Jit` (173 in all), each closed. There are 7 new
+  mutants: the mutation pin is 191, each mutant compiled and refused under Rocq 9.3. Lane result: in the
+  task report.
 
 ### Pass split: the normal form (wave 1b)
 

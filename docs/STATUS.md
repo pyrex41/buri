@@ -1241,8 +1241,11 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and nine statements are in the assumption audit
-in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and seventy-three statements are in the assumption audit
+in `rocq/Audit_Jit.v`, all about the models (64 added by emit-spec: the family hooks' map and all lemmas, the hand-written
+nested `Comp_ind'` of `rocq/JitEmitRel.v` and of its non-empty test copy with `suffix`, `comp_embed`, `pmapx_pmap`,
+`trap_has_handler`, `VR_VRh`, `VRh_no_partial` and `Ends'_final`; the back-end statements of `rocq/JitEmitInv.v`
+are stated, not proved, see [SHEN-JIT](SHEN-JIT.md)). Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
 `OB-JIT-PORT-PRIMS`). The five added at 0.6 state `shen-jit.write-bytes`, the read-error raise

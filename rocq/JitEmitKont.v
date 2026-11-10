@@ -276,4 +276,20 @@ Scheme KD'_m := Induction for KD' Sort Prop
  with RK'_m := Induction for RK' Sort Prop.
 Combined Scheme K'_mut from KD'_m, TK'_m, KC'_m, RK'_m.
 End Kont.
+
+(* A KTrap frame is always matched by a handler: whatever the position, a continuation whose
+   innermost frame is a KTrap has at least one handler installed (the one KD'_trap consumes, in
+   this frame or a caller's). *)
+Theorem trap_has_handler : forall V HC,
+ (forall c cv caps fp st cs hs w o r k, KD' V HC c cv caps fp st cs hs w o r k ->
+   forall h rho k1, k = KTrap h rho :: k1 -> hs <> []) /\
+ (forall c cv caps fp st cs hs w gd l r k, TK' V HC c cv caps fp st cs hs w gd l r k ->
+   forall h rho k1, k = KTrap h rho :: k1 -> hs <> []) /\
+ (forall c cv caps fp st cs hs w dst r k, KC' V HC c cv caps fp st cs hs w dst r k ->
+   forall h rho k1, k = KTrap h rho :: k1 -> hs <> []) /\
+ (forall fp st cs hs k, RK' V HC fp st cs hs k -> forall h rho k1, k = KTrap h rho :: k1 -> hs <> []).
+Proof.
+ intros V HC. apply K'_mut; intros; subst; try discriminate; eauto.
+ destruct ass; [contradiction|discriminate].
+Qed.
 End JitEmitKont.
