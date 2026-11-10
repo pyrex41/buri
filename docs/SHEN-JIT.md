@@ -131,11 +131,17 @@ Inputs that overflow the C stack through `=` are not covered (`OB-JIT-ISSUE-3`).
 
 ## Image obligation
 
-The binary's hash covers its heap image, about 765 KB of its 1 MB on arm64, which stage 1 made by
-running the runtime itself. Validating stage 0 doesn't cover that. `OB-JIT-IMAGE` requires decoding
-the image in Rocq and relating it to the KLambda store after initialisation, or proving stage 1 is an
-instance of the main theorem. Separately, the run reads the image from its own file, which the
-process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
+The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (runtime `13afde42...`, image
+`fd8485a5...`), which stage 1 made by loading stage 0 and running initialisation. Validating stage 0 doesn't cover that.
+`OB-JIT-IMAGE` is now partial and split into five sub-obligations ([SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)):
+- `OB-JIT-IMAGE-CODE` (partial): a Rocq decoder, run as a spike measurement and not in the lane, finds that the
+  function-cell code of 955 of 955 stage 0 definitions equals `JitBytecode.build_code` of their `.sbc`.
+- `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, and all data it built.
+- `OB-JIT-IMAGE-SEALING` (open): stage 1 seals 18 files where stage 0 sealed 24, which leaves 65 names redefinable
+  behind 115 sealed call sites.
+- `OB-JIT-IMAGE-READER` (open): the trusted reader and `image_load`.
+- `OB-JIT-IMAGE-FILE` (partial): the run reads the image from `argv[0]` (resolved through `PATH`) unless
+  `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary.
 
 ## What exists
 
