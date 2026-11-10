@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -169,3 +169,17 @@ Print Assumptions JitKRefBase.JitKRefBase.storehas_stable.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.ObsT_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_lok_refuted.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.SRel_alloc.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.lam_core.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.frz_core.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_lambda.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_freeze.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_lambda_lt.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_freeze_lt.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_step.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.call_rel.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_at.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_rel.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_core.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_lt.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_of_fund.

@@ -75,8 +75,8 @@ As of commit `1495f49` (7 November 2026):
 
 `make report` passed on 7 November 2026 in a Linux x86-64 container, on the tree committed as `1495f49`
 (the v0.4 cons-chain rule in the Shen/JIT lowerer proof).
-Since then the Shen/JIT lane was re-pinned to 0.6 (branch `p2/v06`): its audit module has 169 statements (112 before KRef's structural lemmas, 109 before the `=` budget assembly, 88 before the `=` budget step and walk, 70 at the re-pin, 65 before)
-and the proof-mutation pin is 188 (186 before KRef's structural lemmas, 184 before the `=` budget assembly, 180 before the `=` budget step and walk, 178 at the re-pin, 175 before). Those were checked by the lane and by compiling each Shen/JIT mutant in
+Since then the Shen/JIT lane was re-pinned to 0.6 (branch `p2/v06`): its audit module has 183 statements (169 before the KRef closure lemmas, 112 before KRef's structural lemmas, 109 before the `=` budget assembly, 88 before the `=` budget step and walk, 70 at the re-pin, 65 before)
+and the proof-mutation pin is 189 (188 before the KRef closure lemmas, 186 before KRef's structural lemmas, 184 before the `=` budget assembly, 180 before the `=` budget step and walk, 178 at the re-pin, 175 before). Those were checked by the lane and by compiling each Shen/JIT mutant in
 Rocq 9.3; `make report` was not rerun after the re-pin, so the totals below are UNKNOWN for the current tree.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.

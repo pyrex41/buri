@@ -6049,7 +6049,8 @@
     "rocq/JitKRef.v",
     "rocq/JitKRefGround.v",
     "rocq/JitKRefCompose.v",
-    "rocq/JitKRefBase.v"
+    "rocq/JitKRefBase.v",
+    "rocq/JitKRefCompatClo.v"
    ],
    "history": [
     {
@@ -6071,6 +6072,11 @@
      "source": "rocq/JitKRefBase.v",
      "recorded": "2026-11-09: open. kref-base proved and audited (57 statements in rocq/Audit_Jit.v, each Closed under the global context): the JitKRef statements VRel_down, VRel_wext, ERel_down, KRef_scope, sealed_stable and storehas_stable; SRel/KRel/ERel/EnvRel down in the index, KRel/ERel/EnvRel up in wext, ObsT down in the index and antitone in the world; source anti-reduction ObsT_anti and ObsT_anti_io (traces concatenate), target-step reduction ObsT_step and ObsT_running (a target resource step matched by the source's, through KRel's Throw clause), resource_match, wrong_match; the bind lemma ERel_push and one KRel lemma per frame kind (KLet, KIf, KCond, KAnd, KAndR, KOr, KOrR, KTrap, KHead, KArgs, KCallArgs, KApply), the application frames under AppRel, a hypothesis whose proof is compat_app's and compat_call's; ERel_anti and its instances for let, if, cond, type, a named call of a D function and lambda application; world_closed, world_closed_alloc and VRel_ptrs (world reachability for the = budget; JitEqBudgetStep's S-local lok does not follow from SRel: SRel_lok_refuted, so the = budget path needs store_ok or an SRel interface change). Refuted in Rocq, so not proved: SRel monotone up in wext (SRel_wext_refuted; SRel_wext_cells is the true form) and ObsT monotone up in wext (ObsT_wext_refuted; ObsT_wext_anti is the true direction). Mutants ShenJitKRefKRelStrict and ShenJitKRefDefunSealed are rejected, each first by an existing proof (KRel_top in rocq/JitKRefGround.v; jit_defun_fixed_refused in rocq/JitProfile.v; with JitProfile.v's two defun-refusal theorems deleted, in a throwaway build, the chain compiles up to JitKRefBase.v and sealed_step fails). Not proved: any compatibility lemma, the fundamental property, AppRel for any function value.",
      "reconciliation": "kref-base, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefCompatClo.v",
+     "recorded": "2026-11-09: open. kref-clo proved and audited (14 statements in rocq/Audit_Jit.v, each Closed under the global context): compat_lambda_statement and compat_freeze_statement outright (no induction hypothesis; each side allocates a cell, the world grows by the fresh pair, fresh by world_closed, SRel_alloc; same_id holds for the new locations, and KRef relating only g is no obstacle since the identity key is related through the new pair); compat_lambda_lt and compat_freeze_lt, the reflexive forms from fund_below k; app_rel, AppAll at every index up to k from fund_below k and prim_compat_statement by induction on the index (closures by VBody's clause at the lower index, over-application by the KApply frame, arity errors and non-callable heads including symbols raising alike, a partial application through the function table, equal under SRel: XUndefinedFun, a user body by fund_below, a primitive by prim_compat_statement, eval-kl by fund_below in the empty environment); compat_app_core and compat_app_lt; compat_app_statement only as compat_app_of_fund : fund_gen_statement -> prim_compat_statement -> compat_app_statement. Mutant ShenJitKRefLamNoSameId (VBody's VLam clause without same_id) is rejected, first by VBody_ground in rocq/JitKRefGround.v. Not proved: prim_compat_statement, fund_gen_statement, compat_call, compat_defun, the control compatibility lemmas.",
+     "reconciliation": "kref-clo, Phase 2 KRef track, 9 November 2026."
     }
    ]
   },
