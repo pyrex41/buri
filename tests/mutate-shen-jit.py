@@ -60,6 +60,9 @@ ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a c
 ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
   JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
   deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
+ShenJitKRefCondSwap: a copy of compat_cond whose target is the clauses in reverse order
+  (ECond (rev cl)), with compat_cond's own proof. cond tries clauses in order, so the copy is false
+  and its proof must fail.
 """
 import re
 from pathlib import Path
@@ -193,4 +196,7 @@ mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v',
 mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
        '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
+mutate('ShenJitKRefCondSwap', 'rocq/JitKRefCompatCtl.v',
+       "Theorem compat_type : compat_type_statement.",
+       "Theorem compat_cond_swap : forall g cl0 cl,\n Forall2 (fun p0 p => KRef g (fst p0) (fst p) /\\ KRef g (snd p0) (snd p)) cl0 cl ->\n KRef g (ECond cl0) (ECond (rev cl)).\nProof.\n intros g cl0 cl F k w rho0 rho Ww HE. apply ERel_cond.\n eapply Forall2_impl; [|exact F]. intros p0 p [H1 H2]. split; [apply H1|apply H2]; assumption.\nQed.\n\nTheorem compat_type : compat_type_statement.")
 print(' '.join(names))

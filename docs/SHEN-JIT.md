@@ -150,7 +150,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 169 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 193 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -311,6 +311,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
 | `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
 | `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
+| `rocq/JitKRefCompatCtl.v` | KRef's control compatibility lemmas: compat_lit, var, let, if, and, or, cond, type and defun (JitKRef statements, closed); trap at index k from `fund_below k` and `prim_compat_statement` (`compat_trap_lt`), and `compat_trap_statement` as an implication from `prim_compat_statement` and `fund_gen_statement` |
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
@@ -331,7 +332,15 @@ FunRel the callees b0 calls are the lowered bodies, not the kernel's source defi
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
 `ShenJitEquivComposeLeft` are rejected (since K00 each is the chain JitKRef.v, JitKRefGround.v[, JitKRefCompose.v]
-with the statement mutated). `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
+with the statement mutated). `rocq/JitKRefCompatCtl.v` (24 audited statements) proves the JitKRef statements compat_lit, compat_var, compat_let, compat_if,
+compat_and, compat_or, compat_cond, compat_type and compat_defun with no hypotheses beyond their own (compat_defun takes
+`D_wf`, and gets StoreHas of the new store from `storehas_stable`), each from an ERel-level lemma built on `ERel_push`
+and the frame lemmas. Trap is NOT closed with `fund_below` alone: applying the handler to the exception may apply a
+partial primitive (a handler `(+ 1)` is `VPartial "+" [1]`), which runs `prim_rule_r`, so `compat_trap_lt` takes
+`fund_below k` and `prim_compat_statement`; `compat_trap_of_fund` gives `compat_trap_statement` from
+`prim_compat_statement` and `fund_gen_statement`. Mutant `ShenJitKRefCondSwap` (a copy of compat_cond with the target's
+clauses reversed) is rejected.
+`rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
 SRel up in wext and ObsT up in wext are false and refuted in Rocq (`SRel_wext_refuted`, `ObsT_wext_refuted`; a pair the

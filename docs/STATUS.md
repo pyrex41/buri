@@ -1261,6 +1261,11 @@ Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/Jit
 `rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
 and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
 will be proved through (`fv`, `fund_below`, `fund_gen_statement`, `PrimOutRel`, `prim_compat_statement`).
+Twenty-four are in `rocq/JitKRefCompatCtl.v` (branch `p2/kref-ctl`): the JitKRef statements `compat_lit`, `compat_var`,
+`compat_let`, `compat_if`, `compat_and`, `compat_or`, `compat_cond`, `compat_type` and `compat_defun`, closed, with their
+ERel-level lemmas; trap only conditionally: `compat_trap_lt` takes `fund_below k` AND `prim_compat_statement` (a handler
+may be a partial primitive), and `compat_trap_of_fund` derives `compat_trap_statement` from `prim_compat_statement` and
+`fund_gen_statement`. Not the closure compatibility lemmas or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
