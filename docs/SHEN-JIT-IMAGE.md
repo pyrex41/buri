@@ -64,7 +64,7 @@ Measured header (Rocq `s_hdr`, and the Python census agrees):
 | Field | Value |
 |---|---|
 | magic, version | `SJHI`, 2 |
-| build | `5c81999610faf8e6` |
+| build | `5c81999610faf8e6`, which occurs in the runtime part too (`grep -c -a` on its 4657760 bytes: 2) |
 | word size | 8 |
 | heap words | 87059 |
 | cell entries | 3114 (1557 cells) |
@@ -139,8 +139,11 @@ Costs: compiling `ImgData.v` (97887 words plus the 955 `.sbc` trees, 4.5 MB of s
 | Code | Held by | Made by |
 |---|---|---|
 | `thread` (arity 1, 8 bytes of bytecode) | the function cell of `thread` | `shen-jit.initialise`, which calls `eval-kl` on `(defun thread (x) (shen-jit.thread x))` (`src/port/shen-jit.kl`, about line 415), "defined here, once sealing has ended" |
-| 5 `lambda` | `*property-vector*`, through pair chains | the lambda-form entries that initialisation records with `shen.set-lambda-form-entry` |
+| 5 `lambda` | reached from the value of `*property-vector*`, through pair chains (first referrer followed; the key holding each one was not decoded) | consistent with the lambda-form entries initialisation records with `shen.set-lambda-form-entry`; not checked further |
 | 1 `lambda` | constant slot 7698, nested in one of those 5 (the one whose arity word carries an entry) | the same |
+
+Of the 1313 closures, 956 sit in function cells: the 955 and `thread`. The other 357 are held elsewhere, in values
+and data built by initialisation, and are part of `OB-JIT-IMAGE-INIT` too.
 
 These 7 were lowered at stage 1 by the image's own sealed lowerer, through `eval-kl`, and not by stage 0. That lowerer is
 measured to reproduce stage 0 on 944 of 955 definitions (CENSUS.md, the image run). No stage 0 validation covers these 7.
@@ -177,8 +180,15 @@ No `inline` instruction targets an extension name.
 - **The loaded code does not change.** The `.sbc` already carries `call-sealed`, and the relation above matches all
   955, including the 65.
 - **Redefinition is what changes.** In the image the 65 names are open, so a program may redefine them, through
-  `eval-kl` of a `defun` or the install primitive. After that, the 115 sealed sites still call the closure bound at load,
-  while open calls and `shen-jit.sealed?` see the new definition. Shen's late binding would call the new one.
+  `eval-kl` of a `defun` or the install primitive. Read from the source, and not tested, the 115 sealed sites then
+  still call the closure bound at load, while open calls and `shen-jit.sealed?` see the new definition. Shen's late
+  binding would call the new one. The source reading:
+  - `sj_install` (`loader.c`, about lines 448 to 480) refuses only names whose sealed bit is set. Its
+    `bind_sealed(&l, true)` binds only the sealed slots of the code being installed (`l.sealed_slot` is local to that
+    load).
+  - The `redefine` hook (`jit.c`, about line 304) only undoes the native patches of open calls to that cell
+    (`patches_drop`).
+  - Nothing rewrites an existing sealed constant slot.
 - **The image's own lowerer differs from stage 0's.** It treats these callees as open, with `shen-jit.inlined?`
   guards. That is where the 11 image-run differences of CENSUS.md come from: features 2, launcher 3, namespaces 3,
   programmable-pattern-matching 3.
@@ -232,18 +242,43 @@ Under Coq 8.18 (`make prove`) the spike's files are UNKNOWN: they were compiled 
 
 ## Evidence (this run)
 
-Everything was run in `buri-lps` on 10 November 2026, from worktree `p2/r1-image`, which is based on `p2/int`
-`2e45d67`. These are measurements: the Rocq verdicts are computed by Rocq, and the census lines are Python
-bookkeeping.
+Everything was run in `buri-lps` on 10 November 2026, from worktree `p2/r1-image`, at commit `e08d73e`, which is based
+on `p2/int` `2e45d67`. These are measurements: the Rocq verdicts are computed by Rocq, and the census lines are Python
+bookkeeping. Nothing here runs in the lane.
 
-| Item | Value |
+**Run of the committed spike.** Command: `cd /work/p2-r1-image && /lps/bin/rocq-slot bash spikes/image-decode/run.sh
+/lps/p6/sj /tmp/p2-r1-image-final`. Exit 0 after 1836 s. It printed `IMAGE_DECODE_OK`, which run.sh prints only
+after three checks pass:
+- Ax.log says closed;
+- `s_total = Some (955, 0)`;
+- both mutants give `differ print`.
+
+The log is `/tmp/p2-r1-image-run.log`, sha256 `9f24f9eaee718574ed425d1535ee504185a72fc73718ff9bdf29b1d9651cca2d`.
+The run's outputs are byte-identical to the first, exploratory run's.
+
+| Item | sha256 |
 |---|---|
-| `JitImage.v` as compiled (Stdlib rename) | sha256 `b8dcdd29741a6d2f77977b17e5b7020b16ba9b975cf864628494e8ea33001f43` |
-| `ImgData.v` (generated) | `cf5a735de83c5dfa165192578c27e9055480e02daca8912cfe0a2258dca62878` |
+| `spikes/image-decode/JitImage.v` (committed) | `e0c2f3ebafc16461a7cbfe5461e55bac0e1240fdfb4e3197d4cc4f02289ef020` |
+| the same, as compiled (Stdlib rename) | `a6064daebceac296e28ca7fc6867108d295c6709d9768dbde0e3c1562a9d7014` |
+| `image_to_rocq.py` | `1f8caa1c13128fd108470553ff3b6b1f627d18fd543cc10378aedc8c09ae36ab` |
+| `ImgRun.v`, `ImgSum.v`, `ImgMut.v` | `b45b1ded...9036`, `c7db10b3...bc09`, `d7f0a0a2...7014` |
+| `census.py`, `sealgap.py`, `run.sh` | `d8719f5a...930e`, `eb767564...b2f2`, `1b649ec3...a439` |
+| `ImgData.v` (generated) | `6ead9530a6e529a0e298df4d0c76b7ae830c363d8feb8719b1d5db0fd1a4a113` |
 | `ImgSum.log` (the 955 tally, header, types, sealing, code objects) | `8e332a8a18451238a159aa789fed610751875d129b48dfb1b9b0370b520a37e2` |
 | `ImgMut.log` (two mutants, each `differ print`) | `ef02bcf991317d77f2d69ad602668cc03c36bc0ada80b1019365fa08e5317d84` |
+| `Ax.log` (`Print Assumptions check_def_sound`: closed) | `188ff29b8a0705f491438ebf47623e533fe60658944f3f1f58e1f9b5badb1bcf` |
 | `census.out` (Python walk: same types, 2371/2364/7, 890 sealed) | `87713698409cbdcf7d63491a94567da77012627c93b8964eb63a5b75b23ee141` |
 | `sealgap.out` (115 sites, 45 callers) | `0e509ac14f9b6c14c78bfde49bce30b741b814a5fb574cad38dc3291d7b877cb` |
-| `Print Assumptions check_def_sound`, `code_eqb_true` | Closed under the global context |
 
-The final `run.sh` rerun of the committed files is recorded in the commit message that adds this document.
+`fncells.py` was run separately, by hand. It found 956 function cells that hold a procedure, all distinct.
+
+**Lane.** Command: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-image-lane /lps/bin/rocq-slot bash scripts/check-shen-jit.sh`.
+It ran on the same tree, whose lane-checked files are unchanged from `p2/int`. Exit 0 after 1063 s:
+- "rocq-9: 199 audited statements closed, rocqchk passed";
+- "stage0: 111 accepted, 844 rejected, 0 unreadable of 955 definitions, as recorded";
+- differential NOT RUN.
+
+The log sha256 is `2e01b8e52d591237ceefc44d37401376f979f032bb40d6e656afdca1ef1d1003`.
+
+**Not run:** `make prove` (Coq 8.18), the differential, `gate_tests.sh` and the mutation suite. They are UNKNOWN for
+this branch. The ledger check `./scripts/check-shen tests/ledger.shen` passed on the host (BURI_SUITE_OK ledger 62).

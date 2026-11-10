@@ -4665,7 +4665,7 @@
      "kind": "review",
      "ref": "spikes/image-decode/JitImage.v",
      "establishes": "artifact-correspondence",
-     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context"
+     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context"
     }
    ],
    "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
