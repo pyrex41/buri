@@ -24,7 +24,8 @@ counts of the form "N of 955 kernel definitions validated" come from the full-pi
 completion routes, "image bytes decoded in Rocq and related to that store" is reached for the code objects only. Global
 state needs either the stage 1 route, which is proving stage 1 an instance of the main theorem, or a Rocq decoder of the
 data that initialisation built. The stage 1 route needs validated initialisation code. At 0.6 the source judge accepts
-111 of 955 definitions (spikes/pass-split/CENSUS.md), so that route is far off.
+148 of 955 definitions (`tests/shen-jit/stage0-accepted.txt`; 111 at the re-pin, `spikes/pass-split/CENSUS.md`, before `=`
+against a symbol constant was admitted), so that route is far off.
 
 ## Inputs (bound)
 
