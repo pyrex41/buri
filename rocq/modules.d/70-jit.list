@@ -17,6 +17,7 @@ JitLowerEquiv
 JitEqBudget
 JitEqBudgetStep
 JitEqBudgetWalk
+JitEqBudgetCore
 JitLowerStage0
 JitNorm
 JitNormStage0

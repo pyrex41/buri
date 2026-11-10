@@ -6074,7 +6074,7 @@
    "scope": "universal",
    "owner": "E2E-38",
    "packages": [],
-   "status": "open",
+   "status": "discharged",
    "boundary": "KLambda = on related heaps of different lengths",
    "identity": "rocq/JitEqBudget.v",
    "statement": "eq_core_statement (rocq/JitEqBudget.v): for every port rules R, every profile P' whose num_cmp P' PEqual is symmetric and transitive, and every heap h with Forall (lok (length h)) h, cellcmp R P' h (length h) p q = cellcmp R P' h (S (length h)) p q for all p <> q. eq_budget_from_core proves that it implies JitLowerEquiv.eq_budget_statement.",
@@ -6082,12 +6082,32 @@
     "the hypotheses are needed: eq_budget_refuted gives a five-cell heap where, with a tolerance number equality, = answers None at budget S (length h) and Some false at one more"
    ],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitEqBudgetCore.JitEqBudgetCore.eq_core",
+     "establishes": "model-proof",
+     "note": "eq_core_statement (jit_rules sealed) for every sealed set"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitEqBudgetCore.JitEqBudgetCore.eq_budget",
+     "establishes": "model-proof",
+     "note": "JitLowerEquiv.eq_budget_statement sealed, through eq_budget_from_core"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitEqBudgetCore.JitEqBudgetCore.eq_budget_closed",
+     "establishes": "model-proof",
+     "note": "relativized to a NoDup set of allocated cells closed under data pointers; no lok hypothesis"
+    }
+   ],
    "completion_evidence": "eq_core_statement proved with no axioms. Estimated over 1,000 lines, in four parts: (1) the merge simulation, both the same-budget and the shifted direction, with a lemma that interchangeable leaves change no comparison; (2) depth-first stop positions over cyclic heaps, the ultrametric lemma and its two-smallest-equal consequence; (3) on a finite set, strict refinement of an equivalence adds a class; (4) the induction on closed sets of cells.",
    "sources": [
     "rocq/JitEqBudget.v",
     "rocq/JitEqBudgetStep.v",
-    "rocq/JitEqBudgetWalk.v"
+    "rocq/JitEqBudgetWalk.v",
+    "rocq/JitEqBudgetCore.v"
    ],
    "history": [
     {
@@ -6104,11 +6124,16 @@
      "source": "rocq/JitEqBudgetStep.v",
      "recorded": "2026-11-09: open. Part (1), the merge step, is proved with no axioms under S-relativized hypotheses (closed_in, lok_in; no global lok): least_true_pointers, closed_after, same_budget_sim, shifted_sim, xy_answers_true, xy_true_from_1, step_settled, least_true_exists, remove_length, remove_nodup, surgery_in, surgery_out, surgery_length, all in rocq/Audit_Jit.v. Mutant ShenJitEqStepNotLeast (least_true_pointers without its least-d premise) is rejected. Parts (2) to (4), the base and the assembly, are not proved.",
      "reconciliation": "eq-step task on p2/eq-step, 9 November 2026."
-     },
-     {
+    },
+    {
      "source": "rocq/JitEqBudgetWalk.v",
      "recorded": "2026-11-09: open. Base case proved on p2/eq-walk: walk_bound_pred (and walk_bound) says that for every R, every P whose num_cmp P PEqual is symmetric and transitive, every heap h and every list S of cell indices closed under the data pointers of its cells (closed_in h S) with no distinct p, q in S ever comparing true (no_true_pairs R P h S), a cell comparison cellcmp R P h d p q = Some b with p <> q in S gives cellcmp R P h (pred (length S)) p q = Some b. No lok, NoDup or bounds hypothesis. walk_bound_needs_trans refutes the statement without transitivity (tol on h5). Proof: token streams, first disagreement (link_cell), the walk (walk_of_answer), threshold equivalences E t from the ultrametric gt (gt_trans), strict refinement counting (count_thresholds). All print Closed under the global context in rocq/Audit_Jit.v. Open: the merge step and the assembly of eq_core_statement.",
      "reconciliation": "eq-walk, Phase 2 eqbudget track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitEqBudgetCore.v",
+     "recorded": "2026-11-09: discharged on p2/eq-assembly. eq_core : forall sealed, eq_core_statement (jit_rules sealed) and eq_budget : forall sealed, JitLowerEquiv.eq_budget_statement sealed, from eq_budget_closed (for num_cmp P PEqual symmetric and transitive, a heap h and a NoDup list cs of allocated cells closed under the vector pointers in their data, = on operands whose pointers lie in cs answers at every budget >= S (length cs) what it answers at S (length cs); no lok hypothesis), proved by induction on length cs with step_settled and walk_bound and a case split on the decidable goal (no excluded middle). All three print Closed under the global context in rocq/Audit_Jit.v; eq_budget_refuted is still closed. Mutants ShenJitEqCoreNoTrans and ShenJitEqCoreNoClosure are rejected. eq_core_statement and eq_budget_statement are unchanged.",
+     "reconciliation": "eq-assembly, Phase 2 eqbudget track, 9 November 2026."
     }
    ]
   },

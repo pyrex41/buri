@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -109,3 +109,6 @@ Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.count_thresholds.
 Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_pred.
 Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound.
 Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_needs_trans.
+Print Assumptions JitEqBudgetCore.JitEqBudgetCore.eq_budget_closed.
+Print Assumptions JitEqBudgetCore.JitEqBudgetCore.eq_core.
+Print Assumptions JitEqBudgetCore.JitEqBudgetCore.eq_budget.

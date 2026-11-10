@@ -6,14 +6,18 @@
    - eq_budget_from_core: JitLowerEquiv.eq_budget_statement follows from eq_core_statement.
    - eq_depth_mono_le: more budget never takes back a defined answer.
    - eq_budget_refuted: without its two hypotheses the statement is false (below).
-   Open: eq_core_statement.
+   eq_core_statement is proved in JitEqBudgetCore.v (JitEqBudgetCore.eq_core), from the step in
+   JitEqBudgetStep.v and the base in JitEqBudgetWalk.v; JitEqBudgetCore.eq_budget is
+   JitLowerEquiv.eq_budget_statement. This file does not import them. The paper proof below is
+   kept as the plan they follow.
 
-   ---- The open core ----
+   ---- The core ----
    eq_core_statement: at budget length h, one more budget changes no comparison of two
    cells.
 
-   Paper proof, not formalized. Write K_d(p,q) for cellcmp d p q, and tau(p,q) for the least d
-   at which it is Some, if any. By eq_depth_mono, the core says tau(p,q) <= length h. Prove,
+   Paper proof, formalized in JitEqBudgetStep.v, JitEqBudgetWalk.v and JitEqBudgetCore.v. Write
+   K_d(p,q) for cellcmp d p q, and tau(p,q) for the least d at which it is Some, if any. By
+   eq_depth_mono, the core says tau(p,q) <= length h. Prove,
    for every set S of cells closed under the vector pointers in their data (not closure
    environments: = never reads those) and all p, q in S, that tau(p,q) <= |S|. Induction on |S|:
 
@@ -336,7 +340,8 @@ End PerZ.
 (* ======================= reduction to one step on cells ======================= *)
 (* = at budget S d reads the heap only through `cellcmp d`: the comparison, at budget d, of the
    contents of two different cells. So once one more budget changes no cell comparison, no
-   further budget changes anything. What is left open is that step at d = length h. *)
+   further budget changes anything. That step at d = length h is
+   eq_core_statement, proved in JitEqBudgetCore.v. *)
 Section Reduce.
 Variables (R : port_rules) (P : profile) (h : list (list value)).
 Local Open Scope nat_scope.
@@ -389,7 +394,7 @@ Proof.
 Qed.
 End Reduce.
 
-(* The open core: at budget length h, one more budget changes no cell comparison. By
+(* The core (proved in JitEqBudgetCore.v as eq_core): at budget length h, one more budget changes no cell comparison. By
    eq_depth_mono it is enough that a cell comparison that ever answers Some does so by budget
    length h. A search (a Python copy of eq_depth_r, used only for search, n <= 6, with
    partial-equivalence atoms, NaN-like atoms, nested pairs and an opaque value) found every
