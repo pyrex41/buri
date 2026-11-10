@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and eighty-nine statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Two hundred and twelve statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1269,6 +1269,20 @@ call of a D function and lambda application; target-step reduction with a target
 wrong-state matching; the bind lemma `ERel_push` and a KRel lemma for every frame kind, the application frames under
 `AppRel`, which is a hypothesis there; and `world_closed`, world reachability for the `=` budget (S-local lok does not follow from SRel: `SRel_lok_refuted`). No compatibility lemma
 and not the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
+Fourteen are in `rocq/JitKRefCompatClo.v` (branch `p2/kref-clo`), the compatibility lemmas for closures and dynamic
+application. `compat_lambda` and `compat_freeze` are the JitKRef statements, proved with no induction hypothesis: each
+side allocates one cell, the world grows by the fresh pair (fresh by `world_closed`; `SRel_alloc`), `same_id` holds for
+the new locations, and VBody's body clause follows from the body's KRef at every lower index. KRef relating only g is no
+obstacle: the closure's identity key is related because the new pair is in every larger world. `compat_lambda_lt` and
+`compat_freeze_lt` are the reflexive forms from `fund_below k`. `app_rel` proves `AppAll` at every index up to k from
+`fund_below k` and `prim_compat_statement`, by induction on the index: closures use VBody's clause at the lower index
+(the target's application step pays it), over-application the KApply frame, arity errors and non-callable heads (symbols,
+data) raise alike, and a partial application calls through the function table, equal on both sides under SRel (an unbound
+name raises `XUndefinedFun`; a user body is related by `fund_below`; a primitive by `prim_compat_statement`, eval-kl's
+expression by `fund_below` in the empty environment). `compat_app_core` and `compat_app_lt` give EApp at index k; the
+JitKRef statement is proved only as `compat_app_of_fund : fund_gen_statement -> prim_compat_statement -> compat_app_statement`,
+because a stored function or primitive runs code outside the expression. Mutant `ShenJitKRefLamNoSameId` (VBody's VLam
+clause without `same_id`) is rejected, first by `VBody_ground` in `rocq/JitKRefGround.v`.
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is proved in `JitEqBudgetCore.v` (below).
 Thirteen are in `rocq/JitEqBudgetStep.v`: the step of the core's induction on a closed set of cells, under S-relativized
@@ -1290,20 +1304,27 @@ answers at |S| + 1 (no lok hypothesis, global or S-local; induction on |S| with 
 on the decidable goal, so no excluded middle). `eq_core` is `eq_core_statement (jit_rules sealed)`, with S all cells, and
 `eq_budget` is `JitLowerEquiv.eq_budget_statement sealed`, through `eq_budget_from_core`. Proof mutants `ShenJitEqCoreNoTrans`
 and `ShenJitEqCoreNoClosure` are rejected.
-Twenty are the front checkers (branch `p2/F00`). Five in `rocq/JitFrontCheck.v`: `fchk`, one checker for every front
+Twenty-nine are the front checkers (branch `p2/F00`). Six in `rocq/JitFrontCheck.v`: `fchk`, one checker for every front
 pass, parameterised by rewrite rules (equality with `scoped`, the same head with recursion, then each rule given the
 checker at one fuel less), and `fchk_sound`, proved from a `FrontHyps` premise (D_wf, KRef_refl, every compat_*
-statement, and KRef_scope and ERel anti-reduction, both already proved) and each rule's `rule_sound`. Eight in
+statement, and KRef_scope and ERel anti-reduction, both already proved) and each rule's `rule_sound`, and `fchk_rejects_unscoped` (vm_compute). Eight in
 `rocq/JitFrontChainTest.v`, a synthetic test: two toy source rewrites (if-true; let of a literal around its own
 variable), each closed, chain at one node, and fchk accepts the pair with both and rejects it with either removed
-(vm_compute). Seven in `rocq/JitFrontShare.v`: share's else rewrite, (if C X Y) to (let ElseN (freeze Y) (unchain C X
+(vm_compute). Fifteen in `rocq/JitFrontShare.v`: share's else rewrite, (if C X Y) to (let ElseN (freeze Y) (unchain C X
 ElseN)), with `share_rule_sound` proved outright (no FrontHyps; its one premise is that D defines thaw as the kernel
-does, and `kernel_thaw_parses` checks that the kernel's thaw parses to that definition), so `check_share_sound` rests on FrontHyps only through fchk. Share's reuse of a chain variable for a hd/tl the
-chain took is not covered. On the v0.6 share witnesses (sha256 `6881eb29...`) check_share accepts 951 of 955 share
-pairs; the 4 rejected are the share-chain definitions (`shen.macros`, `shen.process-let`, `shen.lambda-of-defun`,
+does, and `kernel_thaw_parses` checks that the kernel's thaw parses to that definition), so `check_share_sound` rests on FrontHyps only through fchk. That thaw premise (HT) is an amendment to the spec,
+which asked for FrontHyps alone, and it is necessary: `share_rule_needs_thaw` (closed) refutes the FrontHyps-only form
+at D = [] (with thaw unbound, the target's `(thaw G)` raises XUndefinedFun where the source returns), and
+`share_rule_sound_needs_thaw` restates it against FrontHyps. Discharging HT for the real D needs emission to admit
+thaw's body, a dynamic apply, before D_compiled can hold: open. Three decision lemmas (`share_accepts_basic`,
+`share_rejects_swap`, `share_rejects_thaw_other`, vm_compute) fix the rule's verdicts. Share's reuse of a chain variable for a hd/tl the
+chain took is not covered. On the v0.6 share witnesses (sha256 `6881eb29...`) check_share validates 0 of the 4 share
+rewrites: it accepts 951 of 955 pairs, all definitions share leaves unchanged (equality case, share_rule never fires),
+and the 4 rejected are the share-chain definitions (`shen.macros`, `shen.process-let`, `shen.lambda-of-defun`,
 `shen.process-assoc`), each with a Rocq rejection trace ending at a reused chain variable. This is the share link only:
 acceptance holds modulo FrontHyps, which kref-fund is to discharge. Mutants `ShenJitFrontNoScope`,
-`ShenJitFrontSameFuel`, `ShenJitFrontShareElseSwap` and `ShenJitFrontShareThawAny` are rejected (Rocq 9.3; the
+`ShenJitFrontSameFuel`, `ShenJitFrontShareElseSwap` and `ShenJitFrontShareThawAny` are rejected, the first, third
+and fourth at those decision lemmas, the second at the Fixpoint guard (Rocq 9.3; the
 Coq 8.18 compile of these files, and so `make prove`, was not run).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 

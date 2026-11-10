@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitFrontCheck JitFrontChainTest JitFrontShare.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitFrontCheck JitFrontChainTest JitFrontShare.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -169,7 +169,22 @@ Print Assumptions JitKRefBase.JitKRefBase.storehas_stable.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.ObsT_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_lok_refuted.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.SRel_alloc.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.lam_core.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.frz_core.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_lambda.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_freeze.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_lambda_lt.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_freeze_lt.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_step.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.call_rel.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_at.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_rel.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_core.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_lt.
+Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_of_fund.
 Print Assumptions JitFrontCheck.JitFrontCheck.expr_eqb_eq.
+Print Assumptions JitFrontCheck.JitFrontCheck.fchk_rejects_unscoped.
 Print Assumptions JitFrontCheck.JitFrontCheck.front_scope_proved.
 Print Assumptions JitFrontCheck.JitFrontCheck.front_anti_proved.
 Print Assumptions JitFrontCheck.JitFrontCheck.same_sound.
@@ -189,3 +204,11 @@ Print Assumptions JitFrontShare.JitFrontShare.share_rules_sound.
 Print Assumptions JitFrontShare.JitFrontShare.check_share_sound.
 Print Assumptions JitFrontShare.JitFrontShare.fresh_not_bound.
 Print Assumptions JitFrontShare.JitFrontShare.kernel_thaw_parses.
+Print Assumptions JitFrontShare.JitFrontShare.share_accepts_basic.
+Print Assumptions JitFrontShare.JitFrontShare.share_rejects_swap.
+Print Assumptions JitFrontShare.JitFrontShare.share_rejects_thaw_other.
+Print Assumptions JitFrontShare.JitFrontShare.cx_accepted.
+Print Assumptions JitFrontShare.JitFrontShare.cx_tgt_runs.
+Print Assumptions JitFrontShare.JitFrontShare.cx_inv_star.
+Print Assumptions JitFrontShare.JitFrontShare.share_rule_needs_thaw.
+Print Assumptions JitFrontShare.JitFrontShare.share_rule_sound_needs_thaw.

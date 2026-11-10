@@ -198,6 +198,13 @@ Fixpoint fchk (rules : list rule) (fuel : nat) (g : list name) (e0 e : expr) {st
           || existsb (fun r => r (fchk rules f) g e0 e) rules
  end.
 
+(* The decision the equality case's scope test makes: a variable outside the scope is not
+   accepted against itself, at any fuel, by fchk with no rules (KRef_refl needs scoped g e: an
+   unscoped variable may be bound to unrelated values on the two sides). Placed before any proof,
+   so that dropping the test fails here, at the decision, and not inside a proof script. *)
+Theorem fchk_rejects_unscoped : forall n, fchk [] n [] (EVar (of_string "x")) (EVar (of_string "x")) = false.
+Proof. intros [|n]; vm_compute; reflexivity. Qed.
+
 Section Front.
 Variables (sealed : list name) (D : list (name * fundef)).
 Notation R := (jit_rules sealed).

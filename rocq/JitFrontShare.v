@@ -21,6 +21,8 @@
    frame by frame (kif_base, kand_frame), and a chain let binds the same name on both sides
    (chain_sound). The thaw steps go through the store's thaw, so the soundness takes, as a
    premise, that D defines thaw as the kernel does: (defun thaw (V) (V)) (Section hypothesis HT).
+   HT is necessary: share_rule_needs_thaw (below) refutes share_rule_sound without it, at D = [],
+   from KRef_refl alone, so the FrontHyps-only form the spec asked for is false.
 
    NOT covered: share's REUSE of a chain-bound variable for a hd/tl the chain already took (the
    `reuse` / `canon` part of lower.shen's share, "share chains"). Relating (hd V) on the source to
@@ -30,8 +32,9 @@
 
    Freshness: the checker tests the freshness facts it needs (G and the chain binders outside the
    scope, and from each other) directly; fresh_not_bound shows that fresh_ok's reserved-name
-   premise implies them for the lowerer's names. no_keyword_binders is not needed: the checker reads
-   parsed expressions, where (thaw G) is a named call whatever binds what. *)
+   premise implies them for the lowerer's names. no_keyword_binders is not used here: the checker
+   reads Rocq's parse, where (thaw G) is a named call whatever binds what; it matters for parse
+   fidelity (the binary reading the forms as Rocq does), which is call_preservation_src's premise. *)
 From Coq Require Import List ZArith NArith PArith Bool String Ascii Lia.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitProfile JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitFrontCheck JitLowerStage0.
 Import ListNotations.
@@ -87,6 +90,26 @@ Fixpoint esize (e : expr) : nat := match e with
 (* Every recursive call of fchk and of the share rule is on a strict part of the target, so the
    target's size is enough fuel. Fuel only bounds the search: soundness holds at every fuel. *)
 Definition check_share (ps : list name) (b0 b : expr) : bool := fchk share_rules (S (esize b)) ps b0 b.
+
+(* ---------- the share rule's decisions, by vm_compute ----------
+   Over the parameter p: (if p 0 1) against
+   - share_ok:   (let G (freeze 1) (if p 0 (thaw G)))   accepted, the rule's own shape;
+   - share_swap: (let G (freeze 1) (if p (thaw G) 0))   rejected: then and else swapped;
+   - share_thaw_other: (let G (freeze 1) (if p 0 (thaw p)))  rejected: the else thaws a variable
+     that is not the ElseN the let binds.
+   They come before every proof, so a mutant that changes one of these decisions fails here. *)
+Definition sx_p : name := of_string "p".
+Definition sx_G : name := of_string "G".
+Definition share_src : expr := EIf (EVar sx_p) (ENum (NInt 0)) (ENum (NInt 1)).
+Definition share_ok : expr := ELet sx_G (EFreeze (ENum (NInt 1))) (EIf (EVar sx_p) (ENum (NInt 0)) (thaw_e sx_G)).
+Definition share_swap : expr := ELet sx_G (EFreeze (ENum (NInt 1))) (EIf (EVar sx_p) (thaw_e sx_G) (ENum (NInt 0))).
+Definition share_thaw_other : expr := ELet sx_G (EFreeze (ENum (NInt 1))) (EIf (EVar sx_p) (ENum (NInt 0)) (thaw_e sx_p)).
+Theorem share_accepts_basic : check_share [sx_p] share_src share_ok = true.
+Proof. vm_compute. reflexivity. Qed.
+Theorem share_rejects_swap : check_share [sx_p] share_src share_swap = false.
+Proof. vm_compute. reflexivity. Qed.
+Theorem share_rejects_thaw_other : check_share [sx_p] share_src share_thaw_other = false.
+Proof. vm_compute. reflexivity. Qed.
 
 (* A rejection trace: the path of target constructors from the root to the deepest node where
    neither equality, the same head nor the share rule holds. Computed by Rocq, for the record of a
@@ -634,6 +657,101 @@ Proof. constructor; [exact share_rule_sound|constructor]. Qed.
 Theorem check_share_sound : FrontHyps sealed D -> forall ps b0 b, check_share ps b0 b = true -> KRef ps b0 b.
 Proof. intros FH ps b0 b E. exact (fchk_sound sealed D FH share_rules share_rules_sound _ ps b0 b E). Qed.
 End Share.
+
+(* ---------- HT is necessary: share_rule_sound fails for a D without thaw ----------
+   The FrontHyps-only form of share_rule_sound is false. Take D = [] (D_wf holds) and the empty
+   store, which meets it. The pair
+       (if false 0 1)   against   (let G (freeze 1) (if false 0 (thaw G)))
+   is accepted by share_rule with rec = syntactic equality in scope, a sound rec by KRef_refl (a
+   FrontHyps field). The source returns 1. The target, in 9 steps, reaches (thaw G), finds no
+   function thaw in the store and raises (XUndefinedFun thaw); every throw the source can reach is
+   a resource error (XUser "out of memory" / "stack overflow"). KRef demands the source match the
+   target's throw, so the pair is not in KRef and share_rule is not rule_sound for this D.
+   SRel forces both stores to share one function table but D = [] says nothing of thaw, so no
+   FrontHyps field constrains what (thaw G) does: a premise on thaw's definition in D (HT) is
+   needed. share_rule_needs_thaw proves it from KRef_refl alone; share_rule_sound_needs_thaw
+   restates it against the FrontHyps-only statement: that statement, at D = [], refutes
+   FrontHyps sealed [], which kref-fund is to prove for every D_wf store spec. *)
+Definition cx_G : name := of_string "G".
+Definition cx_src : expr := EIf (EBool false) (ENum (NInt 0)) (ENum (NInt 1)).
+Definition cx_tgt : expr := ELet cx_G (EFreeze (ENum (NInt 1))) (EIf (EBool false) (ENum (NInt 0)) (thaw_e cx_G)).
+Definition cx_rec (g : list name) (a b : expr) : bool := expr_eqb a b && scoped g b.
+Definition cx_s : store := Store [] [] [].
+Definition cx_kif : frame := KIf (ENum (NInt 0)) (ENum (NInt 1)) [].
+Definition cx_det : list config :=
+ [Cfg (Eval [] cx_src) [] cx_s; Cfg (Eval [] (EBool false)) [cx_kif] cx_s;
+  Cfg (Ret (VBool false)) [cx_kif] cx_s; Cfg (Eval [] (ENum (NInt 1))) [] cx_s;
+  Cfg (Ret (VNum (NInt 1))) [] cx_s].
+
+Theorem cx_accepted : share_rule cx_rec [] cx_src cx_tgt = true.
+Proof. vm_compute. reflexivity. Qed.
+
+Section Cx.
+Variable sealed : list name.
+Notation R := (jit_rules sealed).
+Notation P := jit_profile.
+
+(* Every configuration the source can reach: its own deterministic run, or a resource throw on
+   the way out. *)
+Definition cx_inv (c : config) : Prop :=
+ In c cx_det \/ exists x, (exists r, resource_exn R r = Some x) /\
+   In c [Cfg (Throw x) [cx_kif] cx_s; Cfg (Throw x) [] cx_s].
+
+Lemma cx_inv_step : forall c l c1, step_r R P c l c1 -> cx_inv c -> cx_inv c1.
+Proof.
+ intros c l c1 St [I|(x & Rx & I)].
+ - cbn in I. repeat destruct I as [<-|I]; try contradiction; inversion St; subst;
+   repeat match goal with E : next_r _ _ _ = _ |- _ => cbn in E end; try discriminate;
+   try match goal with E : MTau _ = MTau _ |- _ => injection E as <-; left; cbn; tauto end;
+   match goal with Rx : resource_exn _ ?r = Some ?y |- _ =>
+     right; exists y; split; [exists r; exact Rx|cbn; tauto] end.
+ - cbn in I. repeat destruct I as [<-|I]; try contradiction; inversion St; subst;
+   repeat match goal with E : next_r _ _ _ = _ |- _ => cbn in E end;
+   repeat match goal with E : running_state _ = _ |- _ => cbn in E end; try discriminate.
+   match goal with E : MTau _ = MTau _ |- _ => injection E as <- end.
+   right. exists x. split; [exact Rx|cbn; tauto].
+Qed.
+
+Lemma cx_inv_star : forall c t c', star (step_r R P) c t c' -> cx_inv c -> cx_inv c'.
+Proof. intros c t c' H. induction H as [|c l c1 t c2 St _ IH]; intros I; [exact I|apply IH; exact (cx_inv_step _ _ _ St I)]. Qed.
+
+Lemma cx_runs_tau : forall n c c1 c2, next_r R P c = MTau c1 ->
+ JitKRef.JitKRef.runs sealed n c1 [] c2 -> JitKRef.JitKRef.runs sealed (S n) c [] c2.
+Proof. intros n c c1 c2 E H. exact (JitKRef.JitKRef.runs_S sealed n c Tau c1 [] c2 (step_r_tau R P c c1 E) H). Qed.
+
+Lemma cx_tgt_runs : JitKRef.JitKRef.runs sealed 9 (Cfg (Eval [] cx_tgt) [] cx_s) []
+ (Cfg (Throw (XUndefinedFun thaw_name)) [] (Store [[]] [] [])).
+Proof. do 9 (eapply cx_runs_tau; [reflexivity|]). constructor. Qed.
+
+Theorem share_rule_needs_thaw : JitKRef.JitKRef.KRef_refl_statement sealed [] ->
+ ~ JitFrontCheck.rule_sound sealed [] share_rule.
+Proof.
+ intros Hrefl H.
+ assert (Hs : JitFrontCheck.chk_sound sealed [] cx_rec).
+ { intros g a b E. apply andb_true_iff in E as [E1 E2]. apply expr_eqb_eq in E1. subst b.
+   apply Hrefl; [split; constructor|exact E2]. }
+ assert (W0 : wf_world []) by (split; constructor).
+ pose proof (H cx_rec Hs [] cx_src cx_tgt cx_accepted 20%nat [] [] [] W0 (fun x I => match I with end)) as K.
+ assert (HK : JitKRef.JitKRef.KRel sealed [] 20 [] [] []) by exact (JitKRefGround.JitKRefGround.KRel_top sealed [] 20 [] W0).
+ assert (HS : JitKRef.JitKRef.SRel sealed [] 20 [] cx_s cx_s).
+ { unfold JitKRef.JitKRef.SRel, JitKRef.JitKRef.SRel_with.
+   split; [exact W0|split; [intros f d []|split; [intros f d []|split; [reflexivity|split; [constructor|]]]]].
+   intros l0 l []. }
+ pose proof (K 20%nat (le_n _) [] (JitKRefGround.JitKRefGround.wext_refl [] W0) [] [] HK cx_s cx_s HS) as O.
+ destruct (O 9%nat [] _ ltac:(lia) cx_tgt_runs) as (_ & B & _).
+ destruct (B _ _ eq_refl) as (s0 & w' & S0 & _).
+ destruct (cx_inv_star _ _ _ S0 (or_introl (or_introl eq_refl))) as [I|(x & (r & Rx) & I)].
+ - cbn in I. repeat destruct I as [E|I]; try discriminate; contradiction.
+ - cbn in I. repeat destruct I as [E|I]; try discriminate; try contradiction.
+   injection E as -> _. destruct r; discriminate.
+Qed.
+
+(* The FrontHyps-only form of share_rule_sound, at D = [], would refute FrontHyps there. *)
+Corollary share_rule_sound_needs_thaw :
+ (JitFrontCheck.FrontHyps sealed [] -> JitFrontCheck.rule_sound sealed [] share_rule) ->
+ ~ JitFrontCheck.FrontHyps sealed [].
+Proof. intros H FH. exact (share_rule_needs_thaw (JitFrontCheck.fh_refl sealed [] FH) (H FH)). Qed.
+End Cx.
 
 (* fresh_ok's premise gives the checker's freshness tests for the lowerer's own names: a name the
    source never mentions is in no scope built from the source's binders and parameters. *)

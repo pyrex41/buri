@@ -60,14 +60,20 @@ ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a c
 ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
   JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
   deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
+ShenJitKRefLamNoSameId: VBody's VLam clause without same_id, so two related lambdas need not have
+  corresponding identities. Built as JitKRef.v + JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v;
+  rejected first by VBody_ground (JitKRefGround.v): = on closures compares identities, so the ground
+  relation needs same_id. JitKRefCompatClo's lemmas only establish same_id (lam_core), never use it.
 ShenJitFrontNoScope: fchk's equality case without `scoped g e`. KRef_refl needs it (a free variable
-  outside the scope may be bound to unrelated values on the two sides), so fchk_sound must fail.
+  outside the scope may be bound to unrelated values on the two sides). Rejected first at the
+  decision: fchk_rejects_unscoped (vm_compute, placed right after fchk) no longer holds.
 ShenJitFrontSameFuel: fchk passes its own fuel, not fuel - 1, to the rules' recursive checker.
-  The definition is no longer structural; Rocq refuses the Fixpoint.
+  The definition is no longer structural; Rocq refuses the Fixpoint (the guard condition is the
+  property itself: termination of the check, and the induction fchk_sound runs on the fuel).
 ShenJitFrontShareElseSwap: share's chain base accepts (if T' (thaw G) X'), the else and then branches
-  swapped. chain_base (and so share_rule_sound) must fail.
+  swapped. Rejected first at the decision: share_rejects_swap (vm_compute, before every proof).
 ShenJitFrontShareThawAny: share accepts (thaw H) for any variable H as the else branch, not only the
-  ElseN the let binds. is_thaw_of_eq (and so share_rule_sound) must fail.
+  ElseN the let binds. Rejected first at the decision: share_rejects_thaw_other (vm_compute).
 """
 import re
 from pathlib import Path
@@ -201,6 +207,9 @@ mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v',
 mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
        '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
+mutate_chain('ShenJitKRefLamNoSameId', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v', 'rocq/JitKRefCompatClo.v'],
+       " | VLam x0 b0 r0, VLam x b r => same_id w r0 r /\\\n     forall j, (j < k)%nat -> forall w', wext w w' -> forall a0 a, V j w' a0 a ->",
+       " | VLam x0 b0 r0, VLam x b r =>\n     forall j, (j < k)%nat -> forall w', wext w w' -> forall a0 a, V j w' a0 a ->")
 mutate('ShenJitFrontNoScope', 'rocq/JitFrontCheck.v',
        ' | S f => (expr_eqb e0 e && scoped g e)', ' | S f => (expr_eqb e0 e)')
 mutate('ShenJitFrontSameFuel', 'rocq/JitFrontCheck.v',
