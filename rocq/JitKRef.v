@@ -30,8 +30,9 @@
      compat_app_lt at index k and compat_app_of_fund (from fund_gen_statement and
      prim_compat_statement). compat_call and compat_defun are still planned (sealed_stable and
      storehas_stable are proved in JitKRefBase.v).
-   - JitKRefPrim.v (planned): prim_compat_statement, using eq_budget_statement (JitEqBudget's
-     eq_budget_from_core) and jit_eq_per_statement.
+   - JitKRefPrim.v (exists): prim_compat_statement as prim_compat, with no hypothesis; the = case
+     from JitEqBudgetCore.eq_budget_closed (each side's budget moved to S (length w), then a
+     lockstep walk), not from eq_budget_statement.
    - JitKRefFund.v (planned): fund_gen_statement by induction on the index from the compatibility
      lemmas, then fundamental_statement, KRef_refl_statement, store_refl_statement and
      call_preservation_src_statement without the fundamental hypothesis.
@@ -585,8 +586,8 @@ Definition PrimOutRel (k : nat) (w : world) (p0 p : presult) : Prop :=
 
 (* Every table primitive under jit_rules, and every port primitive jit_rules gives (none while
    port_prim is off: JitProfile.jit_port_prims_off), maps related arguments and stores to related
-   results. The = case rests on eq_budget_statement; jit_eq_per_statement gives its hypotheses at
-   jit_profile. *)
+   results. Proved as JitKRefPrim.prim_compat; its = case rests on
+   JitEqBudgetCore.eq_budget_closed, not on eq_budget_statement. *)
 Definition prim_compat_statement : Prop := forall k w,
  (forall p args0 args s0 s, Forall2 (VRel k w) args0 args -> SRel k w s0 s ->
     PrimOutRel k w (prim_rule_r R P p args0 s0) (prim_rule_r R P p args s)) /\

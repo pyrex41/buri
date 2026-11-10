@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -183,3 +183,19 @@ Print Assumptions JitKRefCompatClo.JitKRefCompatClo.app_rel.
 Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_core.
 Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_lt.
 Print Assumptions JitKRefCompatClo.JitKRefCompatClo.compat_app_of_fund.
+Print Assumptions JitKRefPrim.JitKRefPrim.eq_lock.
+Print Assumptions JitKRefPrim.JitKRefPrim.parse_sk.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_arith.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_data.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_vector.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_globals.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_io.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_error.
+Print Assumptions JitKRefPrim.JitKRefPrim.kl_eq_rel_from.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_eq_from.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_eq.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_param_eval_kl.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_compat_table.
+Print Assumptions JitKRefPrim.JitKRefPrim.port_compat_of.
+Print Assumptions JitKRefPrim.JitKRefPrim.port_param_jit.
+Print Assumptions JitKRefPrim.JitKRefPrim.prim_compat.

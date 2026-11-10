@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and eighty-three statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and ninety-nine statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1283,6 +1283,16 @@ expression by `fund_below` in the empty environment). `compat_app_core` and `com
 JitKRef statement is proved only as `compat_app_of_fund : fund_gen_statement -> prim_compat_statement -> compat_app_statement`,
 because a stored function or primitive runs code outside the expression. Mutant `ShenJitKRefLamNoSameId` (VBody's VLam
 clause without `same_id`) is rejected, first by `VBody_ground` in `rocq/JitKRefGround.v`.
+Sixteen are in `rocq/JitKRefPrim.v` (branch `p2/kref-prim`): `prim_compat`, the JitKRef statement
+`prim_compat_statement` with no hypothesis, from one lemma per primitive family (arithmetic and conversions; lists,
+strings and symbols; vectors, where absvector extends the world; globals; IO; errors; `=`; eval-kl's parse step,
+`parse_sk`), `prim_compat_table` for the table, and `port_compat_of` / `port_param_jit` for port primitives (vacuous for
+`jit_rules`, which gives none). The `=` case (`prim_param_eq_from`, instantiated with `JitEqBudgetCore.eq_budget_closed`)
+moves each side's budget to `S (length w)` over the world's side of the heap, then walks both sides in lockstep
+(`eq_lock`); it uses neither `eq_budget_statement` nor any lok. Mutants `ShenJitKRefAbsvectorNoWext` and
+`ShenJitKRefEqBudgetFree` are rejected. With `prim_compat` proved, `compat_app_of_fund` needs only `fund_gen_statement`
+(not combined into a new audited statement); `compat_call`, `compat_defun`, the control compatibility lemmas and the
+fundamental property are still unproved.
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is proved in `JitEqBudgetCore.v` (below).
 Thirteen are in `rocq/JitEqBudgetStep.v`: the step of the core's induction on a closed set of cells, under S-relativized

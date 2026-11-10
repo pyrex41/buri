@@ -20,6 +20,7 @@ JitEqBudget
 JitEqBudgetStep
 JitEqBudgetWalk
 JitEqBudgetCore
+JitKRefPrim
 JitLowerStage0
 JitNorm
 JitNormStage0

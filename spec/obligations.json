@@ -5868,9 +5868,16 @@
    "sources": [
     "rocq/KLPort.v",
     "rocq/JitProfile.v",
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "rocq/JitKRefPrim.v"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "rocq/JitKRefPrim.v",
+     "recorded": "2026-11-09: open. JitKRefPrim.port_compat_of gives the port half of prim_compat_statement for any port_prim table whose rules each satisfy rule_param (parametricity under VRel/SRel); jit_rules gives none, so it holds vacuously (port_param_jit). Wiring in a table needs rule_param for each of its rules. Not proved for any proposed rule; for the hashing rules (shen-jit.hash, dict-find, dict-put, dict-remove) a proof would need the environment's hash invariant under the world's bijection (not proved; no counterexample checked in Rocq).",
+     "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-EQ-CYCLE",
@@ -6050,7 +6057,8 @@
     "rocq/JitKRefGround.v",
     "rocq/JitKRefCompose.v",
     "rocq/JitKRefBase.v",
-    "rocq/JitKRefCompatClo.v"
+    "rocq/JitKRefCompatClo.v",
+    "rocq/JitKRefPrim.v"
    ],
    "history": [
     {
@@ -6077,6 +6085,11 @@
      "source": "rocq/JitKRefCompatClo.v",
      "recorded": "2026-11-09: open. kref-clo proved and audited (14 statements in rocq/Audit_Jit.v, each Closed under the global context): compat_lambda_statement and compat_freeze_statement outright (no induction hypothesis; each side allocates a cell, the world grows by the fresh pair, fresh by world_closed, SRel_alloc; same_id holds for the new locations, and KRef relating only g is no obstacle since the identity key is related through the new pair); compat_lambda_lt and compat_freeze_lt, the reflexive forms from fund_below k; app_rel, AppAll at every index up to k from fund_below k and prim_compat_statement by induction on the index (closures by VBody's clause at the lower index, over-application by the KApply frame, arity errors and non-callable heads including symbols raising alike, a partial application through the function table, equal under SRel: XUndefinedFun, a user body by fund_below, a primitive by prim_compat_statement, eval-kl by fund_below in the empty environment); compat_app_core and compat_app_lt; compat_app_statement only as compat_app_of_fund : fund_gen_statement -> prim_compat_statement -> compat_app_statement. Mutant ShenJitKRefLamNoSameId (VBody's VLam clause without same_id) is rejected, first by VBody_ground in rocq/JitKRefGround.v. Not proved: prim_compat_statement, fund_gen_statement, compat_call, compat_defun, the control compatibility lemmas.",
      "reconciliation": "kref-clo, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefPrim.v",
+     "recorded": "2026-11-09: open. kref-prim proved and audited (16 statements in rocq/Audit_Jit.v, each Closed under the global context): prim_compat (JitKRef.prim_compat_statement, no hypothesis); per-family lemmas prim_param_arith, prim_param_data, prim_param_vector, prim_param_globals, prim_param_io, prim_param_error, prim_param_eq and prim_param_eval_kl; prim_compat_table; port_compat_of and port_param_jit (port half vacuous for jit_rules); eq_lock, the lockstep walk of = at one budget; kl_eq_rel_from and prim_param_eq_from, the = case from JitEqBudgetCore.eq_budget_closed_statement, instantiated with eq_budget_closed (no lok, not eq_budget_statement); parse_sk, eval-kl's parse step. Mutants ShenJitKRefAbsvectorNoWext and ShenJitKRefEqBudgetFree rejected. Not proved: the compatibility lemmas and the fundamental property.",
+     "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
     }
    ]
   },
