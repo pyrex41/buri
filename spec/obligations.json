@@ -6049,7 +6049,10 @@
     "rocq/JitKRef.v",
     "rocq/JitKRefGround.v",
     "rocq/JitKRefCompose.v",
-    "rocq/JitKRefBase.v"
+    "rocq/JitKRefBase.v",
+    "rocq/JitFrontCheck.v",
+    "rocq/JitFrontChainTest.v",
+    "rocq/JitFrontShare.v"
    ],
    "history": [
     {
@@ -6071,6 +6074,11 @@
      "source": "rocq/JitKRefBase.v",
      "recorded": "2026-11-09: open. kref-base proved and audited (57 statements in rocq/Audit_Jit.v, each Closed under the global context): the JitKRef statements VRel_down, VRel_wext, ERel_down, KRef_scope, sealed_stable and storehas_stable; SRel/KRel/ERel/EnvRel down in the index, KRel/ERel/EnvRel up in wext, ObsT down in the index and antitone in the world; source anti-reduction ObsT_anti and ObsT_anti_io (traces concatenate), target-step reduction ObsT_step and ObsT_running (a target resource step matched by the source's, through KRel's Throw clause), resource_match, wrong_match; the bind lemma ERel_push and one KRel lemma per frame kind (KLet, KIf, KCond, KAnd, KAndR, KOr, KOrR, KTrap, KHead, KArgs, KCallArgs, KApply), the application frames under AppRel, a hypothesis whose proof is compat_app's and compat_call's; ERel_anti and its instances for let, if, cond, type, a named call of a D function and lambda application; world_closed, world_closed_alloc and VRel_ptrs (world reachability for the = budget; JitEqBudgetStep's S-local lok does not follow from SRel: SRel_lok_refuted, so the = budget path needs store_ok or an SRel interface change). Refuted in Rocq, so not proved: SRel monotone up in wext (SRel_wext_refuted; SRel_wext_cells is the true form) and ObsT monotone up in wext (ObsT_wext_refuted; ObsT_wext_anti is the true direction). Mutants ShenJitKRefKRelStrict and ShenJitKRefDefunSealed are rejected, each first by an existing proof (KRel_top in rocq/JitKRefGround.v; jit_defun_fixed_refused in rocq/JitProfile.v; with JitProfile.v's two defun-refusal theorems deleted, in a throwaway build, the chain compiles up to JitKRefBase.v and sealed_step fails). Not proved: any compatibility lemma, the fundamental property, AppRel for any function value.",
      "reconciliation": "kref-base, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCheck.v",
+     "recorded": "2026-11-09: open. F00 (branch p2/F00), 20 audited statements, each Closed under the global context. rocq/JitFrontCheck.v: fchk, one front checker parameterised by rules (equality with scoped, same head with recursion, then each rule given fchk at one fuel less), rule_sound, the FrontHyps record (D_wf, KRef_refl, KRef_scope, ERel anti-reduction, every compat_* statement; a premise, never an axiom; KRef_scope and anti-reduction proved as front_scope_proved and front_anti_proved), and fchk_sound under FrontHyps and Forall rule_sound. rocq/JitFrontChainTest.v (synthetic): two closed toy rules chain at one node; acceptance and both rejections by vm_compute. rocq/JitFrontShare.v: share's else rewrite (let ElseN (freeze Y') (unchain C X' ElseN)), share_rule_sound proved with no FrontHyps (premise: D defines thaw as (defun thaw (V) (V))), check_share_sound under FrontHyps; kernel_thaw_parses (vm_compute) checks that stage 0's form of thaw parses to the definition the premise names, and stage 0's source judge rejects thaw's own code, so a D holding thaw fails D_compiled until emission admits a dynamic apply. Share's reuse of a chain variable for a hd/tl the chain took is NOT covered. Report-only run on the v0.6 share witnesses (sha256 6881eb29...): check_share accepts 951 of 955 share pairs; the 4 rejected are the share-chain definitions shen.macros, shen.process-let, shen.lambda-of-defun and shen.process-assoc, each with a Rocq rejection trace ending at a reused chain variable. Mutants ShenJitFrontNoScope, ShenJitFrontSameFuel, ShenJitFrontShareElseSwap and ShenJitFrontShareThawAny are rejected. Not proved: FrontHyps (the compatibility lemmas and KRef_refl), share's reuse, norm's checkers.",
+     "reconciliation": "Front checker framework and share checker (F00), 9 November 2026."
     }
    ]
   },

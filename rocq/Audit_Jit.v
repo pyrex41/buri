@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitFrontCheck JitFrontChainTest JitFrontShare.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -169,3 +169,23 @@ Print Assumptions JitKRefBase.JitKRefBase.storehas_stable.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.ObsT_wext_refuted.
 Print Assumptions JitKRefBase.JitKRefBase.SRel_lok_refuted.
+Print Assumptions JitFrontCheck.JitFrontCheck.expr_eqb_eq.
+Print Assumptions JitFrontCheck.JitFrontCheck.front_scope_proved.
+Print Assumptions JitFrontCheck.JitFrontCheck.front_anti_proved.
+Print Assumptions JitFrontCheck.JitFrontCheck.same_sound.
+Print Assumptions JitFrontCheck.JitFrontCheck.fchk_sound.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.rule_if_true_sound.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.rule_let_lit_sound.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_accepted.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_if.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_let.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_if_any_fuel.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_let_any_fuel.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_kref.
+Print Assumptions JitFrontShare.JitFrontShare.thaw_erel.
+Print Assumptions JitFrontShare.JitFrontShare.chain_sound.
+Print Assumptions JitFrontShare.JitFrontShare.share_rule_sound.
+Print Assumptions JitFrontShare.JitFrontShare.share_rules_sound.
+Print Assumptions JitFrontShare.JitFrontShare.check_share_sound.
+Print Assumptions JitFrontShare.JitFrontShare.fresh_not_bound.
+Print Assumptions JitFrontShare.JitFrontShare.kernel_thaw_parses.

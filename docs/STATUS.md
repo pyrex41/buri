@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and sixty-nine statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and eighty-nine statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1290,6 +1290,21 @@ answers at |S| + 1 (no lok hypothesis, global or S-local; induction on |S| with 
 on the decidable goal, so no excluded middle). `eq_core` is `eq_core_statement (jit_rules sealed)`, with S all cells, and
 `eq_budget` is `JitLowerEquiv.eq_budget_statement sealed`, through `eq_budget_from_core`. Proof mutants `ShenJitEqCoreNoTrans`
 and `ShenJitEqCoreNoClosure` are rejected.
+Twenty are the front checkers (branch `p2/F00`). Five in `rocq/JitFrontCheck.v`: `fchk`, one checker for every front
+pass, parameterised by rewrite rules (equality with `scoped`, the same head with recursion, then each rule given the
+checker at one fuel less), and `fchk_sound`, proved from a `FrontHyps` premise (D_wf, KRef_refl, every compat_*
+statement, and KRef_scope and ERel anti-reduction, both already proved) and each rule's `rule_sound`. Eight in
+`rocq/JitFrontChainTest.v`, a synthetic test: two toy source rewrites (if-true; let of a literal around its own
+variable), each closed, chain at one node, and fchk accepts the pair with both and rejects it with either removed
+(vm_compute). Seven in `rocq/JitFrontShare.v`: share's else rewrite, (if C X Y) to (let ElseN (freeze Y) (unchain C X
+ElseN)), with `share_rule_sound` proved outright (no FrontHyps; its one premise is that D defines thaw as the kernel
+does, and `kernel_thaw_parses` checks that the kernel's thaw parses to that definition), so `check_share_sound` rests on FrontHyps only through fchk. Share's reuse of a chain variable for a hd/tl the
+chain took is not covered. On the v0.6 share witnesses (sha256 `6881eb29...`) check_share accepts 951 of 955 share
+pairs; the 4 rejected are the share-chain definitions (`shen.macros`, `shen.process-let`, `shen.lambda-of-defun`,
+`shen.process-assoc`), each with a Rocq rejection trace ending at a reused chain variable. This is the share link only:
+acceptance holds modulo FrontHyps, which kref-fund is to discharge. Mutants `ShenJitFrontNoScope`,
+`ShenJitFrontSameFuel`, `ShenJitFrontShareElseSwap` and `ShenJitFrontShareThawAny` are rejected (Rocq 9.3; the
+Coq 8.18 compile of these files, and so `make prove`, was not run).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,

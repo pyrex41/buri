@@ -60,6 +60,14 @@ ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a c
 ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
   JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
   deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
+ShenJitFrontNoScope: fchk's equality case without `scoped g e`. KRef_refl needs it (a free variable
+  outside the scope may be bound to unrelated values on the two sides), so fchk_sound must fail.
+ShenJitFrontSameFuel: fchk passes its own fuel, not fuel - 1, to the rules' recursive checker.
+  The definition is no longer structural; Rocq refuses the Fixpoint.
+ShenJitFrontShareElseSwap: share's chain base accepts (if T' (thaw G) X'), the else and then branches
+  swapped. chain_base (and so share_rule_sound) must fail.
+ShenJitFrontShareThawAny: share accepts (thaw H) for any variable H as the else branch, not only the
+  ElseN the let binds. is_thaw_of_eq (and so share_rule_sound) must fail.
 """
 import re
 from pathlib import Path
@@ -193,4 +201,12 @@ mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v',
 mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
        '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
        '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
+mutate('ShenJitFrontNoScope', 'rocq/JitFrontCheck.v',
+       ' | S f => (expr_eqb e0 e && scoped g e)', ' | S f => (expr_eqb e0 e)')
+mutate('ShenJitFrontSameFuel', 'rocq/JitFrontCheck.v',
+       '          || existsb (fun r => r (fchk rules f) g e0 e) rules', '          || existsb (fun r => r (fchk rules fuel) g e0 e) rules')
+mutate('ShenJitFrontShareElseSwap', 'rocq/JitFrontShare.v',
+       " | EIf T' X' Z => is_thaw_of G Z && rec g C T' && rec g0 X X'", " | EIf T' Z X' => is_thaw_of G Z && rec g C T' && rec g0 X X'")
+mutate('ShenJitFrontShareThawAny', 'rocq/JitFrontShare.v',
+       ' | ECall t [EVar H] => text_eqb t thaw_name && text_eqb H G', ' | ECall t [EVar H] => text_eqb t thaw_name')
 print(' '.join(names))

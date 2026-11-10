@@ -22,3 +22,6 @@ JitEqBudgetCore
 JitLowerStage0
 JitNorm
 JitNormStage0
+JitFrontCheck
+JitFrontChainTest
+JitFrontShare

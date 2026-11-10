@@ -150,7 +150,10 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 169 statements |
+| `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
+| `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
+| `rocq/JitFrontShare.v` | share's checker (`check_share`), `share_rule_sound`, and the stage 0 share tally |
+| `rocq/Audit_Jit.v` | Assumption audit of 189 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -621,6 +624,64 @@ closures, folded constants, port primitives), not from erase; pass-capture's cen
 from `Observation` through `JitNormStage0` compiled with `scripts/rocq coqc -Q . Buri`, the six statements printed
 "Closed under the global context", and `coqchk` replayed `JitNorm` and `JitNormStage0`. A full `make prove` was not
 run.
+
+### Front checkers: the framework and share (F00, branch `p2/F00`)
+
+**Framework** (`rocq/JitFrontCheck.v`). Every front checker is `fchk rules fuel g e0 e` for a list of rules. At each
+node it tries, in order: syntactic equality with `scoped g e` (KRef_refl); the same head constructor on both sides,
+recursing into the parts with the scope extended for `let` and `lambda` (the compat_* statements); then each rule,
+given `fchk rules (fuel - 1)` as its recursive checker. A rule may rewrite the source side at the current node and
+call the recursive checker on the same target node, so a second rule can fire on the rewritten source there: rewrites
+stacked at one position chain without transitivity of KRef. Extra target steps are paid from the step index inside a
+rule's own proof. `rule_sound r` says: for every recursive checker sound at every index, every pair r accepts is in
+KRef. `fchk_sound` is proved from `FrontHyps` (D_wf, KRef_refl, KRef_scope, ERel anti-reduction and every compat_*
+statement of `JitKRef.v`) and `Forall rule_sound rules`. FrontHyps is a premise, never an axiom; KRef_scope and the
+anti-reduction lemma are already proved (`front_scope_proved`, `front_anti_proved`), the rest is kref-fund's.
+
+**Chain test** (`rocq/JitFrontChainTest.v`, synthetic). Two toy rules, each with a closed `rule_sound`: if-true
+elimination, and let of a literal around its own variable, `(let X L X)` to `L` (the general substitution of a literal
+into any body is not a rule: it needs a substitution lemma under closures). `(if true (let x 5 x) 0)` against `5` needs
+both at the root; fchk accepts it with both rules and rejects it with either removed (at fuel 4 by vm_compute, and at
+every fuel).
+
+**Share** (`rocq/JitFrontShare.v`). lower.shen at 934cfa5 rewrites `(if C X Y)`, C a chain of `and` and `let`, to
+`(let ElseN (freeze Y') (unchain C X' ElseN))`. `share_rule` checks that ElseN and the closure identity key are not in
+scope, `Y` against `Y'`, and that the body is C unchained: each test checked in the chain's scope, each chain binder
+outside the outer scope and different from ElseN, every else branch exactly `(thaw ElseN)`, and the then branch
+checked against the source's in the outer scope. `share_rule_sound` is proved without FrontHyps: three target steps
+make the frozen closure, whose cell is target-only and outside the world; each `(thaw ElseN)` takes six target steps to
+`Y'`, paid from the index (`thaw_erel`); the source's `and`/KAndR/if frames are related to the target's if frames
+(`kif_base`, `kand_frame`); a chain `let` binds the same name on both sides (`chain_sound`). Its one premise is that D
+defines `thaw` as the kernel does, `(defun thaw (V) (V))`; `kernel_thaw_parses` (vm_compute) checks that stage 0's
+form of thaw parses to exactly that definition. Stage 0's source judge rejects thaw's own code (a dynamic apply), so
+a D that holds thaw does not meet `D_compiled` until emission admits it. `check_share ps b0 b` is fchk with this rule at fuel
+`1 + size b`, and `check_share_sound` gives KRef under FrontHyps. Freshness is tested directly; `fresh_not_bound` shows
+fresh_ok's premise implies the tests for the lowerer's names. no_keyword_binders is not needed: the checker reads
+parsed expressions.
+
+**Not covered: share's reuse.** lower.shen also replaces, in the then branch, a `hd`/`tl` the chain already took by the
+chain variable bound to it (`reuse`, `canon`). Relating `(hd V)` to a variable that holds its value needs an
+environment invariant that KRef does not carry, so the share rule requires the then branch to match the source's.
+
+**Stage 0 at 0.6.** `tests/shen-jit/stage0_to_rocq.py --share STAGE0_DIR SHARE_DIR NAME OUT.v` tokenizes `<name>.forms`
+and `<name>.share`; Rocq parses both and `tally_share` runs check_share. On the witnesses at
+`/tmp/p2-v06-capture2/witness` (share set sha256 `6881eb294f9a7c90641351ff1a487297e2a6828389354387519ebfc41e97902d`,
+the CENSUS.md hash; `.forms` identical to `/lps/p6/sj/build/stage0`): **951 of 955 share pairs accepted, 4 rejected,
+0 unparsed**. The 4 rejected are exactly the share-chain definitions, all in `macros`, each with a Rocq rejection trace
+(`share_trace`): `shen.process-let`, `shen.lambda-of-defun` and `shen.process-assoc` at the root rewrite, "the then
+branch differs from the source's (share's reuse of a chain variable is not covered)"; `shen.macros` through three
+nested frozen elses to the same reason. The 951 accepted are the definitions share leaves unchanged, accepted by the
+equality case. Acceptance is of the share link only, modulo FrontHyps; it says nothing about norm or emission and is
+not counted toward the 950 kernel definitions validated source to bytecode. The run is report-only (no gate); its
+command and logs are in the F00 report.
+
+Mutants rejected by Rocq: `ShenJitFrontNoScope` (equality without `scoped`: fchk_sound fails),
+`ShenJitFrontSameFuel` (rules get the same fuel: the Fixpoint is refused), `ShenJitFrontShareElseSwap` (chain base
+with then and else swapped: chain_base fails), `ShenJitFrontShareThawAny` (`(thaw H)` for any H: is_thaw_of_eq fails).
+
+Checked under Rocq 9.3 only (lane: 189 audited statements closed, rocqchk passed, stage 0 111 of 955 as recorded).
+The Coq 8.18 compile of the three files and of the four mutants (`make prove`, `scripts/proof-mutations`) was not run:
+UNKNOWN.
 
 ## Differential results
 
