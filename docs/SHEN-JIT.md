@@ -350,9 +350,9 @@ into it pointwise, for the `=` budget (`world_closed_alloc` in JitEqBudgetStep's
 does not follow from SRel (`SRel_lok_refuted`); the `=` case of `prim_compat` does not need it, since `JitEqBudgetCore.eq_budget_closed` takes no lok (below). Under `jit_rules` no step changes a sealed name's function (`sealed_step`: defun
 and eval-kl's defun are refused, primitives keep gfuns, `port_prim` is None). Mutants `ShenJitKRefKRelStrict` (KRel
 at j < k) and `ShenJitKRefDefunSealed` (defun admits sealed names) are rejected, each first by an existing proof
-(`KRel_top`; `jit_defun_fixed_refused`; with JitProfile.v's refusal theorems deleted in a throwaway build, `sealed_step` fails). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
-fundamental property below index k in scope-and-free-variable form; `fund_gen_statement`, that it holds at every
-index given `D_wf`; and `prim_compat_statement`, that every primitive maps related arguments and stores to related
+(`KRel_top`; `jit_defun_fixed_refused`; with JitProfile.v's refusal theorems deleted in a throwaway build, `sealed_step` fails). `JitKRef.v` also states the index-local interface: `fund_below k`, the
+fundamental property below index k in scope-and-free-variable form, and `fund_gen_statement`, that it holds at every
+index given `D_wf` (both unproved); and `prim_compat_statement`, that every primitive maps related arguments and stores to related
 results (`PrimOutRel`: a related value and store at a larger world, the same exception, both wrong, the same
 eval-kl expression or resource, or the same IO request with related continuations).
 `rocq/JitKRefPrim.v` proves `prim_compat_statement` (`prim_compat`, Closed under the global context, 16 audited
@@ -375,7 +375,8 @@ hypotheses on number equality; `eq_budget_statement`, with its global lok, is no
 `port_compat_of`, for any port_prim table whose rules are each parametric (`rule_param`), with `port_param_jit`
 discharging it vacuously for `jit_rules`, which gives none: wiring in an approved table (`OB-JIT-PORT-PRIMS`) needs
 `rule_param` for each of its rules. No proposed rule is proved parametric; those that hash a key read the environment's
-hash of heap and value, parametric only if the hash is invariant under the world's bijection. Mutants
+hash of heap and value, so their proof would need that hash invariant under the world's bijection (not proved; no
+counterexample checked in Rocq). Mutants
 `ShenJitKRefAbsvectorNoWext` (absvector at the same world) and `ShenJitKRefEqBudgetFree` (the `=` case at the two raw
 budgets, without eq_budget_closed; a true statement whose proof then fails) are rejected.
 

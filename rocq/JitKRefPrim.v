@@ -2,8 +2,8 @@
    table primitive under jit_rules, and every port primitive jit_rules gives, maps VRel-related
    arguments and SRel-related stores to PrimOutRel-related results. It re-opens Section Equiv with
    JitKRef.v's Variables and the abbreviations of JitKRefGround.v / JitKRefBase.v. No Definition here
-   changes a JitKRef statement; the helper Definitions (shape, prim_param, rule_param, the family
-   lists, sk) are used by lemma statements only.
+   changes a JitKRef statement; the helper Definitions (vsize, pargs, pclauses, shape, prim_param,
+   rule_param, the family lists) are used by lemma statements only.
 
    What is proved (every Theorem is in Audit_Jit and prints "Closed under the global context"):
    - One lemma per family, each `forall k w p, In p fam_X -> prim_param k w p`:
@@ -46,8 +46,8 @@
 
    Does NOT prove: rule_param for any proposed port rule (OB-JIT-PORT-PRIMS). Those that hash a key
    (shen-jit.hash, dict-find, dict-put, dict-remove) take the environment's hash of the heap and a
-   value, which is parametric only if the hash is invariant under the world's bijection: a hash
-   that reads a vector's location is not (two related vectors at different locations). *)
+   value, so their proof would need that hash invariant under the world's bijection (not proved; no
+   counterexample is checked here). Nor eval-kl's evaluation of the parsed expression (kref-fund). *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitProfile JitKRef JitKRefGround
  JitKRefBase JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetCore.

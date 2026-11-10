@@ -5868,12 +5868,13 @@
    "sources": [
     "rocq/KLPort.v",
     "rocq/JitProfile.v",
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "rocq/JitKRefPrim.v"
    ],
    "history": [
     {
      "source": "rocq/JitKRefPrim.v",
-     "recorded": "2026-11-09: open. JitKRefPrim.port_compat_of gives the port half of prim_compat_statement for any port_prim table whose rules each satisfy rule_param (parametricity under VRel/SRel); jit_rules gives none, so it holds vacuously (port_param_jit). Wiring in a table needs rule_param for each of its rules. Not proved for any proposed rule; the hashing rules (shen-jit.hash, dict-find, dict-put, dict-remove) are parametric only if the environment's hash is invariant under the world's bijection (a hash reading a vector's location is not).",
+     "recorded": "2026-11-09: open. JitKRefPrim.port_compat_of gives the port half of prim_compat_statement for any port_prim table whose rules each satisfy rule_param (parametricity under VRel/SRel); jit_rules gives none, so it holds vacuously (port_param_jit). Wiring in a table needs rule_param for each of its rules. Not proved for any proposed rule; for the hashing rules (shen-jit.hash, dict-find, dict-put, dict-remove) a proof would need the environment's hash invariant under the world's bijection (not proved; no counterexample checked in Rocq).",
      "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
     }
    ]
