@@ -63,12 +63,12 @@ Definition ins := B.code_ins c.
 Definition konst (k : N) := nth_error (B.code_consts c) (N.to_nat k).
 Definition lbl (l : N) := B.find_label l ins.
 
-(* = is admitted only with a constant operand it cannot misjudge: a fixnum, string, boolean, (),
-   or a real that is not a NaN. On two NaNs the model is stuck (RIdentity, OB-JIT-NAN-IDENTITY)
-   where the source answers false. Symbols are left out too, as before B.sym_of_text was made
-   injective (OB-JIT-SYM-INJECTIVE). An atom of these kinds meets neither. *)
+(* = is admitted only with a constant operand it cannot misjudge: a fixnum, string, symbol,
+   boolean, (), or a real that is not a NaN. On two NaNs the model is stuck (RIdentity,
+   OB-JIT-NAN-IDENTITY) where the source answers false; an atom of these kinds never meets that.
+   Symbols compare by name, as B.sym_of_text is injective (OB-JIT-SYM-INJECTIVE). *)
 Definition eq_safe_val (w : B.val) : bool := match w with
- | B.VFix _ | B.VStr _ | B.VBool _ | B.VNil => true
+ | B.VFix _ | B.VStr _ | B.VSym _ | B.VBool _ | B.VNil => true
  | B.VReal b => negb (JitFloat.JitFloat.is_nan b)
  | _ => false end.
 Definition eq_safe_op (o : B.operand) : bool := match o with

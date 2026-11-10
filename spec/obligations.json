@@ -4819,7 +4819,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerThm.JitLowerThm.preservation",
      "establishes": "model-proof",
-     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end: the bytecode runs to a machine whose next step returns a value related to the source's, or raises an error the source also raises (Ends takes that machine as a parameter; Ends_final). Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, = when one operand is a constant fixnum, string, boolean, () or non-NaN real (JitLowerRel.pguard), the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, = without such a constant, dynamic application, globals, defun or eval-kl."
+     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end: the bytecode runs to a machine whose next step returns a value related to the source's, or raises an error the source also raises (Ends takes that machine as a parameter; Ends_final). Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, = when one operand is a constant fixnum, string, symbol, boolean, () or non-NaN real (JitLowerRel.pguard), the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, = without such a constant, dynamic application, globals, defun or eval-kl."
     },
     {
      "kind": "universal-theorem",
@@ -4870,7 +4870,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
      "establishes": "artifact-correspondence",
-     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 111 of 955 definitions accepted at 934cfa5 (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 844 rejected are unvalidated, not refuted."
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 148 of 955 definitions accepted at 934cfa5 (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 807 rejected are unvalidated, not refuted."
     }
    ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
@@ -4902,6 +4902,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-09: partial, 111 of 955 definitions accepted at 0.6 (110 of 950 at 0.4). By name: shen-jit.lower.constant-index lost (removed upstream), shen-jit.lower.list-key (new) and shen-jit.lower.prim-arity (rewritten) gained; the other 109 accepted at both pins.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-10: partial, 148 of 955 definitions accepted at 0.6 (was 111). pguard admits symbol constants now that sym_of_text is injective (OB-JIT-SYM-INJECTIVE), ported from pass/eq 906b389 (145 of 950 at 0.4); 37 definitions were blocked only by = against a symbol, exactly the features.tsv eq-symbol-const-only rows; none is lost.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6, 10 November 2026."
     }
    ]
   },
@@ -6144,6 +6149,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-08: open, narrowed. = is admitted when one operand is a constant fixnum, string, boolean, () or non-NaN real, decided by the checker on the code's constant (JitLowerRel.pguard, JitLowerPrim.p_eq). Of the 447 stage 0 definitions using =, 429 use it only with a literal operand but 140 only with a literal that is not a symbol; = on two variables, and against a symbol, stay here (OB-JIT-NAN-IDENTITY, OB-JIT-SYM-INJECTIVE).",
      "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-10: open, narrowed further. = against a symbol constant is admitted (OB-JIT-SYM-INJECTIVE); = on two computed values, and against a NaN or pair constant, stay here.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6, 10 November 2026."
     }
    ]
   },

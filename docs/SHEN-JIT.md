@@ -406,10 +406,10 @@ proof mutant `ShenJitLowerEndsDecoupled` (the old form of `E_ok`) is rejected. T
 
 **What the relation admits:** integer, real, string, symbol, boolean and nil literals; variables in slots; `let`,
 including sharing a slot; `if`, `cond`, `and` and `or`, as values and as tests; `type`; the primitives `+ - *`,
-the four comparisons, `cons hd tl cons? number? string?`; `=` when one operand is a constant fixnum, string, boolean, `()` or
-non-NaN real; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
+the four comparisons, `cons hd tl cons? number? string?`; `=` when one operand is a constant fixnum, string, symbol, boolean, `()`
+or non-NaN real; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
 `lower.shen`'s in-place argument moves. **Not admitted:** closures, captured variables, `trap-error`, `=` on two
-computed values or against a symbol or NaN constant,
+computed values or against a NaN or pair constant,
 dynamic application, `set` and `value`, the other primitives, `do`, `thaw`, `defun` and `eval-kl`, and every
 rewrite listed under the surprises above.
 
@@ -423,8 +423,9 @@ rewrite listed under the surprises above.
   theorem says nothing about when those happen.
 - `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
 
-**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **111 of 955 kernel definitions
-validated** at 0.6, 844 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.4 it was 110 of 950.
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **148 of 955 kernel definitions
+accepted** by the source judge at 0.6, 807 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At the re-pin it was 111 of 955, and admitting `=` against a symbol
+constant (below) took it to 148, losing none. At 0.4 it was 110 of 950.
 Compared by name, the re-pin lost `shen-jit.lower.constant-index` (removed upstream with the dictionary-keyed constant
 pool) and gained `shen-jit.lower.list-key` (new) and `shen-jit.lower.prim-arity` (rewritten as a dictionary lookup);
 the other 109 accepted definitions are accepted at both pins. Net, five definitions more: the lowerer gains
@@ -437,7 +438,8 @@ re-pin to 0.4 it fell to 53: eight definitions accepted at 0.3 were rejected bec
 `shen.create-skeleton`, `shen.macro-@ch`, `shen.macro-@c` and `<!>`. Two are new since 0.3: kernel 43.4's
 `shen.precompiled-function?` and `shen.x.expand-dynamic.expand-initializer`. Of the 169 definitions whose code uses the
 chain, 161 are still rejected for other constructs. Admitting `=` against a safe constant (below) took the count from
-61 to 110 and lost none. Each accepted definition is a
+61 to 110 at 0.4, and none was lost; admitting symbol constants took 0.4 to 145 (branch `pass/eq`,
+906b389) and 0.6 from 111 to 148. Each accepted definition is a
 lowering of its kernel KLambda in the relation's sense; a rejected one is unvalidated, not wrong. A census of the
 forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the rest go:
 
@@ -483,7 +485,7 @@ per construct below.
 **`=` against a safe constant** (`JitLowerRel.pguard`, `JitLowerPrim.p_eq`). `lower.shen` lowers `(= A B)` as a plain
 `(prim D = A B)`, with a literal as `(const K)`. `pmap` now maps `=` to the bytecode's `PEq`, and `C_prim` and the
 primitive frame `KD_prim` (`JitLowerKont.v`) carry one more premise: for `PEq`, some operand is a constant whose
-value is a fixnum, string, boolean, `()` or a real that is not a NaN. The checker decides it on the code's
+value is a fixnum, string, symbol, boolean, `()` or a real that is not a NaN. The checker decides it on the code's
 constant table. The value-level lemma `eq_core` shows that against such an atom the source's `eq_depth_r` and the
 model's `eq_val` give the same answer for every pair of `VR`-related values, so `prim_agree` takes the guard as a
 hypothesis that is trivially true for the other primitives. The frame's premise is about the instruction, not
@@ -509,13 +511,16 @@ C interns by name and agrees with the source, so the defect was the model's, and
 `VR_sym` was ruled out, since it would narrow the related states. The encoding was made injective instead
 (`OB-JIT-SYM-INJECTIVE`, discharged; `sym_of_text_eqb`, above). Before that fix, the guard left symbol constants
 out, which cost the most: of the 447 definitions using `=`, 429 compare only against a literal, but only 140 against
-literals that are not symbols.
+literals that are not symbols. With the fix the guard admits symbol constants. At 0.4 stage 0 went from 110 to 145
+(35 definitions blocked only by `=` against a symbol); at 0.6 it went from 111 to 148, none lost, and the 37
+gained are exactly the definitions `features.tsv` lists with `eq-symbol-const` as their only feature and no
+required family (census, compared by name).
 
 Fuel plays no part. `eq_val` spends fuel only at absvectors, which `VR` never relates, and pairs recurse
 structurally, so on related values the model never stops with `RCyclic`; the source's depth bound likewise matters
 only for vectors. C's process exit on terms past 2^31 steps or 2 GiB of pending pairs (`OB-JIT-EQ-CYCLE`) is not
 modelled, as before. So no case goes through the resource permission. Three proof mutants are rejected
-(`ShenJitLowerEqSym` and `ShenJitLowerEqNaN`, which widen `eq_core`'s guard to symbols or to every real, and
+(`ShenJitLowerEqPair` and `ShenJitLowerEqNaN`, which widen `eq_core`'s guard to pairs, which can hold a NaN, or to every real, and
 `ShenJitLowerCheckEqGuard`, a checker without the guard). Lines, net: 15 in `JitLowerRel.v`, 58 in
 `JitLowerPrim.v` (with the two checked witnesses), 18 in `JitLowerStep.v`, 91 in all, plus one premise in
 `JitLowerKont.v` and three changed lines in `JitLowerCheck.v`.
@@ -543,7 +548,7 @@ was not attempted and is not estimated here.
 
 - The source semantics has no `do`: `do` is an ordinary call of the kernel's definition, and the lowerer compiles
   it inline. Relating them needs the store's `do` to be the kernel's, as `OB-JIT-LOWER-OPTIMIZATIONS` lists.
-- `=` is admitted only against a safe constant: the bytecode model is stuck (`RIdentity`) on two NaNs, where the
+- `=` is admitted only against an atomic constant that is not a NaN: the bytecode model is stuck (`RIdentity`) on two NaNs, where the
   source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
