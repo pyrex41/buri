@@ -317,4 +317,44 @@ Proof.
  try eassumption; unfold PC, PT, PO, PS, PW, PA; intros; try (eapply D; eassumption); suf_close.
 Qed.
 End JitEmitRelDummy.
+
+(* ---------- why the code object is an index (Rocq-checked evidence) ---------- *)
+(* JitLowerRel has the code object c as a uniform parameter. A closure's body is code nested in c
+   (code_codes c), and the Clo family must state the body's derivation at that OTHER code object
+   inside the same derivation. Keeping c uniform, the body's derivation can only enter through a
+   second inductive over codes, nested through a parameter of the block; Rocq refuses that.
+   Below, in miniature (nat for codes, list nat for environments): RuleD is a family hook with the
+   block's relations as parameters, Cp/Ct the block with c uniform and the nesting relation Nest a
+   uniform parameter, and Tree the inductive over codes that would carry a nested code's
+   derivation. The `Fail` succeeds only if Rocq rejects Tree (Rocq 9.3 reports "Non strictly
+   positive occurrence" for it). NestIdx then makes the code an index of the block and nests the other
+   code's derivation directly in the rule (as JitEmitRel does), and is accepted.
+   A second, independent reason for SIX relation parameters in each Rule_X (Comp, CompT, CompOp,
+   CompOps, CompW, CompTA) rather than three: a family's premises nest operand lists (CompOps,
+   e.g. Prim's and App's arguments), and do/let windows (CompW, CompTA).
+   Does NOT say: that no other encoding with c uniform exists; only that this one is refused. *)
+Module NestShape.
+Inductive RuleD (c : nat) (Nest : nat -> list nat -> Prop)
+  (Cp : list nat -> nat -> Prop) (Ct : list nat -> bool -> Prop) : list nat -> nat -> Prop :=
+ | RD_seq g a b : Cp g a -> Ct g true -> Cp (a :: g) b -> Nest c g -> RuleD c Nest Cp Ct g (a + b).
+Section S.
+Variable c : nat. Variable Nest : nat -> list nat -> Prop.
+Inductive Cp : list nat -> nat -> Prop :=
+ | Cp0 g : Cp g 0
+ | CpX g n : RuleD c Nest Cp Ct g n -> Cp g n
+with Ct : list nat -> bool -> Prop :=
+ | Ct0 g n : Cp g n -> Ct g true.
+End S.
+Fail Inductive Tree : nat -> list nat -> Prop :=
+ | T_mk c g : Cp c Tree g 0 -> Tree c g.
+End NestShape.
+Module NestIdx.
+Inductive RuleD (Cp : nat -> list nat -> nat -> Prop) (Ct : nat -> list nat -> bool -> Prop) : nat -> list nat -> nat -> Prop :=
+ | RD_clo c c' g n : Cp c' [] n -> Ct c g true -> RuleD Cp Ct c g (S n).
+Inductive Cp : nat -> list nat -> nat -> Prop :=
+ | Cp0 c g : Cp c g 0
+ | CpX c g n : RuleD Cp Ct c g n -> Cp c g n
+with Ct : nat -> list nat -> bool -> Prop :=
+ | Ct0 c g n : Cp c g n -> Ct c g true.
+End NestIdx.
 End JitEmitNestTest.

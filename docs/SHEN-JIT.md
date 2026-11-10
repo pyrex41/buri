@@ -505,7 +505,13 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   object and its capture names. JitLowerRel has the code as a Section variable instead. The spec asked
   for the old index shape, but a closure's body is nested code, and stating its derivation inside the
   same block needs the code as an index. With the code fixed, a second inductive over codes would have to
-  nest through Comp's own parameter, and Rocq 9.3 refuses that (a spike, recorded in the task report).
+  nest through Comp's own parameter, and Rocq 9.3 refuses that ("Non strictly positive
+  occurrence"). The evidence is now in the tree: `JitEmitNestTest.NestShape` reproduces the refused
+  definition under `Fail` (the lane compiles it, and the `ShenJitEmitNestShapeAccepted` mutant,
+  without `Fail`, is refused), and `JitEmitNestTest.NestIdx` is the accepted code-indexed form.
+  The rules take all six relations, not three, for a second reason: family premises nest operand
+  lists (`CompOps`) and windows (`CompW`, `CompTA`). **This deviation from the spec's index shape
+  needs a review decision; it is not signed off.**
   Each of the seven families has an empty rule for Comp, CompT and CompOp (21 hooks), over relation
   variables for all six relations. lower.shen needs the CompT and CompOp hooks: its `test` lowers
   `(do X Y)` as value then test, and its `operand` lowers a folded list as `(const K)`.
@@ -568,21 +574,40 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
 - **Old fragment.** The old invariant embeds at any `mu` that relates the store's cells and
   globals (`StoreRel`). `kont_embed`, `sm_embed` and `ms_embed` are proved. The kernel's `do` is no
   longer a premise, because only the `do` frames ask it.
-  - Each `*_old_statement` takes the old theorem's premises plus `StoreRel mu s m`, and concludes
-    the **new** conclusion (`MS'`/`Ends'`, a growing mu, an evolving store). It follows from its
-    new statement (`*_old_of_new`). It does **not** recover the old theorems: the old conclusion
-    (`MS`, a constant store) needs a reverse embedding that emit-spec does not prove. So spec item 3
-    is not met.
-  - `StoreRel` cannot be dropped. MS and Com leave the machine's globals unconstrained, and a
-    store with a vector-valued global needs a `mu` that tracks its cell.
+  - Fix round 2: each `*_old_statement` now has the **old** conclusion verbatim (`Sstar`, `TN`,
+    `MS s` with the store constant, `JitLowerThm.Ends` / `JitKRef.EndsSrc`), at `mu = []` with no
+    handler, and the old premises plus `GvalsRel [] s m`. `*_old_of_new` proves each (closed) from
+    its new statement **and a reflection obligation** (`old_reflect_statement`,
+    `old_reflect_src_statement`), through `ms_embed`/`sm_embed` at `mu = []` and proved bridges
+    (`srun_nil_sstar`, `trun_nil_tn`, `tn_tstar`, `ms_entered`, `entered_embed`). The proofs do
+    not use the old theorems.
+  - The reflection is stated, not proved; its truth is UNKNOWN. It is needed: the new conclusions
+    pick some JitEmitRel derivation, some `mu'` and some trace, and nothing keeps an old-fragment
+    run inside the old fragment, so the old conclusion does not follow from the new statements
+    alone. Reflecting JitEmitRel derivations would invert the rules outside their files. A family
+    whose rule overlaps the old fragment (Eq's `=` beside `C_prim` with `pguard`) puts the
+    reflection at risk; whether such a family must re-prove it, beside its map and all lemmas, is
+    a review decision.
+  - `GvalsRel [] s m` cannot be dropped (`ShenJitEmitOldGvalsDropped`): MS and Com leave the
+    machine's globals unconstrained, and the new invariant needs them related.
   - The old theorems are unchanged and stay proved on their own.
-- **Evidence.** 87 statements were added to `Audit_Jit` (196 in all), each closed. There are 25
+- **Pending review (not signed off).** The index shape above; the frame exclusions and the
+  `env_ok` / one-argument-window narrowing (spec item 4 asks for all frames, so the affected
+  families, Store, Prim, Eq, App and IO, go back through emit-spec until the open source-model or
+  bytecode decisions are made: absvector bound, error-to-string text, stream state, the
+  home-directory prefix on open, the raise continuation of an IO failure with no handler); the
+  reflection obligation above. The counterexamples behind the narrowing are hand-argued, and the
+  agreement of the newly admitted primitives (str, intern, pos, tlstr, cn, n->string, string->n,
+  set, value, simple-error, <-address, address->, absvector?, /) is hand-checked: both UNKNOWN.
+- **Evidence.** 92 statements were added to `Audit_Jit` (201 in all), each closed. There are 30
   emit-spec mutants, at least one per new relation or definition:
   - `MS'`, `Out'`, `EndsSrc'`, `TRun` and the six `Sim*`;
   - `HK`, `GvalsRel`, `DoOK`, `FunRel'` and `StoreRel`;
-  - `resp_ok`, `ev_of` and `frame_prim`.
+  - `resp_ok`, `ev_of` and `frame_prim`;
+  - the reflection obligations, the old-fragment premise, the `TRun` bridge, and the refused
+    uniform-code nesting.
 
-  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 209. Lane
+  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 214. Lane
   result: in the task report.
 
 ### Pass split: the normal form (wave 1b)

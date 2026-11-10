@@ -185,6 +185,11 @@ Print Assumptions JitEmitInv.JitEmitInv.ms_embed.
 Print Assumptions JitEmitInv.JitEmitInv.preservation_old_of_new.
 Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_of_new.
 Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.srun_nil_sstar.
+Print Assumptions JitEmitInv.JitEmitInv.trun_nil_tn.
+Print Assumptions JitEmitInv.JitEmitInv.tn_tstar.
+Print Assumptions JitEmitInv.JitEmitInv.ms_entered.
+Print Assumptions JitEmitInv.JitEmitInv.entered_embed.
 Print Assumptions JitEmitInv.JitEmitInv.HK_length.
 Print Assumptions JitEmitInv.JitEmitInv.do_body_second.
 Print Assumptions JitEmitInv.JitEmitInv.storerel_nil.

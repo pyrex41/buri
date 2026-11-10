@@ -4,7 +4,8 @@
    Proved here (closed): VR_VRh, VRh_no_partial, HK_length, do_body_second, the embedding of the
    old invariant at any mu that relates the store's cells and globals (kont_embed, sm_embed,
    ms_embed), env_ok_inhabited, TRun_0, Out'_not_stuck, value_bound/value_unbound,
-   SimC/T/O/S/W/A_of_sim', Ends'_final, EndsSrc'_final, and the three *_old_of_new implications.
+   SimC/T/O/S/W/A_of_sim', Ends'_final, EndsSrc'_final, the old-fragment bridges (srun_nil_sstar,
+   trun_nil_tn, tn_tstar, ms_entered, entered_embed) and the three *_old_of_new corollaries.
 
    What the old invariant (JitLowerStep.MS, JitLowerThm) fixes, and what this one lets evolve:
    - mu, a partial bijection between KLambda heap locations (nat) and bytecode heap keys
@@ -44,13 +45,17 @@
    call_preservation'_statement           JitLowerThm.call_preservation
    EndsSrc'                               JitKRef.EndsSrc
    call_preservation_src'_statement       JitKRef.call_preservation_src_statement
-   preservation_old_statement             NOT a generalization: JitLowerThm.preservation's
-   call_preservation_old_statement          premises plus StoreRel mu s m, with the NEW
-   call_preservation_src_old_statement      conclusion; each follows from its new statement
-                                            (by the *_old_of_new lemmas). The old conclusion (MS, constant
-                                            store) is not recovered from the new one.
+   preservation_old_statement             JitLowerThm.preservation, verbatim conclusion, at
+   call_preservation_old_statement          mu = [] with GvalsRel [] s m added. Each follows
+   call_preservation_src_old_statement      (closed, *_old_of_new) from its new statement plus
+                                            the reflection obligation below; the old theorems'
+                                            proofs are not used. (JitKRef.call_preservation_src_
+                                            statement for the src one.)
+   old_reflect_statement,                 no old counterpart: the missing piece, MS'/Ends' at
+   old_reflect_src_statement                mu = [] on an IO-free old-fragment run read back as
+                                            MS/Ends/EndsSrc. Stated, NOT proved; truth UNKNOWN.
    The old fragment: no handler, no capture, no do frame, what MS, Com and JitLowerRel.CompFn
-   describe, at any mu StoreRel admits. *)
+   describe; the embedding (ms_embed) holds at any mu StoreRel admits, the corollaries are at mu = []. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitProfile
  JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef
@@ -712,69 +717,155 @@ Definition call_preservation_src'_statement : Prop := forall mu s m c ps b0 b1 e
  (exists m1 k tS tT, EndsSrc' mu s c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
 (* ---------- the old fragment ---------- *)
-(* The new statements specialized to the old fragment. Each *_old_statement takes the old
-   theorem's premises (MS; Com, JitLowerRel.CompFn and entered for a call) plus StoreRel mu s m,
-   for any mu, and concludes the NEW conclusion at that mu; *_old_of_new proves each from its new
-   statement (closed), through ms_embed and sm_embed, with an environment env_ok admits.
-   StoreRel is the part of the new invariant the old one does not carry, because the old fragment
-   never reads it: the globals, and the cells mu tracks. It is needed: MS and Com leave the
-   machine's globals unconstrained, and on a state whose globals are unrelated to the store's the
-   new invariant says nothing (the value primitive would read them). A store with a vector- or
-   closure-valued global satisfies it at a mu that tracks that cell, not at mu = [].
-   Does NOT say: that the old theorems follow from the new ones. The conclusion is MS'/Ends' (a
-   growing mu, an evolving store, equal IO traces), not MS/Ends with the store constant, and
-   recovering the latter needs a reverse embedding (MS' on old-fragment code back to MS) that
-   emit-spec does not prove; the old theorems stay proved on their own (JitLowerThm,
-   JitKRefCompose) and unchanged. *)
-Definition preservation_old_statement : Prop := forall n mu s c m (rs : nat -> B.jreq -> B.jres),
- env_ok rs -> MS s c m -> StoreRel mu s m ->
- (exists c' m' k tS tT mu', Srun c tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
-    mext mu mu' /\ MS' mu' c' m') \/
- (exists m1 k tS tT, Ends' mu c m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+(* The old theorems, restated at the old fragment as corollaries of the new statements: empty mu,
+   no handler (Com), the store constant, and the OLD conclusions verbatim (Sstar, TN, MS s, and
+   JitLowerThm.Ends / JitKRef.EndsSrc with the store s). Each *_old_statement takes the old
+   theorem's premises plus GvalsRel [] s m, and *_old_of_new proves it (closed) from its new
+   statement and one reflection obligation (old_reflect_statement, old_reflect_src_statement),
+   through ms_embed/sm_embed at mu = [] and the bridges below, never through JitLowerThm's or
+   JitKRefCompose's proofs.
+   GvalsRel [] s m is needed: MS and Com leave the machine's globals unconstrained, and on a state
+   whose globals are unrelated to the store's the new invariant says nothing (the value primitive
+   would read them). At mu = [] it asks every bound global to hold a value VR relates (no vector,
+   closure, exception or stream).
+   The reflection is the missing piece. The new conclusions forget what the old ones keep: MS'
+   picks SOME JitEmitRel derivation, SOME mu' extending [] and SOME trace, and nothing in the new
+   statements keeps a run that starts in the old fragment inside it (the conclusion's derivation
+   may come from a family rule, values may be related through mu'). So the old conclusion does not
+   follow from the new statements alone, and the reflection is stated, not proved. Reflecting
+   JitEmitRel derivations would invert the Rule_X outside their own files, which the design
+   forbids; a family whose rule overlaps the old fragment (Eq's = beside C_prim with pguard) is
+   where the reflection is at risk, and whether such a family must re-prove it, beside its map and
+   all lemmas, is a review decision (OB-JIT-LOWER-FRAGMENT). *)
 
-Definition call_preservation_old_statement : Prop := forall mu s m c ps b args n (rs : nat -> B.jreq -> B.jres),
- env_ok rs -> Com s m -> JitLowerRel.CompFn c ps b -> List.length ps = List.length args -> entered m c args ->
- StoreRel mu s m ->
- let c0 := Cfg (Eval (combine ps args) b) [] s in
- (exists c' m' k tS tT mu', Srun c0 tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
-    mext mu mu' /\ MS' mu' c' m') \/
- (exists m1 k tS tT, Ends' mu c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+(* An IO-free source run is a silent one. *)
+Lemma srun_nil_sstar : forall c c', Srun c [] c' -> Sstar c c'.
+Proof.
+ intros c c' H. unfold Srun in H. remember (@nil event) as t eqn:Et.
+ induction H as [c0|c0 l c1 t c2 St Hs IH]; [constructor|].
+ destruct l as [|ev]; cbn in Et; [|discriminate]. econstructor; [exact St|auto].
+Qed.
 
-Definition call_preservation_src_old_statement : Prop := forall mu s m c ps b0 b1 e args n (rs : nat -> B.jreq -> B.jres),
- env_ok rs -> JitKRef.JitKRef.D_wf sealed D -> JitKRef.JitKRef.KRef sealed D ps b0 b1 -> JitKRef.JitKRef.KRef sealed D ps b1 e ->
- JitKRef.JitKRef.StoreHas D s -> store_ok s ->
- Com s m -> JitLowerRel.CompFn c ps e -> List.length ps = List.length args -> entered m c args ->
- StoreRel mu s m ->
- let c0 := Cfg (Eval (combine ps args) b0) [] s in
- let ce := Cfg (Eval (combine ps args) e) [] s in
- (exists c' m' k tS tT mu', Srun ce tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
-    mext mu mu' /\ MS' mu' c' m') \/
- (exists m1 k tS tT, EndsSrc' mu s c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+(* A bytecode run with no IO event is a run of silent steps. *)
+Lemma trun_nil_tn : forall rs k m m', TRun rs k m [] m' -> JitLowerThm.TN E pt k m m'.
+Proof.
+ intros rs k m m' H. remember (@nil (option event)) as t eqn:Et.
+ induction H as [rs m|rs n m m1 t m2 N H IH|rs n m q kk t m2 N H IH]; [constructor| |discriminate].
+ econstructor; [exact N|auto].
+Qed.
+
+Lemma tn_tstar : forall k m m', JitLowerThm.TN E pt k m m' -> TStar m m'.
+Proof. intros k m m' H; induction H; [constructor|econstructor; eauto]. Qed.
+
+(* The configuration a call enters is related by MS (JitLowerThm.call_preservation's first step,
+   restated here: a state, not the theorem's conclusion). *)
+Lemma ms_entered : forall s m c ps b args, Com s m -> JitLowerRel.CompFn c ps b -> List.length ps = List.length args ->
+ entered m c args -> MS s (Cfg (Eval (combine ps args) b) [] s) m.
+Proof.
+ intros s m c ps b args Cm [r' Cf] L [Hc [Hr [Hk Aa]]].
+ eapply MS_eval with (g := bind ps 2) (top := (2 + N.of_nat (List.length ps))%N) (dst := DRet) (r2 := r')
+   (w := fun a => (B.m_fp m + (2 + N.of_nat (List.length ps)) <= a)%N).
+ - exact Cm.
+ - rewrite Hc, Hr. exact Cf.
+ - apply MEnv_bind; [exact L|exact Aa].
+ - apply bind_below.
+ - intros a A; exact A.
+ - rewrite Hk. apply KC_ret; [intros a A; lia|constructor].
+Qed.
 
 Lemma entered_embed : forall mu s m c args, Com s m -> entered m c args -> entered' mu m c args.
 Proof.
  intros mu s m c args [Hh _] (Hc & Hr & Hk & Aa). repeat split; auto. apply argsat_embed; exact Aa.
 Qed.
 
-Theorem preservation_old_of_new : preservation'_statement -> preservation_old_statement.
-Proof. intros Pr n mu s c m rs Eo H G. apply Pr; auto. eapply ms_embed; eauto. Qed.
+(* The reflection obligation (NOT proved; its truth is UNKNOWN). From a state MS relates, with
+   globals VR relates, an IO-free bytecode run under an environment env_ok admits: a related
+   state the new invariant reaches is MS-related with the same store and after no source IO, and
+   an end the new invariant reaches is JitLowerThm.Ends with the same store.
+   Does NOT say: anything about a state outside the old fragment, or a run with IO; that MS' and
+   MS relate the same pairs in general (a family rule can relate old syntax to code JitLowerRel
+   does not, and mu' can relate values VR does not); that it survives a family rule overlapping
+   the old fragment without that family re-proving it. *)
+Definition old_reflect_statement : Prop := forall s c m (rs : nat -> B.jreq -> B.jres) k tS tT m1,
+ env_ok rs -> MS s c m -> GvalsRel [] s m -> TRun rs k m tT m1 -> map Some tS = tT ->
+ (forall c' mu', Srun c tS c' -> mext [] mu' -> MS' mu' c' m1 -> tS = [] /\ MS s c' m1) /\
+ (Ends' [] c m1 tS -> tS = [] /\ JitLowerThm.Ends E pt sealed s c m1).
 
-Theorem call_preservation_old_of_new : call_preservation'_statement -> call_preservation_old_statement.
+(* The same for the composed front end's end: EndsSrc' at mu = [] read back as JitKRef.EndsSrc
+   (the emitted body's final store s, the value VR-related). NOT proved; truth UNKNOWN.
+   Does NOT say: anything when the emitted body e is outside the old fragment; anything about b0
+   beyond what EndsSrc' gives (KRef's GVal/GStore at a world extending the identity on s). *)
+Definition old_reflect_src_statement : Prop := forall s m c ps b0 b1 e args (rs : nat -> B.jreq -> B.jres) k tS tT m1,
+ env_ok rs -> JitKRef.JitKRef.D_wf sealed D -> JitKRef.JitKRef.KRef sealed D ps b0 b1 -> JitKRef.JitKRef.KRef sealed D ps b1 e ->
+ JitKRef.JitKRef.StoreHas D s -> store_ok s ->
+ Com s m -> JitLowerRel.CompFn c ps e -> List.length ps = List.length args -> entered m c args -> GvalsRel [] s m ->
+ TRun rs k m tT m1 -> map Some tS = tT ->
+ EndsSrc' [] s (Cfg (Eval (combine ps args) b0) [] s) m1 tS ->
+ tS = [] /\ JitKRef.JitKRef.EndsSrc sealed E pt s (Cfg (Eval (combine ps args) b0) [] s) m1.
+
+(* JitLowerThm.preservation at the old fragment, with GvalsRel [] s m added.
+   Does NOT say: anything at a state whose globals VR does not relate (the old theorem does). *)
+Definition preservation_old_statement : Prop := forall n s c m, MS s c m -> GvalsRel [] s m ->
+ (exists c' m' k, Sstar c c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
+ (exists m1, JitLowerThm.Ends E pt sealed s c m1 /\ TStar m m1).
+
+(* JitLowerThm.call_preservation at the old fragment, with GvalsRel [] s m added.
+   Does NOT say: anything at a state whose globals VR does not relate. *)
+Definition call_preservation_old_statement : Prop := forall s m c ps b args n,
+ Com s m -> JitLowerRel.CompFn c ps b -> List.length ps = List.length args -> entered m c args -> GvalsRel [] s m ->
+ let c0 := Cfg (Eval (combine ps args) b) [] s in
+ (exists c' m' k, Sstar c0 c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
+ (exists m1, JitLowerThm.Ends E pt sealed s c0 m1 /\ TStar m m1).
+
+(* JitKRef.call_preservation_src_statement at the old fragment, with GvalsRel [] s m added.
+   Does NOT say: anything at a state whose globals VR does not relate; anything more about b0
+   than the old statement (its Does NOT say carries over). *)
+Definition call_preservation_src_old_statement : Prop := forall s m c ps b0 b1 e args n,
+ JitKRef.JitKRef.D_wf sealed D -> JitKRef.JitKRef.KRef sealed D ps b0 b1 -> JitKRef.JitKRef.KRef sealed D ps b1 e ->
+ JitKRef.JitKRef.StoreHas D s -> store_ok s ->
+ Com s m -> JitLowerRel.CompFn c ps e -> List.length ps = List.length args -> entered m c args -> GvalsRel [] s m ->
+ let c0 := Cfg (Eval (combine ps args) b0) [] s in
+ let ce := Cfg (Eval (combine ps args) e) [] s in
+ (exists c' m' k, Sstar ce c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
+ (exists m1, JitKRef.JitKRef.EndsSrc sealed E pt s c0 m1 /\ TStar m m1).
+
+Theorem preservation_old_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_statement.
 Proof.
- intros Cp mu s m c ps b args n rs Eo Cm Cf L En G c0. apply (Cp mu s m c ps b args n rs Eo).
- - apply sm_embed; auto. constructor.
- - apply comp_embed_fn; exact Cf.
- - exact L.
- - eapply entered_embed; eauto.
+ intros Pr Rf n s c m H G. destruct env_ok_inhabited as [rs Eo].
+ destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G)))
+   as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En & Tr & Mp)].
+ - destruct (proj1 (Rf s c m rs k tS tT m' Eo H G Tr Mp) c' mu' Ss Mx Ms) as [E0 Ms0]. subst tS; cbn in Mp; subst tT.
+   left. exists c', m', k. repeat split; auto; [apply srun_nil_sstar; exact Ss|eapply trun_nil_tn; exact Tr].
+ - destruct (proj2 (Rf s c m rs k tS tT m1 Eo H G Tr Mp) En) as [E0 En0]. subst tS; cbn in Mp; subst tT.
+   right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> call_preservation_src_old_statement.
+Theorem call_preservation_old_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_statement.
 Proof.
- intros Cp mu s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So Cm Cf L En G c0 ce.
- apply (Cp mu s m c ps b0 b1 e args n rs Eo); auto.
- - apply sm_embed; auto. constructor.
- - apply comp_embed_fn; exact Cf.
- - eapply entered_embed; eauto.
+ intros Cp Rf s m c ps b args n Cm Cf L En G c0. destruct env_ok_inhabited as [rs Eo].
+ pose proof (ms_entered s m c ps b args Cm Cf L En) as H0.
+ destruct (Cp [] s m c ps b args n rs Eo (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+   (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
+   as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
+ - destruct (proj1 (Rf s c0 m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 Ms0]. subst tS; cbn in Mp; subst tT.
+   left. exists c', m', k. repeat split; auto; [apply srun_nil_sstar; exact Ss|eapply trun_nil_tn; exact Tr].
+ - destruct (proj2 (Rf s c0 m rs k tS tT m1 Eo H0 G Tr Mp) En1) as [E0 En0]. subst tS; cbn in Mp; subst tT.
+   right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
+Qed.
+
+Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> old_reflect_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_statement.
+Proof.
+ intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G c0 ce. destruct env_ok_inhabited as [rs Eo].
+ pose proof (ms_entered s m c ps e args Cm Cf L En) as H0.
+ destruct (Cp [] s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+   (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
+   as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
+ - destruct (proj1 (Rf s ce m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 Ms0]. subst tS; cbn in Mp; subst tT.
+   left. exists c', m', k. repeat split; auto; [apply srun_nil_sstar; exact Ss|eapply trun_nil_tn; exact Tr].
+ - destruct (Rs s m c ps b0 b1 e args rs k tS tT m1 Eo Dw K1 K2 Sh So Cm Cf L En G Tr Mp En1) as [E0 En0].
+   subst tS; cbn in Mp; subst tT.
+   right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 End Src.
 End Inv.
