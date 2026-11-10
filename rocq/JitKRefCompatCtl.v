@@ -26,6 +26,14 @@
      NOT closed with fund_below alone, and compat_trap_statement itself is not proved here.
      compat_trap_of_fund derives compat_trap_statement from prim_compat_statement and
      fund_gen_statement, as an implication; kref-prim and kref-fund discharge those.
+     No proof from fund_below k alone is known. The direct route is an obstruction, not a
+     refutation (an informal index count, not a Rocq counterexample): ObsT pays one index per
+     target step. In AppExn_of at index S j <= k, the primitive case needs PoutRel j of the
+     outcome. fund_below k gives ERel at most at j (j < k) for the Eval config of a call such as
+     (ECall p [EVar y1; ...]), and that config reaches prim_rule_r only after at least one target
+     step, so it relates the outcome at j - 1 at best: one index short. Relating the primitives'
+     outcomes directly is prim_compat_statement, which JitKRefPrim owns (it needs the = budget).
+     JitKRefCompatClo's app_rel takes the same two premises for the same reason.
 
    Does NOT prove: compat_lambda, freeze, app, call (JitKRefCompatClo), prim_compat_statement
    (JitKRefPrim), the fundamental property or compat_trap_statement unconditionally (JitKRefFund). *)
