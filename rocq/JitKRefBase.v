@@ -92,6 +92,8 @@ Notation storehas_stable_statement := (JitKRef.JitKRef.storehas_stable_statement
 Notation VRel_down_statement := (JitKRef.JitKRef.VRel_down_statement sealed D).
 Notation VRel_wext_statement := (JitKRef.JitKRef.VRel_wext_statement sealed D).
 Notation ERel_down_statement := (JitKRef.JitKRef.ERel_down_statement sealed D).
+Notation KRef := (JitKRef.JitKRef.KRef sealed D).
+Notation KRef_scope_statement := (JitKRef.JitKRef.KRef_scope_statement sealed D).
 Notation VRelF_index := (JitKRefGround.JitKRefGround.VRelF_index sealed D).
 Notation VRel_unfold := (JitKRefGround.JitKRefGround.VRel_unfold sealed D).
 
@@ -173,30 +175,30 @@ Proof.
  apply (proj1 (ERel_iff k w r0 e0 r e) H j' ltac:(lia) w' W K0 K HK s0 s HS).
 Qed.
 
-Lemma ERel_wext : forall k w w' r0 e0 r e, wext w w' -> ERel k w r0 e0 r e -> ERel k w' r0 e0 r e.
+Theorem ERel_wext : forall k w w' r0 e0 r e, wext w w' -> ERel k w r0 e0 r e -> ERel k w' r0 e0 r e.
 Proof.
  intros k w w' r0 e0 r e W H. apply ERel_iff. intros j L w'' W2 K0 K HK s0 s HS.
  apply (proj1 (ERel_iff k w r0 e0 r e) H j L w'' (wext_trans _ _ _ W W2) K0 K HK s0 s HS).
 Qed.
 
-Lemma KRel_down : forall k j w K0 K, (j <= k)%nat -> KRel k w K0 K -> KRel j w K0 K.
+Theorem KRel_down : forall k j w K0 K, (j <= k)%nat -> KRel k w K0 K -> KRel j w K0 K.
 Proof.
  intros k j w K0 K L H. apply KRel_iff. intros j' L' w' W. apply (proj1 (KRel_iff k w K0 K) H); [lia|exact W].
 Qed.
 
-Lemma KRel_wext : forall k w w' K0 K, wext w w' -> KRel k w K0 K -> KRel k w' K0 K.
+Theorem KRel_wext : forall k w w' K0 K, wext w w' -> KRel k w K0 K -> KRel k w' K0 K.
 Proof.
  intros k w w' K0 K W H. apply KRel_iff. intros j L w'' W2.
  apply (proj1 (KRel_iff k w K0 K) H); [exact L|eapply wext_trans; eauto].
 Qed.
 
-Lemma KRel_mono : forall k j w w' K0 K, (j <= k)%nat -> wext w w' -> KRel k w K0 K -> KRel j w' K0 K.
+Theorem KRel_mono : forall k j w w' K0 K, (j <= k)%nat -> wext w w' -> KRel k w K0 K -> KRel j w' K0 K.
 Proof. intros. eapply KRel_down; [eassumption|]. eapply KRel_wext; eassumption. Qed.
 
-Lemma ERel_mono : forall k j w w' r0 e0 r e, (j <= k)%nat -> wext w w' -> ERel k w r0 e0 r e -> ERel j w' r0 e0 r e.
+Theorem ERel_mono : forall k j w w' r0 e0 r e, (j <= k)%nat -> wext w w' -> ERel k w r0 e0 r e -> ERel j w' r0 e0 r e.
 Proof. intros. eapply ERel_down; [eassumption|]. eapply ERel_wext; eassumption. Qed.
 
-Lemma VRel_mono : forall k j w w' v0 v, (j <= k)%nat -> wext w w' -> VRel k w v0 v -> VRel j w' v0 v.
+Theorem VRel_mono : forall k j w w' v0 v, (j <= k)%nat -> wext w w' -> VRel k w v0 v -> VRel j w' v0 v.
 Proof. intros. eapply VRel_down; [eassumption|]. eapply VRel_wext; eassumption. Qed.
 
 Lemma Forall2_VRel_mono : forall k j w w' l0 l, (j <= k)%nat -> wext w w' ->
@@ -206,7 +208,7 @@ Proof. intros k j w w' l0 l L W F. eapply Forall2_impl; [|exact F]. intros a b; 
 Lemma SRel_wf : forall k w s0 s, SRel k w s0 s -> wf_world w.
 Proof. intros k w s0 s H; apply H. Qed.
 
-Lemma SRel_down : forall k j w s0 s, (j <= k)%nat -> SRel k w s0 s -> SRel j w s0 s.
+Theorem SRel_down : forall k j w s0 s, (j <= k)%nat -> SRel k w s0 s -> SRel j w s0 s.
 Proof.
  intros k j w s0 s L (W & H0 & H1 & G & Gv & Hp).
  split; [exact W|split; [exact H0|split; [exact H1|split; [exact G|split]]]].
@@ -217,7 +219,7 @@ Qed.
 
 (* SRel is NOT monotone up in wext (SRel_wext_refuted, below): a pair the larger world adds
    needs its cells, related. This is the true form. *)
-Lemma SRel_wext_cells : forall k w w' s0 s, SRel k w s0 s -> wext w w' ->
+Theorem SRel_wext_cells : forall k w w' s0 s, SRel k w s0 s -> wext w w' ->
  (forall l0 l, In (l0, l) w' -> In (l0, l) w \/ exists c0 c, nth_error (heap s0) l0 = Some c0 /\
     nth_error (heap s) l = Some c /\ Forall2 (VRel k w') c0 c) ->
  SRel k w' s0 s.
@@ -230,18 +232,24 @@ Proof.
    eapply Forall2_impl; [|exact F]. intros a b; apply VRel_wext; exact Wx.
 Qed.
 
-Lemma EnvRel_mono : forall k j w w' g r0 r, (j <= k)%nat -> wext w w' ->
+Theorem EnvRel_mono : forall k j w w' g r0 r, (j <= k)%nat -> wext w w' ->
  EnvRel_with (VRel k) w g r0 r -> EnvRel_with (VRel j) w' g r0 r.
 Proof.
  intros k j w w' g r0 r L W H x I. destruct (H x I) as (v0 & v & E0 & E & V).
  exists v0, v. repeat split; auto. eapply VRel_mono; eauto.
 Qed.
 
-Lemma ObsT_down : forall k j w c0 c, (j <= k)%nat -> ObsT k w c0 c -> ObsT j w c0 c.
+(* KRef relates on its scope only, so a larger scope asks more of the environments. *)
+Theorem KRef_scope : KRef_scope_statement.
+Proof.
+ intros g g' e0 e I H k w rho0 rho W HE. apply H; [exact W|]. intros x Ix. apply HE. apply I. exact Ix.
+Qed.
+
+Theorem ObsT_down : forall k j w c0 c, (j <= k)%nat -> ObsT k w c0 c -> ObsT j w c0 c.
 Proof. intros k j w c0 c L H n t c' Ln Hr. apply (H n t c'); [lia|exact Hr]. Qed.
 
 (* ObsT is antitone in the world: a smaller world asks less of the matching source run. *)
-Lemma ObsT_wext_anti : forall k w w' c0 c, wext w w' -> ObsT k w' c0 c -> ObsT k w c0 c.
+Theorem ObsT_wext_anti : forall k w w' c0 c, wext w w' -> ObsT k w' c0 c -> ObsT k w c0 c.
 Proof.
  intros k w w' c0 c W H n t c' L Hr. destruct (H n t c' L Hr) as (A & B & C). split; [|split; [|exact C]].
  - intros v s E. destruct (A v s E) as (v0 & s0 & w'' & S0 & W2 & G1 & G2).
@@ -958,7 +966,7 @@ Proof.
    apply srun_callargs with (vs := vs); [exact F|]. apply call_named_user; [exact Ef|exact L].
 Qed.
 
-Lemma SRel_with_cell : forall k w s0 s, SRel k w s0 s -> SRel k w (with_cell s0) s.
+Theorem SRel_with_cell : forall k w s0 s, SRel k w s0 s -> SRel k w (with_cell s0) s.
 Proof.
  intros k w s0 s (W & H0 & H1 & G & Gv & Hp).
  split; [exact W|split; [exact H0|split; [exact H1|split; [exact G|split; [exact Gv|]]]]].
@@ -977,5 +985,241 @@ Proof.
  eapply srun_tau; [reflexivity|]. eapply srun_tau; [reflexivity|]. eapply srun_tau; [reflexivity|].
  eapply srun_tau; [apply sval_next; exact Hv|]. eapply srun_tau; [reflexivity|apply srun_refl].
 Qed.
+
+(* ======================= world reachability ======================= *)
+Lemma GVal_ptrs : forall w v0 v, GVal w v0 v -> Forall2 (fun l0 l => In (l0, l) w) (vptrs v0) (vptrs v).
+Proof.
+ intros w v0. induction v0; intros v H; destruct v; cbn in H; try contradiction; cbn [vptrs].
+ 6: { destruct H as [H1 H2]. apply Forall2_app; [apply IHv0_1|apply IHv0_2]; assumption. }
+ 6: { constructor; [exact H|constructor]. }
+ all: constructor.
+Qed.
+
+(* Related values point to related locations, pointwise. *)
+Theorem VRel_ptrs : forall k w v0 v, VRel k w v0 v -> Forall2 (fun l0 l => In (l0, l) w) (vptrs v0) (vptrs v).
+Proof. intros k w v0 v H. apply GVal_ptrs. exact (JitKRefGround.JitKRefGround.VRel_ground sealed D k w v0 v H). Qed.
+
+Lemma Forall2_in_l : forall {A B} (Q : A -> B -> Prop) l1 l2 x, Forall2 Q l1 l2 -> In x l1 -> exists y, In y l2 /\ Q x y.
+Proof.
+ intros A B Q l1 l2 x F. induction F as [|a b l1 l2 Qab F IH]; intro I; [contradiction|].
+ destruct I as [<-|I]; [exists b; split; [left; reflexivity|exact Qab]|].
+ destruct (IH I) as (z & Iz & Qz). exists z. split; [right; exact Iz|exact Qz].
+Qed.
+
+Lemma Forall2_in_r : forall {A B} (Q : A -> B -> Prop) l1 l2 y, Forall2 Q l1 l2 -> In y l2 -> exists x, In x l1 /\ Q x y.
+Proof.
+ intros A B Q l1 l2 y F. induction F as [|a b l1 l2 Qab F IH]; intro I; [contradiction|].
+ destruct I as [<-|I]; [exists a; split; [left; reflexivity|exact Qab]|].
+ destruct (IH I) as (z & Iz & Qz). exists z. split; [right; exact Iz|exact Qz].
+Qed.
+
+Lemma len_map : forall {A B} (f : A -> B) l, List.length (map f l) = List.length l.
+Proof. intros A B f l. induction l as [|a l IH]; cbn; [reflexivity|rewrite IH; reflexivity]. Qed.
+
+Lemma len_seq : forall n m, List.length (seq m n) = n.
+Proof. induction n as [|n IH]; intro m; cbn; [reflexivity|rewrite IH; reflexivity]. Qed.
+
+Lemma below_length : forall (S : list nat) n, NoDup S -> (forall l, In l S -> (l < n)%nat) -> (List.length S <= n)%nat.
+Proof.
+ intros S n N H. rewrite <- (len_seq n 0). apply NoDup_incl_length; [exact N|].
+ intros l I. apply in_seq. specialize (H l I). lia.
+Qed.
+
+(* JitEqBudgetWalk.closed_in, with vptrs for data_ptrs (the same text). *)
+Definition closed_set (h : list (list value)) (S : list nat) : Prop :=
+ forall p xs, In p S -> nth_error h p = Some xs -> forall l, In l (flat_map vptrs xs) -> In l S.
+
+(* World reachability: under SRel, the world's source side and its target side are each closed
+   under the vector pointers of their cells, duplicate-free, allocated, and of the same size, the
+   world's length, so at most either heap's length. With VRel_ptrs, every cell = can reach from two
+   related values is in the world, on each side, through the world's bijection. *)
+Theorem world_closed : forall k w s0 s, SRel k w s0 s ->
+ closed_set (heap s0) (map fst w) /\ closed_set (heap s) (map snd w) /\
+ NoDup (map fst w) /\ NoDup (map snd w) /\ List.length (map fst w) = List.length (map snd w) /\
+ (forall l0, In l0 (map fst w) -> (l0 < List.length (heap s0))%nat) /\
+ (forall l, In l (map snd w) -> (l < List.length (heap s))%nat) /\
+ (List.length w <= List.length (heap s0))%nat /\ (List.length w <= List.length (heap s))%nat.
+Proof.
+ intros k w s0 s HS. pose proof HS as ([F1 F2] & _ & _ & _ & _ & Hp).
+ assert (A0 : forall l0, In l0 (map fst w) -> (l0 < List.length (heap s0))%nat).
+ { intros l0 I. apply in_map_iff in I as [[a b] [Ea I]]. cbn in Ea. subst a.
+   destruct (Hp _ _ I) as (c0 & c & N0 & _). apply nth_error_Some. congruence. }
+ assert (A1 : forall l, In l (map snd w) -> (l < List.length (heap s))%nat).
+ { intros l I. apply in_map_iff in I as [[a b] [Eb I]]. cbn in Eb. subst b.
+   destruct (Hp _ _ I) as (c0 & c & _ & N & _). apply nth_error_Some. congruence. }
+ assert (C0 : closed_set (heap s0) (map fst w)).
+ { intros p xs I N l Il. apply in_map_iff in I as [[a b] [Ea I]]. cbn in Ea. subst a.
+   destruct (Hp _ _ I) as (c0 & c & N0 & N1 & F). rewrite N in N0. injection N0 as <-.
+   apply in_flat_map in Il as [x [Ix Il]]. destruct (Forall2_in_l _ _ _ _ F Ix) as (y & Iy & Vxy).
+   destruct (Forall2_in_l _ _ _ _ (VRel_ptrs _ _ _ _ Vxy) Il) as (l' & _ & Iw).
+   apply in_map_iff. exists (l, l'). split; [reflexivity|exact Iw]. }
+ assert (C1 : closed_set (heap s) (map snd w)).
+ { intros p xs I N l Il. apply in_map_iff in I as [[a b] [Eb I]]. cbn in Eb. subst b.
+   destruct (Hp _ _ I) as (c0 & c & N0 & N1 & F). rewrite N in N1. injection N1 as <-.
+   apply in_flat_map in Il as [y [Iy Il]]. destruct (Forall2_in_r _ _ _ _ F Iy) as (x & Ix & Vxy).
+   destruct (Forall2_in_r _ _ _ _ (VRel_ptrs _ _ _ _ Vxy) Il) as (l' & _ & Iw).
+   apply in_map_iff. exists (l', l). split; [reflexivity|exact Iw]. }
+ split; [exact C0|split; [exact C1|split; [exact F1|split; [exact F2|split]]]].
+ - rewrite !len_map. reflexivity.
+ - split; [exact A0|split; [exact A1|split]].
+   + rewrite <- (len_map fst w). apply below_length; assumption.
+   + rewrite <- (len_map snd w). apply below_length; assumption.
+Qed.
+
+(* ======================= sealed definitions are stable ======================= *)
+Definition pgf (s : store) (o : pout) : Prop := match o with ORet _ s' => gfuns s' = gfuns s | _ => True end.
+
+Ltac dmatch := match goal with |- context [match ?x with _ => _ end] =>
+ lazymatch x with context [match _ with _ => _ end] => fail | _ => destruct x end end.
+
+(* No primitive changes the function table. *)
+Theorem prim_gfuns : forall p args s,
+ match prim_rule_r R P p args s with PDone o => pgf s o | PIO q kk => forall r, pgf s (kk r) end.
+Proof.
+ intros p args s. destruct p; unfold prim_rule_r, prim_rule, rule_intern, rule_pos, rule_tlstr, rule_cn, rule_str,
+  rule_stringp, rule_n_to_string_r, rule_string_to_n, rule_set, rule_value, rule_simple_error,
+  rule_error_to_string, rule_cons, rule_hd, rule_tl, rule_consp, rule_equal_r, rule_eval_kl, rule_absvector,
+  rule_address_set, rule_address_get, rule_absvectorp, rule_write_byte_r, rule_write_byte, rule_read_byte,
+  rule_open, rule_close, rule_get_time_r, rule_get_time, rule_arith_r, rule_div_r, rule_cmp, rule_numberp,
+  ret, throw, dom, io_fail;
+  repeat (intros; cbn -[kl_eq_r]; dmatch); cbn; auto.
+Qed.
+
+Definition move_gf (s : store) (m : move) : Prop := match m with
+ | MTau c' => gfuns (mem c') = gfuns s | MIO _ kk => forall r, gfuns (mem (kk r)) = gfuns s | _ => True end.
+
+Lemma pout_config_gf : forall o rest K s, pgf s o -> gfuns (mem (pout_config P o rest K s)) = gfuns s.
+Proof. intros o rest K s H. destruct o; cbn in *; destruct rest; first [exact H|exact eq_refl]. Qed.
+
+(* jit_rules has no port primitive, so an unbound name only raises. *)
+Theorem jit_port_prim_none : forall g, port_prim R g = None.
+Proof. reflexivity. Qed.
+
+Lemma call_gf : forall g args K s, move_gf s (call_named_r R P g args K s).
+Proof.
+ intros g args K s. unfold call_named_r. destruct (lookup g (gfuns s)) as [[p|ps b]|].
+ - destruct (arity_mismatch R (List.length args) (prim_arity p)); [exact eq_refl|].
+   destruct (Nat.ltb (List.length args) (prim_arity p)); [exact eq_refl|].
+   unfold prim_move_r. pose proof (prim_gfuns p (firstn (prim_arity p) args) s) as H.
+   destruct (prim_rule_r R P p (firstn (prim_arity p) args) s).
+   + apply pout_config_gf; exact H.
+   + intro r. apply pout_config_gf. apply H.
+ - destruct (arity_mismatch R (List.length args) (List.length ps)); [exact eq_refl|].
+   destruct (Nat.ltb (List.length args) (List.length ps)); [exact eq_refl|].
+   destruct (skipn (List.length ps) args); exact eq_refl.
+ - rewrite jit_port_prim_none. exact eq_refl.
+Qed.
+
+Lemma apply_gf : forall f args K s, move_gf s (apply_value_r R P f args K s).
+Proof.
+ intros f args K s. destruct f; try exact (call_gf _ _ _ _); destruct args as [|a rest]; try exact eq_refl.
+ destruct rest; exact eq_refl.
+Qed.
+
+(* A step either keeps the function table or adds a definition that defun_allowed admitted. *)
+Definition gfd (s s' : store) : Prop :=
+ gfuns s' = gfuns s \/ exists f d, defun_allowed R s f = true /\ gfuns s' = (f, d) :: gfuns s.
+Definition move_gfd (s : store) (m : move) : Prop := match m with
+ | MTau c' => gfd s (mem c') | MIO _ kk => forall r, gfd s (mem (kk r)) | _ => True end.
+
+Lemma move_gf_gfd : forall s m, move_gf s m -> move_gfd s m.
+Proof. intros s [c'|q kk|o|why] H; cbn in *; auto; [left; exact H|intro r; left; apply H]. Qed.
+
+Lemma next_gfd : forall c, move_gfd (mem c) (next_r R P c).
+Proof.
+ intros [[rho e|v|x|r|ev|why] K s]; cbn [mem].
+ - change (move_gfd s (eval_move_r R P rho e K s)). destruct e; try (apply move_gf_gfd; exact eq_refl).
+   + destruct clauses as [|[c b] l]; apply move_gf_gfd; exact eq_refl.
+   + unfold eval_move_r. destruct (defun_allowed R s f) eqn:Da; [destruct (nodupb params)|];
+      unfold move_gfd, gfd; cbn [mem gfuns].
+     * right. eexists _, _. split; [exact Da|reflexivity].
+     * left; reflexivity.
+     * left; reflexivity.
+   + destruct args; apply move_gf_gfd; [exact (call_gf _ _ _ _)|exact eq_refl].
+ - destruct K as [|f K]; [exact I|]. change (move_gfd s (ret_move_r R P v f K s)).
+   apply move_gf_gfd. destruct f; try exact eq_refl.
+   + destruct v; try exact eq_refl. destruct b0; exact eq_refl.
+   + destruct v; try exact eq_refl. destruct b0; exact eq_refl.
+   + destruct args; [exact (apply_gf _ _ _ _)|exact eq_refl].
+   + destruct rest; [exact (apply_gf _ _ _ _)|exact eq_refl].
+   + destruct rest; [exact (call_gf _ _ _ _)|exact eq_refl].
+   + exact (apply_gf _ _ _ _).
+ - destruct K as [|f K]; [exact I|]. change (move_gfd s (throw_move x f K s)).
+   apply move_gf_gfd. destruct f; exact eq_refl.
+ - change (move_gfd s (match resource_exn R r with Some x => MTau (Cfg (Throw x) K s) | None => MFinal (ResourceOut r) end)).
+   destruct (resource_exn R r); [apply move_gf_gfd; exact eq_refl|exact I].
+ - destruct ev; exact I.
+ - exact I.
+Qed.
+
+Lemma step_gfd : forall c l c', step_r R P c l c' -> gfd (mem c) (mem c').
+Proof.
+ intros c l c' H. destruct H as [c c' E|c q kk r E|c r x _ _].
+ - pose proof (next_gfd c) as G. rewrite E in G. exact G.
+ - pose proof (next_gfd c) as G. rewrite E in G. apply G.
+ - left; reflexivity.
+Qed.
+
+(* jit_rules' defun_allowed refuses every sealed name, so no step changes a sealed name's
+   function: not defun, not defun through eval-kl (its form runs eval_move_r's EDefun rule), not a
+   primitive, and there is no port primitive. *)
+Theorem sealed_step : forall c l c' f, step_r R P c l c' -> In f sealed ->
+ lookup f (gfuns (mem c')) = lookup f (gfuns (mem c)).
+Proof.
+ intros c l c' f H I. destruct (step_gfd _ _ _ H) as [E|(g & d & Da & E)]; rewrite E; [reflexivity|].
+ cbn [lookup]. destruct (text_eqb f g) eqn:T; [|reflexivity]. exfalso. apply text_eqb_eq in T. subst g.
+ change (negb (is_fixed_name f || existsb (text_eqb f) sealed) = true) in Da.
+ apply negb_true_iff, orb_false_iff in Da as [_ Da].
+ assert (existsb (text_eqb f) sealed = true) as Ex by (apply existsb_exists; exists f; split; [exact I|apply text_eqb_refl]).
+ congruence.
+Qed.
+
+Theorem sealed_stable : sealed_stable_statement.
+Proof.
+ intros c t c' f H I. unfold JitKRef.JitKRef.srun in H.
+ induction H as [c|c l c1 t c2 St H IH]; [reflexivity|]. rewrite IH. eapply sealed_step; eauto.
+Qed.
+
+Theorem storehas_stable : storehas_stable_statement.
+Proof.
+ intros c t c' [Fs _] H SH f d I. rewrite (sealed_stable c t c' f H).
+ - apply SH; exact I.
+ - rewrite Forall_forall in Fs. exact (Fs (f, d) I).
+Qed.
 End Equiv.
+
+(* ======================= two directions that do not hold ======================= *)
+(* SRel is not monotone up in wext: the empty store is related to itself at the empty world but
+   not at [(0,0)], whose pair has no cell. SRel_wext_cells is the true form. *)
+Theorem SRel_wext_refuted : forall sealed k,
+ ~ (forall w w' s0 s, wext w w' -> JitKRef.JitKRef.SRel sealed [] k w s0 s -> JitKRef.JitKRef.SRel sealed [] k w' s0 s).
+Proof.
+ intros sealed k H. set (s := Store [] [] []).
+ assert (A : JitKRef.JitKRef.SRel sealed [] k [] s s).
+ { unfold JitKRef.JitKRef.SRel, JitKRef.JitKRef.SRel_with.
+   split; [split; constructor|split; [intros f d []|split; [intros f d []|split; [reflexivity|split; [constructor|]]]]].
+   intros l0 l []. }
+ assert (W : wext [] [(0%nat, 0%nat)]).
+ { split; [intros a []|split; (constructor; [intros []|constructor])]. }
+ destruct (H [] [(0%nat, 0%nat)] s s W A) as (_ & _ & _ & _ & _ & Hp).
+ destruct (Hp 0%nat 0%nat (or_introl eq_refl)) as (c0 & c & N & _). discriminate.
+Qed.
+
+(* ObsT is not monotone up in wext: a returned value with the empty store is observed at the empty
+   world, but not at [(0,0)], which GStore would need a cell for. ObsT_wext_anti is the true
+   direction. *)
+Theorem ObsT_wext_refuted : forall sealed,
+ ~ (forall k w w' c0 c, wext w w' -> JitKRef.JitKRef.ObsT sealed k w c0 c -> JitKRef.JitKRef.ObsT sealed k w' c0 c).
+Proof.
+ intros sealed H. set (s := Store [] [] []). set (c := Cfg (Ret VNil) [] s).
+ assert (A : JitKRef.JitKRef.ObsT sealed 1 [] c c).
+ { apply JitKRefGround.JitKRefGround.obs_top_ret; [split; constructor|exact I|].
+   split; [reflexivity|split; [constructor|intros l0 l []]]. }
+ assert (W : wext [] [(0%nat, 0%nat)]).
+ { split; [intros a []|split; (constructor; [intros []|constructor])]. }
+ assert (R0 : JitKRef.JitKRef.runs sealed 0 c [] c) by constructor.
+ destruct (H 1%nat [] [(0%nat, 0%nat)] c c W A 0%nat [] c ltac:(lia) R0) as (Hr & _ & _).
+ destruct (Hr VNil s eq_refl) as (v0 & s0 & w' & _ & [Iw _] & _ & _ & _ & Hc).
+ destruct (Hc 0%nat 0%nat (Iw _ (or_introl eq_refl))) as (c1 & c2 & _ & N & _). discriminate.
+Qed.
 End JitKRefBase.

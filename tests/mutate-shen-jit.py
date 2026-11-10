@@ -50,6 +50,11 @@ ShenJitWalkTolInstance: the statement walk_bound_needs_trans refutes now carries
   on h5 needs a transitivity proof tol does not have, so walk_bound_needs_trans must fail.
 ShenJitWalkPrefixAbove: the order on stop paths puts a prefix above its extensions, which breaks
   the threshold equivalence's monotonicity. ltl_total must fail.
+ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a continuation is no
+  longer related at its own index. Built as JitKRef.v + JitKRefGround.v + JitKRefBase.v; rejected.
+ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
+  JitProfile.v, so jit_defun_sealed_refused rejects it first; sealed_step (JitKRefBase) reads the same
+  option.
 """
 import re
 from pathlib import Path
@@ -170,4 +175,10 @@ mutate('ShenJitWalkTolInstance', walk,
 mutate('ShenJitWalkPrefixAbove', walk,
        ' | [], _ :: _ => true\n | _ :: _, [] => false\n',
        ' | [], _ :: _ => false\n | _ :: _, [] => true\n')
+mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v'],
+       "Definition KRel_with (k : nat) (w : world) (K0 K : list frame) : Prop :=\n forall j, (j <= k)%nat ->",
+       "Definition KRel_with (k : nat) (w : world) (K0 K : list frame) : Prop :=\n forall j, (j < k)%nat ->")
+mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
+       '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
+       '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
 print(' '.join(names))
