@@ -1078,8 +1078,9 @@ Definition closed_alloc (h : list (list value)) (S : list nat) : Prop :=
 
 Lemma dptr_vptrs : forall (A : nat -> Prop) v, (forall l, In l (vptrs v) -> A l) -> dptr A v.
 Proof.
- intros A v. induction v; intro H; cbn [vptrs dptr] in *; auto.
- split; [apply IHv1|apply IHv2]; intros l I; apply H; apply in_or_app; auto.
+ intros A v. induction v; intro H; cbn [vptrs dptr] in *; try exact I.
+ - split; [apply IHv1|apply IHv2]; intros l I; apply H; apply in_or_app; auto.
+ - apply H. left. reflexivity.
 Qed.
 
 (* world_closed in JitEqBudgetStep's form (closed_in), on each side. Not derivable from SRel:
