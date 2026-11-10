@@ -1261,7 +1261,7 @@ Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/Jit
 `rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
 and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
 will be proved through (`fv`, `fund_below`, `fund_gen_statement`, `PrimOutRel`, `prim_compat_statement`).
-Fifty-five are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
+Fifty-six are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
 `ObsT_wext_refuted`); source anti-reduction with and without an IO prefix and in ERel form for let, if, cond, type, a named

@@ -53,8 +53,8 @@ ShenJitWalkPrefixAbove: the order on stop paths puts a prefix above its extensio
 ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a continuation is no
   longer related at its own index. Built as JitKRef.v + JitKRefGround.v + JitKRefBase.v; rejected.
 ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
-  JitProfile.v, so jit_defun_sealed_refused rejects it first; sealed_step (JitKRefBase) reads the same
-  option.
+  JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
+  deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
 """
 import re
 from pathlib import Path

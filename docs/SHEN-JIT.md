@@ -330,7 +330,7 @@ FunRel the callees b0 calls are the lowered bodies, not the kernel's source defi
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
 `ShenJitEquivComposeLeft` are rejected (since K00 each is the chain JitKRef.v, JitKRefGround.v[, JitKRefCompose.v]
-with the statement mutated). `rocq/JitKRefBase.v` proves the relation's structure (55 audited statements):
+with the statement mutated). `rocq/JitKRefBase.v` proves the relation's structure (56 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
 SRel up in wext and ObsT up in wext are false and refuted in Rocq (`SRel_wext_refuted`, `ObsT_wext_refuted`; a pair the
@@ -347,7 +347,7 @@ pointers of its cells, duplicate-free, of size `length w`, so at most either hea
 into it pointwise, for the `=` budget. Under `jit_rules` no step changes a sealed name's function (`sealed_step`: defun
 and eval-kl's defun are refused, primitives keep gfuns, `port_prim` is None). Mutants `ShenJitKRefKRelStrict` (KRel
 at j < k) and `ShenJitKRefDefunSealed` (defun admits sealed names) are rejected, each first by an existing proof
-(`KRel_top`; `jit_defun_fixed_refused`). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
+(`KRel_top`; `jit_defun_fixed_refused`; with JitProfile.v's refusal theorems deleted in a throwaway build, `sealed_step` fails). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
 fundamental property below index k in scope-and-free-variable form; `fund_gen_statement`, that it holds at every
 index given `D_wf`; and `prim_compat_statement`, that every primitive maps related arguments and stores to related
 results (`PrimOutRel`: a related value and store at a larger world, the same exception, both wrong, the same
