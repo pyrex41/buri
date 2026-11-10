@@ -146,7 +146,10 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitMeta.v` | Determinism, explicit stuck classification, loader and control laws |
 | `rocq/KLPort.v` | The port options on the KLambda semantics, and `next_r_agreed` |
 | `rocq/JitProfile.v` | `KLValue.profile` instance, `jit_rules`, and the deviation table |
-| `rocq/Audit_Jit.v` | Assumption audit of 65 statements |
+| `rocq/JitEqBudget.v` | `=` on jit numbers a PER; the `=` budget lemma reduced to one cell step (`eq_core_statement`, open) |
+| `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
+| `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
+| `rocq/Audit_Jit.v` | Assumption audit of 109 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -318,7 +321,8 @@ each lambda and freeze allocates a cell and the passes add and remove them. It i
 rewrites rely on (sealed, `D_wf`) and a well-formed store; adequacy and store reflexivity from the same premise; the
 ground relation's lemmas, `KRel_top`, and the premise checks' specifications. The source's final store is related to
 the start by `GStore` under a world fixing the old locations, not equal to it. Not proved: the fundamental property, the
-compatibility lemmas, the `=` budget lemma (`JitEqBudget.v`, separate work; its induction step is proved in `JitEqBudgetStep.v`, the base and assembly are open), and any front-link checker. Under Com's
+compatibility lemmas, the `=` budget lemma (`JitEqBudget.v`, separate work; its induction step is proved in `JitEqBudgetStep.v`
+and its base case, `walk_bound`, in `JitEqBudgetWalk.v`; the assembly is open), and any front-link checker. Under Com's
 FunRel the callees b0 calls are the lowered bodies, not the kernel's source definitions. A checker must reject norm's
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and

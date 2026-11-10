@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Eighty-eight statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and nine statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1263,8 +1263,14 @@ Thirteen are in `rocq/JitEqBudgetStep.v`: the step of the core's induction on a 
 hypotheses only (`closed_in`, `lok_in`; no global lok). For the least-budget true pair x, y: their pointers are identical and
 their other leaves agree (`least_true_pointers`; the `ShenJitEqStepNotLeast` mutant, without the least premise, is rejected), the
 surgery redirecting y to x keeps the rest closed (`closed_after`), it simulates at the same budget (`same_budget_sim`) and back
-with one more (`shifted_sim`), and `step_settled` carries settledness from S minus y at n to S at n + 1. The base case and the
-assembly are open, so `OB-JIT-EQ-BUDGET-CORE` stays open.
+with one more (`shifted_sim`), and `step_settled` carries settledness from S minus y at n to S at n + 1. The base case is proved
+in `JitEqBudgetWalk.v` (below); the assembly is open, so `OB-JIT-EQ-BUDGET-CORE` stays open.
+Eight are in `rocq/JitEqBudgetWalk.v`, the core's base case (branch `p2/eq-walk`): for a set S of cells closed under the
+pointers in their data, with no two distinct cells ever comparing true, a cell comparison that answers at some budget
+answers the same at budget |S| - 1 (`walk_bound_pred`, and `walk_bound` at |S|). It needs only that number equality is
+symmetric and transitive, and no lok hypothesis. `walk_bound_needs_trans` refutes it without transitivity (the
+tolerance profile on h5). The step case is the `JitEqBudgetStep.v` work above; the assembly of `eq_core_statement` remains open.
+Proof mutants `ShenJitWalkNoTrans`, `ShenJitWalkTolInstance` and `ShenJitWalkPrefixAbove` are rejected.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,

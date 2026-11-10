@@ -6078,7 +6078,8 @@
    "completion_evidence": "eq_core_statement proved with no axioms. Estimated over 1,000 lines, in four parts: (1) the merge simulation, both the same-budget and the shifted direction, with a lemma that interchangeable leaves change no comparison; (2) depth-first stop positions over cyclic heaps, the ultrametric lemma and its two-smallest-equal consequence; (3) on a finite set, strict refinement of an equivalence adds a class; (4) the induction on closed sets of cells.",
    "sources": [
     "rocq/JitEqBudget.v",
-    "rocq/JitEqBudgetStep.v"
+    "rocq/JitEqBudgetStep.v",
+    "rocq/JitEqBudgetWalk.v"
    ],
    "history": [
     {
@@ -6095,6 +6096,11 @@
      "source": "rocq/JitEqBudgetStep.v",
      "recorded": "2026-11-09: open. Part (1), the merge step, is proved with no axioms under S-relativized hypotheses (closed_in, lok_in; no global lok): least_true_pointers, closed_after, same_budget_sim, shifted_sim, xy_answers_true, xy_true_from_1, step_settled, least_true_exists, remove_length, remove_nodup, surgery_in, surgery_out, surgery_length, all in rocq/Audit_Jit.v. Mutant ShenJitEqStepNotLeast (least_true_pointers without its least-d premise) is rejected. Parts (2) to (4), the base and the assembly, are not proved.",
      "reconciliation": "eq-step task on p2/eq-step, 9 November 2026."
+     },
+     {
+     "source": "rocq/JitEqBudgetWalk.v",
+     "recorded": "2026-11-09: open. Base case proved on p2/eq-walk: walk_bound_pred (and walk_bound) says that for every R, every P whose num_cmp P PEqual is symmetric and transitive, every heap h and every list S of cell indices closed under the data pointers of its cells (closed_in h S) with no distinct p, q in S ever comparing true (no_true_pairs R P h S), a cell comparison cellcmp R P h d p q = Some b with p <> q in S gives cellcmp R P h (pred (length S)) p q = Some b. No lok, NoDup or bounds hypothesis. walk_bound_needs_trans refutes the statement without transitivity (tol on h5). Proof: token streams, first disagreement (link_cell), the walk (walk_of_answer), threshold equivalences E t from the ultrametric gt (gt_trans), strict refinement counting (count_thresholds). All print Closed under the global context in rocq/Audit_Jit.v. Open: the merge step and the assembly of eq_core_statement.",
+     "reconciliation": "eq-walk, Phase 2 eqbudget track, 9 November 2026."
     }
    ]
   },

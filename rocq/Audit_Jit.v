@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitEqBudget JitEqBudgetStep.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -101,3 +101,11 @@ Print Assumptions JitEqBudgetStep.JitEqBudgetStep.remove_nodup.
 Print Assumptions JitEqBudgetStep.JitEqBudgetStep.surgery_in.
 Print Assumptions JitEqBudgetStep.JitEqBudgetStep.surgery_out.
 Print Assumptions JitEqBudgetStep.JitEqBudgetStep.surgery_length.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.link_cell.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_of_answer.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.gt_trans.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.E_trans.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.count_thresholds.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_pred.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound.
+Print Assumptions JitEqBudgetWalk.JitEqBudgetWalk.walk_bound_needs_trans.

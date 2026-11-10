@@ -40,6 +40,13 @@ ShenJitSymBase256: symbols as the name's elements in base 256, as before, which 
   [65537]. text_of_sym_of_text must fail.
 ShenJitEqStepNotLeast: least_true_pointers without its 'least d' premise: a true pair at any budget
   need not have identical pointers. least_true_pointers must fail.
+ShenJitWalkNoTrans: the walk bound's section drops transitivity of number equality, so leaf
+  agreement is no longer a PER. lag_trans must fail.
+ShenJitWalkTolInstance: the statement walk_bound_needs_trans refutes now carries the transitivity
+  hypothesis, i.e. it is walk_bound itself. Instantiating it with JitEqBudget's tolerance profile
+  on h5 needs a transitivity proof tol does not have, so walk_bound_needs_trans must fail.
+ShenJitWalkPrefixAbove: the order on stop paths puts a prefix above its extensions, which breaks
+  the threshold equivalence's monotonicity. ltl_total must fail.
 """
 from pathlib import Path
 out = Path('_build/mutations')
@@ -129,4 +136,16 @@ mutate('ShenJitEqStepNotLeast', 'rocq/JitEqBudgetStep.v',
        " (forall d' p q, d' < d -> In p cs -> In q cs -> p <> q -> cellcmp R P h d' p q <> Some true) ->\n"
        " list_eq (leaf_eq R P) xs ys = Some true.\nProof.\n intros R P h cs d x y xs ys C Ix Iy Ex Ey T Lst.",
        " list_eq (leaf_eq R P) xs ys = Some true.\nProof.\n intros R P h cs d x y xs ys C Ix Iy Ex Ey T.")
+walk = 'rocq/JitEqBudgetWalk.v'
+mutate('ShenJitWalkNoTrans', walk,
+       ' (Htr : forall x y z, num_cmp P PEqual x y = true -> num_cmp P PEqual y z = true -> num_cmp P PEqual x z = true).',
+       ' (Htr : True).')
+mutate('ShenJitWalkTolInstance', walk,
+       ' (forall x y, num_cmp P PEqual x y = num_cmp P PEqual y x) ->\n closed_in h S -> no_true_pairs R P h S ->',
+       ' (forall x y, num_cmp P PEqual x y = num_cmp P PEqual y x) ->\n'
+       ' (forall x y z, num_cmp P PEqual x y = true -> num_cmp P PEqual y z = true -> num_cmp P PEqual x z = true) ->\n'
+       ' closed_in h S -> no_true_pairs R P h S ->')
+mutate('ShenJitWalkPrefixAbove', walk,
+       ' | [], _ :: _ => true\n | _ :: _, [] => false\n',
+       ' | [], _ :: _ => false\n | _ :: _, [] => true\n')
 print(' '.join(names))
