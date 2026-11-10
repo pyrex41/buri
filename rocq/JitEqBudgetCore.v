@@ -139,6 +139,9 @@ Proof.
  eapply Forall_impl; [|exact Lx]. apply vok_din.
 Qed.
 
+Lemma seq_len : forall s n, List.length (seq s n) = n.
+Proof. intros s n. revert s. induction n as [|n IH]; intro s; cbn; [reflexivity|]. rewrite IH. reflexivity. Qed.
+
 Lemma eq_core_all : forall R, eq_core_statement R.
 Proof.
  intros R P' h Sy Tr Hh p q D.
@@ -147,7 +150,7 @@ Proof.
  - pose proof (cells_closed R P' Sy Tr h (seq 0 (List.length h)) (seq_NoDup _ _) (all_closed h Hh)
      p q (proj2 (in_seq _ _ _) (conj (Nat.le_0_l p) Lp)) (proj2 (in_seq _ _ _) (conj (Nat.le_0_l q) Lq)) D)
      as Hc.
-   rewrite length_seq in Hc. symmetry. apply Hc. lia.
+   rewrite seq_len in Hc. symmetry. apply Hc. lia.
  - unfold cellcmp. rewrite (proj2 (nth_error_None h q) Lq). destruct (nth_error h p); reflexivity.
  - unfold cellcmp. rewrite (proj2 (nth_error_None h p) Lp). reflexivity.
 Qed.
