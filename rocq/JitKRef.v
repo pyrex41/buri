@@ -20,12 +20,14 @@
    - JitKRefCompose.v (exists): VR_fo, the combine lemmas, call_preservation_src_of_fundamental.
    - JitLowerEquiv.v (exists): name preservation only. One abbreviation per old name, so that
      JitLowerEquiv.JitLowerEquiv.<name> still denotes the moved constant; no constants of its own.
-   - JitKRefBase.v (planned): the relation's structure: VRel_down, VRel_wext, ERel_down, KRel and
-     SRel monotonicity in index and world, KRef_scope, and fv against scoped.
+   - JitKRefBase.v (exists): the relation's structure: VRel_down, VRel_wext, ERel_down, KRel
+     monotonicity in index and world, SRel down in the index (SRel up in wext is false:
+     SRel_wext_refuted; SRel_wext_cells is the true form), KRef_scope, sealed_stable and
+     storehas_stable. fv against scoped is not yet proved there.
    - JitKRefCompatCtl.v (planned): the control compatibility lemmas, compat_lit, var, let, if,
      and, or, cond, type and trap, each from fund_below at its index.
    - JitKRefCompatClo.v (planned): closures, calls and store code: compat_lambda, freeze, app,
-     call and defun, with sealed_stable and storehas_stable.
+     call and defun (sealed_stable and storehas_stable are proved in JitKRefBase.v).
    - JitKRefPrim.v (planned): prim_compat_statement, using eq_budget_statement (JitEqBudget's
      eq_budget_from_core) and jit_eq_per_statement.
    - JitKRefFund.v (planned): fund_gen_statement by induction on the index from the compatibility

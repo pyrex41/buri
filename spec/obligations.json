@@ -6048,7 +6048,8 @@
     "rocq/JitLowerEquiv.v",
     "rocq/JitKRef.v",
     "rocq/JitKRefGround.v",
-    "rocq/JitKRefCompose.v"
+    "rocq/JitKRefCompose.v",
+    "rocq/JitKRefBase.v"
    ],
    "history": [
     {
@@ -6065,6 +6066,11 @@
      "source": "rocq/JitKRef.v",
      "recorded": "2026-11-09: open. K00 restructure, no proof added: every statement of rocq/JitLowerEquiv.v moved byte-identical to rocq/JitKRef.v, the proofs to rocq/JitKRefGround.v and rocq/JitKRefCompose.v, each constant with its old type (Check output compared); rocq/JitLowerEquiv.v keeps the old qualified names as abbreviations, so Audit_Jit's 13 JitLowerEquiv lines audit the moved constants and K00 leaves its count unchanged (109 after the merge into p2/int). JitKRef.v adds, unproved, fv, fund_below, fund_gen_statement (taking D_wf), PoutRel, PrimOutRel and prim_compat_statement.",
      "reconciliation": "KRef interface split (K00), 9 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefBase.v",
+     "recorded": "2026-11-09: open. kref-base proved and audited (57 statements in rocq/Audit_Jit.v, each Closed under the global context): the JitKRef statements VRel_down, VRel_wext, ERel_down, KRef_scope, sealed_stable and storehas_stable; SRel/KRel/ERel/EnvRel down in the index, KRel/ERel/EnvRel up in wext, ObsT down in the index and antitone in the world; source anti-reduction ObsT_anti and ObsT_anti_io (traces concatenate), target-step reduction ObsT_step and ObsT_running (a target resource step matched by the source's, through KRel's Throw clause), resource_match, wrong_match; the bind lemma ERel_push and one KRel lemma per frame kind (KLet, KIf, KCond, KAnd, KAndR, KOr, KOrR, KTrap, KHead, KArgs, KCallArgs, KApply), the application frames under AppRel, a hypothesis whose proof is compat_app's and compat_call's; ERel_anti and its instances for let, if, cond, type, a named call of a D function and lambda application; world_closed, world_closed_alloc and VRel_ptrs (world reachability for the = budget; JitEqBudgetStep's S-local lok does not follow from SRel: SRel_lok_refuted, so the = budget path needs store_ok or an SRel interface change). Refuted in Rocq, so not proved: SRel monotone up in wext (SRel_wext_refuted; SRel_wext_cells is the true form) and ObsT monotone up in wext (ObsT_wext_refuted; ObsT_wext_anti is the true direction). Mutants ShenJitKRefKRelStrict and ShenJitKRefDefunSealed are rejected, each first by an existing proof (KRel_top in rocq/JitKRefGround.v; jit_defun_fixed_refused in rocq/JitProfile.v; with JitProfile.v's two defun-refusal theorems deleted, in a throwaway build, the chain compiles up to JitKRefBase.v and sealed_step fails). Not proved: any compatibility lemma, the fundamental property, AppRel for any function value.",
+     "reconciliation": "kref-base, Phase 2 KRef track, 9 November 2026."
     }
    ]
   },

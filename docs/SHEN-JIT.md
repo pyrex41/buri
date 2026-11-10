@@ -150,7 +150,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 112 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 169 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -311,6 +311,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
 | `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
 | `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
+| `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 
@@ -330,7 +331,25 @@ FunRel the callees b0 calls are the lowered bodies, not the kernel's source defi
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
 `ShenJitEquivComposeLeft` are rejected (since K00 each is the chain JitKRef.v, JitKRefGround.v[, JitKRefCompose.v]
-with the statement mutated). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
+with the statement mutated). `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
+`VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
+ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
+SRel up in wext and ObsT up in wext are false and refuted in Rocq (`SRel_wext_refuted`, `ObsT_wext_refuted`; a pair the
+larger world adds needs related cells, `SRel_wext_cells`). Observation: source anti-reduction (`ObsT_anti`, and
+`ObsT_anti_io` with a source IO prefix, traces concatenated, through `ObsTr`), target-step reduction (`ObsT_step`;
+`ObsT_running`, where a target resource step is matched by the source's through KRel's Throw clause, `resource_match`),
+`wrong_match`. The bind lemma `ERel_push` (a first step that pushes a frame) and one KRel lemma per frame kind: KLet, KIf,
+KCond, KAnd, KAndR, KOr, KOrR, KTrap (with the handler's KApply frame), KHead, KArgs, KCallArgs and KApply; the
+application frames are reduced to `AppRel`, a hypothesis whose proof is compat_app's and compat_call's (`ObsT_swap`
+moves between two frames with the same next move). ERel-form anti-reduction `ERel_anti` (source-only steps, possibly
+with a new environment and one-sided cells) and its instances for let, if, cond, type, a named call of a D function and
+lambda application. `world_closed` and `VRel_ptrs`: under SRel each side of the world is closed under the vector
+pointers of its cells, duplicate-free, of size `length w`, so at most either heap's length, and related values point
+into it pointwise, for the `=` budget (`world_closed_alloc` in JitEqBudgetStep's form). JitEqBudgetStep's S-local lok
+does not follow from SRel (`SRel_lok_refuted`): the `=` budget path needs `store_ok` alongside SRel, or a change to SRel. Under `jit_rules` no step changes a sealed name's function (`sealed_step`: defun
+and eval-kl's defun are refused, primitives keep gfuns, `port_prim` is None). Mutants `ShenJitKRefKRelStrict` (KRel
+at j < k) and `ShenJitKRefDefunSealed` (defun admits sealed names) are rejected, each first by an existing proof
+(`KRel_top`; `jit_defun_fixed_refused`; with JitProfile.v's refusal theorems deleted in a throwaway build, `sealed_step` fails). `JitKRef.v` also states the index-local interface, unproved: `fund_below k`, the
 fundamental property below index k in scope-and-free-variable form; `fund_gen_statement`, that it holds at every
 index given `D_wf`; and `prim_compat_statement`, that every primitive maps related arguments and stores to related
 results (`PrimOutRel`: a related value and store at a larger world, the same exception, both wrong, the same

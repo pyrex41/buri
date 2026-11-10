@@ -55,6 +55,11 @@ ShenJitEqCoreNoTrans: the assembly of the = budget core drops transitivity of nu
   cannot be applied. core_settled, and with it eq_core, must fail.
 ShenJitEqCoreNoClosure: eq_budget_closed_statement without the S-closure hypothesis
   (closed_in h cs replaced by True): the cells of cs may point outside cs. eq_budget_closed must fail.
+ShenJitKRefKRelStrict: KRel_with quantifies over j < k instead of j <= k, so a continuation is no
+  longer related at its own index. Built as JitKRef.v + JitKRefGround.v + JitKRefBase.v; rejected.
+ShenJitKRefDefunSealed: jit_rules' defun_allowed admits sealed names. The single-file mutant is
+  JitProfile.v, so jit_defun_fixed_refused rejects it first; with JitProfile's two refusal theorems
+  deleted (a throwaway build), sealed_step (JitKRefBase) fails on the same option.
 """
 import re
 from pathlib import Path
@@ -182,4 +187,10 @@ mutate('ShenJitEqCoreNoTrans', core,
 mutate('ShenJitEqCoreNoClosure', core,
        ' NoDup cs -> St.closed_in h cs ->\n forall a b,',
        ' NoDup cs -> True ->\n forall a b,')
+mutate_chain('ShenJitKRefKRelStrict', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v'],
+       "Definition KRel_with (k : nat) (w : world) (K0 K : list frame) : Prop :=\n forall j, (j <= k)%nat ->",
+       "Definition KRel_with (k : nat) (w : world) (K0 K : list frame) : Prop :=\n forall j, (j < k)%nat ->")
+mutate('ShenJitKRefDefunSealed', 'rocq/JitProfile.v',
+       '(fun _ f => negb (is_fixed_name f || existsb (text_eqb f) sealed))',
+       '(fun _ f => negb (is_fixed_name f) || existsb (text_eqb f) sealed)')
 print(' '.join(names))

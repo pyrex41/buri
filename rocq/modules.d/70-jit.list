@@ -12,6 +12,7 @@ JitLowerThm
 JitLowerCheck
 JitKRef
 JitKRefGround
+JitKRefBase
 JitKRefCompose
 JitLowerEquiv
 JitEqBudget
