@@ -95,6 +95,11 @@ ShenJitKRefPoutThrowAny: PoutRel relates any two exceptions (OThrow x0, OThrow x
 ShenJitKRefPrimOutAnyIO: PrimOutRel relates two IO requests without q0 = q. The two sides then make
   different requests, and call_rel (JitKRefCompatClo), which must give the same request on both
   sides, must fail. Built as the chain of ShenJitKRefPoutThrowAny.
+ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) without the clause
+  gfuns s0 = gfuns s, each replaced by True so no destructuring shifts. Built as JitKRef.v +
+  JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v; the first three compile, and Rocq rejects
+  JitKRefCompatClo.call_rel, the named-call move compat_call (JitKRefCompatCall) rests on: with two
+  function tables no longer equal, a call of f may run different definitions on the two sides.
 """
 import re
 from pathlib import Path
@@ -267,4 +272,27 @@ mutate_chain('ShenJitKRefPoutThrowAny', clochain,
 mutate_chain('ShenJitKRefPrimOutAnyIO', clochain,
        " | PIO q0 c0, PIO q c => q0 = q /\\ forall r, PoutRel k w (c0 r) (c r)\n",
        " | PIO q0 c0, PIO q c => forall r, PoutRel k w (c0 r) (c r)\n")
+def mutate_chain_n(name, paths, edits):
+    """mutate_chain with several (old, new) edits, all in paths[0], each old occurring once."""
+    src = Path(paths[0]).read_text()
+    for old, new in edits:
+        assert src.count(old) == 1, (name, old)
+        src = src.replace(old, new)
+    mods = [Path(p).stem for p in paths]
+    texts = [src] + [Path(p).read_text() for p in paths[1:]]
+    for i in range(1, len(texts)):
+        for m in mods[:i]:
+            req = re.compile(r'^(From Buri Require Import .*) ' + m + r'(?=[ .])', re.M)
+            assert len(req.findall(texts[i])) == 1, (name, m)
+            texts[i] = req.sub(lambda g: g.group(1), texts[i])
+            texts[i] = re.sub(r'(?<![\w.])' + m + r'\.' + m + r'(?!\w)', m, texts[i])
+    (out / (name + '.v')).write_text('\n'.join(texts))
+    names.append(name)
+
+mutate_chain_n('ShenJitKRefCallNoTable',
+       ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v', 'rocq/JitKRefCompatClo.v'],
+       [(" gfuns s0 = gfuns s /\\\n Forall2 (fun p0 p => fst p0 = fst p /\\ GVal w",
+         " True /\\\n Forall2 (fun p0 p => fst p0 = fst p /\\ GVal w"),
+        ("StoreHas s0 /\\ StoreHas s /\\ gfuns s0 = gfuns s /\\",
+         "StoreHas s0 /\\ StoreHas s /\\ True /\\")])
 print(' '.join(names))

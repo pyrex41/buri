@@ -156,7 +156,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 226 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 249 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -318,6 +318,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
 | `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
 | `rocq/JitKRefCompatCtl.v` | KRef's control compatibility lemmas: compat_lit, var, let, if, and, or, cond, type and defun (JitKRef statements, closed); trap at index k from `fund_below k` alone (`compat_trap_fb`, the corollary `compat_trap_lt prim_compat`; `AppExn_fb`), and `compat_trap_statement` from `fund_gen_statement` alone (`compat_trap_of_gen`) |
+| `rocq/JitKRefCompatCall.v` | KRef's named-call compatibility lemma: compat_call at index k from `fund_below k` alone (`compat_call_lt`; `compat_call_lt_pc` takes `prim_compat_statement`), the reflexive scope form `compat_call_refl_lt`, and `compat_call_statement` from `fund_gen_statement` alone (`compat_call_of_fund`) |
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
 | `rocq/JitKRefCompatClo.v` | KRef compatibility for lambda, freeze and dynamic application: `compat_lambda`, `compat_freeze` (no induction hypothesis), the `_lt` forms from `fund_below`, `app_rel`, and `compat_app_of_fund` from `fund_gen_statement` and `prim_compat_statement` |
 | `rocq/JitKRefFv.v` | `scoped_fv` (an expression scoped in g has its free variables in g), `fv` against binders and the list forms (`fv_lam_iff`, `fv_let_iff`, `scoped_defun_fv`, `fv_cond_iff`, `fv_app_iff`, `fv_call_iff`), `fund_below`'s scope condition carried to subterms and under binders (`fv_scope_*`), and the index induction `fund_below_all` / `fund_gen_of_step` that `fund_gen_statement` will be proved by; not `fund_gen_statement` itself |
@@ -357,6 +358,15 @@ with `JitKRefPrim.prim_compat` that premise is discharged: `AppExn_fb` and `comp
 `fund_gen_statement` alone (`compat_trap_of_fund` keeps the two-premise form). Mutants `ShenJitKRefCondSwap` (a copy of
 compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim` (compat_trap_fb and
 AppExn_fb without `prim_compat`) are rejected.
+`rocq/JitKRefCompatCall.v` (7 audited statements) proves compat_call. A call with no argument moves through the function
+table at once (`ERel_call_nil`: `JitKRefCompatClo.call_rel` relates the two `call_named_r` moves, the two tables being equal
+under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with arguments pushes `KCallArgs`
+(`ERel_call_cons`: `KRel_KCallArgs`, whose `AppRel` of `(VPartial f [])` against itself comes from `app_rel`).
+`compat_call_lt` (compat_call at index k, KRef-related arguments) takes `fund_below k` alone, being
+`compat_call_lt_pc JitKRefPrim.prim_compat`; it needs no `D_wf`. `compat_call_refl_lt` is the reflexive scope form, and
+`compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
+(SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
+compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation.
 `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.

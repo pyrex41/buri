@@ -22,6 +22,7 @@ JitEqBudgetWalk
 JitEqBudgetCore
 JitKRefPrim
 JitKRefCompatCtl
+JitKRefCompatCall
 JitLowerStage0
 JitNorm
 JitNormStage0

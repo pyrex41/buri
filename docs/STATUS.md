@@ -1269,22 +1269,29 @@ and `fund_gen_statement`. With `JitKRefPrim.prim_compat` on the integration bran
 exception) and `compat_trap_fb` (trap at index k, the corollary `compat_trap_lt prim_compat`) take `fund_below k` as their only
 hypothesis, and `compat_trap_of_gen` gives `compat_trap_statement` from `fund_gen_statement` alone. Mutants
 `ShenJitKRefCondSwap` (compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim`
-(compat_trap_fb and AppExn_fb without `prim_compat`) are rejected. Not `compat_call` or the fundamental property, so
+(compat_trap_fb and AppExn_fb without `prim_compat`) are rejected. Not the fundamental property, so
 `OB-JIT-LOWER-FRONT` stays open.
-Sixteen are in `rocq/JitKRefFv.v` (branch `p2/r1-fv-mutants`, not yet merged into `p2/int`): `scoped_fv`
+Sixteen are in `rocq/JitKRefFv.v` (branch `p2/r1-fv-mutants`, merged into `p2/int`): `scoped_fv`
 (`scoped g e = true -> forall x, In x (fv e) -> In x g`), by a nested induction on expr (`expr_ind'`); `fv` against
 binders (`fv_lam_iff`, `fv_let_iff`; a defun's body is scoped by its parameters, `scoped_defun_fv`) and the cond and
 application lists (`fv_cond_iff`, `fv_app_iff`, `fv_call_iff`); `fund_below`'s scope condition from `scoped`
 (`fv_scope_of_scoped`), to a lambda's or let's body with the binder bound on both sides (`fv_scope_lam_body`,
 `fv_scope_let_body`) and to subterms (`fv_scope_cond`, `fv_scope_app`, `fv_scope_call`); and the index induction
 (`fund_below_S`, `fund_below_all`, `fund_gen_of_step : (D_wf -> forall k, fund_below k -> fund_at k) -> fund_gen_statement`).
-Not `fund_gen_statement`: its step needs every compatibility lemma (`compat_call` is still open). Four mutants of the
+Not `fund_gen_statement`: its step needs every compatibility lemma at index k (`compat_call_lt` is now in `JitKRefCompatCall.v`, below), and that step is not yet assembled. Four mutants of the
 index-local interface's definitions in `rocq/JitKRef.v` are rejected: `ShenJitKRefFundBelowLe` (`fund_below` over j <= k;
 `fund_below_0` fails), `ShenJitKRefFvLamUnfiltered` (fv of a lambda keeps its binder; `scoped_fv` fails),
 `ShenJitKRefPoutThrowAny` (`PoutRel` relates any two exceptions; `pout_obs` in JitKRefCompatClo fails) and
 `ShenJitKRefPrimOutAnyIO` (`PrimOutRel` without the same IO request; `call_rel` fails). The earlier
 `ShenJitKRefAbsvectorNoWext` and `ShenJitKRefEqBudgetFree` mutate proofs in JitKRefPrim.v, not `PoutRel`'s or
-`PrimOutRel`'s text, so they did not cover those definitions. Mutation pin 198, audit count 242.
+`PrimOutRel`'s text, so they did not cover those definitions. Mutation pin 198, audit count 242 on that branch.
+Seven are in `rocq/JitKRefCompatCall.v` (branch `p2/r1-compat-call`, merged into `p2/int` after `p2/r1-fv-mutants`): compat_call. `compat_call_lt` gives a named call at index k
+from `fund_below k` alone (through `JitKRefCompatClo.call_rel` and `app_rel`, with `JitKRefPrim.prim_compat`; no `D_wf`),
+`compat_call_refl_lt` its reflexive scope form, and `compat_call_of_fund` gives `compat_call_statement` from
+`fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable` (SRel and GStore
+without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`. Not
+`fund_gen_statement` or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
+With both merged: mutation pin 199, audit count 249.
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
@@ -1315,7 +1322,7 @@ strings and symbols; vectors, where absvector extends the world; globals; IO; er
 moves each side's budget to `S (length w)` over the world's side of the heap, then walks both sides in lockstep
 (`eq_lock`); it uses neither `eq_budget_statement` nor any lok. Mutants `ShenJitKRefAbsvectorNoWext` and
 `ShenJitKRefEqBudgetFree` are rejected. With `prim_compat` proved, `compat_app_of_fund` needs only `fund_gen_statement`
-(not combined into a new audited statement); `compat_call` and the fundamental property are still unproved (the control
+(not combined into a new audited statement); the fundamental property is still unproved (`compat_call` is in `JitKRefCompatCall.v`; the control
 compatibility lemmas and `compat_defun` are in `JitKRefCompatCtl.v`, above).
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is proved in `JitEqBudgetCore.v` (below).

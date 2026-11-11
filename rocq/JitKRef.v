@@ -30,8 +30,12 @@
      fund_gen_statement as compat_trap_of_gen.
    - JitKRefCompatClo.v (exists): compat_lambda and compat_freeze outright; app as
      compat_app_lt at index k and compat_app_of_fund (from fund_gen_statement and
-     prim_compat_statement). compat_call is still planned (sealed_stable and storehas_stable
-     are proved in JitKRefBase.v; compat_defun is in JitKRefCompatCtl.v).
+     prim_compat_statement). compat_defun is in JitKRefCompatCtl.v; sealed_stable and
+     storehas_stable are proved in JitKRefBase.v.
+   - JitKRefCompatCall.v (exists): compat_call at index k from fund_below k alone (compat_call_lt,
+     with JitKRefPrim.prim_compat; compat_call_lt_pc takes prim_compat_statement), its reflexive
+     scope form compat_call_refl_lt, and compat_call_statement from fund_gen_statement as
+     compat_call_of_fund.
    - JitKRefPrim.v (exists): prim_compat_statement as prim_compat, with no hypothesis; the = case
      from JitEqBudgetCore.eq_budget_closed (each side's budget moved to S (length w), then a
      lockstep walk), not from eq_budget_statement.
