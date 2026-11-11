@@ -1,7 +1,7 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
 From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog JitImage
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
- JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex.
+ JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex JitEmitCheck.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -714,3 +714,11 @@ Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.SRel_nt_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_nt_of_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_refuted.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.cx_tables_differ.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_famC.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_famT.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_famO.
+Print Assumptions JitEmitCheck.JitEmitCheck.chk_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.check_emit_gen_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.check_emit_sound_hooks.
+Print Assumptions JitEmitCheck.JitEmitCheck.check_emit_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.judge_emit_sound.
