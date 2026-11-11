@@ -6349,7 +6349,7 @@
     },
     {
      "source": "rocq/JitFrontInline.v",
-     "recorded": "2026-11-11: open. p2/r1-f-inline merged with p2/int f42d6c4 (after r1-f-sugar and r1-f-prolog) on its own branch: no statement changed; the union has 539 Audit_Jit statements (523 + the 16 of JitFrontInline) and a proof-mutation pin of 234 (229 + the 5 r1-f-inline mutants). Validation unchanged: 0 of 955 kernel definitions validated (full pipeline); the source judge accepts 148 of 955.",
+     "recorded": "2026-11-11: open. p2/r1-f-inline merged with p2/int f42d6c4 (after r1-f-sugar and r1-f-prolog) on its own branch: no statement changed; the union has 539 Audit_Jit statements (523 + the 16 of JitFrontInline) and a proof-mutation pin of 234 (229 + the 5 r1-f-inline mutants). No count changes: the source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN (no full-pipeline judge was run). Evidence on e317b27 (buri-lps, Rocq 9.3): SKIP_DIFF=1 scripts/check-shen-jit.sh exit 0 (539 audited statements closed, rocqchk passed; stage0 148 accepted of 955; differential NOT RUN), log sha256 c921aa18...4130; site_report re-run (test, not proof): [5430; 5430; 5424; 5424; 5430; 5430; 0; 37; 37; 37], stage0 ec9b3872..., norm e45add98...b69dd1, log sha256 98a5afe7...6e22; the 5 r1-f-inline mutants rejected at aeq_shadow, aeq_let_cx, inl_site_g_cx, bind_site_g_cx, chain_final_raise, log sha256 005470f8...085. The full mutation suite, make prove and the differential were not run (UNKNOWN).",
      "reconciliation": "r1-f-inline fix round, merge of p2/int f42d6c4, 11 November 2026."
     }
    ]
