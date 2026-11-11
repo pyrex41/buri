@@ -870,14 +870,22 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
     event (`gt_trun_none`), and the machine is not final at step 0, so neither disjunct holds at
     `n = 1` (`noenv_false_at`). `resp_ok_bound_needed`: the same at an environment answering a
     clock reading of 2^64, outside `resp_ok`'s 64 bits; neither environment is `env_ok`. So
-    `env_ok` cannot be dropped from `preservation'_statement`. It is an assumption about the
+    `env_ok` cannot be dropped from `preservation'_statement`. The refutation uses that `ev_of`
+    leaves `JFailed` and readings of 2^64 or more untranslated. Translating a failure would not
+    save the statement: the bytecode then resumes with no result while the source throws
+    (`dv_io_fail`). It is an assumption about the
     environment, not derivable from the pin or the premises. `call_preservation'` and
     `call_preservation_src'` are analogous; their necessity is NOT proved here.
   - Mutant `ShenJitEmitIoFailTranslated`: `ev_of` translates `(JTime, JFailed)`, so the `JFailed`
     environment no longer refutes the statement and `env_ok_needed` must fail.
 
-  11 closed statements added (424 in `Audit_Jit`: 399 + 14 from r1-kref-fund + 11). The pin is 238 =
-  235 + r1-kref-fund's 2 + 1. Still NOT proved, truth UNKNOWN: `sim'_statement`, every
+  11 closed statements added (424 in `Audit_Jit`: 399 + 14 from r1-kref-fund + 11; the lane on
+  `95459c7` printed 424 closed, with 0 Axioms lines). The pin is 238 = 235 + r1-kref-fund's 2 + 1.
+  That is a **census**, not `report.py` evidence. There are 87 ShenJit mutant names; `p2/int`
+  `5779555` has 50, so 151 of its 201 are non-JIT. In addition, the 40 ShenJitEmit* and kref-fund
+  mutants were all rejected under Rocq 9.3 on `95459c7`. `make prove` and `make report` were not
+  run, so their result is UNKNOWN: buri-lps has only the Rocq 9.3 switch, and `scripts/prove`
+  needs Coq 8.18.0 and `scripts/shen`. Still NOT proved, truth UNKNOWN: `sim'_statement`, every
   `sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'` and
   `old_reflect_core_statement`. Still at primitive or call level only: the `frame_prim`
   exclusions and the one-argument window. A statement-level counterexample for those needs a KD'
