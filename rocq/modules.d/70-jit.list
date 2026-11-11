@@ -28,3 +28,6 @@ JitNorm
 JitNormStage0
 JitKRefFv
 JitKRefFund
+JitFrontCheck
+JitFrontChainTest
+JitFrontShare

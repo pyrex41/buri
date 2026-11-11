@@ -6211,6 +6211,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-09: 0.6 adds two norm rewrites (THORN cut-fail to (if (shen.unlocked? L) (shen.lock K L) false); deref equality to shen-jit.deref=), neither admitted. Dictionary-keyed constant sharing (NaN never shared) and the instruction counter in mark do not affect JitLowerRel, which reads constants by index and value.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-10: open. Sharing of factorised tests (F00, branch p2/F00): rocq/JitFrontShare.v proves share's else rewrite sound (share_rule_sound) with one premise beyond FrontHyps, HT (D defines thaw as (defun thaw (V) (V))). Two items stay open here. (1) Share's reuse of a chain-bound variable for a hd/tl the chain already took (lower.shen's reuse/canon) is not covered: relating (hd V) to a variable holding its value needs a relation that carries an environment fact KRef does not; every one of the 4 share rewrites of stage 0 at v0.6 (shen.macros, shen.process-let, shen.lambda-of-defun, shen.process-assoc) reuses, so 0 of the 4 are validated (report-only run; the other 951 of 955 witnesses are unchanged by share and accepted by equality). (2) HT for the real D: HT is decidable membership, but a D holding thaw meets D_compiled only once emission (Comp, the emit track) admits thaw's body, a 0-ary dynamic apply.",
+     "reconciliation": "F00 fix round, 10 November 2026."
     }
    ]
   },
@@ -6249,7 +6254,10 @@
     "rocq/JitKRefCompatCtl.v",
     "rocq/JitKRefFv.v",
     "rocq/JitKRefCompatCall.v",
-    "rocq/JitKRefFund.v"
+    "rocq/JitKRefFund.v",
+    "rocq/JitFrontCheck.v",
+    "rocq/JitFrontChainTest.v",
+    "rocq/JitFrontShare.v"
    ],
    "history": [
     {
@@ -6306,6 +6314,11 @@
      "source": "rocq/JitKRefFund.v",
      "recorded": "2026-11-10: open. r1-kref-fund proved and audited (14 statements in rocq/Audit_Jit.v, 263 in all, each Closed under the global context): fund_step (D_wf -> fund_below k -> fund_at k, by structural induction on expr with one case per constructor: literals and variables by ERel_sval, a variable bound on neither side by ERel_throw_both, let by ERel_let with the body below k from fund_below and at k from the induction hypothesis (body_at), if, and, or, cond and type by their ERel lemmas, trap by ERel_trap with AppExn_fb, defun by ERel_defun, lambda, freeze, application and named call by compat_lambda_lt, compat_freeze_lt, compat_app_lt with JitKRefPrim.prim_compat, and compat_call_refl_lt), fund_gen (fund_gen_statement, by JitKRefFv.fund_gen_of_step), fund_at_all, EnvRelAll_scope, fundamental (fundamental_statement), KRef_refl (KRef_refl_statement), compat_trap, compat_app and compat_call (the three compatibility statements outright), store_refl (store_refl_statement), adequacy (adequacy_statement) and call_preservation_src (call_preservation_src_statement, whose only premises are its own: D_wf, the two KRef links, StoreHas, store_ok, Com, CompFn, the arity and entered). store_ok is carried beside SRel as the statements' premise (SRel does not give it: SRel_lok_refuted); KRef's treatment of = is unchanged (prim_compat's = case rests on JitEqBudgetCore.eq_budget_closed; no fallback). No JitKRef.v statement changed. Every *_statement of rocq/JitKRef.v now has a closed proof (eq_budget_statement as JitEqBudgetCore.eq_budget, jit_eq_per_statement as JitEqBudget.jit_eq_per). Mutants, each rejected (pin 201): ShenJitKRefFundNoTrapCase (fund_step's trap case proved as a literal; fails at the trap goal) and ShenJitKRefStoreReflNoStoreOk (store_refl_statement without store_ok s, chained JitKRef.v + JitKRefGround.v; store_refl_of_fundamental fails). Still open: completion_evidence also asks for front-link checkers proved to establish KRef (share and norm), which no file proves yet, so OB-JIT-LOWER-FRONT is not discharged.",
      "reconciliation": "r1-kref-fund, Phase 2 KRef track, 10 November 2026; built on p2/int at 17379dc."
+    },
+    {
+     "source": "rocq/JitFrontCheck.v",
+     "recorded": "2026-11-09: open. F00 (branch p2/F00), 31 audited statements, each Closed under the global context. rocq/JitFrontCheck.v: fchk, one front checker parameterised by rules (equality with scoped, same head with recursion, then each rule given fchk at one fuel less), rule_sound, the FrontHyps record (D_wf, KRef_refl, KRef_scope, ERel anti-reduction, every compat_* statement; a premise, never an axiom; KRef_scope and anti-reduction proved as front_scope_proved and front_anti_proved), and fchk_sound under FrontHyps and Forall rule_sound. rocq/JitFrontChainTest.v (synthetic): two closed toy rules chain at one node; acceptance and both rejections by vm_compute. rocq/JitFrontShare.v: share's else rewrite (let ElseN (freeze Y') (unchain C X' ElseN)), share_rule_sound proved with no FrontHyps (premise: D defines thaw as (defun thaw (V) (V))), check_share_sound under FrontHyps; kernel_thaw_parses (vm_compute) checks that stage 0's form of thaw parses to the definition the premise names, and stage 0's source judge rejects thaw's own code, so a D holding thaw fails D_compiled until emission admits a dynamic apply. Share's reuse of a chain variable for a hd/tl the chain took is NOT covered. Report-only run on the v0.6 share witnesses (sha256 6881eb29...): check_share validates 0 of the 4 share rewrites: it accepts 951 of 955 pairs, all unchanged by share (equality case; share_rule does not fire), and the 4 rejected are the share-chain definitions shen.macros, shen.process-let, shen.lambda-of-defun and shen.process-assoc, each with a Rocq rejection trace ending at a reused chain variable. The thaw premise (HT) amends the spec, which asked for FrontHyps alone, and Rocq shows it is needed: share_rule_needs_thaw (closed, no premise) proves share_rule is not rule_sound at D = [] (thaw unbound: the target raises XUndefinedFun thaw where the source returns 1; its rec, literal equality, is sound at every D by lit_kref, proved directly), so by share_rule_sound_needs_thaw the FrontHyps-only form holds at D = [] only if FrontHyps sealed [] is false, which kref-fund's front_hyps is to prove it is not; accepting HT or requiring its discharge is the spec owner's decision. Mutants ShenJitFrontNoScope, ShenJitFrontShareElseSwap and ShenJitFrontShareThawAny are rejected at decision lemmas placed before every proof (fchk_rejects_unscoped, share_rejects_swap, share_rejects_thaw_other, vm_compute); ShenJitFrontSameFuel at the Fixpoint guard. Not proved: FrontHyps (the compatibility lemmas and KRef_refl), HT for the real D, share's reuse, norm's checkers.",
+     "reconciliation": "Front checker framework and share checker (F00), 9 November 2026."
     }
    ]
   },

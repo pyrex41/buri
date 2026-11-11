@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitFrontCheck JitFrontChainTest JitFrontShare.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -263,3 +263,45 @@ Print Assumptions JitKRefFund.JitKRefFund.compat_call.
 Print Assumptions JitKRefFund.JitKRefFund.store_refl.
 Print Assumptions JitKRefFund.JitKRefFund.adequacy.
 Print Assumptions JitKRefFund.JitKRefFund.call_preservation_src.
+Print Assumptions JitFrontCheck.JitFrontCheck.expr_eqb_eq.
+Print Assumptions JitFrontCheck.JitFrontCheck.fchk_rejects_unscoped.
+Print Assumptions JitFrontCheck.JitFrontCheck.front_scope_proved.
+Print Assumptions JitFrontCheck.JitFrontCheck.front_anti_proved.
+Print Assumptions JitFrontCheck.JitFrontCheck.same_sound.
+Print Assumptions JitFrontCheck.JitFrontCheck.fchk_sound.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.rule_if_true_sound.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.rule_let_lit_sound.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_accepted.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_if.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_let.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_if_any_fuel.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_rejected_without_let_any_fuel.
+Print Assumptions JitFrontChainTest.JitFrontChainTest.chain_kref.
+Print Assumptions JitFrontShare.JitFrontShare.thaw_erel.
+Print Assumptions JitFrontShare.JitFrontShare.chain_sound.
+Print Assumptions JitFrontShare.JitFrontShare.share_rule_sound.
+Print Assumptions JitFrontShare.JitFrontShare.share_rules_sound.
+Print Assumptions JitFrontShare.JitFrontShare.check_share_sound.
+Print Assumptions JitFrontShare.JitFrontShare.fresh_not_bound.
+Print Assumptions JitFrontShare.JitFrontShare.kernel_thaw_parses.
+Print Assumptions JitFrontShare.JitFrontShare.share_accepts_basic.
+Print Assumptions JitFrontShare.JitFrontShare.share_rejects_swap.
+Print Assumptions JitFrontShare.JitFrontShare.share_rejects_thaw_other.
+Print Assumptions JitFrontShare.JitFrontShare.lit_vrel.
+Print Assumptions JitFrontShare.JitFrontShare.lit_kref.
+Print Assumptions JitFrontShare.JitFrontShare.cx_accepted.
+Print Assumptions JitFrontShare.JitFrontShare.cx_tgt_runs.
+Print Assumptions JitFrontShare.JitFrontShare.cx_inv_star.
+Print Assumptions JitFrontShare.JitFrontShare.share_rule_needs_thaw.
+Print Assumptions JitFrontShare.JitFrontShare.share_rule_sound_needs_thaw.
+Print Assumptions JitFrontShare.JitFrontShare.front_hyps.
+Print Assumptions JitFrontShare.JitFrontShare.share_needs_thaw_outright.
+Print Assumptions JitFrontShare.JitFrontShare.thaw_fixed.
+Print Assumptions JitFrontShare.JitFrontShare.thaw_defun_refused.
+Print Assumptions JitFrontShare.JitFrontShare.fixed_step.
+Print Assumptions JitFrontShare.JitFrontShare.thaw_stable.
+Print Assumptions JitFrontShare.JitFrontShare.comp_no_app_slot.
+Print Assumptions JitFrontShare.JitFrontShare.comp_no_app.
+Print Assumptions JitFrontShare.JitFrontShare.ht_not_com.
+Print Assumptions JitFrontShare.JitFrontShare.ht_not_compiled.
+Print Assumptions JitFrontShare.JitFrontShare.ht_dwf_sat.

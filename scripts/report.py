@@ -343,7 +343,7 @@ report = {
         'coalton': 'optional tooling experiment; no proof contribution',
     },
     'port_conformance': {'port': 'shen-scheme', 'cases': suite_counts['conformance'], 'evidence': 'sampled-agreement'},
-    'rejected_proof_mutations': 189,
+    'rejected_proof_mutations': 193,
     'rocq_regression_examples': 96,
     'orchestration_regressions': 22,
     'open': ['Encoder native execution and primitive representation refinement', 'Shen checker correspondence to Rocq', 'Shen evaluator correspondence to Rocq',

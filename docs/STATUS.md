@@ -1359,6 +1359,30 @@ answers at |S| + 1 (no lok hypothesis, global or S-local; induction on |S| with 
 on the decidable goal, so no excluded middle). `eq_core` is `eq_core_statement (jit_rules sealed)`, with S all cells, and
 `eq_budget` is `JitLowerEquiv.eq_budget_statement sealed`, through `eq_budget_from_core`. Proof mutants `ShenJitEqCoreNoTrans`
 and `ShenJitEqCoreNoClosure` are rejected.
+Thirty-one are the front checkers (branch `p2/F00`). Six in `rocq/JitFrontCheck.v`: `fchk`, one checker for every front
+pass, parameterised by rewrite rules (equality with `scoped`, the same head with recursion, then each rule given the
+checker at one fuel less), and `fchk_sound`, proved from a `FrontHyps` premise (D_wf, KRef_refl, every compat_*
+statement, and KRef_scope and ERel anti-reduction, both already proved) and each rule's `rule_sound`, and `fchk_rejects_unscoped` (vm_compute). Eight in
+`rocq/JitFrontChainTest.v`, a synthetic test: two toy source rewrites (if-true; let of a literal around its own
+variable), each closed, chain at one node, and fchk accepts the pair with both and rejects it with either removed
+(vm_compute). Seventeen in `rocq/JitFrontShare.v`: share's else rewrite, (if C X Y) to (let ElseN (freeze Y) (unchain C X
+ElseN)), with `share_rule_sound` proved outright (no FrontHyps; its one premise is that D defines thaw as the kernel
+does, and `kernel_thaw_parses` checks that the kernel's thaw parses to that definition), so `check_share_sound` rests on FrontHyps only through fchk. That thaw premise (HT) is an amendment to the spec,
+which asked for FrontHyps alone, and Rocq shows it is needed: `share_rule_needs_thaw` (closed, no premise) proves
+share_rule is not rule_sound at D = [] (with thaw unbound, the target's `(thaw G)` raises XUndefinedFun where the source
+returns; the rec it uses is literal equality, sound at every D by `lit_kref`, proved directly), so by
+`share_rule_sound_needs_thaw` the FrontHyps-only form holds at D = [] only if FrontHyps sealed [] is false, which
+kref-fund's front_hyps is to prove it is not. Discharging HT for the real D needs emission to admit
+thaw's body, a dynamic apply, before D_compiled can hold: open. Three decision lemmas (`share_accepts_basic`,
+`share_rejects_swap`, `share_rejects_thaw_other`, vm_compute) fix the rule's verdicts. Share's reuse of a chain variable for a hd/tl the
+chain took is not covered. On the v0.6 share witnesses (sha256 `6881eb29...`) check_share validates 0 of the 4 share
+rewrites: it accepts 951 of 955 pairs, all definitions share leaves unchanged (equality case, share_rule never fires),
+and the 4 rejected are the share-chain definitions (`shen.macros`, `shen.process-let`, `shen.lambda-of-defun`,
+`shen.process-assoc`), each with a Rocq rejection trace ending at a reused chain variable. This is the share link only:
+acceptance holds modulo FrontHyps, which kref-fund is to discharge. Mutants `ShenJitFrontNoScope`,
+`ShenJitFrontSameFuel`, `ShenJitFrontShareElseSwap` and `ShenJitFrontShareThawAny` are rejected, the first, third
+and fourth at those decision lemmas, the second at the Fixpoint guard (Rocq 9.3; the
+Coq 8.18 compile of these files, and so `make prove`, was not run).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Heap image (spike, not gated; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): a Rocq decoder in `spikes/image-decode/` reads the

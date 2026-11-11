@@ -107,6 +107,16 @@ ShenJitKRefStoreReflNoStoreOk: store_refl_statement without its store_ok s premi
   JitKRef.v + JitKRefGround.v. store_ok is carried beside SRel as a premise because SRel does not give
   it (JitKRefBase.SRel_lok_refuted); without it, store_refl_of_fundamental (and adequacy_of_fundamental,
   which uses it) must fail.
+ShenJitFrontNoScope: fchk's equality case without `scoped g e`. KRef_refl needs it (a free variable
+  outside the scope may be bound to unrelated values on the two sides). Rejected first at the
+  decision: fchk_rejects_unscoped (vm_compute, placed right after fchk) no longer holds.
+ShenJitFrontSameFuel: fchk passes its own fuel, not fuel - 1, to the rules' recursive checker.
+  The definition is no longer structural; Rocq refuses the Fixpoint (the guard condition is the
+  property itself: termination of the check, and the induction fchk_sound runs on the fuel).
+ShenJitFrontShareElseSwap: share's chain base accepts (if T' (thaw G) X'), the else and then branches
+  swapped. Rejected first at the decision: share_rejects_swap (vm_compute, before every proof).
+ShenJitFrontShareThawAny: share accepts (thaw H) for any variable H as the else branch, not only the
+  ElseN the let binds. Rejected first at the decision: share_rejects_thaw_other (vm_compute).
 """
 import re
 from pathlib import Path
@@ -310,4 +320,12 @@ mutate('ShenJitKRefFundNoTrapCase', fund,
 mutate_chain('ShenJitKRefStoreReflNoStoreOk', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
        " D_wf -> StoreHas s -> store_ok s -> SRel k (id_world s) s s.\n",
        " D_wf -> StoreHas s -> SRel k (id_world s) s s.\n")
+mutate('ShenJitFrontNoScope', 'rocq/JitFrontCheck.v',
+       ' | S f => (expr_eqb e0 e && scoped g e)', ' | S f => (expr_eqb e0 e)')
+mutate('ShenJitFrontSameFuel', 'rocq/JitFrontCheck.v',
+       '          || existsb (fun r => r (fchk rules f) g e0 e) rules', '          || existsb (fun r => r (fchk rules fuel) g e0 e) rules')
+mutate('ShenJitFrontShareElseSwap', 'rocq/JitFrontShare.v',
+       " | EIf T' X' Z => is_thaw_of G Z && rec g C T' && rec g0 X X'", " | EIf T' Z X' => is_thaw_of G Z && rec g C T' && rec g0 X X'")
+mutate('ShenJitFrontShareThawAny', 'rocq/JitFrontShare.v',
+       ' | ECall t [EVar H] => text_eqb t thaw_name && text_eqb H G', ' | ECall t [EVar H] => text_eqb t thaw_name')
 print(' '.join(names))
