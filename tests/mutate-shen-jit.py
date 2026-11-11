@@ -74,12 +74,23 @@ ShenJitKRefEqBudgetFree: the = case compares the two sides at their raw budgets 
 ShenJitKRefCondSwap: a copy of compat_cond whose target is the clauses in reverse order
   (ECond (rev cl)), with compat_cond's own proof. cond tries clauses in order, so the copy is false
   and its proof must fail.
-ShenJitKRefTrapNoPrim: compat_trap_fb (trap from fund_below k alone) proved from compat_trap_lt
-  without supplying JitKRefPrim.prim_compat. compat_trap_lt's prim_compat_statement premise is then
-  an open goal that no hypothesis closes, so the proof must fail: the fund_below-only form rests on
-  primitive parametricity (a handler may be a partial primitive).
-ShenJitKRefAppExnNoPrim: AppExn_fb proved from AppExn_of without JitKRefPrim.prim_compat; the same
-  premise is left open and the proof must fail.
+ShenJitKRefTrapNoPrim: AppExn (JitKRefCompatCtl) restricted to handlers that are not a partial
+  application of a table primitive (a premise: f0 = VPartial gn args -> lookup gn (gfuns s0) <>
+  Some (FPrim p)), with AppExn_of's primitive case discharged by that premise instead of by
+  prim_compat_statement. Rocq rejects KRel_KApply_exn, the trap frame's handler step that
+  ERel_trap, compat_trap_lt and compat_trap_fb rest on: the handler there is any value the
+  continuation returns, and the residual goal (printed by Show in the log) is False from
+  lookup gn (gfuns s0) = Some (FPrim p), which nothing refutes. A handler may be a partial primitive,
+  so trap needs AppExn at primitive handlers, i.e. prim_compat. compat_trap_fb is true
+  (prim_compat is closed), so this is a rejected proof, not a false statement.
+ShenJitKRefAppExnNoPrim: AppExn_of's premise prim_compat_statement weakened to primitive outcomes
+  related on EQUAL argument lists only (forall k w p args s0 s, SRel k w s0 s -> PrimOutRel k w
+  (prim_rule_r p args s0) (prim_rule_r p args s)), its use instantiated at the source's arguments.
+  Rocq rejects AppExn_of in its primitive case: the target applies the primitive to args0 ++
+  [VExn x], related to the source's args ++ [VExn x] by VRel but not equal, so the weakened premise
+  relates the wrong pair and pout_obs's PoutRel premise is not met. AppExn_fb is true, so this is a
+  rejected proof, not a false statement; it shows the primitive case needs parametricity over
+  related, unequal arguments, which prim_compat_statement states.
 ShenJitKRefFundBelowLe: fund_below k quantifies over j <= k instead of j < k, so it claims the index
   k itself. A stronger hypothesis, not a false statement. Built as JitKRef.v + JitKRefFv.v; the proof
   of fund_below_0 (JitKRefFv; lia on j < 0) fails first. fund_below_S's step, from fund_below k and
@@ -100,6 +111,13 @@ ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) 
   JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v; the first three compile, and Rocq rejects
   JitKRefCompatClo.call_rel, the named-call move compat_call (JitKRefCompatCall) rests on: with two
   function tables no longer equal, a call of f may run different definitions on the two sides.
+  A rejected proof only. That call_rel is false without the clause is shown separately in Rocq by
+  JitKRefCallNoTableCex.call_rel_no_table_refuted (call_rel's statement with SRel's table clause
+  replaced by True, over the unmutated VRel, KRel and fund_below).
+ShenJitKRefCallNoTableCexTable: JitKRefCallNoTableCex.SRel_nt with the table clause restored
+  (gfuns s0 = gfuns s for True, and SRel_nt_table's proof supplying it). The counterexample's two
+  stores have different tables, so call_rel_no_table_refuted must fail where it establishes SRel_nt
+  for them (exact I against gfuns cx_s0 = gfuns cx_s).
 ShenJitKRefFundNoTrapCase: fund_step (JitKRefFund) with its trap case proved as a literal
   (eapply ERel_lit; reflexivity) instead of by ERel_trap with JitKRefCompatCtl.AppExn_fb. Rocq
   rejects it at the trap goal: lit_val (ETrap a b) is None, so no compat lemma covers the case.
@@ -322,12 +340,6 @@ mutate('ShenJitKRefEqBudgetFree', prim,
 mutate('ShenJitKRefCondSwap', 'rocq/JitKRefCompatCtl.v',
        "Theorem compat_type : compat_type_statement.",
        "Theorem compat_cond_swap : forall g cl0 cl,\n Forall2 (fun p0 p => KRef g (fst p0) (fst p) /\\ KRef g (snd p0) (snd p)) cl0 cl ->\n KRef g (ECond cl0) (ECond (rev cl)).\nProof.\n intros g cl0 cl F k w rho0 rho Ww HE. apply ERel_cond.\n eapply Forall2_impl; [|exact F]. intros p0 p [H1 H2]. split; [apply H1|apply H2]; assumption.\nQed.\n\nTheorem compat_type : compat_type_statement.")
-mutate('ShenJitKRefTrapNoPrim', 'rocq/JitKRefCompatCtl.v',
-       "Proof. intros k. exact (compat_trap_lt (JitKRefPrim.JitKRefPrim.prim_compat sealed D) k). Qed.",
-       "Proof. intros k. apply compat_trap_lt; assumption. Qed.")
-mutate('ShenJitKRefAppExnNoPrim', 'rocq/JitKRefCompatCtl.v',
-       "Proof. intros k Hf. exact (AppExn_of (JitKRefPrim.JitKRefPrim.prim_compat sealed D) k Hf). Qed.",
-       "Proof. intros k Hf. apply AppExn_of; [|exact Hf]; assumption. Qed.")
 fvchain = ['rocq/JitKRef.v', 'rocq/JitKRefFv.v']
 mutate_chain('ShenJitKRefFundBelowLe', fvchain,
        "Definition fund_below (k : nat) : Prop :=\n forall j, (j < k)%nat ->",
@@ -359,6 +371,37 @@ def mutate_chain_n(name, paths, edits):
     (out / (name + '.v')).write_text('\n'.join(texts))
     names.append(name)
 
+ctl = 'rocq/JitKRefCompatCtl.v'
+mutate_chain_n('ShenJitKRefTrapNoPrim', [ctl],
+       [(" forall j w K0 K x f0 f s0 s, (j <= k)%nat -> KRel j w K0 K -> VRel j w f0 f -> SRel j w s0 s ->\n"
+         "  ObsT j w (Cfg (Ret f0) (KApply [VExn x] :: K0) s0)",
+         " forall j w K0 K x f0 f s0 s, (j <= k)%nat -> KRel j w K0 K -> VRel j w f0 f -> SRel j w s0 s ->\n"
+         "  (forall gn args p, f0 = VPartial gn args -> lookup gn (gfuns s0) <> Some (FPrim p)) ->\n"
+         "  ObsT j w (Cfg (Ret f0) (KApply [VExn x] :: K0) s0)"),
+        (" intros j' w' v0 v s0 s L' W HV HS. apply HA; [lia|eapply KRel_mono; [exact L'|exact W|exact HK]|exact HV|exact HS].\n",
+         " intros j' w' v0 v s0 s L' W HV HS. apply HA; [lia|eapply KRel_mono; [exact L'|exact W|exact HK]|exact HV|exact HS|].\n"
+         " intros gn args p E Lk. Show. congruence.\n"),
+        (" intros Hp k Hf j w K0 K x f0 f s0 s L HK HV HS. destruct j as [|j]; [apply ObsT_0|].\n",
+         " intros Hp k Hf j w K0 K x f0 f s0 s L HK HV HS NP. destruct j as [|j]; [apply ObsT_0|].\n"),
+        ("   unfold call_named_r. rewrite G. destruct (lookup gn (gfuns s)) as [[p|ps body]|].\n"
+         "   + (* a primitive *)\n"
+         "     rewrite Ln. destruct (arity_mismatch R (List.length (args0 ++ [VExn x])) (prim_arity p)) eqn:A; cbn [MRel]; [apply Thr|].\n"
+         "     apply arity_ok in A. rewrite A, Nat.ltb_irrefl. rewrite !firstn_all2, !skipn_all2 by lia.\n"
+         "     unfold prim_move_r. pose proof (proj1 (Hp j w) p _ _ s0 s Fj HSj) as Hr.\n"
+         "     destruct (prim_rule_r R P p (args ++ [VExn x]) s0), (prim_rule_r R P p (args0 ++ [VExn x]) s);\n"
+         "      cbn in Hr; try contradiction; cbn [MRel].\n"
+         "     * eapply pout_obs; [exact Hf|lia|exact HKj|exact HSj|exact Hr].\n"
+         "     * destruct Hr as [<- Hr]. split; [reflexivity|]. intros r.\n"
+         "       eapply pout_obs; [exact Hf|lia|exact HKj|exact HSj|apply Hr].\n",
+         "   unfold call_named_r. rewrite G. destruct (lookup gn (gfuns s)) as [[p|ps body]|] eqn:Lk.\n"
+         "   + (* a primitive: excluded by NP *)\n"
+         "     exfalso. apply (NP _ _ p eq_refl). rewrite G. exact Lk.\n")])
+mutate_chain_n('ShenJitKRefAppExnNoPrim', [ctl],
+       [("Theorem AppExn_of : prim_compat_statement -> forall k, fund_below k -> AppExn k.",
+         "Theorem AppExn_of : (forall k w p args s0 s, SRel k w s0 s ->\n"
+         "   PrimOutRel k w (prim_rule_r R P p args s0) (prim_rule_r R P p args s)) -> forall k, fund_below k -> AppExn k."),
+        ("     unfold prim_move_r. pose proof (proj1 (Hp j w) p _ _ s0 s Fj HSj) as Hr.\n",
+         "     unfold prim_move_r. pose proof (Hp j w p (args ++ [VExn x]) s0 s HSj) as Hr.\n")])
 mutate_chain_n('ShenJitKRefCallNoTable',
        ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v', 'rocq/JitKRefCompatClo.v'],
        [(" gfuns s0 = gfuns s /\\\n Forall2 (fun p0 p => fst p0 = fst p /\\ GVal w",
@@ -444,4 +487,9 @@ mutate('ShenJitFrontPrologDoFirst', prolog,
        '     negb (text_eqb v1 v2) && text_eqb v2 v2\' &&', '     negb (text_eqb v1 v2) && text_eqb v1 v2\' &&')
 mutate('ShenJitFrontPrologP4Key', prolog,
        ' && negb (text_eqb p4 id_key) &&', ' && negb (text_eqb p3 id_key) &&')
+cex = 'rocq/JitKRefCallNoTableCex.v'
+mutate_chain_n('ShenJitKRefCallNoTableCexTable', [cex],
+       [(" wf_world w /\\ StoreHas s0 /\\ StoreHas s /\\ True /\\\n",
+         " wf_world w /\\ StoreHas s0 /\\ StoreHas s /\\ gfuns s0 = gfuns s /\\\n"),
+        ("(conj W (conj H0 (conj H1 (conj I (conj Fv Hh)))))", "(conj W (conj H0 (conj H1 (conj G (conj Fv Hh)))))")])
 print(' '.join(names))

@@ -1270,7 +1270,9 @@ and `fund_gen_statement`. With `JitKRefPrim.prim_compat` on the integration bran
 exception) and `compat_trap_fb` (trap at index k, the corollary `compat_trap_lt prim_compat`) take `fund_below k` as their only
 hypothesis, and `compat_trap_of_gen` gives `compat_trap_statement` from `fund_gen_statement` alone. Mutants
 `ShenJitKRefCondSwap` (compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim`
-(compat_trap_fb and AppExn_fb without `prim_compat`) are rejected. Not the fundamental property, so
+are rejected (rewritten by r21-mutation-hygiene: TrapNoPrim restricts AppExn to non-primitive handlers and is rejected at
+`KRel_KApply_exn`; AppExnNoPrim weakens AppExn_of's premise to equal-argument primitive outcomes and is rejected in its
+primitive case; both rejected proofs of true statements). Not the fundamental property, so
 `OB-JIT-LOWER-FRONT` stays open.
 Sixteen are in `rocq/JitKRefFv.v` (branch `p2/r1-fv-mutants`, merged into `p2/int`): `scoped_fv`
 (`scoped g e = true -> forall x, In x (fv e) -> In x g`), by a nested induction on expr (`expr_ind'`); `fv` against
@@ -1290,7 +1292,10 @@ Seven are in `rocq/JitKRefCompatCall.v` (branch `p2/r1-compat-call`, merged into
 from `fund_below k` alone (through `JitKRefCompatClo.call_rel` and `app_rel`, with `JitKRefPrim.prim_compat`; no `D_wf`),
 `compat_call_refl_lt` its reflexive scope form, and `compat_call_of_fund` gives `compat_call_statement` from
 `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable` (SRel and GStore
-without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`. Not
+without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`. That mutant is a rejected proof only;
+`rocq/JitKRefCallNoTableCex.v` (r21-mutation-hygiene, 3 audited statements) refutes in Rocq call_rel's statement with SRel's
+table clause dropped (`call_rel_no_table_refuted`, unmutated VRel/KRel/fund_below), and mutant
+`ShenJitKRefCallNoTableCexTable` is rejected. Not
 `fund_gen_statement` or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 With both merged: mutation pin 199, audit count 249.
 Fourteen are in `rocq/JitKRefFund.v` (branch `p2/r1-kref-fund`, built on `p2/int` at `17379dc`): the fundamental

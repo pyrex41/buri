@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog JitKRefCallNoTableCex.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -523,3 +523,6 @@ Print Assumptions JitFrontProlog.JitFrontProlog.KRel_ca_let.
 Print Assumptions JitFrontProlog.JitFrontProlog.KRel_ca_last.
 Print Assumptions JitFrontProlog.JitFrontProlog.star_reach.
 Print Assumptions JitFrontProlog.JitFrontProlog.bind_site_unsound.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.SRel_nt_table.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_nt_of_table.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_refuted.
