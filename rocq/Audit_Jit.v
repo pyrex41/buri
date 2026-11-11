@@ -725,3 +725,8 @@ Print Assumptions JitEmitSim.JitEmitSim.vrh_refl.
 Print Assumptions JitEmitSim.JitEmitSim.adequacy_tr.
 Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src'_of_cp'.
 Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src_old_of_cp'.
+Print Assumptions JitEmitSim.JitEmitSim.fx_next.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_false.
+Print Assumptions JitEmitSim.JitEmitSim.preservation'_false.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src'_false.
+Print Assumptions JitEmitSim.JitEmitSim.raise_resolve_false.

@@ -189,6 +189,9 @@ ShenJitEmitSimRaiseStar: raise_resolve_statement's step case with TStar for TPlu
   not move, so the step count of preservation' is not met. preservation'_of_sim' must fail.
 ShenJitEmitSimSlot1Any: evalctx_slot1_void without cv <> []: a code that captures nothing may write
   slot 1. evalctx_slot1_void must fail.
+ShenJitEmitSimFreshNext: the counterexample machine fx_m with a fresh allocation pointer (m_next 2,
+  past do's closure at key 1): the raise no longer overwrites a live object, so fx_next (the
+  overwrite) and with it call_preservation'_false must fail.
 ShenJitKRefCallNoTableCexTable: JitKRefCallNoTableCex.SRel_nt with the table clause restored
   (gfuns s0 = gfuns s for True, and SRel_nt_table's proof supplying it). The counterexample's two
   stores have different tables, so call_rel_no_table_refuted must fail where it establishes SRel_nt
@@ -674,4 +677,7 @@ mutate('ShenJitEmitSimRaiseStar', sim,
 mutate('ShenJitEmitSimSlot1Any', sim,
        "Lemma evalctx_slot1_void : forall mu cv caps g top r2 rho k s w m, cv <> [] ->",
        "Lemma evalctx_slot1_void : forall mu cv caps g top r2 rho k s w m, True ->")
+mutate('ShenJitEmitSimFreshNext', sim,
+       " B.Machine fx_st 0 fx_c fx_r [] [] B.VCleared JitEmitInv.cx_heap 1 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.",
+       " B.Machine fx_st 0 fx_c fx_r [] [] B.VCleared JitEmitInv.cx_heap 2 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.")
 print(' '.join(names))

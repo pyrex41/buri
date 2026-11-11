@@ -174,9 +174,9 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/JitEmitSim.v` | The generic parts as implications: `preservation'` from `sim'` and `raise_resolve`, `call_preservation'` from `preservation'`, `call_preservation_src'` from `call_preservation'` and `clo_scoped`; the slot-1 gap witnessed (r22-emit-sim) |
+| `rocq/JitEmitSim.v` | The generic parts as implications: `preservation'` from `sim'` and `raise_resolve`, `call_preservation'` from `preservation'`, `call_preservation_src'` from `call_preservation'` and `clo_scoped`; the slot-1 gap witnessed; `preservation'`, `call_preservation'`, `call_preservation_src'` refuted (stale `m_next`) (r22-emit-sim) |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 718 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 723 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -1040,6 +1040,21 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
 theorem there is an implication between statements, closed under the global context. Nothing in
 `rocq/JitEmitInv.v` changed.
 
+**`preservation'_statement`, `call_preservation'_statement` and `call_preservation_src'_statement` are FALSE as
+stated** (closed in Rocq at `cx_E`, `cx_pt`, sealed `[]`: `preservation'_false`, `call_preservation'_false`,
+`call_preservation_src'_false`; and `raise_resolve_false` for this task's own premise). SMs says nothing about the
+machine's allocation pointer `m_next`, and `JitBytecode.alloc` writes at `m_next` without looking. The witness
+`fx_m` is SM-related to JitEmitInv's `cx_s` with `m_next` = 1, the key of do's closure. It is entered on the
+accepted function `(defun f (X) (hd X))` (CompFn' through C_ret, O_val, C_prim, O_var; no hook) with 1. Its
+first step raises with no handler, allocating the exception over do's closure, and finishes (`fx_next`). Every
+end that Ends' or EndsSrc' admits asks SMs of that final machine. FunRel' fails there for every store
+(`fx_no_funrel`), and the machine has no further step, so at n = 1 neither disjunct holds. The fix belongs to
+emit-spec: SMs must keep `m_next` fresh (every key at or above it unused). This does NOT refute
+`sim'_statement`: O'_raise asks SM of the machine before the allocation. Mutant `ShenJitEmitSimFreshNext`
+gives the witness a fresh pointer, and `fx_next` must then fail. The implications below stay as proved. Their
+conclusions are false at `cx_E`, so `raise_resolve_statement` is false there too; each conclusion becomes a
+target only once SMs is repaired.
+
 | Theorem | From | To |
 |---|---|---|
 | `call_preservation'_of_preservation'` | `preservation'_statement` | `call_preservation'_statement` (the entry state is MS'-related: `entered_ms'`) |
@@ -1087,9 +1102,9 @@ inverted outside their files); `old_reflect_core_statement` (UNKNOWN, not attemp
 `C_prim` goes through `pmap`, which has no IO primitive, so nothing a call enters asks for IO (the analogue
 of `env_ok_needed` needs a family rule reaching get-time).
 
-Ten closed statements added (`Audit_Jit` 718). Five mutants, each dropping or weakening one new premise
+Fifteen closed statements added (`Audit_Jit` 723). Six mutants (`ShenJitEmitSimFreshNext` above, and five each dropping or weakening one new premise
 or theorem hypothesis: `ShenJitEmitSimCloScoped`, `ShenJitEmitSimVrhDom`, `ShenJitEmitSimAdequacyRefl`,
-`ShenJitEmitSimRaiseStar`, `ShenJitEmitSimSlot1Any`. The `scripts/report.py` pin is 273 (268 + 5), computed;
+`ShenJitEmitSimRaiseStar`, `ShenJitEmitSimSlot1Any`). The `scripts/report.py` pin is 274 (268 + 6), computed;
 `make report` was not run. The evidence is in [STATUS](STATUS.md).
 
 ### Pass split: the normal form (wave 1b)

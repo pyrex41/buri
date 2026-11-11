@@ -3,6 +3,13 @@
    NOTHING here is assumed or Admitted; each theorem takes the statements it uses as explicit
    arguments, so Print Assumptions shows no axiom.
 
+   FALSE as stated (closed, at JitEmitInv.cx_E, cx_pt, sealed []): preservation'_statement,
+   call_preservation'_statement, call_preservation_src'_statement (preservation'_false,
+   call_preservation'_false, call_preservation_src'_false), and this file's raise_resolve_statement
+   (raise_resolve_false). SMs does not keep the allocation pointer m_next fresh; see the section
+   "the statements are FALSE as stated". The implications below hold, but their conclusions are
+   targets only once SMs is repaired (emit-spec).
+
    Proved here (closed):
    - MEnv_bind', entered_ms': the configuration a call enters is MS'-related (cv = [], the
      parameters in slots 2 up, the empty continuation through KC'_ret and RK'_top).
@@ -331,6 +338,156 @@ Proof.
    + intros a A; cbn in A |- *; lia.
    + intros a A; lia.
    + apply KC'_slot; [cbn; lia|]. apply KD'_ret; [intros a A; cbn in *; lia|constructor].
+Qed.
+
+(* ---------- the statements are FALSE as stated: a stale allocation pointer (closed) ----------
+   SM (SMs: sm_bij, sm_heap, sm_gvals, sm_fun) says nothing about the machine's next allocation key
+   m_next, and JitBytecode.alloc writes at m_next without looking. So SM relates a machine whose
+   m_next is the key of a live object, here do's closure (key 1 of JitEmitInv.cx_heap, which
+   FunRel' ties to the store's do). The call fx_c of (defun f (X) (hd X)) on 1 is accepted
+   (CompFn' through C_ret, O_val, C_prim, O_var; no family hook) and entered with 1 in slot 2. The
+   machine's first step raises "hd: 1 is not a pair" with no handler, allocating the exception at
+   key 1 over do's closure, and finishes (fx_next). Every end Ends' or EndsSrc' admits asks SMs of
+   that final machine, whose FunRel' fails for EVERY store (fx_no_funrel: the global function do
+   is a closure at key 1, which no longer holds one). And the machine has no step to stay related
+   after. So, at n = 1, neither disjunct holds:
+   - call_preservation'_false: ~ call_preservation'_statement cx_E cx_pt [];
+   - preservation'_false: ~ preservation'_statement cx_E cx_pt [] (through
+     call_preservation'_of_preservation');
+   - call_preservation_src'_false: ~ call_preservation_src'_statement cx_E cx_pt [] [] (b0 = b1 = e,
+     the KRef links by KRef_refl, D = []).
+   What the statements need: SMs to keep m_next fresh (every key at or above it unused, or at least
+   tget (m_next m) (m_heap m) = None with alloc's successor fresh in turn); that is a change to
+   JitEmitInv's SMs (emit-spec's), so this task stops here for these three statements.
+   Does NOT say: anything about a machine whose m_next is fresh (every machine the loader builds
+   and every run from one), or about sim'_statement, which O'_raise satisfies before the allocation
+   (its SM is of the machine that raises); the refutation is of the many-step statements' ends. *)
+Definition fx_x : name := JitEmitInv.cx_x.
+Definition fx_b : expr := ECall (of_string "hd") [EVar fx_x].
+Definition fx_r : list B.instr := [B.IPrim 3 B.PHd [B.OSlot 2]; B.IReturn (B.OSlot 3)].
+Definition fx_c : B.code := B.Code B.VNil 1 None 5 [] fx_r [] B.VNil.
+Definition fx_st : B.tree B.val := B.tset (B.skey 2) (B.VFix 1) B.Leaf.
+Definition fx_m : B.machine :=
+ B.Machine fx_st 0 fx_c fx_r [] [] B.VCleared JitEmitInv.cx_heap 1 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.
+Definition fx_args : list value := [VNum (NInt 1)].
+
+Lemma fx_sm : SM [] JitEmitInv.cx_s [] fx_m.
+Proof.
+ split.
+ - constructor.
+   + exact pbij_nil.
+   + intros l p I; destruct I.
+   + split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
+   + apply funrel_embed. apply JitEmitInv.cx_funrel; reflexivity.
+ - unfold HK. cbn. constructor.
+Qed.
+
+Lemma fx_comp : CompFn' fx_c [fx_x] fx_b.
+Proof.
+ exists []. eapply C_ret. eapply O_val. eapply C_prim with (p := PHd) (q := B.PHd) (ops := [B.OSlot 2]).
+ - vm_compute. reflexivity.
+ - reflexivity.
+ - reflexivity.
+ - discriminate.
+ - eapply Os_cons; [eapply O_var; [vm_compute; reflexivity|lia]|apply Os_nil].
+ - reflexivity.
+Qed.
+
+Lemma fx_entered : entered' [] fx_m fx_c fx_args.
+Proof.
+ split; [reflexivity|split; [reflexivity|split; [reflexivity|split; [reflexivity|]]]].
+ eapply AA'_cons; [vm_compute; reflexivity|constructor|constructor].
+Qed.
+
+Lemma fx_next : exists m', B.next JitEmitInv.cx_E JitEmitInv.cx_pt fx_m = B.MFinal (B.FError (B.VExn 1)) m' /\
+ B.m_gfun m' = JitEmitInv.cx_gfun /\ exists msg tv, B.tget 1 (B.m_heap m') = Some (B.OExn msg tv).
+Proof.
+ eexists. split; [vm_compute; reflexivity|]. split; [reflexivity|]. eexists _, _. vm_compute. reflexivity.
+Qed.
+
+Lemma fx_no_funrel : forall s m', B.m_gfun m' = JitEmitInv.cx_gfun ->
+ (forall c caps, B.tget 1 (B.m_heap m') <> Some (B.OClo c caps)) -> ~ FunRel' s m'.
+Proof.
+ intros s m' G H Fr. assert (Gd : B.tget (B.sym_of_text do_name) (B.m_gfun m') = Some (B.VClo 1)).
+ { rewrite G. apply JitMeta.JitMeta.tget_tset_same. }
+ destruct (lookup do_name (gfuns s)) as [[p|ps b]|] eqn:L.
+ - pose proof (fr'_prim _ _ Fr _ _ L) as Pn. rewrite JitEmitInv.do_not_prim in Pn. discriminate.
+ - destruct (fr'_user _ _ Fr _ _ _ L) as (l & c & caps & Gl & Hl & _). rewrite Gd in Gl. inversion Gl; subst.
+   exact (H c caps Hl).
+ - exact (fr'_none _ _ Fr _ L 1 Gd).
+Qed.
+
+(* The final machine of any end from fx_m: none is SMs-related to any store. *)
+Lemma fx_final_bad : forall o m2, B.next JitEmitInv.cx_E JitEmitInv.cx_pt fx_m = B.MFinal o m2 ->
+ (forall v', o <> B.FReturn v') /\ forall mu s, ~ SMs mu s m2.
+Proof.
+ intros o m2 N. destruct fx_next as (m' & Nx & G & msg & tv & Hl). rewrite Nx in N. injection N as <- <-.
+ split; [intros v' E0; discriminate|]. intros mu s Ss. apply (fx_no_funrel s m' G); [|exact (sm_fun _ _ _ Ss)].
+ intros c caps E0. rewrite Hl in E0. discriminate.
+Qed.
+
+Lemma fx_trun : forall rs k tT m1, TRun JitEmitInv.cx_E JitEmitInv.cx_pt rs k fx_m tT m1 -> k = 0%nat /\ m1 = fx_m.
+Proof.
+ intros rs k tT m1 Tr. destruct fx_next as (m' & Nx & _). inversion Tr; subst; [split; reflexivity| |];
+  match goal with N : B.next _ _ fx_m = _ |- _ => rewrite Nx in N; discriminate end.
+Qed.
+
+Theorem call_preservation'_false : ~ call_preservation'_statement JitEmitInv.cx_E JitEmitInv.cx_pt [].
+Proof.
+ intro Cp. destruct env_ok_inhabited as [rs Eo].
+ destruct (Cp [] JitEmitInv.cx_s fx_m fx_c [fx_x] fx_b fx_args 1%nat rs Eo fx_sm fx_comp eq_refl fx_entered)
+   as [(c' & m' & k & tS & tT & mu' & _ & Tr & Le & _)|(m1 & k & tS & tT & En & Tr & _)].
+ - destruct (fx_trun rs k tT m' Tr) as [-> _]. lia.
+ - destruct (fx_trun rs k tT m1 Tr) as [_ ->].
+   destruct En as [v v' s' m2 mu' _ Nf _ _ Ss|x l msg tv s' m2 mu' _ Nf _ _ _ Ss];
+     destruct (fx_final_bad _ _ Nf) as [Nr Ns]; [exact (Nr v' eq_refl)|exact (Ns _ _ Ss)].
+Qed.
+
+Theorem preservation'_false : ~ preservation'_statement JitEmitInv.cx_E JitEmitInv.cx_pt [].
+Proof. intro P. exact (call_preservation'_false (call_preservation'_of_preservation' _ _ _ P)). Qed.
+
+Theorem call_preservation_src'_false : ~ call_preservation_src'_statement JitEmitInv.cx_E JitEmitInv.cx_pt [] [].
+Proof.
+ intro Cp. destruct env_ok_inhabited as [rs Eo].
+ assert (Dw : JitKRef.JitKRef.D_wf [] []) by (split; constructor).
+ assert (Kr : JitKRef.JitKRef.KRef [] [] [fx_x] fx_b fx_b)
+   by (apply (JitKRefFund.JitKRefFund.KRef_refl [] [] [fx_x] fx_b Dw); vm_compute; reflexivity).
+ assert (Sh : JitKRef.JitKRef.StoreHas [] JitEmitInv.cx_s) by (intros f d I; destruct I).
+ assert (So : store_ok JitEmitInv.cx_s) by (split; constructor).
+ destruct (Cp [] JitEmitInv.cx_s fx_m fx_c [fx_x] fx_b fx_b fx_b fx_args 1%nat rs Eo Dw Kr Kr Sh So fx_sm fx_comp eq_refl fx_entered)
+   as [(c' & m' & k & tS & tT & mu' & _ & Tr & Le & _)|(m1 & k & tS & tT & En & Tr & _)].
+ - destruct (fx_trun rs k tT m' Tr) as [-> _]. lia.
+ - destruct (fx_trun rs k tT m1 Tr) as [_ ->].
+   destruct En as [v0 v v' s0 s' w m2 mu' _ _ _ _ Nf _ _ Ss|x l msg tv s0 s' w m2 mu' _ _ _ Nf _ _ _ Ss];
+     destruct (fx_final_bad _ _ Nf) as [Nr Ns]; [exact (Nr v' eq_refl)|exact (Ns _ _ Ss)].
+Qed.
+
+(* raise_resolve_statement (preservation'_of_sim''s premise) is FALSE as stated, by the same stale
+   pointer: at fx_m the machine raises from fx_m with its rest advanced (fx_raise), SM and an empty
+   continuation relate that machine, and the only resolution, the no-handler end, asks SMs of the
+   machine after the allocation (fx_final_bad). So preservation'_of_sim' is an implication from a
+   false premise at cx_E; it says what the many-step proof needs once SMs keeps m_next fresh. *)
+Definition fx_m2 : B.machine := B.set_rest fx_m [B.IReturn (B.OSlot 3)].
+Lemma fx_raise : B.next JitEmitInv.cx_E JitEmitInv.cx_pt fx_m = B.raise fx_m2 (B.t "hd: ~S is not a pair") (B.VFix 1).
+Proof. vm_compute. reflexivity. Qed.
+
+Theorem raise_resolve_false : ~ raise_resolve_statement JitEmitInv.cx_E JitEmitInv.cx_pt [].
+Proof.
+ intro Rr.
+ assert (Sm : SM [] JitEmitInv.cx_s [] fx_m2).
+ { split.
+   - constructor.
+     + exact pbij_nil.
+     + intros l p I; destruct I.
+     + split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
+     + apply funrel_embed. apply JitEmitInv.cx_funrel; reflexivity.
+   - unfold HK. cbn. constructor. }
+ destruct (Rr [] XNotCallable [] JitEmitInv.cx_s fx_m fx_m2 (B.t "hd: ~S is not a pair") (B.VFix 1) [] [] (fun a => (0 <= a)%N)
+   fx_raise I Sm (or_introl eq_refl))
+   as [(c' & m' & mu' & _ & (ma & T1 & _) & _)|(l & msg' & tv' & s' & m3 & mu' & _ & Nf & _ & _ & _ & Ss)].
+ - right. right. exists DRet, []. apply KC'_ret; [intros a A; exact A|constructor].
+ - destruct fx_next as (mx & Nx & _). unfold TS in T1. rewrite Nx in T1. discriminate.
+ - exact (proj2 (fx_final_bad _ _ Nf) _ _ Ss).
 Qed.
 
 (* ---------- the front end composed ---------- *)
