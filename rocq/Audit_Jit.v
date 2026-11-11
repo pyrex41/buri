@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontInline.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -475,3 +475,12 @@ Print Assumptions JitFrontD.JitFrontD.cblk_of_Comp.
 Print Assumptions JitFrontD.JitFrontD.cblk_CompFn.
 Print Assumptions JitFrontD.JitFrontD.cblk_reject.
 Print Assumptions JitFrontD.JitFrontD.D_why_spec.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_sound.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_sound_of.
+Print Assumptions JitFrontInline.JitFrontInline.REnv_tag.
+Print Assumptions JitFrontInline.JitFrontInline.inline_site_unsound.
+Print Assumptions JitFrontInline.JitFrontInline.bind_site_unsound.
+Print Assumptions JitFrontInline.JitFrontInline.no_reach_iter.
+Print Assumptions JitFrontInline.JitFrontInline.KRef_throw.
+Print Assumptions JitFrontInline.JitFrontInline.inl_site_g_inl_site.
+Print Assumptions JitFrontInline.JitFrontInline.bind_site_g_bind_site.

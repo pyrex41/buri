@@ -493,4 +493,63 @@ Proof.
 Qed.
 End Cx.
 
+(* ======================= the proposed guard, and its cost on real data ======================= *)
+(* A frozen argument whose body reads id_key: the counterexamples' shape. *)
+Definition reads_id (n : expr) : bool := match n with
+ | EFreeze x => bound (JitKRef.JitKRef.fv x) id_key | _ => false end.
+Definition inl_site_g (fold letdo : bool) (D : list (name * fundef)) (f : name) (nargs : list expr) (e : expr) : bool :=
+ forallb (fun n => negb (reads_id n)) nargs && F.inl_site fold letdo D f nargs e.
+Definition bind_site_g (fold : bool) (D : list (name * fundef)) (nargs : list expr) (e : expr) : bool :=
+ forallb (fun n => negb (reads_id n)) nargs && F.bind_site fold D nargs e.
+
+Lemma inl_site_g_inl_site : forall fold letdo D f nargs e, inl_site_g fold letdo D f nargs e = true -> F.inl_site fold letdo D f nargs e = true.
+Proof.
+ intros. unfold inl_site_g in H.
+ repeat match goal with Hb : (_ && _) = true |- _ => apply andb_prop in Hb as [_ Hb] end. assumption.
+Qed.
+Lemma bind_site_g_bind_site : forall fold D nargs e, bind_site_g fold D nargs e = true -> F.bind_site fold D nargs e = true.
+Proof.
+ intros. unfold bind_site_g in H.
+ repeat match goal with Hb : (_ && _) = true |- _ => apply andb_prop in Hb as [_ Hb] end. assumption.
+Qed.
+
+(* The guard rejects both counterexamples (tests: they pin what the guard is for). *)
+Example inl_site_g_cx : inl_site_g false false D_cx f_cx [xfz] (EVar id_key) = false.
+Proof. vm_compute. reflexivity. Qed.
+Example bind_site_g_cx : bind_site_g false D_bx nargs_bx e_bx = false.
+Proof. vm_compute. reflexivity. Qed.
+
+(* Real-site report (a TEST harness over the decoded stage 0 table, as JitFrontD.inl_report):
+   every inlining marker site (isites, read back with site_nargs) against its owner's D_of store,
+   and every bound-now site (bind_args over the lowered body). Returns
+   (inline sites, read back, accepted unguarded fold=false, accepted guarded fold=false,
+    accepted unguarded fold=true, accepted guarded fold=true, sites with a frozen argument reading id_key,
+    bound-now sites, accepted unguarded, accepted guarded). *)
+Definition site_report (rows : list F.row) : list nat :=
+ let isite_args := flat_map (fun r =>
+   match F.D_of rows (F.r_name r) with
+   | None => []
+   | Some D => flat_map (fun s => let '(f, m, oe) := s in
+       match oe, lookup f D with
+       | Some e, Some (FUser ps eF) => match F.site_nargs ps eF m e with
+         | Some (nargs, _) => [(D, f, nargs, e)]
+         | None => [] end
+       | _, _ => [] end) (F.isites rows (F.r_params r) [] (F.r_nf r)) end) rows in
+ let nsites := List.length (flat_map (fun r => F.isites rows (F.r_params r) [] (F.r_nf r)) rows) in
+ let cnt (P : list (name * fundef) * name * list expr * expr -> bool) := List.length (filter P isite_args) in
+ let bsites := flat_map (fun r =>
+   match F.D_of rows (F.r_name r) with
+   | None => []
+   | Some D => flat_map (fun s => match F.bind_args s with Some a => [(D, a, s)] | None => [] end) (F.subterms (F.r_low r)) end) rows in
+ let bcnt (P : list (name * fundef) * list expr * expr -> bool) := List.length (filter P bsites) in
+ [nsites; List.length isite_args;
+  cnt (fun q => let '(D, f, nargs, e) := q in F.inl_site false false D f nargs e);
+  cnt (fun q => let '(D, f, nargs, e) := q in inl_site_g false false D f nargs e);
+  cnt (fun q => let '(D, f, nargs, e) := q in F.inl_site true false D f nargs e);
+  cnt (fun q => let '(D, f, nargs, e) := q in inl_site_g true false D f nargs e);
+  cnt (fun q => let '(_, _, nargs, _) := q in existsb reads_id nargs);
+  List.length bsites;
+  bcnt (fun q => let '(D, a, e) := q in F.bind_site false D a e);
+  bcnt (fun q => let '(D, a, e) := q in bind_site_g false D a e)].
+
 End JitFrontInline.

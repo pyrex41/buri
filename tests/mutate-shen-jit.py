@@ -144,6 +144,17 @@ ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arg
   source call's. pair_src_lrules_wrong must fail.
 ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
   marker. isites_fbound must fail.
+ShenJitFrontAeqLamNoRn: aeq compares a lambda's bodies without pairing the two binders, so
+  (lambda x x) is alpha-equivalent to (lambda y x). Built as JitFrontD.v + JitFrontInline.v
+  (mutate_chain); JitFrontD's Example aeq_shadow fails first (aeq_sound's lambda case comes later
+  in the chain).
+ShenJitFrontAeqLetIdKey: aeq's let case drops binder_ok, so a let may bind the closure-identity key,
+  which a freeze then rebinds on one side only. Built as JitFrontD.v + JitFrontInline.v; aeq_sound
+  must fail (REnv_tag's RnOk premise is no longer met).
+ShenJitFrontInlGuard: inl_site_g drops its id_key guard on frozen arguments, so it accepts the
+  inline counterexample. inl_site_g_cx must fail.
+ShenJitFrontBindGuard: bind_site_g drops its id_key guard, so it accepts the bound-now
+  counterexample. bind_site_g_cx must fail.
 """
 import re
 from pathlib import Path
@@ -386,4 +397,17 @@ mutate('ShenJitFrontPairReadBack', front,
 mutate('ShenJitFrontIsitesNoLets', front,
        ' | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O',
        ' | (x, NVar _, _) :: anc => if bound ps x then O else O')
+finl = ['rocq/JitFrontD.v', 'rocq/JitFrontInline.v']
+mutate_chain('ShenJitFrontAeqLamNoRn', finl,
+       ' | ELam x b0, ELam y b => binder_ok x y && aeq ((x, y) :: rn) b0 b\n | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a',
+       ' | ELam x b0, ELam y b => binder_ok x y && aeq rn b0 b\n | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a')
+mutate_chain('ShenJitFrontAeqLetIdKey', finl,
+       ' | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a && aeq ((x, y) :: rn) b0 b\n | EIf c0 a0 b0, EIf c a b => aeq rn c0 c',
+       ' | ELet x a0 b0, ELet y a b => aeq rn a0 a && aeq ((x, y) :: rn) b0 b\n | EIf c0 a0 b0, EIf c a b => aeq rn c0 c')
+mutate('ShenJitFrontInlGuard', 'rocq/JitFrontInline.v',
+       ' forallb (fun n => negb (reads_id n)) nargs && F.inl_site fold letdo D f nargs e.',
+       ' F.inl_site fold letdo D f nargs e.')
+mutate('ShenJitFrontBindGuard', 'rocq/JitFrontInline.v',
+       ' forallb (fun n => negb (reads_id n)) nargs && F.bind_site fold D nargs e.',
+       ' F.bind_site fold D nargs e.')
 print(' '.join(names))
