@@ -346,6 +346,50 @@ comparing code, and `check_def_sound` then fails.
 
 Under Coq 8.18 (`make prove`), `JitImage.v` is UNKNOWN: no 8.18 toolchain was available here.
 
+## Evidence (r21-image-lane)
+
+All runs were in `buri-lps` on 11 November 2026, under Rocq 9.3 (opam switch `lps`). The tree is commit `1533b51` on
+`p2/r21-image-lane`, based on `p2/int` `f42d6c4`, copied with `git archive` to `/work/p2-r21-image-lane`. The later
+commits change only docs and the ledger. Kinds are kept apart: Rocq proofs (lane), Rocq census (`image_facts`),
+Python census, and a binary test.
+
+| Run | Command | Exit | Log sha256 |
+|---|---|---|---|
+| Lane, with image step (proof and Rocq census) | `cd /work/p2-r21-image-lane && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-image-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh` | 0, 1355 s | `/tmp/p2-r21-image-lane-lane.log` `ea4cd53c500132976d847df2ae92565c922df68d3b2852bff0f4be57fa848327` |
+| the image step's Rocq log (`image_code_ok`, `image_mutants_caught`, `image_facts`) | inside the lane run, about 126 s | 0 | `s0/Img.log` `cb369c66a573c7070f5eed42fcca2f616a0c8b8f5612409c6fc1110889cd3574`; `s0/image-facts.txt` `d1017803d8c748e4e764a6aa8c54489dd6e59a65cf53df9d7083f3b0cf600376` (equal to the pin) |
+| Proof mutant `ShenJitImageNoCodeEq` (from `tests/mutate-shen-jit.py`, Stdlib rename) | `rocq compile -Q /tmp/p2-r21-image-lane-out Buri ShenJitImageNoCodeEq.v` under rocq-slot | 1, rejected: "(in proof check_def_sound): Attempt to save an incomplete proof" | `/tmp/p2-r21-image-mut/ShenJitImageNoCodeEq.log` `45eb3afdfe79ed6fb33983661205e14e31560a43587c7ce5ba2115e793772847` |
+| Measurements (Python census, binary split, redefinition test) | `bash /tmp/p2-r21-image-meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas`: runs `census.py`, `sealgap.py` and `fncells.py`, the split hashes, and `qemu-riscv64 /lps/p6/sj/build/shen-jit script redef.shen` | 0 (each step 0) | `/tmp/p2-r21-image-meas.log` `4a6c412489ab2e1ecaea265bdcffd414e529f87aded3ac0892b1010c4e326d85` |
+
+The lane printed:
+- "rocq-9: 527 audited statements closed, rocqchk passed";
+- "stage0: 148 accepted, 807 rejected, 0 unreadable of 955 definitions, as recorded";
+- "image: image_code_ok proved, assuming only Uint63 int, lsr, land, eqb ... 2 image mutants caught, census as recorded";
+- "differential: NOT RUN".
+
+`Audit_Jit.log` has sha256 `f19d12ce631457a12dbe4993ef7d4bea089ddfb49748035eec9fec161b60d5f7`. The 148 is the source
+judge's stage 0 count, not a validated count.
+
+Measurement outputs (sha256):
+- `split.out` `a2703018141da0842914299260b03247d7cec877e0f23f0799e7c5a855746919`: 5440856 bytes, runtime `13afde42...`,
+  image `fd8485a5...`, `SJHI-END`;
+- `census.out` `36f1fd87391f5c2bb6e30f0e4b9bf8e88821401c01c185bc76838e9b7bdb6dcc`;
+- `sealgap.out` `0e509ac14f9b6c14c78bfde49bce30b741b814a5fb574cad38dc3291d7b877cb`, the same as at r1-image;
+- `fncells.out` `ae8e926404034dab5752104aab9e6d18ae604c35d95716d5a2b314942f953364`;
+- `redef.shen` `acc9512f2fd0d2150129a6041bb2be17146d43f9e67e1c2dec4f29e86217686d`, `redef.out`
+  `46329b981e8d9250ff6b739bcedebcc09552ad26e8f9e8586ee85cb54e6e8cb7`, `redef.err` empty.
+
+The binary is `e0acd513...` and stage 0 is `ec9b3872...`, both as pinned. The measurement script lives in the session
+scratchpad and is not committed. Its steps are the commands listed in the table.
+
+**Ledger:** `./scripts/check-shen tests/ledger.shen` on the host passed: BURI_SUITE_OK ledger 62.
+
+**Not run, UNKNOWN for this branch:**
+- `make prove` (Coq 8.18, which would compile `JitImage.v`; no 8.18 toolchain here);
+- the differential;
+- `gate_tests.sh`;
+- the full mutation suite (`scripts/proof-mutations`);
+- `make report`.
+
 ## Evidence of the r1-image spike (history, superseded for the code objects by the lane step)
 
 Everything was run in `buri-lps` on 10 November 2026, from worktree `p2/r1-image`, at commit `e08d73e`, which is based
