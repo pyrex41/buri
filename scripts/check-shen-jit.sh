@@ -81,7 +81,7 @@ rocqchk -silent -Q . Buri $(for f in $FILES; do echo "Buri.$f"; done) > chk.log 
 echo "rocq-9: ${closed} audited statements closed, rocqchk passed"
 # Emit families, term level (r21-emit-spec-land): Rocq prints (Set Printing All) every constant of JitEmitRel and of each
 # compiled module that directly requires a JitEmit module, outside the JitEmitRule<X>.v files; JitEmitRel's own Comp_ind' family and the
-# block's generated schemes are exempt. No printed term may match on Comp, CompT or CompOp (such a match prints
+# block's generated schemes are exempt, as are those of JitEmitNestTest's copy (JitEmitRelDummy). No printed term may match on Comp, CompT or CompOp (such a match prints
 # their hook constructors [CTO]_<X> as branches; JitLowerRel's Comp has no such constructors), match on a Rule hook, or use a Rule hook's or the Comp block's generated schemes. This
 # sees what the syntactic gate cannot, such as a destruct of an unnamed Comp hypothesis. Test evidence, not proof.
 python3 -I - "$out" "$FILES" <<'EMIT_TERM' || { echo "EMIT_TERM_INVERSION_FOUND"; exit 15; }
@@ -90,7 +90,8 @@ out=pathlib.Path(sys.argv[1]); files=sys.argv[2].split()
 FAM='(?:Eq|Store|Prim|DoFold|Clo|App|Trap)'
 KINDS={'def','prf','scheme','rec','corec','proj','inst','meth','coe','thm','lem','fact'}
 BLK=['Comp','CompT','CompOp','CompOps','CompW','CompTA']
-EXEMPT={('JitEmitRel','JitEmitRel',n) for n in [b+"_ind'" for b in BLK]+[f'{b}_{s}' for b in BLK for s in ['ind','sind','rect','rec']]}
+EXEMPT={(f,p,n) for f,p in [('JitEmitRel','JitEmitRel'),('JitEmitNestTest','JitEmitNestTest.JitEmitRelDummy')]
+        for n in [b+"_ind'" for b in BLK]+[f'{b}_{s}' for b in BLK for s in ['ind','sind','rect','rec']]}
 names=[]; mods=[]
 for f in files:
     if f.startswith('JitEmitRule') or f=='Audit_Jit': continue
