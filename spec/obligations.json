@@ -4635,13 +4635,20 @@
      "ref": "docs/SHEN-JIT-IMAGE.md",
      "establishes": "artifact-correspondence",
      "note": "measured: the binary e0acd513... (5440856 bytes) is the runtime 13afde42... (4657760 bytes) followed by the image fd8485a5... (783096 bytes), found from the SJHI-END trailer; the run opens argv[0] (resolved through PATH) unless SHEN_JIT_IMAGE is set. No premise about the file system is stated in any theorem yet"
+    },
+    {
+     "kind": "identity-hash",
+     "ref": "spikes/image-decode/meas.sh",
+     "establishes": "artifact-correspondence",
+     "note": "re-measured (bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc; split.out sha256 a2703018141da0842914299260b03247d7cec877e0f23f0799e7c5a855746919): the binary e0acd513... (5440856 bytes) is runtime 13afde42... + image fd8485a5... ending SJHI-END. Verdict: feasible only as a stated premise of the top theorem (SHEN_JIT_IMAGE unset, argv[0] resolves to this file); not derivable from the image"
     }
    ],
    "completion_evidence": "A stated premise, used by the top theorem, that the file the run opens (argv[0] resolved through PATH, SHEN_JIT_IMAGE unset) holds the pinned binary, whose final image is fd8485a5...; or the image embedded in the ELF.",
    "sources": [
+    "docs/SHEN-JIT-IMAGE.md",
     "docs/SHEN-JIT.md",
-    "spikes/riscv-build/RESULTS.md",
-    "docs/SHEN-JIT-IMAGE.md"
+    "spikes/image-decode/meas.sh",
+    "spikes/riscv-build/RESULTS.md"
    ],
    "history": [
     {
@@ -4681,7 +4688,7 @@
      "kind": "instance-validation",
      "ref": "JitImage.JitImage.code_check_sound",
      "establishes": "artifact-correspondence",
-     "note": "lane step of scripts/check-shen-jit.sh: Img.v (stage0_to_rocq.py --image) proves image_code_ok, code_check over the pinned image and the 24 files' stage 0 trees (Buri.s0 modules), by vm_compute; its only printed assumptions are Rocq's primitive Uint63 int, lsr, land, eqb (the reader's halves join), checked exactly by the lane; image_mutants_caught (two print code mutants) proved; proof mutant ShenJitImageNoCodeEq rejected. Partial only because OB-JIT-IMAGE-READER is open"
+     "note": "lane step of scripts/check-shen-jit.sh (cd /work/p2-r21-image-lane && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-image-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh at 1533b51 in buri-lps, rc 0, log sha256 ea4cd53c500132976d847df2ae92565c922df68d3b2852bff0f4be57fa848327, s0/Img.log cb369c66a573c7070f5eed42fcca2f616a0c8b8f5612409c6fc1110889cd3574): Img.v (stage0_to_rocq.py --image) proves image_code_ok, code_check over the pinned image and the 24 files' stage 0 trees (Buri.s0 modules), by vm_compute; its only printed assumptions are Rocq's primitive Uint63 int, lsr, land, eqb (the reader's halves join), checked exactly by the lane, so image_code_ok is not closed under the global context (the Audit_Jit theorems are); image_mutants_caught (two print code mutants) proved; proof mutant ShenJitImageNoCodeEq rejected. Partial only because OB-JIT-IMAGE-READER is open; mutant log sha256 45eb3afd...2847"
     }
    ],
    "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
@@ -4720,12 +4727,13 @@
      "kind": "review",
      "ref": "docs/SHEN-JIT-IMAGE.md",
      "establishes": "artifact-correspondence",
-     "note": "census, not proof (Rocq image_facts in the lane, tests/shen-jit/image-facts.txt; census.py, measurement /tmp/p2-r21-image-meas.sh on the committed tree in buri-lps, log /tmp/p2-r21-image-meas.log sha256 4a6c4124...6d85): 7 of 2371 code objects unreached from the 955 (thread, 6 lambda); 1313 closures, 956 in function cells, 357 elsewhere (3 in value cells), 352 of them running code reached from the 955, none with captures; 55 bound value cells. Verdict: INIT-CODE (the 7) feasible by capturing initialisation's eval-kl forms and judging them, not done; INIT-DATA (values, property vector, dictionaries, streams) infeasible now (needs validated initialisation code or a source run of initialisation)"
+     "note": "census, not proof (Rocq image_facts in the lane, tests/shen-jit/image-facts.txt; census.py, bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc): 7 of 2371 code objects unreached from the 955 (thread, 6 lambda); 1313 closures, 956 in function cells, 357 elsewhere (3 in value cells), 352 of them running code reached from the 955, none with captures; 55 bound value cells. Verdict: INIT-CODE (the 7) feasible by capturing initialisation's eval-kl forms and judging them, not done; INIT-DATA (values, property vector, dictionaries, streams) infeasible now (needs validated initialisation code or a source run of initialisation)"
     }
    ],
    "completion_evidence": "Stage 1 proved an instance of the main theorem over validated initialisation code, or the initialised store decoded and related in Rocq.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "spikes/image-decode/meas.sh"
    ],
    "history": [
     {
@@ -4757,12 +4765,13 @@
      "kind": "review",
      "ref": "spikes/image-decode/redef.shen",
      "establishes": "artifact-correspondence",
-     "note": "test, not proof (pinned binary under qemu, measurement /tmp/p2-r21-image-meas.sh on the committed tree in buri-lps, log /tmp/p2-r21-image-meas.log sha256 4a6c4124...6d85, redef.out sha256 46329b98...cb7): after eval-kl of (defun shen.x.launcher.execute-all (X) redefined) the open call gives redefined while the sealed caller shen.x.launcher.eval-command-h still gives [success]; defun of a sealed name and of thaw, hd, tl is refused. Rocq census in the lane: 890 sealed names, exactly the 18 files; the 6 extension files' 65 definitions unsealed, targeted by 115 sealed sites (file-by-file table in docs/SHEN-JIT-IMAGE.md). Verdict: FunRel surviving redefinition is false for the binary; only the premise route is feasible"
+     "note": "test, not proof (pinned binary under qemu, bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc, redef.out sha256 46329b98...cb7): after eval-kl of (defun shen.x.launcher.execute-all (X) redefined) the open call gives redefined while the sealed caller shen.x.launcher.eval-command-h still gives [success]; defun of a sealed name and of thaw, hd, tl is refused. Rocq census in the lane: 890 sealed names, exactly the 18 files; the 6 extension files' 65 definitions unsealed, targeted by 115 sealed sites (file-by-file table in docs/SHEN-JIT-IMAGE.md). Verdict: FunRel surviving redefinition is false for the binary; only the premise route is feasible"
     }
    ],
    "completion_evidence": "A stated premise or exclusion in the top theorem for redefinition of the 65 unsealed extension names, or Rocq evidence that FunRel survives it.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "spikes/image-decode/meas.sh"
    ],
    "history": [
     {
@@ -4794,12 +4803,13 @@
      "kind": "identity-hash",
      "ref": "docs/SHEN-JIT-IMAGE.md",
      "establishes": "artifact-correspondence",
-     "note": "measured (measurement /tmp/p2-r21-image-meas.sh on the committed tree in buri-lps, log /tmp/p2-r21-image-meas.log sha256 4a6c4124...6d85, split.out sha256 a2703018...6919): binary e0acd513... = runtime 13afde42... (4657760 bytes) + image fd8485a5... (783096 bytes) ending SJHI-END. Verdict: feasible by review of the word split plus a Rocq model of rebase_heap/restore_raw; not done"
+     "note": "measured (bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc, split.out sha256 a2703018...6919): binary e0acd513... = runtime 13afde42... (4657760 bytes) + image fd8485a5... (783096 bytes) ending SJHI-END. Verdict: feasible by review of the word split plus a Rocq model of rebase_heap/restore_raw; not done"
     }
    ],
    "completion_evidence": "The loader's rebasing and raw-field reconstruction modelled or reviewed against image.c, and the reader reviewed as a word split only.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "spikes/image-decode/meas.sh"
    ],
    "history": [
     {

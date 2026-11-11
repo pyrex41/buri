@@ -1382,7 +1382,7 @@ Eight are in `rocq/JitFrontProlog.v` (r1-f-prolog, branch `p2/r1-f-prolog`): nor
 Merged into `p2/int` by merge-r1-f-prolog (p2/r1-f-prolog 675aa35 after r1-f-sugar 5a478a7): the union has 523 audited statements (515 + the 8 of JitFrontProlog) and mutation pin 229 (222 + the 7 `ShenJitFrontProlog*` mutants); no statement changed. The source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
-Heap image (lane-checked since r21-image-lane; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): `rocq/JitImage.v` decodes the
+Heap image (lane-checked since r21-image-lane, the instance lemma not closed; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): `rocq/JitImage.v` decodes the
 pinned binary's image (`fd8485a5...`, the last 783096 bytes) in `scripts/check-shen-jit.sh`. Rocq proves
 `image_code_ok` by `vm_compute`: 955 of 955 stage 0 code objects equal the code objects their image function cells
 hold. It assumes only Rocq's primitive Uint63 `int`, `lsr`, `land` and `eqb`, which join the reader's halves, and the

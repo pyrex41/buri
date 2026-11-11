@@ -224,7 +224,7 @@ those 65 names.
 No `inline` instruction targets an extension name.
 
 **The gap file by file.** The 18 files `toplevel` to `lower` have every definition sealed both at stage 0 and in the
-image (890 names; the lane's `sealed_by_file` proves it per file). The 6 files below were sealed at stage 0 and are
+image (890 names). That is a Rocq census, `sealed_by_file` in `image_facts`, diffed against `tests/shen-jit/image-facts.txt`; it is not a proof. The 6 files below were sealed at stage 0 and are
 not sealed in the image. Columns: definitions, sealed in the image (Rocq, lane), stage 0 sealed sites that target the
 file's definitions, and their caller files (`census.py`, `gap` lines).
 
@@ -334,6 +334,10 @@ The steps the r1-image scoping listed are done. `scripts/check-shen-jit.sh` now 
    - Rocq first computed the words as an N list and stored it as a constant. That compile was stopped after 616 s,
      because VM-compiling a constant of about 6 million constructors is the slow part.
    - Writing the words as N literals in the file was stopped after 140 s.
+   - Joining each chunk of 1000 words with `Eval vm_compute` into its own N constant, so as to keep constants small,
+     timed out at 900 s.
+
+   So the instance is **not closed**. That is open under `OB-JIT-IMAGE-READER`.
 4. `image_facts`, the census Rocq computes on the image, is diffed with `tests/shen-jit/image-facts.txt`. It covers the
    word and definition counts, the code, closure and cell census, the sealing by file, and the thaw, hd and tl facts.
    A change fails the lane (`IMAGE_FACTS_CHANGED`).
@@ -358,7 +362,7 @@ Python census, and a binary test.
 | Lane, with image step (proof and Rocq census) | `cd /work/p2-r21-image-lane && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-image-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh` | 0, 1355 s | `/tmp/p2-r21-image-lane-lane.log` `ea4cd53c500132976d847df2ae92565c922df68d3b2852bff0f4be57fa848327` |
 | the image step's Rocq log (`image_code_ok`, `image_mutants_caught`, `image_facts`) | inside the lane run, about 126 s | 0 | `s0/Img.log` `cb369c66a573c7070f5eed42fcca2f616a0c8b8f5612409c6fc1110889cd3574`; `s0/image-facts.txt` `d1017803d8c748e4e764a6aa8c54489dd6e59a65cf53df9d7083f3b0cf600376` (equal to the pin) |
 | Proof mutant `ShenJitImageNoCodeEq` (from `tests/mutate-shen-jit.py`, Stdlib rename) | `rocq compile -Q /tmp/p2-r21-image-lane-out Buri ShenJitImageNoCodeEq.v` under rocq-slot | 1, rejected: "(in proof check_def_sound): Attempt to save an incomplete proof" | `/tmp/p2-r21-image-mut/ShenJitImageNoCodeEq.log` `45eb3afdfe79ed6fb33983661205e14e31560a43587c7ce5ba2115e793772847` |
-| Measurements (Python census, binary split, redefinition test) | `bash /tmp/p2-r21-image-meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas`: runs `census.py`, `sealgap.py` and `fncells.py`, the split hashes, and `qemu-riscv64 /lps/p6/sj/build/shen-jit script redef.shen` | 0 (each step 0) | `/tmp/p2-r21-image-meas.log` `4a6c412489ab2e1ecaea265bdcffd414e529f87aded3ac0892b1010c4e326d85` |
+| Measurements (Python census, binary split, redefinition test) | `bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2`, at commit `2149914` (the script committed): runs `census.py`, `sealgap.py` and `fncells.py`, the split hashes, and `qemu-riscv64 /lps/p6/sj/build/shen-jit script redef.shen` | 0 (each step 0) | `/tmp/p2-r21-image-meas2.log` `671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc`. An earlier run of the same script from the scratchpad gave identical output hashes |
 
 The lane printed:
 - "rocq-9: 527 audited statements closed, rocqchk passed";
@@ -378,8 +382,7 @@ Measurement outputs (sha256):
 - `redef.shen` `acc9512f2fd0d2150129a6041bb2be17146d43f9e67e1c2dec4f29e86217686d`, `redef.out`
   `46329b981e8d9250ff6b739bcedebcc09552ad26e8f9e8586ee85cb54e6e8cb7`, `redef.err` empty.
 
-The binary is `e0acd513...` and stage 0 is `ec9b3872...`, both as pinned. The measurement script lives in the session
-scratchpad and is not committed. Its steps are the commands listed in the table.
+The binary is `e0acd513...` and stage 0 is `ec9b3872...`, both as pinned.
 
 **Ledger:** `./scripts/check-shen tests/ledger.shen` on the host passed: BURI_SUITE_OK ledger 62.
 
