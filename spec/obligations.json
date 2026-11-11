@@ -6251,7 +6251,8 @@
     "rocq/JitKRefFv.v",
     "rocq/JitKRefCompatCall.v",
     "rocq/JitKRefFund.v",
-    "rocq/JitFrontD.v"
+    "rocq/JitFrontD.v",
+    "rocq/JitFrontProlog.v"
    ],
    "history": [
     {
@@ -6323,6 +6324,113 @@
      "source": "rocq/JitFrontD.v",
      "recorded": "2026-11-11: open. Merge of p2/r1-d00-merge (3338413) into p2/int after r1-term (cd991df): no statement changed; the union has 475 Audit_Jit statements (463 + the 12 of JitFrontD) and mutation pin 216 (203 + the 13 ShenJitFront mutants; tests/mutate-shen-jit.py has 60 mutate calls).",
      "reconciliation": "merge-r1-d00-merge, Phase 2 integration, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontProlog.v",
+     "recorded": "2026-11-11: open. r1-f-prolog (rocq/JitFrontProlog.v, branch p2/r1-f-prolog off p2/int 7cb676e): the bound-now rule of norm, bind_rule, as a front rule of F00's shape (rule, rule_sound), proved sound for every store D (bind_rule_sound, from D_wf alone): the source call (shen.bind! X0 Y0 B0 (freeze E0)) refines the expansion (let a1 X (let a2 Y (let a3 B N))) when the recursive checker relates X0, Y0 and B0 to the let values and E0 to each place N runs it, and beq relates shen.bind!'s lowered body in D to N (alpha-equivalence with bind!'s first three parameters renamed to a1 a2 a3, the fourth thawed in place, an unused let read as the kernel's do). beq_sound is a direct induction on the two bodies, with no transitivity of KRef; the source's frames are related to the target's lets by KRel_ca_let and KRel_ca_last. Audited (8 statements, each Closed under the global context): bind_rule_sound, beq_sound, ERel_letdo, KRel_do_tail, KRel_ca_let, KRel_ca_last, star_reach, bind_site_unsound. FINDING, Rocq-checked: JitFrontD.bind_site_sound_statement is false (bind_site_unsound: a frozen body reading KLPort's id_key is accepted by bind_site, and the target returns the caller's id_key value where the source can only return its closure's own cell); bind_rule adds the id_key guard (Example bind_rule_rejects_id_key). inline_site_sound_statement's thaw-with case has the same unguarded id_key position (frozen_free and hidden do not test id_key); not refuted in Rocq here. Test, not proof (Rocq vm_compute, prolog_scan over the 955 parsed stage 0 sources via stage0_to_rocq.py --prolog): bound-now's direct shape in 6 definitions (25 sites), the let-frozen shape in 5 (23 lets), unified-now's in 4 (7), cut-fail's and deref='s in 0. bind_rule on the real sites against their D_of stores: UNKNOWN (not run). Proof mutants ShenJitFrontPrologIdKey, ShenJitFrontPrologHidden, ShenJitFrontPrologFreeVar, ShenJitFrontPrologLetdo, ShenJitFrontPrologScope, ShenJitFrontPrologDoFirst, ShenJitFrontPrologP4Key rejected. Residuals: OB-JIT-FRONT-PROLOG-UNIFY, OB-JIT-FRONT-PROLOG-DEREFEQ, OB-JIT-FRONT-PROLOG-CUTFAIL.",
+     "reconciliation": "r1-f-prolog, Phase 2 front track, 11 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-FRONT-PROLOG-UNIFY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to KLambda (lower.shen's unified-now)",
+   "identity": "rocq/JitFrontProlog.v",
+   "statement": "A norm rule for unified-now ((is X Y B L K (freeze E)) and is!, to a let chain calling shen-jit.unify= or shen-jit.unify=!) is sound against KRef for every store meeting D.",
+   "premises": [
+    "the target calls shen-jit.unify= or shen-jit.unify=!, port defuns over shen-jit.same? (pointer identity), shen-jit.deref, shen-jit.pvar? and shen-jit.pvar-offset, which under jit_rules are named calls into the store that no D entry can pin (no KL body exists for them)",
+    "decision-gated (identity primitives; port primitives without an approved source meaning): Reuben's call, defaulting to a named residual"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT",
+    "OB-JIT-PORT-PRIMS",
+    "OB-JIT-IDENTITY-MODEL"
+   ],
+   "evidence": [],
+   "completion_evidence": "Reuben's decision on the identity model and on the port primitives' source meaning, then a unified-now rule proved sound in rocq/JitFrontProlog.v; until then the 4 stage 0 definitions with unified-now sites stay named residuals.",
+   "sources": [
+    "rocq/JitFrontProlog.v",
+    "rocq/JitFrontD.v",
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontProlog.v",
+     "recorded": "2026-11-11: open; decision-gated, named residual by default. No rule (rocq/JitFrontProlog.v header). Test, not proof (Rocq prolog_scan over the 955 parsed stage 0 sources): unified-now's source shape in 4 definitions, 7 sites, as the T02 census.",
+     "reconciliation": "r1-f-prolog, Phase 2 front track, 11 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-FRONT-PROLOG-DEREFEQ",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to KLambda (lower.shen's deref=, v0.6)",
+   "identity": "rocq/JitFrontProlog.v",
+   "statement": "A norm rule for deref= ((= (shen.deref X B) (shen.deref Y B)) to (shen-jit.deref= X Y B)) is sound against KRef for every store meeting D.",
+   "premises": [
+    "shen-jit.deref= answers true through shen-jit.same? on one cell where = on the two deep copies compares contents, false on a NaN leaf (OB-JIT-NAN-IDENTITY), and it calls shen-jit.deref and shen-jit.pvar? through shen.lazyderef: identity primitives and port primitives with no approved source meaning",
+    "decision-gated (identity primitives): Reuben's call, defaulting to a named residual",
+    "vacuous for stage 0: the source shape occurs in no stage 0 definition (Rocq prolog_scan, 0 of 955), so no stage 0 verdict depends on this rule"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT",
+    "OB-JIT-IDENTITY-MODEL",
+    "OB-JIT-NAN-IDENTITY",
+    "OB-JIT-PORT-PRIMS"
+   ],
+   "evidence": [],
+   "completion_evidence": "Reuben's decision on the identity model (and the NaN case), then a deref= rule proved sound or refuted with a Rocq counterexample.",
+   "sources": [
+    "rocq/JitFrontProlog.v",
+    "rocq/JitFrontD.v",
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontProlog.v",
+     "recorded": "2026-11-11: open; decision-gated, no rule. Test, not proof (Rocq prolog_scan over the 955 parsed stage 0 sources): 0 definitions with the source shape (the census's 0 firings).",
+     "reconciliation": "r1-f-prolog, Phase 2 front track, 11 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-FRONT-PROLOG-CUTFAIL",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "KLambda to KLambda (lower.shen's cut-fail, v0.6)",
+   "identity": "rocq/JitFrontProlog.v",
+   "statement": "A norm rule for cut-fail ((shen.cut B L K (freeze (when false B2 L2 K2 C))), all variables, to (if (shen.unlocked? L) (shen.lock K L) false)) is sound against KRef for every store meeting D.",
+   "premises": [
+    "soundness needs shen.cut's and when's lowered bodies in D (store facts JitFrontD does not name) and a proof that the source call runs to e_cut's residual (if (and (= W false) U) (shen.lock K L) W) with W false, related to the target by renaming and the and/= partial evaluation",
+    "vacuous for stage 0: the source shape occurs in no stage 0 definition (Rocq prolog_scan: 16 calls of shen.cut with a frozen fourth argument in 8 definitions, none whose frozen body is a when call), so no stage 0 verdict depends on this rule"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT"
+   ],
+   "evidence": [],
+   "completion_evidence": "A cut-fail rule with its store facts, proved sound in rocq/JitFrontProlog.v, with a mutant the lane rejects; or this obligation closed as out of scope for the pinned stage 0 by Reuben.",
+   "sources": [
+    "rocq/JitFrontProlog.v",
+    "rocq/JitFrontD.v",
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontProlog.v",
+     "recorded": "2026-11-11: open; no rule, not proved. Test, not proof (Rocq prolog_scan): 0 of 955 stage 0 definitions have the source shape.",
+     "reconciliation": "r1-f-prolog, Phase 2 front track, 11 November 2026."
     }
    ]
   },

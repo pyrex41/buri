@@ -28,9 +28,11 @@
      against id_key, which the source's freeze closure binds (tagged_env) and the expansion, which
      runs the body in place, does not. bind_rule adds that guard; Example bind_rule_rejects_id_key
      pins it.
-   - The scans (prolog_scan, a test over decoded sources, not proof): the shapes cut-fail and
-     deref= match in no stage 0 source (0 of 955), so their absence from the rule set changes no
-     verdict; see the residuals below.
+   - The scan (prolog_scan, Rocq vm_compute over the 955 parsed stage 0 sources; a test, not proof;
+     run by stage0_to_rocq.py --prolog on /lps/p6/sj/build/stage0 at 934cfa5): cut-fail's shape 0
+     definitions (0 sites), deref='s 0 (0), shen.cut with a frozen fourth argument 8 (16),
+     bound-now's direct shape 6 (25), the let-frozen shape 5 (23 lets), unified-now's 4 (7). So
+     the absence of a cut-fail or deref= rule changes no stage 0 verdict; see the residuals below.
 
    Residuals (named, each with a ledger entry in spec/obligations.json):
    - OB-JIT-FRONT-PROLOG-UNIFY (decision-gated: identity primitives and port primitives without an
@@ -46,9 +48,9 @@
    - OB-JIT-FRONT-PROLOG-CUTFAIL (no rule, vacuous for stage 0). Its soundness needs shen.cut's,
      when's, shen.unlocked?'s and shen.lock's lowered bodies in D and a proof that the source call
      runs to e_cut's residual (if (and (= W false) U) (shen.lock K L) W) with W false; it is not
-     proved here. The source shape occurs in no stage 0 definition (prolog_scan: 28 calls of
-     shen.cut with a frozen fourth argument, none whose frozen body is a `when` call), so no stage 0
-     verdict depends on it.
+     proved here. The source shape occurs in no stage 0 definition (prolog_scan: 16 calls of
+     shen.cut with a frozen fourth argument, in 8 definitions, none whose frozen body is a `when`
+     call), so no stage 0 verdict depends on it.
    - bound-now through a let-bound freeze (12 of stage 0's 37 sites): frozen-in copies E into the
      bind call; the rule for that shape is the freeze-copying family's (it rewrites the source to the
      direct shape, then this rule applies).
@@ -63,7 +65,8 @@ Import ListNotations.
 Set Warnings "-notation-for-abbreviation".
 Module JitFrontProlog.
 Import Observation.Observation KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLSemantics KLPort.KLPort
- JitProfile.JitProfile JitLowerRel.JitLowerRel JitKRef.JitKRef JitKRefGround.JitKRefGround JitKRefBase.JitKRefBase.
+ JitProfile.JitProfile JitLowerRel.JitLowerRel JitKRef.JitKRef JitKRefGround.JitKRefGround JitKRefBase.JitKRefBase
+ JitLowerStage0.JitLowerStage0.
 Module F := JitFrontD.JitFrontD.
 Definition do_name : name := JitNorm.JitNorm.do_name.
 
@@ -923,5 +926,65 @@ Proof.
    rewrite forallb_forall in Ck. specialize (Ck i ltac:(apply in_seq; lia)). rewrite Ei in Ck.
    destruct v0; try discriminate Ck. cbn in HG. contradiction.
  - discriminate E.
+Qed.
+
+(* ======================= the Prolog shapes in stage 0's sources (a TEST harness, not proof) ======================= *)
+(* Run by tests/shen-jit/stage0_to_rocq.py --prolog over the decoded .forms of every stage 0 file. For each
+   shape, the number of definitions with at least one occurrence and the number of occurrences, in
+   the parsed source bodies. The shapes over-approximate lower.shen's guards (any arguments, any
+   scope), so a 0 is a 0 for the rewrite.
+   - cut_frozen: (shen.cut _ _ _ (freeze _)), what cut-fail's pattern starts with;
+   - cut_fail: (shen.cut _ _ _ (freeze (when _ ...))), cut-fail's source shape;
+   - deref_eq: (= (shen.deref _ _) (shen.deref _ _)), deref='s source shape;
+   - bound_now: (shen.bind! _ _ _ (freeze _)), bound-now's direct shape (bind_rule's);
+   - bound_let: (let G (freeze _) ...) with (shen.bind! _ _ _ G) inside, the let-frozen shape;
+   - unified_now: (is _ _ _ _ _ (freeze _)) or (is! ...), unified-now's shape. *)
+Definition cut_name : name := kw "shen.cut".
+Definition when_name : name := kw "when".
+Definition deref_name : name := kw "shen.deref".
+Definition is_cut_frozen (e : expr) : bool := match e with
+ | ECall f [_; _; _; EFreeze _] => text_eqb f cut_name | _ => false end.
+Definition is_cut_fail (e : expr) : bool := match e with
+ | ECall f [_; _; _; EFreeze (ECall h _)] => text_eqb f cut_name && text_eqb h when_name | _ => false end.
+Definition is_deref_eq (e : expr) : bool := match e with
+ | ECall f [ECall d1 [_; _]; ECall d2 [_; _]] => text_eqb f (kw "=") && text_eqb d1 deref_name && text_eqb d2 deref_name
+ | _ => false end.
+Definition is_unified_now (e : expr) : bool := match e with
+ | ECall f [_; _; _; _; _; EFreeze _] => text_eqb f (kw "is") || text_eqb f (kw "is!") | _ => false end.
+
+Definition shape_count (P : expr -> bool) (bs : list expr) : nat * nat :=
+ (List.length (filter (fun b => existsb P (F.subterms b)) bs),
+  fold_left (fun n b => n + List.length (filter P (F.subterms b))) bs 0)%nat.
+
+Definition src_bodies (fs : list sx) : list expr :=
+ flat_map (fun f => match parse [] (to_value f) with Some (EDefun _ _ b) => [b] | _ => [] end) fs.
+
+Definition prolog_scan (fs : list sx) : list (string * (nat * nat)) :=
+ let bs := src_bodies fs in
+ [("bodies", (List.length bs, List.length fs));
+  ("cut_frozen", shape_count is_cut_frozen bs); ("cut_fail", shape_count is_cut_fail bs);
+  ("deref_eq", shape_count is_deref_eq bs); ("bound_now", shape_count F.frozen_bind bs);
+  ("bound_let", shape_count F.let_frozen_bind bs); ("unified_now", shape_count is_unified_now bs)]%string.
+
+Example scan_cut_fail : is_cut_fail (ECall cut_name [EVar (kw "B"); EVar (kw "L"); EVar (kw "K");
+  EFreeze (ECall when_name [EBool false; EVar (kw "B"); EVar (kw "L"); EVar (kw "K"); EVar (kw "C")])]) = true.
+Proof. vm_compute. reflexivity. Qed.
+Example scan_deref_eq : is_deref_eq (ECall (kw "=") [ECall deref_name [EVar (kw "X"); EVar (kw "B")];
+  ECall deref_name [EVar (kw "Y"); EVar (kw "B")]]) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+(* No rule of this file fires on the two v0.6 shapes: bind_rule refuses them whatever the recursive
+   checker says (the norm checker has no cut-fail or deref= rule; see the header's residuals). *)
+Example bind_rule_not_cut_fail : forall D rec g e, bind_rule D rec g (ECall cut_name [EVar (kw "B"); EVar (kw "L"); EVar (kw "K");
+  EFreeze (ECall when_name [EBool false; EVar (kw "B"); EVar (kw "L"); EVar (kw "K"); EVar (kw "C")])]) e = false.
+Proof.
+ intros D rec g e. destruct e as [| | | | | | |a1 x e1| | | | | | | | | |]; try reflexivity;
+  destruct e1 as [| | | | | | |a2 y e2| | | | | | | | | |]; try reflexivity; destruct e2; reflexivity.
+Qed.
+Example bind_rule_not_deref_eq : forall D rec g e, bind_rule D rec g (ECall (kw "=") [ECall deref_name [EVar (kw "X"); EVar (kw "B")];
+  ECall deref_name [EVar (kw "Y"); EVar (kw "B")]]) e = false.
+Proof.
+ intros D rec g e. destruct e as [| | | | | | |a1 x e1| | | | | | | | | |]; try reflexivity;
+  destruct e1 as [| | | | | | |a2 y e2| | | | | | | | | |]; try reflexivity; destruct e2; reflexivity.
 Qed.
 End JitFrontProlog.

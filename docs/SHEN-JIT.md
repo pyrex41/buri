@@ -156,7 +156,8 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 475 statements |
+| `rocq/JitFrontProlog.v` | norm's Prolog rewrites: the bound-now rule, proved sound (`bind_rule_sound`); D00's `bind_site_sound_statement` refuted (`bind_site_unsound`); the source-shape scan `prolog_scan` |
+| `rocq/Audit_Jit.v` | Assumption audit of 483 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -346,6 +347,32 @@ against shen.bind!'s lowered body, with a seeded renaming. Their soundness and `
 (option B) would reach about 725. Two interface items for the KRef track: `fresh_ok` over `D_bodies` fails on lowered
 bodies (the premise the rules use is `fresh_front`), and fold-arith's `(+, FPrim PAdd)` in D needs `+` in `sealed`.
 No count changes: the source judge accepts 148 of 955 stage 0 definitions; the full-pipeline validated count is UNKNOWN.
+
+**norm's Prolog rewrites** (`rocq/JitFrontProlog.v`, r1-f-prolog, 11 November 2026). The bound-now rule `bind_rule`, in F00's
+front-rule shape (`rule`, `rule_sound`, same text as `JitFrontCheck`, not yet on `p2/int`), is proved sound for every store D
+from `D_wf` alone (`bind_rule_sound`, audited, Closed under the global context): (shen.bind! X0 Y0 B0 (freeze E0)) refines
+(let a1 X (let a2 Y (let a3 B N))) when the recursive checker relates X0, Y0, B0 to the let values and E0 to each place N runs
+it (in the scope of that place's free names), and `beq` relates shen.bind!'s lowered body in D to N: alpha-equivalence with
+bind!'s first three parameters renamed to a1, a2, a3, the fourth thawed in place, and an unused `let` read as the kernel's
+`do` from D. No transitivity of KRef is used: `KRel_ca_let` and `KRel_ca_last` relate the source's argument frames to the
+target's lets, the source enters e_B, and `beq_sound` relates e_B to N by a direct induction (with `ERel_letdo` and
+`KRel_do_tail` for the target's do). A Rocq-checked finding: D00's `JitFrontD.bind_site_sound_statement` is **false**
+(`bind_site_unsound`): bind_site accepts a frozen body that reads KLPort's closure-identity key `id_key`, which the source's
+freeze closure binds to its own new cell while the expansion, running the body in place, reads the caller's; the target
+returns the caller's value where the source can only return the cell or raise a resource error. `bind_rule` refuses it
+(Example `bind_rule_rejects_id_key`). `inline_site_sound_statement`'s thaw-with case has the same unguarded position (not
+refuted in Rocq here). Mutants `ShenJitFrontPrologIdKey`, `ShenJitFrontPrologHidden`, `ShenJitFrontPrologFreeVar`,
+`ShenJitFrontPrologLetdo`, `ShenJitFrontPrologScope`, `ShenJitFrontPrologDoFirst` and `ShenJitFrontPrologP4Key` are rejected.
+Test, not proof (Rocq `prolog_scan` over the 955 parsed stage 0 sources, `stage0_to_rocq.py --prolog`): bound-now's direct
+shape in 6 definitions (25 sites), the let-frozen shape in 5 (23 lets; the freeze-copying family rewrites it to the direct
+shape), unified-now's in 4 (7), cut-fail's and deref='s in 0 (16 calls of shen.cut with a frozen fourth argument, in 8
+definitions, none freezing a `when` call). Residuals, each a ledger entry: `OB-JIT-FRONT-PROLOG-UNIFY` (unified-now: its
+target calls port forms over `shen-jit.same?`, `shen-jit.deref`, `shen-jit.pvar?`, `shen-jit.pvar-offset`; identity and port
+primitives, decision-gated), `OB-JIT-FRONT-PROLOG-DEREFEQ` (deref=: `shen-jit.same?` on one cell against = on two copies,
+the NaN case; decision-gated; vacuous for stage 0) and `OB-JIT-FRONT-PROLOG-CUTFAIL` (no rule; vacuous for stage 0). Every D
+holding shen.bind! still fails `D_compiled'` (`shen-jit.pvar-offset`, `OB-JIT-PORT-PRIMS`), so the 6 bound-now definitions
+stay residual in the full pipeline. bind_rule on the real sites against their `D_of` stores: UNKNOWN (not run). No count
+changes: the full-pipeline validated count is UNKNOWN.
 
 **The front passes** (`rocq/JitKRef.v` with proofs in `JitKRefGround.v` and `JitKRefCompose.v`; old names in `rocq/JitLowerEquiv.v`; `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
 (b1 to e) before it emits code for e. `KRef g e0 e` is a step-indexed Kripke refinement on KLambda expressions under
