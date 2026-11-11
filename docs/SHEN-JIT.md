@@ -161,7 +161,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 291 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 322 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -597,7 +597,8 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   frame admitted `get-time`, whose request `ev_of` did not translate, and `O'_io` quantified over
   every response. Checking the other frames found more of the same kind. Each is argued by hand
   from `KLSemantics.prim_rule`/`apply_value` and `JitBytecode.prim_step`/`enter`; none is
-  mechanized (a Rocq reproduction of these states is UNKNOWN, not done):
+  mechanized at emit-spec; r1-emit-spec-merge checks each in Rocq as a primitive-level divergence
+  (`dv_*` in `rocq/JitEmitInv.v`, below), except `=` on a cycle and `write-byte`, still UNKNOWN:
   - `absvector` of 2^48 allocates in the source, while the bytecode raises.
   - `error-to-string` of a primitive's exception is `"error"` in the source but the message in
     the bytecode.
@@ -644,7 +645,8 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
     `old_reflect_src_statement`), through `ms_embed`/`sm_embed` at `mu = []` and proved bridges
     (`srun_nil_sstar`, `trun_nil_tn`, `tn_tstar`, `ms_entered`, `entered_embed`). The proofs do
     not use the old theorems.
-  - The reflection is stated, not proved; its truth is UNKNOWN. It is needed: the new conclusions
+  - The reflection `old_reflect_statement` is **false** (r1-emit-spec-merge, `old_reflect_false`,
+    below), so the three `*_old_of_new` corollaries are vacuous. It was needed: the new conclusions
     pick some JitEmitRel derivation, some `mu'` and some trace, and nothing keeps an old-fragment
     run inside the old fragment, so the old conclusion does not follow from the new statements
     alone. Reflecting JitEmitRel derivations would invert the rules outside their files. A family
@@ -674,6 +676,46 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
 
   Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 215 (fix 1 recorded 209 for 26 added mutants; the history gives 184 + 31). Lane
   result: in the task report.
+
+### Emit-spec premises settled in Rocq (r1-emit-spec-merge)
+
+Branch `p2/r1-emit-spec-merge`: `p2/emit-spec` merged onto `p2/int` (`2ab3ffc`), plus the following
+in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statement`,
+`preservation'`, `call_preservation'` and `call_preservation_src'` stay unproved, truth UNKNOWN.
+
+- **The reflection is refuted** (`old_reflect_false`, closed). The store defines the kernel's
+  `do` and every primitive. In `(let Z (do 1 2) Z)` the machine is at `call 0 1 do 2`, with 1 and
+  2 in the window. MS relates the source, at `Ret 2` with do's call pending (`cx_ms0`, through
+  `KD_call`). After two silent steps (the call, and do's `return`) MS' relates the **same**
+  configuration to the machine (`cx_ms'1`): `KD'_do2` makes the pending call of `do`
+  transparent. MS does not (`cx_not_ms1`). So `old_reflect_statement`'s first conjunct fails at
+  `c' = c`, `mu' = []`. It is JitEmitKont's do frames, not a family rule, that overlap the old
+  syntax. The `*_old_of_new` corollaries take the reflection as a hypothesis, so they recover
+  nothing; how the old conclusions are to be recovered is a review decision (for example a
+  reflection to *some* MS-related configuration at a later machine, which the old preservation
+  theorem gives, so it would not be independent evidence). `old_reflect_src_statement`: UNKNOWN.
+- **get-time is modeled as IO on both sides** (`get_time_agree`, closed): on related arguments,
+  both ask the clock with requests `ev_of` translates to each other, and for every answer
+  `resp_ok` admits the source's result is `VRh`-related to what the bytecode writes; or both
+  raise. An out-of-memory raise before the request is the source's resource exit, as for other
+  allocating primitives.
+- **The narrowing, checked in Rocq** (closed Examples; divergences at the primitive or call
+  level, not refutations of `sim'_statement`): `dv_absvector_src/_byt` (2^48), `dv_ets_*`
+  (error-to-string), `dv_open` (*home-directory*), `dv_close`, `dv_read_closed` (closed stream),
+  `dv_eq_nan` (two NaNs: the bytecode is stuck), `dv_window` (two arguments to a one-parameter
+  closure: the source over-applies, the bytecode raises), `dv_io_fail` (an IO failure: the
+  bytecode resumes with no result, the source throws; `resp_ok` excludes the answer).
+  `gvals_needed`: MS holds and MS' at no `mu` when the store binds a global the machine does
+  not, so `GvalsRel [] s m` is not implied by the old premises. Not mechanized: `=` on a cycle,
+  `write-byte`. At the old fragment `env_ok` is discharged (`env_ok_inhabited`).
+- **Awaiting Reuben** (none approved): `env_ok` on the run statements, the `frame_prim`
+  exclusions, the one-argument window, `GvalsRel` on the `*_old` statements, and how the old
+  conclusions are recovered.
+- **Evidence.** 31 closed statements added to `Audit_Jit` (322 in all). Mutants
+  `ShenJitEmitGetTimeSwap` (run and unix swapped in `ev_of`; `get_time_agree` must fail) and
+  `ShenJitEmitDo2Opaque` (`KD'_do2` needs `False`; `old_reflect_false` must fail); the pin is 224.
+  The lane and the emit mutants were run on this branch (task report); `make prove`, `make
+  report`, the differential and the Coq 8.18 build were not, so their results are UNKNOWN.
 
 ### Pass split: the normal form (wave 1b)
 

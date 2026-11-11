@@ -6177,6 +6177,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-10: open, narrowed further. = against a symbol constant is admitted (OB-JIT-SYM-INJECTIVE); = on two computed values, and against a NaN or pair constant, stay here.",
      "reconciliation": "Admitting = against a symbol constant at 0.6, 10 November 2026."
+    },
+    {
+     "source": "rocq/JitEmitInv.v",
+     "recorded": "2026-11-10: open (r1-emit-spec-merge, merged onto p2/int 2ab3ffc). old_reflect_statement is FALSE, checked in Rocq (old_reflect_false, closed): at (let Z (do 1 2) Z), the source at Ret 2 with do's call pending is MS-related to the machine at its call of do; after two silent steps (the call and do's return) MS' still relates the same configuration (KD'_do2 makes the pending call transparent) and MS does not. So the three *_old_of_new corollaries are vacuous; how the old conclusions are recovered is open (review decision). old_reflect_src_statement: UNKNOWN. get-time stays admitted: get_time_agree (closed) proves the clock request, answer and result agree on related arguments under resp_ok, or both raise. The hand-argued divergences behind each narrowing are now Rocq Examples (closed, primitive or call level, not refutations of sim'_statement): absvector 2^48, error-to-string, open with *home-directory*, close and read-byte on a closed stream, = on two NaNs, a two-argument call of a one-parameter closure, an IO failure (dv_*); = on a cycle and write-byte are not mechanized (UNKNOWN). gvals_needed shows GvalsRel [] s m is not implied by the old premises. Pending Reuben: env_ok, the frame_prim exclusions, the one-argument window, GvalsRel on the *_old statements, and the recovery of the old conclusions. The back-end statements stay unproved, truth UNKNOWN.",
+     "reconciliation": "Emit-spec premises and reflection settled in Rocq where possible (r1-emit-spec-merge), 10 November 2026."
     }
    ]
   },
