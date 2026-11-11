@@ -54,3 +54,4 @@ JitEmitRel
 JitEmitNestTest
 JitEmitKont
 JitEmitInv
+JitKRefCallNoTableCex

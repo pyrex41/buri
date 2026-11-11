@@ -1,7 +1,7 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
 From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog JitImage
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
- JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv.
+ JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -710,3 +710,7 @@ Print Assumptions JitImage.JitImage.code_eqb_true.
 Print Assumptions JitImage.JitImage.check_def_sound.
 Print Assumptions JitImage.JitImage.tally_sound.
 Print Assumptions JitImage.JitImage.code_check_sound.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.SRel_nt_table.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_nt_of_table.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_refuted.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.cx_tables_differ.

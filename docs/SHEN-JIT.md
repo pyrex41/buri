@@ -174,7 +174,8 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 704 statements |
+| `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
+| `rocq/Audit_Jit.v` | Assumption audit of 708 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -447,8 +448,13 @@ and the frame lemmas. Applying a trap's handler to the exception may apply a par
 with `JitKRefPrim.prim_compat` that premise is discharged: `AppExn_fb` and `compat_trap_fb` (the corollary
 `compat_trap_lt prim_compat`) take `fund_below k` alone, and `compat_trap_of_gen` gives `compat_trap_statement` from
 `fund_gen_statement` alone (`compat_trap_of_fund` keeps the two-premise form). Mutants `ShenJitKRefCondSwap` (a copy of
-compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim` (compat_trap_fb and
-AppExn_fb without `prim_compat`) are rejected.
+compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim` are rejected. Since
+r21-mutation-hygiene the last two stop at a real obligation, not at a missing name: `ShenJitKRefTrapNoPrim` restricts `AppExn`
+to handlers that are not a partial table primitive (so `AppExn_of` needs no `prim_compat` there) and is rejected at
+`KRel_KApply_exn`, the trap frame's handler step, where the handler is any returned value; `ShenJitKRefAppExnNoPrim` weakens
+`AppExn_of`'s premise to primitive outcomes on equal arguments and is rejected in its primitive case, where the two argument
+lists are only VRel-related. Both statements are true (`prim_compat` is closed), so both are rejected proofs, not false
+statements. (Before r21 they replaced the proof by `assumption` and failed with "No such assumption", which showed nothing.)
 `rocq/JitKRefCompatCall.v` (7 audited statements) proves compat_call. A call with no argument moves through the function
 table at once (`ERel_call_nil`: `JitKRefCompatClo.call_rel` relates the two `call_named_r` moves, the two tables being equal
 under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with arguments pushes `KCallArgs`
@@ -457,7 +463,18 @@ under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with
 `compat_call_lt_pc JitKRefPrim.prim_compat`; it needs no `D_wf`. `compat_call_refl_lt` is the reflexive scope form, and
 `compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
 (SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
-compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation.
+compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation. That mutant is a
+rejected proof only. `rocq/JitKRefCallNoTableCex.v` (4 audited statements) refutes in Rocq a separate statement,
+`call_rel_nt_statement` (call_rel's statement over the unmutated VRel, KRel and fund_below, with only SRel's table clause
+replaced by True), not the mutant's own call_rel:
+`call_rel_no_table_refuted` refutes call_rel's statement with SRel's table clause replaced by True (`SRel_nt`, over the
+unmutated VRel, KRel and fund_below), at sealed = D = [], j = 2, with every other premise discharged (`fund_gen`,
+`prim_compat`, `KRel_top`, `app_at`): the source table lacks `f`, so the source raises `XUndefinedFun`, and the target's
+`(defun f () 1)` returns 1. `call_rel_nt_of_table` gives the conclusion back once `gfuns s0 = gfuns s` is added. Mutant
+`ShenJitKRefCallNoTableCexTable` (SRel_nt with the clause restored) is rejected at the counterexample's store premise, where it
+tries the restored clause by `vm_compute; reflexivity` and Rocq finds the two tables different; `cx_tables_differ` proves
+`gfuns cx_s0 <> gfuns cx_s`, so no proof of that premise exists. Not
+shown: that the mutant's whole chain (its own VRel, KRel, fund_below and GStore) is false.
 `rocq/JitKRefFund.v` (14 audited statements) closes the fundamental property (option A). `fund_step` proves
 `D_wf -> fund_below k -> fund_at k` by structural induction on the expression: literals and variables by `ERel_sval`
 (a variable bound on neither side raises `XUnboundVar` on both, `ERel_throw_both`), let by `ERel_let` (the body below k
