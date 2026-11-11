@@ -80,6 +80,15 @@ three byte for byte. Negative controls (tests, not proof): a pinned file with on
 the main run (`lower 34`) and `--check-tsv` (`core 13`) exit 1, naming that file. Rocq 9.3.0 (switch `lps`), Python
 3.12.3, container `buri-lps`. Census, not proof.
 
+Lane on commit `fe556f2` (this branch's census commit): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r22-t02-refresh-lane-out
+rocq-slot bash scripts/check-shen-jit.sh`, 21:17:59Z to 22:03:37Z, LANE_RC=0, log sha256
+`4dcfa280055225e1e3987619ba1ebd1ceae95a0d588d237eee062321e2631eef`: tables match, 708 audited statements closed,
+rocqchk passed, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded, image step as recorded. The
+differential, `gate_tests.sh`, `make prove` and the mutation suite were not run: UNKNOWN. This branch adds no
+theorem, checker or relation, so no audit entry, mutant or pin changes. The commit after `fe556f2` touches only this
+file. `tests/shen-jit/stage0-residuals.txt` still records `feature_census.py` as `a870685c...` in its header (the
+script is now `b4eb11f4...`); that file is regenerated at the merge.
+
 | what | value |
 |---|---|
 | capture | witness run 955 of 955, count run 955 of 955 code objects byte-identical to stage 0; image run 944 of 955 (a measurement); `CAPTURE_OK` |
@@ -266,12 +275,19 @@ the family, a Rocq counterexample, or a decision-gated reason).
   (`lambda`, `freeze`, `let-freeze`), `E-App` (`apply-dynamic`, `thaw`), `E-Trap` (`trap`). Decision items, each a named
   residual by default: `D-eq-nan` (all two-computed `=`, NaN constants), `D-eval-kl`, `D-port-identity`,
   `D-port-other`. Choices made here: `vector` includes `absvector?` and goes to Store (whose header names absvector,
-  `<-address`, `address->`); `io` goes to Prim (no IO rule file). The script asserts every census item is in exactly
-  one row.
+  `<-address`, `address->`); `io` goes to Prim (no IO rule file). The script asserts every census item is in some
+  row, and in exactly one row apart from `D-eq-nan`, which deliberately repeats `E-Eq`'s `eq-two-computed` (it is the
+  guarded part plus the decision-gated rest) and is left out of that check.
 - **Variants.** `src`: what the existing source judge would accept with the set's emit features in Comp (cond, type,
   dynamic-apply transparent, any other rewrite rejects); `direct`: source -> norm -> bytecode with the set's emit
   features and front families; `nf`, `tf`: emit only, on `judge_split.sh`'s nf and tf inputs. A definition needing two
   non-merged families is in neither family's row.
+- **Which variant is the floor.** A family task compares the judge variant it actually runs with the row variant of
+  the same name: `src` for the source judge (or `judge_hooks.sh` on `<f>.forms`), `nf` or `tf` for `judge_split.sh`'s
+  erased inputs, `direct` for a full-pipeline judge. The variants differ (E-App: src 156, direct 158, because
+  thaw-sugar is merged on the front but opaque to the source judge).
+- **Recomputing a sha256.** Column 10 holds the set: `printf '%s\n' "$defs" | tr , '\n' | LC_ALL=C sort | sha256sum`
+  reproduces column 8 (checked on rows `merged`, `E-Store`, `D-port-other`, variant direct).
 - **Self-check.** `F-sugar` adds 0 on every variant, matching SHEN-JIT.md's statement that the forecast set for the
   four sugar families is empty, and row `merged` src is the Rocq src 148.
 
