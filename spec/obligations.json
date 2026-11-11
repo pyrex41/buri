@@ -4614,6 +4614,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
      "recorded": "2026-11-11: stays partial. CODE lane-checked, instance closed under the global context (partial, behind READER); INIT, SEALING, READER, FILE each carry a measured verdict."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Scoped outcome re-measured; sealing exclusion stated (task r22-image-verdict), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial. Each of CODE, INIT, SEALING, READER, FILE has a verdict tied to a command and log sha256 (docs/SHEN-JIT-IMAGE.md); the 18 sealed versus 24 stage 0 files gap (6 files, 65 names, 115 sites in 45 definitions) is lane-pinned Rocq census; SEALING's exclusion is a named Rocq premise."
     }
    ]
   },
@@ -4771,6 +4776,12 @@
      "ref": "spikes/image-decode/redef.shen",
      "establishes": "artifact-correspondence",
      "note": "test, not proof (pinned binary under qemu, bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc, redef.out sha256 46329b98...cb7): after eval-kl of (defun shen.x.launcher.execute-all (X) redefined) the open call gives redefined while the sealed caller shen.x.launcher.eval-command-h still gives [success]; defun of a sealed name and of thaw, hd, tl is refused. Rocq census in the lane: 890 sealed names, exactly the 18 files; the 6 extension files' 65 definitions unsealed, targeted by 115 sealed sites (file-by-file table in docs/SHEN-JIT-IMAGE.md). Verdict: FunRel surviving redefinition is false for the binary; only the premise route is feasible"
+    },
+    {
+     "kind": "review",
+     "ref": "rocq/JitImage.v",
+     "establishes": "artifact-correspondence",
+     "note": "premise stated, not proved (task r22-image-verdict): JitImage.JitImageSealing.sealing_exclusion_statement sealed c0 := no configuration Sstar sealed reaches from c0 evaluates EDefun f _ _ with f in JitImageSealing.ext_names (the 65 names of the 6 extension files); a Rocq definition in Audit_Jit, Closed under the global context (lane SKIP_DIFF=1 JIT_OUT=/tmp/p2-r22-image-verdict-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh at aa1a7e5 in buri-lps, LANE_RC=0, log /tmp/p2-r22-image-verdict-lane.log sha256 80e439169544b626f15d69f048907beacab49cd30271d6aec50455ecf74508fd, Audit_Jit.log sha256 2d61479f7c55b04993647d04e84200deed500458606184067db4cefe0cc6800d). Not yet a hypothesis of call_preservation_src_statement (unchanged). The install route is outside the model (OB-JIT-PORT-PRIMS). Rocq census in the lane (s0/image-facts.txt sha256 04fd3ee3775b9c04ebcf5e67c26107f85d304af76e277edfd95f590137431db8, equal to tests/shen-jit/image-facts.txt): cn_unsealed_defs 65, cn_ext_names_ok true (the premise's list is exactly the unsealed definitions, in load order), cn_ext_sites 115, cn_ext_callers 45; census mutant dropping one name gives cn_ext_names_ok false and is rejected by the lane's diff (/tmp/p2-r22-image-verdict-mut.log sha256 ffff475658b3898a44358af684e822c3323faeeca8172d72e2eb5d2bdbd8ea03). Measurements re-run at aa1a7e5 (bash spikes/image-decode/meas.sh, rc 0, /tmp/p2-r22-image-verdict-meas.log sha256 01ac4f10e259857d7568c4e0eac73667eab8716db95114bb51b8f4428af2a2d6): output hashes identical to r21 (sealgap.out 0e509ac1...77cb, redef.out 46329b98...cb7)"
     }
    ],
    "completion_evidence": "A stated premise or exclusion in the top theorem for redefinition of the 65 unsealed extension names, or Rocq evidence that FunRel survives it.",
@@ -4788,6 +4799,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
      "recorded": "2026-11-11: stays open; redefinition tested in the binary (sealed sites keep the load-time closure), so the completion route is the stated exclusion of redefining the 65 names."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Sealing exclusion stated in Rocq; image facts re-measured (task r22-image-verdict), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; the exclusion is the named premise JitImageSealing.sealing_exclusion_statement (closed definition, in Audit_Jit) and the 65/115/45 counts are lane-pinned Rocq census; it remains for the top theorem to take the premise."
     }
    ]
   },
