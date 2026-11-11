@@ -144,6 +144,32 @@ ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arg
   source call's. pair_src_lrules_wrong must fail.
 ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
   marker. isites_fbound must fail.
+ShenJitFrontSugarCondTrueAny: chk_cond ends the chain at ANY clause, not only one whose test is
+  the literal true, so (cond (false 1)) checks against 1. chk_cond_sound must fail.
+ShenJitFrontSugarCondIfSwap: chk_cond's if case checks the clause body against the else branch and
+  the rest of the chain against the then branch. chk_cond_sound must fail.
+ShenJitFrontSugarProtectAny: chk_sugar drops (protect X) to X without asking D for the kernel's
+  protect, so a store whose protect is anything else is accepted. chk_sugar_sound must fail.
+ShenJitFrontSugarLamIdKey: chk_sugar's lambda application no longer refuses a scope holding
+  KLPort.id_key, where the source body's closure cell shadows the scoped name (see
+  ShenJitKTermLamAppIdKey). chk_sugar_sound must fail.
+ShenJitFrontSugarThawAny: chk_thaw takes (thaw X) to [apply X] without asking D for the kernel's
+  thaw. chk_thaw_sound must fail.
+ShenJitFrontSugarTrapScope: chk_trap accepts a handler eta whose fresh name is in scope, so the
+  target's handler reads the exception where the source reads the scoped value. chk_trap_sound
+  must fail.
+ShenJitFrontPrologIdKey: beq's thawed-place guard tests p4 instead of id_key, so a frozen body that
+  reads the closure-identity key is run in place (D00's bind_site gap). beq_sound and
+  bind_rule_rejects_id_key must fail.
+ShenJitFrontPrologHidden: beq's thawed-place guard reads hidden against no binders, so the thawed
+  body may read an expansion binder. beq_sound must fail.
+ShenJitFrontPrologFreeVar: beq compares a variable unbound in rn by name, so e_B's free names read
+  unrelated environments. beq_sound must fail.
+ShenJitFrontPrologLetdo: beq reads (let X A B) as (do A' B') even when B uses X. beq_sound must fail.
+ShenJitFrontPrologScope: bind_rule checks the fresh names against no scope, so a let may shadow a
+  name of g the next argument reads. bind_rule_sound must fail.
+ShenJitFrontPrologDoFirst: bind_rule takes a do returning its FIRST argument. bind_rule_sound must fail.
+ShenJitFrontPrologP4Key: bind_rule checks p3, not p4, against id_key. bind_rule_sound must fail.
 ShenJitFrontFoldNoRange: cfold folds + without the fixnum range check, where jit_rules' + raises.
   cfold_run must fail.
 ShenJitFrontFoldNoPrim: cfold folds + without asking that D binds + to the primitive, so the store's
@@ -404,6 +430,38 @@ mutate('ShenJitFrontPairReadBack', front,
 mutate('ShenJitFrontIsitesNoLets', front,
        ' | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O',
        ' | (x, NVar _, _) :: anc => if bound ps x then O else O')
+sugar = 'rocq/JitFrontSugar.v'
+mutate('ShenJitFrontSugarCondTrueAny', sugar,
+       '   (is_true_lit c0 && rec g b0 e) ||', '   (true && rec g b0 e) ||')
+mutate('ShenJitFrontSugarCondIfSwap', sugar,
+       '   match e with EIf c b r => rec g c0 c && rec g b0 b && rec g (ECond rest0) r | _ => false end',
+       '   match e with EIf c b r => rec g c0 c && rec g b0 r && rec g (ECond rest0) b | _ => false end')
+mutate('ShenJitFrontSugarProtectAny', sugar,
+       ' | ECall f [a0] => text_eqb f protect_name && has_protect && rec g a0 e',
+       ' | ECall f [a0] => text_eqb f protect_name && true && rec g a0 e')
+mutate('ShenJitFrontSugarLamIdKey', sugar,
+       ' | EApp (ELam x b0) [a0] => negb (bound g id_key) &&', ' | EApp (ELam x b0) [a0] => true &&')
+mutate('ShenJitFrontSugarThawAny', sugar,
+       ' | ECall f [a0], EApp a [] => text_eqb f thaw_name && has_thaw && rec g a0 a',
+       ' | ECall f [a0], EApp a [] => text_eqb f thaw_name && true && rec g a0 a')
+mutate('ShenJitFrontSugarTrapScope', sugar,
+       '   text_eqb x y && negb (bound g x) && negb (bound g id_key) && rec g a0 a && rec g h0 h',
+       '   text_eqb x y && true && negb (bound g id_key) && rec g a0 a && rec g h0 h')
+prolog = 'rocq/JitFrontProlog.v'
+mutate('ShenJitFrontPrologIdKey', prolog,
+       ' && negb (bound (fv e) id_key) && tk e', ' && negb (bound (fv e) p4) && tk e')
+mutate('ShenJitFrontPrologHidden', prolog,
+       ' text_eqb p p4 && forallb (fun y => negb (F.hidden rn y)) (fv e)', ' text_eqb p p4 && forallb (fun y => negb (F.hidden [] y)) (fv e)')
+mutate('ShenJitFrontPrologFreeVar', prolog,
+       ' | EVar x, EVar y => negb (F.free_in rn x) && F.var_ok rn x y', ' | EVar x, EVar y => F.var_ok rn x y')
+mutate('ShenJitFrontPrologLetdo', prolog,
+       ' => text_eqb d do_name && negb (bound (fv b0) x) && go rn a0 a && go rn b0 b', ' => text_eqb d do_name && true && go rn a0 a && go rn b0 b')
+mutate('ShenJitFrontPrologScope', prolog,
+       ' && F.disjoint [a1; a2; a3] g &&', ' && F.disjoint [a1; a2; a3] [] &&')
+mutate('ShenJitFrontPrologDoFirst', prolog,
+       '     negb (text_eqb v1 v2) && text_eqb v2 v2\' &&', '     negb (text_eqb v1 v2) && text_eqb v1 v2\' &&')
+mutate('ShenJitFrontPrologP4Key', prolog,
+       ' && negb (text_eqb p4 id_key) &&', ' && negb (text_eqb p3 id_key) &&')
 cf = 'rocq/JitFrontCopyFold.v'
 mutate('ShenJitFrontFoldNoRange', cf,
        "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
