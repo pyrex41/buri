@@ -136,8 +136,9 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 `OB-JIT-IMAGE` is now partial and split into five sub-obligations ([SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)):
 - `OB-JIT-IMAGE-CODE` (partial, lane-checked since r21-image-lane): `rocq/JitImage.v` decodes the image in the lane.
   Rocq proves `image_code_ok`: 955 of 955 stage 0 code objects equal the code objects their image function cells hold
-  (`code_check_sound`, closed). `image_code_ok` assumes only Rocq's primitive Uint63 `int`, `lsr`, `land` and
-  `eqb`, which join the reader's halves. It stays partial because the reader is trusted (`-READER`).
+  (`code_check_sound`, closed). `image_code_ok` is closed under the global context too: the reader copies the
+  image's bytes as `byte` constructors and Rocq joins them. It stays partial because it depends on `-READER`, which
+  is open (the reader is trusted), and the ledger does not discharge over an open dependency.
 - `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, 357 closures
   outside function cells (352 of which run code reached from the 955), 55 bound value cells and the data they reach.
   The code part is feasible by judging initialisation's `eval-kl` forms. The data part is infeasible now.

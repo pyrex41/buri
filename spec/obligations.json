@@ -4613,7 +4613,7 @@
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
-     "recorded": "2026-11-11: stays partial. CODE lane-checked (partial, behind READER); INIT, SEALING, READER, FILE each carry a measured verdict."
+     "recorded": "2026-11-11: stays partial. CODE lane-checked, instance closed under the global context (partial, behind READER); INIT, SEALING, READER, FILE each carry a measured verdict."
     }
    ]
   },
@@ -4688,7 +4688,7 @@
      "kind": "instance-validation",
      "ref": "JitImage.JitImage.code_check_sound",
      "establishes": "artifact-correspondence",
-     "note": "lane step of scripts/check-shen-jit.sh (cd /work/p2-r21-image-lane && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-image-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh at 1533b51 in buri-lps, rc 0, log sha256 ea4cd53c500132976d847df2ae92565c922df68d3b2852bff0f4be57fa848327, s0/Img.log cb369c66a573c7070f5eed42fcca2f616a0c8b8f5612409c6fc1110889cd3574): Img.v (stage0_to_rocq.py --image) proves image_code_ok, code_check over the pinned image and the 24 files' stage 0 trees (Buri.s0 modules), by vm_compute; its only printed assumptions are Rocq's primitive Uint63 int, lsr, land, eqb (the reader's halves join), checked exactly by the lane, so image_code_ok is not closed under the global context (the Audit_Jit theorems are); image_mutants_caught (two print code mutants) proved; proof mutant ShenJitImageNoCodeEq rejected. Partial only because OB-JIT-IMAGE-READER is open; mutant log sha256 45eb3afd...2847"
+     "note": "lane step of scripts/check-shen-jit.sh (cd /work/p2-r21-image-lane && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-image-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh at 0595b57 in buri-lps, rc 0, 1545 s, log /tmp/p2-r21-image-lane-lane2.log sha256 a120de67401662489f1d23474d48833a5e9842e882464372a212e33d5a57078b, s0/Img.log sha256 b330dd6e547cd6d2339da07de5423a990be68b877644c3c5d6edd3dedc387571): Img.v (stage0_to_rocq.py --image: the image's bytes as Init.Byte constructors, joined in Rocq by JitImage.words_of_bytes) proves image_code_ok, code_check over the pinned image and the 24 files' stage 0 trees (Buri.s0 modules), by vm_compute, and image_mutants_caught (two print code mutants, each required to still parse); both print Closed under the global context and the lane fails otherwise (IMAGE_ASSUMPTIONS). Proof mutant ShenJitImageNoCodeEq rejected (/tmp/p2-r21-image-mut2/ShenJitImageNoCodeEq.log sha256 45eb3afd...2847). Superseded run at 1533b51 (log ea4cd53c...8327) assumed Uint63 int, lsr, land, eqb. Partial only because it depends on OB-JIT-IMAGE-READER, open (no discharge over an open dependency)"
     }
    ],
    "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
@@ -4707,6 +4707,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
      "recorded": "2026-11-11: stays partial (depends on OB-JIT-IMAGE-READER, open). JitImage.v moved to rocq/, in Audit_Jit (code_eqb_true, check_def_sound, tally_sound, code_check_sound) and the lane: 955 of 955 stage 0 code objects equal their image function cells' code objects, lane-checked."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image instance made closed (task r21-image-lane, verifier fix), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial (depends on OB-JIT-IMAGE-READER, open). image_code_ok and image_mutants_caught now Closed under the global context: the reader writes bytes as Init.Byte constructors instead of Uint63 halves; lane at 0595b57 rc 0, log a120de67...078b."
     }
    ]
   },
@@ -4795,7 +4800,7 @@
    "status": "open",
    "boundary": "Reading and loading the image",
    "identity": "",
-   "statement": "The trusted reader (tests/shen-jit/stage0_to_rocq.py --image, formerly spikes/image-decode/image_to_rocq.py) gives the image's bytes as 32-bit halves of its little-endian 64-bit words, joined in Rocq over the primitive Uint63 integers, and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
+   "statement": "The trusted reader (tests/shen-jit/stage0_to_rocq.py --image, formerly spikes/image-decode/image_to_rocq.py) gives the image's bytes, in file order, as constructors of Rocq's ordinary inductive byte (joined into little-endian 64-bit words in Rocq by JitImage.words_of_bytes, closed), and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
    "premises": [],
    "depends_on": [],
    "evidence": [
@@ -4821,6 +4826,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
      "recorded": "2026-11-11: stays open; the reader is now the lane's --image mode (a word split into halves), the join is in Rocq."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image instance made closed (task r21-image-lane, verifier fix), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; the reader now only copies bytes (Init.Byte constructors), no primitive integers; loader rebasing still unmodelled."
     }
    ]
   },
