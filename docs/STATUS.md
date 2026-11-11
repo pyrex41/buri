@@ -1274,7 +1274,8 @@ hypothesis, and `compat_trap_of_gen` gives `compat_trap_statement` from `fund_ge
 Seven are in `rocq/JitKRefCompatCall.v` (branch `p2/r1-compat-call`): compat_call. `compat_call_lt` gives a named call at index k
 from `fund_below k` alone (through `JitKRefCompatClo.call_rel` and `app_rel`, with `JitKRefPrim.prim_compat`; no `D_wf`),
 `compat_call_refl_lt` its reflexive scope form, and `compat_call_of_fund` gives `compat_call_statement` from
-`fund_gen_statement` alone. Mutants `ShenJitKRefCallNoPrim` and `ShenJitKRefCallRename` are rejected. Not
+`fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable` (SRel and GStore
+without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`. Not
 `fund_gen_statement` or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel

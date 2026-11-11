@@ -26,6 +26,8 @@
    at every store the relation reaches, so neither sealed_stable nor storehas_stable is needed
    here directly: SRel carries StoreHas and the table equality, and every step that changes a
    table (defun) is the business of the frames that return through KRel.
+   Mutant ShenJitKRefCallNoTable drops that table equality from SRel (and GStore); Rocq then
+   rejects JitKRefCompatClo.call_rel, the call move this file uses.
 
    NOT proved here: fund_gen_statement, the fundamental property (JitKRefFund). *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.

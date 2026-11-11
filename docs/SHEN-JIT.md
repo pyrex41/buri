@@ -363,9 +363,9 @@ under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with
 (`ERel_call_cons`: `KRel_KCallArgs`, whose `AppRel` of `(VPartial f [])` against itself comes from `app_rel`).
 `compat_call_lt` (compat_call at index k, KRef-related arguments) takes `fund_below k` alone, being
 `compat_call_lt_pc JitKRefPrim.prim_compat`; it needs no `D_wf`. `compat_call_refl_lt` is the reflexive scope form, and
-`compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutants `ShenJitKRefCallNoPrim`
-(compat_call_lt without `prim_compat`) and `ShenJitKRefCallRename` (compat_call_of_fund's proof on a copy whose target
-calls another name) are rejected.
+`compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
+(SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
+compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation.
 `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
