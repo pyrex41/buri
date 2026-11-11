@@ -327,3 +327,6 @@ Print Assumptions JitEmitInv.JitEmitInv.dv_read_closed.
 Print Assumptions JitEmitInv.JitEmitInv.dv_eq_nan.
 Print Assumptions JitEmitInv.JitEmitInv.dv_window.
 Print Assumptions JitEmitInv.JitEmitInv.dv_io_fail.
+Print Assumptions JitEmitInv.JitEmitInv.dv_window_rel.
+Print Assumptions JitEmitInv.JitEmitInv.dv_write_closed_rel.
+Print Assumptions JitEmitInv.JitEmitInv.dv_write_closed.

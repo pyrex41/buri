@@ -1134,12 +1134,13 @@ Qed.
    - error-to-string: the source answers "error", the bytecode the exception's text (dv_ets_rel, dv_ets_src, dv_ets_byt).
    - open: the bytecode's request prefixes *home-directory*; no translated event equals the
      source's (dv_open).
-   - close and read-byte on a closed stream: the source asks the environment, the bytecode
-     answers without a request (dv_close, dv_read_closed).
+   - close, read-byte and write-byte on a closed stream: the source asks the environment, the
+     bytecode answers or raises without a request (dv_close, dv_read_closed, dv_write_closed).
    - = on two NaNs: the bytecode is stuck, the source answers (dv_eq_nan). = on a cycle is NOT
-     checked here (UNKNOWN).
-   - a dynamic call of two arguments on a one-parameter closure: the source over-applies, the
-     bytecode raises (dv_window).
+     checked here: the source may itself answer OWrong there, so whether it is a divergence at
+     all is UNKNOWN.
+   - a dynamic call of two arguments on a one-parameter closure, the two closures VRh-related
+     (dv_window_rel): the source over-applies, the bytecode raises (dv_window).
    - an IO failure: the bytecode's continuation resumes the machine with no result, the source
      throws; resp_ok excludes the answer (dv_io_fail). This is what env_ok is for.
    - GvalsRel in the *_old statements: MS holds at a store with a bound global the machine does
@@ -1149,7 +1150,8 @@ Definition dv_E : B.env := B.Env (fun _ => false) (fun _ => false) (fun _ => 0%Z
 Definition dv_s : store := Store [] [] [].
 Definition dv_code1 : B.code := B.Code B.VNil 1 None 3 [] [B.IReturn (B.OSlot 2)] [] B.VNil.
 Definition dv_heap : B.tree B.obj :=
- B.tset 1 (B.OExn (B.t "hd: 1 is not a pair") (B.VFix 1)) (B.tset 2 (B.OStream 5 B.SIn false) (B.tset 3 (B.OClo dv_code1 []) B.Leaf)).
+ B.tset 1 (B.OExn (B.t "hd: 1 is not a pair") (B.VFix 1)) (B.tset 2 (B.OStream 5 B.SIn false)
+  (B.tset 3 (B.OClo dv_code1 []) (B.tset 4 (B.OStream 6 B.SOut false) B.Leaf))).
 Definition dv_m (gval : B.tree B.val) : B.machine :=
  B.Machine B.Leaf 0 dv_code1 [] [] [] B.VCleared dv_heap 4 gval B.Leaf B.Leaf false 0.
 Definition dv_mm := dv_m B.Leaf.
@@ -1196,12 +1198,32 @@ Example dv_eq_nan : (exists b, src PEqual [VNum (NFloat dv_nan); VNum (NFloat dv
  byt dv_mm B.PEq [B.VReal dv_nan; B.VReal dv_nan] = B.MStuck B.RIdentity.
 Proof. split; [eexists; vm_compute; reflexivity|vm_compute; reflexivity]. Qed.
 
-(* A dynamic call of a one-parameter closure with two arguments: the source over-applies, the
-   bytecode's call raises. *)
-Example dv_window : apply_value_r (jit_rules []) jit_profile (VLam (kw "X") (EVar (kw "X")) []) [VNum (NInt 1); VNum (NInt 2)] [] dv_s =
- MTau (Cfg (Eval [(kw "X", VNum (NInt 1))] (EVar (kw "X"))) [KApply [VNum (NInt 2)]] dv_s) /\
+(* A dynamic call of a one-parameter closure with two arguments, on related closures (identity
+   cell 0 through mu = [(0, 3)]): the source over-applies, the bytecode's call raises. *)
+Definition dv_rho : lenv := [(id_key, VVec 0)].
+Example dv_window_rel : VRh [(0%nat, 3%positive)] dv_heap (VLam (kw "X") (EVar (kw "X")) dv_rho) (B.VClo 3).
+Proof.
+ eapply VRh_lam with (nc := dv_code1) (caps := []) (cv := []) (l0 := 0%nat).
+ - reflexivity.
+ - split; [reflexivity|]. split; [reflexivity|]. exists [].
+   eapply C_ret. eapply O_var; vm_compute; reflexivity.
+ - reflexivity.
+ - left; reflexivity.
+ - reflexivity.
+ - intros i y N. destruct i; discriminate.
+Qed.
+Example dv_window : apply_value_r (jit_rules []) jit_profile (VLam (kw "X") (EVar (kw "X")) dv_rho) [VNum (NInt 1); VNum (NInt 2)] [] dv_s =
+ MTau (Cfg (Eval ((kw "X", VNum (NInt 1)) :: dv_rho) (EVar (kw "X"))) [KApply [VNum (NInt 2)]] dv_s) /\
  exists l m', B.enter dv_E dv_mm (B.VClo 3) 2 B.Leaf 0 [] = B.MFinal (B.FError (B.VExn l)) m'.
 Proof. split; [reflexivity|vm_compute; eauto]. Qed.
+
+(* write-byte on a closed output stream: the source asks the environment, the bytecode raises. *)
+Example dv_write_closed_rel : VRh [] dv_heap (VStream 6) (B.VStream 4).
+Proof. econstructor; reflexivity. Qed.
+Example dv_write_closed : (exists f, src PWriteByte [VNum (NInt 65); VStream 6] = PIO (QWrite 6 [65]) f) /\
+ exists l m', byt dv_mm B.PWriteByte [B.VFix 65; B.VStream 4] = B.MFinal (B.FError (B.VExn l)) m'.
+Proof. split; [eexists; vm_compute; reflexivity|vm_compute; eauto]. Qed.
+
 
 (* An IO failure with no handler: the bytecode's continuation resumes the machine without a
    result, while the source throws. *)

@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Three hundred and twenty-two statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Three hundred and twenty-five statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models (92 added by emit-spec: the family hooks' map and all lemmas, the hand-written
 nested `Comp_ind'` of `rocq/JitEmitRel.v` and of its non-empty test copy with `suffix`, `comp_embed`, `pmapx_pmap`,
 `frame_prim_pmap`, `trap_has_handler`, `VR_VRh`, `VRh_no_partial`, the old invariant's embedding at any `mu` that relates the
@@ -1249,7 +1249,7 @@ store's cells and globals (`kont_embed`, `sm_embed`, `ms_embed`), sanity lemmas 
 `do_body_second`, `storerel_nil`, `env_ok_inhabited`, `ev_of_time`, `TRun_0`, `Out'_not_stuck`, `value_bound`, `value_unbound`, the six
 `Sim*_of_sim'`, `Ends'_final`, `EndsSrc'_final`), the old-fragment bridges (`srun_nil_sstar`, `trun_nil_tn`, `tn_tstar`,
 `ms_entered`, `entered_embed`) and the three old-fragment corollaries (`*_old_of_new`: the old conclusions at `mu = []`, from the new
-statements plus a reflection obligation, which r1-emit-spec-merge refutes in Rocq, `old_reflect_false`, so they are vacuous); 31 added by
+statements plus a reflection obligation, which r1-emit-spec-merge refutes in Rocq, `old_reflect_false`, so they are vacuous); 34 added by
 r1-emit-spec-merge: `get_time_agree`, the refutation and its parts, `gvals_needed` and the `dv_*` divergence Examples behind each
 narrowing; the back-end statements of `rocq/JitEmitInv.v`
 are stated, not proved, and a first version of them was false (counterexamples recorded in `rocq/JitEmitKont.v`'s `frame_prim`

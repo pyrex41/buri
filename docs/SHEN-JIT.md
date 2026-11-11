@@ -161,7 +161,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 322 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 325 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -598,7 +598,7 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   every response. Checking the other frames found more of the same kind. Each is argued by hand
   from `KLSemantics.prim_rule`/`apply_value` and `JitBytecode.prim_step`/`enter`; none is
   mechanized at emit-spec; r1-emit-spec-merge checks each in Rocq as a primitive-level divergence
-  (`dv_*` in `rocq/JitEmitInv.v`, below), except `=` on a cycle and `write-byte`, still UNKNOWN:
+  (`dv_*` in `rocq/JitEmitInv.v`, below), except `=` on a cycle, still UNKNOWN:
   - `absvector` of 2^48 allocates in the source, while the bytecode raises.
   - `error-to-string` of a primitive's exception is `"error"` in the source but the message in
     the bytecode.
@@ -701,17 +701,18 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   allocating primitives.
 - **The narrowing, checked in Rocq** (closed Examples; divergences at the primitive or call
   level, not refutations of `sim'_statement`): `dv_absvector_src/_byt` (2^48), `dv_ets_*`
-  (error-to-string), `dv_open` (*home-directory*), `dv_close`, `dv_read_closed` (closed stream),
+  (error-to-string), `dv_open` (*home-directory*), `dv_close`, `dv_read_closed`, `dv_write_closed`
+  (closed stream),
   `dv_eq_nan` (two NaNs: the bytecode is stuck), `dv_window` (two arguments to a one-parameter
-  closure: the source over-applies, the bytecode raises), `dv_io_fail` (an IO failure: the
+  closure, related to the bytecode's by `dv_window_rel`: the source over-applies, the bytecode raises), `dv_io_fail` (an IO failure: the
   bytecode resumes with no result, the source throws; `resp_ok` excludes the answer).
   `gvals_needed`: MS holds and MS' at no `mu` when the store binds a global the machine does
   not, so `GvalsRel [] s m` is not implied by the old premises. Not mechanized: `=` on a cycle,
-  `write-byte`. At the old fragment `env_ok` is discharged (`env_ok_inhabited`).
+  where the source may itself answer `OWrong`, so whether it diverges at all is UNKNOWN. At the old fragment `env_ok` is discharged (`env_ok_inhabited`).
 - **Awaiting Reuben** (none approved): `env_ok` on the run statements, the `frame_prim`
   exclusions, the one-argument window, `GvalsRel` on the `*_old` statements, and how the old
   conclusions are recovered.
-- **Evidence.** 31 closed statements added to `Audit_Jit` (322 in all). Mutants
+- **Evidence.** 34 closed statements added to `Audit_Jit` (325 in all). Mutants
   `ShenJitEmitGetTimeSwap` (run and unix swapped in `ev_of`; `get_time_agree` must fail) and
   `ShenJitEmitDo2Opaque` (`KD'_do2` needs `False`; `old_reflect_false` must fail); the pin is 224.
   The lane and the emit mutants were run on this branch (task report); `make prove`, `make
