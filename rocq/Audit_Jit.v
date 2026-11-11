@@ -714,3 +714,14 @@ Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.SRel_nt_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_nt_of_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_refuted.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.cx_tables_differ.
+From Buri Require Import JitEmitSim.
+Print Assumptions JitEmitSim.JitEmitSim.entered_ms'.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_of_preservation'.
+Print Assumptions JitEmitSim.JitEmitSim.preservation'_of_sim'.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_of_sim'.
+Print Assumptions JitEmitSim.JitEmitSim.evalctx_slot1_void.
+Print Assumptions JitEmitSim.JitEmitSim.ms'_slot1_frame.
+Print Assumptions JitEmitSim.JitEmitSim.vrh_refl.
+Print Assumptions JitEmitSim.JitEmitSim.adequacy_tr.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src'_of_cp'.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src_old_of_cp'.

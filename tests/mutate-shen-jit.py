@@ -178,6 +178,17 @@ ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) 
   A rejected proof only. That call_rel is false without the clause is shown separately in Rocq by
   JitKRefCallNoTableCex.call_rel_no_table_refuted (call_rel's statement with SRel's table clause
   replaced by True, over the unmutated VRel, KRel and fund_below).
+ShenJitEmitSimCloScoped: clo_scoped_statement (r22-emit-sim's one premise beyond call_preservation')
+  says nothing (True): a VRh-related closure's body need not be scoped in its parameters and
+  captures, so KRef_refl does not apply. vrh_refl must fail.
+ShenJitEmitSimVrhDom: vrh_refl without its premise that mu's source cells are in the store: a vector
+  through mu need not be in the identity world. vrh_refl must fail.
+ShenJitEmitSimAdequacyRefl: adequacy_tr without the VRel-reflexivity of the environment's values:
+  KRef's environment premise is not met. adequacy_tr must fail.
+ShenJitEmitSimRaiseStar: raise_resolve_statement's step case with TStar for TPlus: the machine need
+  not move, so the step count of preservation' is not met. preservation'_of_sim' must fail.
+ShenJitEmitSimSlot1Any: evalctx_slot1_void without cv <> []: a code that captures nothing may write
+  slot 1. evalctx_slot1_void must fail.
 ShenJitKRefCallNoTableCexTable: JitKRefCallNoTableCex.SRel_nt with the table clause restored
   (gfuns s0 = gfuns s for True, and SRel_nt_table's proof supplying it). The counterexample's two
   stores have different tables, so call_rel_no_table_refuted must fail where it establishes SRel_nt
@@ -647,4 +658,20 @@ mutate_chain_n('ShenJitKRefCallNoTableCexTable', [cex],
          " wf_world w /\\ StoreHas s0 /\\ StoreHas s /\\ gfuns s0 = gfuns s /\\\n"),
         ("(conj W (conj H0 (conj H1 (conj I (conj Fv Hh)))))", "(conj W (conj H0 (conj H1 (conj G (conj Fv Hh)))))"),
         ("split; [exact I|split; [constructor|intros l0 l []]]", "split; [vm_compute; reflexivity|split; [constructor|intros l0 l []]]")])
+sim = 'rocq/JitEmitSim.v'
+mutate('ShenJitEmitSimCloScoped', sim,
+       " forall nc cv ps b, CloOK nc cv ps b -> JitKRef.JitKRef.scoped (ps ++ cv) b = true.",
+       " forall nc cv ps b, CloOK nc cv ps b -> True.")
+mutate('ShenJitEmitSimVrhDom', sim,
+       "forall mu s h, (forall l p, In (l, p) mu -> (l < List.length (heap s))%nat) ->",
+       "forall mu s h, (forall l p, In (l, p) mu -> True) ->")
+mutate('ShenJitEmitSimAdequacyRefl', sim,
+       " (forall x, In x g -> exists v, lookup x rho = Some v /\\ forall k, VRel k (id_world s) v v) ->",
+       " (forall x, In x g -> exists v, lookup x rho = Some v /\\ forall k, True) ->")
+mutate('ShenJitEmitSimRaiseStar', sim,
+       " (exists c' m' mu', Sstar (Cfg (Throw x) k s) c' /\\ TPlus m1 m' /\\ mext mu mu' /\\ MS' mu' c' m') \\/",
+       " (exists c' m' mu', Sstar (Cfg (Throw x) k s) c' /\\ TStar m1 m' /\\ mext mu mu' /\\ MS' mu' c' m') \\/")
+mutate('ShenJitEmitSimSlot1Any', sim,
+       "Lemma evalctx_slot1_void : forall mu cv caps g top r2 rho k s w m, cv <> [] ->",
+       "Lemma evalctx_slot1_void : forall mu cv caps g top r2 rho k s w m, True ->")
 print(' '.join(names))
