@@ -89,7 +89,11 @@ theorem, checker or relation, so no audit entry, mutant or pin changes. The comm
 file and regenerates `tests/shen-jit/stage0-residuals.txt` (`stage0_residuals.py /lps/p6/sj/build/stage0
 /tmp/p2-T02-capture/witness /tmp/p2-r22-t02-refresh-judge ...`, rc 0, 148 of 955, residual 807): the only changed
 line is the header's `feature_census.py` sha256 (`a870685c...` to `b4eb11f4...`), so the rows, which use
-`feature_census.eq_kind`, are byte-identical. The lane result for that commit is recorded in the commit message.
+`feature_census.eq_kind`, are byte-identical. Lane on that commit, `131801f`: `SKIP_DIFF=1
+JIT_OUT=/tmp/p2-r22-t02-refresh-lane-out2 rocq-slot bash scripts/check-shen-jit.sh`, 22:07:09Z to 22:49:23Z,
+LANE_RC=0, log sha256 `7b23a0486611ed509720ea9e0f9014e9b937203dd0a70b246c758ec58a581d83`: tables match, 708
+audited statements closed, rocqchk passed, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded, image
+step as recorded; differential not run (UNKNOWN). The commit after `131801f` touches only this file.
 
 | what | value |
 |---|---|
