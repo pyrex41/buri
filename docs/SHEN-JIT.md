@@ -156,7 +156,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 249 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 263 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -322,6 +322,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
 | `rocq/JitKRefCompatClo.v` | KRef compatibility for lambda, freeze and dynamic application: `compat_lambda`, `compat_freeze` (no induction hypothesis), the `_lt` forms from `fund_below`, `app_rel`, and `compat_app_of_fund` from `fund_gen_statement` and `prim_compat_statement` |
 | `rocq/JitKRefFv.v` | `scoped_fv` (an expression scoped in g has its free variables in g), `fv` against binders and the list forms (`fv_lam_iff`, `fv_let_iff`, `scoped_defun_fv`, `fv_cond_iff`, `fv_app_iff`, `fv_call_iff`), `fund_below`'s scope condition carried to subterms and under binders (`fv_scope_*`), and the index induction `fund_below_all` / `fund_gen_of_step` that `fund_gen_statement` will be proved by; not `fund_gen_statement` itself |
+| `rocq/JitKRefFund.v` | KRef's fundamental property outright: `fund_step` (the induction step over every constructor from the compat lemmas and `prim_compat`), `fund_gen`, `fundamental`, `KRef_refl`, `compat_trap`, `compat_app`, `compat_call`, `store_refl`, `adequacy` and `call_preservation_src`, each with no premise beyond its statement's own |
 | `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
@@ -337,7 +338,7 @@ rewrites rely on (sealed, `D_wf`) and a well-formed store; adequacy and store re
 ground relation's lemmas, `KRel_top`, and the premise checks' specifications. The source's final store is related to
 the start by `GStore` under a world fixing the old locations, not equal to it. The `=` budget lemma is proved: `JitEqBudgetCore.eq_budget`
 is `eq_budget_statement` (its induction step in `JitEqBudgetStep.v`, its base case, `walk_bound`, in `JitEqBudgetWalk.v`, the
-assembly in `JitEqBudgetCore.v`). Not proved: the fundamental property, the compatibility lemmas, and any front-link checker. Under Com's
+assembly in `JitEqBudgetCore.v`). The fundamental property, every compatibility lemma, store reflexivity, adequacy and `call_preservation_src` itself are proved outright in `rocq/JitKRefFund.v` (below). Not proved: any front-link checker. Under Com's
 FunRel the callees b0 calls are the lowered bodies, not the kernel's source definitions. A checker must reject norm's
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
@@ -367,6 +368,20 @@ under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with
 `compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
 (SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
 compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation.
+`rocq/JitKRefFund.v` (14 audited statements) closes the fundamental property (option A). `fund_step` proves
+`D_wf -> fund_below k -> fund_at k` by structural induction on the expression: literals and variables by `ERel_sval`
+(a variable bound on neither side raises `XUnboundVar` on both, `ERel_throw_both`), let by `ERel_let` (the body below k
+from `fund_below k`, at k from the induction hypothesis), if, and, or, cond and type by their ERel lemmas, trap by
+`ERel_trap` with `AppExn_fb`, defun by `ERel_defun`, and lambda, freeze, application and named call by
+`compat_lambda_lt`, `compat_freeze_lt`, `compat_app_lt` (with `prim_compat`, whose `=` case rests on
+`JitEqBudgetCore.eq_budget_closed`) and `compat_call_refl_lt`. `fund_gen` is `fund_gen_statement` by
+`JitKRefFv.fund_gen_of_step`; `fundamental` relates EnvRelAll environments on their names (`EnvRelAll_scope`);
+`KRef_refl`, `compat_trap`, `compat_app`, `compat_call`, `store_refl`, `adequacy` and `call_preservation_src` follow
+with no hypothesis beyond each statement's own premises (for `call_preservation_src`: `D_wf`, the two KRef links,
+`StoreHas`, `store_ok`, `Com`, `CompFn`, the arity and `entered`). `store_ok` is carried beside SRel as a premise,
+since SRel does not give it (`SRel_lok_refuted`). Mutants `ShenJitKRefFundNoTrapCase` (fund_step's trap case proved
+as a literal) and `ShenJitKRefStoreReflNoStoreOk` (`store_refl_statement` without `store_ok s`) are rejected.
+`OB-JIT-LOWER-FRONT` stays open: its completion evidence also needs the front-link checkers.
 `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.

@@ -100,6 +100,13 @@ ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) 
   JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v; the first three compile, and Rocq rejects
   JitKRefCompatClo.call_rel, the named-call move compat_call (JitKRefCompatCall) rests on: with two
   function tables no longer equal, a call of f may run different definitions on the two sides.
+ShenJitKRefFundNoTrapCase: fund_step (JitKRefFund) with its trap case proved as a literal
+  (eapply ERel_lit; reflexivity) instead of by ERel_trap with JitKRefCompatCtl.AppExn_fb. Rocq
+  rejects it at the trap goal: lit_val (ETrap a b) is None, so no compat lemma covers the case.
+ShenJitKRefStoreReflNoStoreOk: store_refl_statement without its store_ok s premise, chained as
+  JitKRef.v + JitKRefGround.v. store_ok is carried beside SRel as a premise because SRel does not give
+  it (JitKRefBase.SRel_lok_refuted); without it, store_refl_of_fundamental (and adequacy_of_fundamental,
+  which uses it) must fail.
 """
 import re
 from pathlib import Path
@@ -295,4 +302,12 @@ mutate_chain_n('ShenJitKRefCallNoTable',
          " True /\\\n Forall2 (fun p0 p => fst p0 = fst p /\\ GVal w"),
         ("StoreHas s0 /\\ StoreHas s /\\ gfuns s0 = gfuns s /\\",
          "StoreHas s0 /\\ StoreHas s /\\ True /\\")])
+fund = 'rocq/JitKRefFund.v'
+mutate('ShenJitKRefFundNoTrapCase', fund,
+       "   apply JitKRefCompatCtl.JitKRefCompatCtl.ERel_trap;\n"
+       "    [exact (JitKRefCompatCtl.JitKRefCompatCtl.AppExn_fb sealed D k Fb)|ih IHa Ww HE|ih IHb Ww HE].\n",
+       "   eapply ERel_lit; reflexivity.\n")
+mutate_chain('ShenJitKRefStoreReflNoStoreOk', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
+       " D_wf -> StoreHas s -> store_ok s -> SRel k (id_world s) s s.\n",
+       " D_wf -> StoreHas s -> SRel k (id_world s) s s.\n")
 print(' '.join(names))

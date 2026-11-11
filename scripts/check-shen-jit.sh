@@ -20,7 +20,7 @@ got=$(sha256sum "$bin" | cut -d' ' -f1)
 python3 "$root/tests/shen-jit/check_tables.py" "$root" "$src" || exit 4
 eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
 mkdir -p "$out"; cd "$out"
-FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv Audit_Jit"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund Audit_Jit"
 for f in $FILES; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
   d=$(diff "$root/rocq/$f.v" "$f.v" || true)   # diff exits 1 when the files differ
