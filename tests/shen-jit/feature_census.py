@@ -9,7 +9,16 @@ Rocq checkers, not evidence. The only Rocq facts it reads are the existing judge
 verdicts (judge_split.sh), and its one check is that the prediction for the current feature set
 agrees with them definition by definition (src and tf).
 
-    feature_census.py STAGE0_DIR CAPTURE_DIR JUDGE_DIR OUT_TSV > FEATURES-tables.md
+    feature_census.py STAGE0_DIR CAPTURE_DIR JUDGE_DIR OUT_TSV [--accepted ACCEPTED_TXT]
+                      [--forecast OUT_FORECAST_TSV] > FEATURES-tables.md
+    feature_census.py --check-tsv FEATURES_TSV ACCEPTED_TXT
+
+--accepted also checks the per-file Rocq src verdict counts, and the per-file current-set prediction,
+against the pinned tests/shen-jit/stage0-accepted.txt. --forecast writes the per-family forecast
+(spikes/pass-split/FORECAST.tsv): for each norm and emit family, the definitions predicted accepted under
+the merged feature set (MERGED_FRONT, BASE) plus that family. --check-tsv repeats the current-set check
+from a features.tsv alone (no capture or judge needed): its rocq_src column against the prediction
+(features and required_families both empty) and the per-file sums against ACCEPTED_TXT.
 
 Inputs: STAGE0_DIR/<f>.forms (names), CAPTURE_DIR/witness/<f>.{norm,share,ncensus} and
 CAPTURE_DIR/count/<f>.ticks from capture_passes.sh, JUDGE_DIR/{src,tf}/<f>.codes from judge_split.sh.
@@ -44,7 +53,9 @@ FAMILY_OF = {
     'share-chain': 'share',
     'sealed-inline': 'inline', 'inline-int-arg': 'inline', 'open-inline': 'inline',
     'cond': 'cond', 'type': 'sugar', 'protect': 'sugar', 'lambda-app': 'sugar',
-    'lambda-app-more': 'sugar', 'curried-apply': 'sugar', 'fn-sealed': 'sugar', 'fn-open': 'sugar',
+    # JitFrontSugar rejects these and defers curried apply and multi-argument lambda application to
+    # the uncurrying family; fn sugar has no rule and no owning task (none fires in the v0.6 capture)
+    'lambda-app-more': 'uncurry', 'curried-apply': 'uncurry', 'fn-sealed': 'fn', 'fn-open': 'fn',
     'trap-lambda': 'trap-sugar', 'trap-other': 'trap-sugar',
     'fold-cons': 'fold-cons', 'fold-plus': 'fold-arith', 'fold-minus': 'fold-arith',
     'let-frozen-copy': 'copy', 'let-frozen-keep': 'copy', 'frozen-late-hoist': 'copy',
@@ -200,6 +211,91 @@ def walk(n, fx, stack=0):
 # since = against a symbol constant was admitted (OB-JIT-SYM-INJECTIVE)
 BASE = {'eq-safe-const', 'eq-symbol-const'}
 
+# ---------------------------------------------------------------- per-family forecast (FORECAST.tsv)
+# The merged feature set the per-family forecast starts from. It is NOT the current-set model above
+# (no judge runs these checkers, so row 0 and the 148 check keep BASE with cond/type transparent).
+# Emit: BASE only; every Rule_X/RuleT_X/RuleO_X hook in rocq/JitEmitRule<X>.v is still empty.
+# Front: the four families whose checkers are composed by JitFrontSugar.chk_front and proved sound with
+# no premise but D_wf (chk_front_sound, r1-f-sugar). JitFrontProlog.bind_rule (r1-f-prolog) is proved
+# sound but is not composed into a checker and covers only the bound-now shape with a literal freeze, so
+# census family bind (also unified-now, bound-now-frozen) is not merged.
+MERGED_FRONT = {'fam:cond', 'fam:sugar', 'fam:thaw-sugar', 'fam:trap-sugar'}
+PRIM_FEATS = {'prim:' + p for p in KL_PRIMS - ADMITTED - GLOBALS - IO - VECTOR - set(ERRORS) - {'=', 'eval-kl'}}
+# (row name, kind, status, items). kind: norm (front family), emit (JitEmitRule<X> family), decision
+# (Reuben's call, defaults to a named residual). Each census item belongs to exactly one row besides
+# the merged one. Choices: `vector` (absvector, <-address, address->, absvector?) goes to Store, whose
+# header names the first three; `io` (open close read-byte write-byte get-time) goes to Prim, as there
+# is no IO rule file (the remaining KL primitives); `=` on two computed operands is split into the
+# guarded part (Eq) and the unguarded part plus NaN constants (decision OB-JIT-NAN-IDENTITY).
+FAMILIES = [
+    ('F-share', 'norm', 'open', {'fam:share'}),
+    ('F-inline', 'norm', 'open', {'fam:inline'}),
+    ('F-sugar', 'norm', 'merged', set(MERGED_FRONT)),
+    ('F-fold', 'norm', 'open', {'fam:fold-cons', 'fam:fold-arith'}),
+    ('F-copy', 'norm', 'open', {'fam:copy'}),
+    ('F-bind', 'norm', 'open', {'fam:bind'}),
+    ('F-cut-deref', 'norm', 'open', {'fam:cut-deref'}),
+    ('F-uncurry', 'norm', 'open', {'fam:uncurry'}),
+    ('F-fn', 'norm', 'unowned', {'fam:fn'}),
+    ('E-Eq', 'emit', 'open', {'eq-two-computed'}),
+    ('E-Store', 'emit', 'open', {'value/set', 'vector'}),
+    ('E-Prim', 'emit', 'open', PRIM_FEATS | {'simple-error', 'error-to-string', 'io'}),
+    ('E-DoFold', 'emit', 'open', {'do', 'folded-const'}),
+    ('E-Clo', 'emit', 'open', {'lambda', 'freeze', 'let-freeze'}),
+    ('E-App', 'emit', 'open', {'apply-dynamic', 'thaw'}),
+    ('E-Trap', 'emit', 'open', {'trap'}),
+    ('D-eq-nan', 'decision', 'decision', {'eq-two-computed', 'eq-two-computed-unguarded', 'nan-const'}),
+    ('D-eval-kl', 'decision', 'decision', {'fam:eval-kl'}),
+    ('D-port-identity', 'decision', 'decision', {'port:' + x for x in IDENTITY}),
+    ('D-port-other', 'decision', 'decision', None),   # every other port: item, filled in from the census
+]
+
+def names_hash(ns):
+    """sha256 of the names sorted by their UTF-8 bytes, each followed by LF."""
+    import hashlib
+    return hashlib.sha256(''.join(n + '\n' for n in sorted(ns, key=lambda x: x.encode())).encode()).hexdigest()
+
+def read_accepted(path):
+    rows = {}
+    for line in open(path):
+        if line.strip():
+            f, a, r, u = line.split()
+            rows[f] = (int(a), int(r), int(u))
+    return rows
+
+def check_accepted(pinned, got, pred, out):
+    """Compare per-file (accepted, rejected, unreadable) from Rocq and the per-file predicted accepted
+    count with the pinned file. Returns the number of disagreeing lines."""
+    bad = 0
+    for f in sorted(set(pinned) | set(got)):
+        if pinned.get(f) != got.get(f):
+            out('    ACCEPTED_MISMATCH rocq %s pinned %r got %r' % (f, pinned.get(f), got.get(f))); bad += 1
+        if pinned.get(f, (None,))[0] != pred.get(f, 0):
+            out('    ACCEPTED_MISMATCH predicted %s pinned %r predicted %d' % (f, pinned.get(f), pred.get(f, 0))); bad += 1
+    return bad
+
+def check_tsv(tsv, accepted):
+    """Current-set check from features.tsv alone (census; Rocq verdicts as recorded in the tsv)."""
+    got, pred, bad = collections.defaultdict(lambda: [0, 0, 0]), collections.Counter(), 0
+    n = 0
+    for line in open(tsv):
+        if line.startswith('#') or line.startswith('definition\t'):
+            continue
+        c = line.rstrip('\n').split('\t')
+        n += 1
+        f, v = c[1], int(c[2])
+        got[f][{1: 0, 2: 1, 0: 2}[v]] += 1
+        p = c[5] == '-' and c[6] == '-'
+        pred[f] += p
+        if p != (v == 1):
+            print('    MISMATCH %s rocq_src %d predicted %s' % (c[0], v, p)); bad += 1
+    got = {f: tuple(x) for f, x in got.items()}
+    bad += check_accepted(read_accepted(accepted), got, pred, print)
+    print('check-tsv: %d definitions; rocq_src accepted %d, predicted %d; pinned %d; mismatches %d'
+          % (n, sum(x[0] for x in got.values()), sum(pred.values()),
+             sum(x[0] for x in read_accepted(accepted).values()), bad))
+    return 1 if bad else 0
+
 def read(path):
     return parse(tokens(open(path).read()))
 
@@ -208,7 +304,7 @@ def verdicts(judge, variant, f):
     return [int(v) for v in lines[1].split()]
 
 # ---------------------------------------------------------------- main
-def main(s0, cap, judge, out_tsv):
+def main(s0, cap, judge, out_tsv, accepted=None, forecast=None):
     files = sorted(f[:-6] for f in os.listdir(s0) if f.endswith('.forms'))
     wit, cnt = os.path.join(cap, 'witness'), os.path.join(cap, 'count')
     D = collections.OrderedDict()   # name -> record
@@ -269,6 +365,21 @@ def main(s0, cap, judge, out_tsv):
       % (N, unread, len(mism)))
     for m in mism:
         P('    MISMATCH %r' % (m,))
+    acc_bad = 0
+    if accepted:
+        got, pred = collections.defaultdict(lambda: [0, 0, 0]), collections.Counter()
+        for n in names:
+            r = D[n]
+            got[r['file']][{1: 0, 2: 1, 0: 2}[r['src']]] += 1
+            pred[r['file']] += emit_ok(r, set()) and not r['opaque']
+        lines = []
+        acc_bad = check_accepted(read_accepted(accepted), {f: tuple(x) for f, x in got.items()}, pred,
+                                 lines.append)
+        P('Pinned per-file src counts (`tests/shen-jit/stage0-accepted.txt`): Rocq verdicts and the current-set')
+        P('prediction each agree on %d of %d files; disagreeing lines: %d\n'
+          % (len(files) - len({l.split()[2] for l in lines}), len(files), acc_bad))
+        for l in lines:
+            P(l)
 
     # ---- feature usage
     allfeats = collections.Counter()
@@ -546,6 +657,55 @@ def main(s0, cap, judge, out_tsv):
         P('| %s | %d | %s |' % (k, len(v), ', '.join('`%s`' % x for x in v[:4])))
     P('\nresidual total: %d\n' % sum(map(len, res.values())))
 
+    # ---- per-family forecast (merged features plus one family)
+    if forecast:
+        fams = [list(x) for x in FAMILIES]
+        ports = {x for x in cand if x.startswith('port:')}
+        for x in fams:
+            if x[3] is None:
+                x[3] = ports - {'port:' + i for i in IDENTITY}
+        covered = set().union(*(x[3] for x in fams)) | BASE
+        assert set(cand) <= covered, 'items in no family row: %r' % sorted(set(cand) - covered)
+        own = collections.Counter(i for x in fams if x[0] != 'D-eq-nan' for i in x[3])
+        assert all(v == 1 for v in own.values()), own
+        M = set(MERGED_FRONT)
+        def sets(S):
+            return {'src': {n for n in emit_direct(S) if not D[n]['opaque']}, 'direct': direct(S), 'nf': {n for n in emit_direct(S) if not D[n]['fx'].inlined},
+                    'tf': emit_direct(S)}
+        base = sets(M)
+        assert base['direct'] == direct(set()) | {n for n in names if NEED[n] <= M}
+        with open(forecast, 'w') as o:
+            w = o.write
+            w('# FORECAST.tsv: census, not proof. Generated by tests/shen-jit/feature_census.py --forecast; do not edit.\n')
+            w('# Per family: the stage 0 definitions (of %d) predicted accepted under the merged feature set plus\n' % N)
+            w('# that family alone, for the family tasks\' count floor. A prediction from a syntactic walk of the\n')
+            w('# untrusted norm witness and the count-run ticks; Rocq decides acceptance. Nothing here is validated.\n')
+            w('# merged set: emit BASE (Comp today: %s; every JitEmitRule<X> hook empty);\n' % ', '.join(sorted(BASE)))
+            w('#   front %s (JitFrontSugar.chk_front, chk_front_sound).\n' % ', '.join(sorted(M)))
+            w('# variants: src = what the existing source judge (JitLowerStage0.judge on <f>.forms, judge_split.sh src)\n')
+            w('#   would accept with the set\'s emit features in Comp (cond, type, dynamic-apply transparent; any other\n')
+            w('#   rewrite rejects); row "merged" src is the current-set prediction, %d (Rocq src: %d).\n'
+              % (len(base['src']), acc_src))
+            w('#   direct = source -> norm -> bytecode (emit features and required front families within the set;\n')
+            w('#   row "merged" direct is %d: the src set plus %d needing only merged front families);\n'
+              % (len(base['direct']), len(base['direct'] - base['src'])))
+            w('#   nf = emit only, on the erased normal form with markers (judge_split.sh nf); tf = emit only,\n')
+            w('#   markers dropped (judge_split.sh tf). new = definitions in the set and not in row "merged".\n')
+            w('# sha256: of the definition names sorted by UTF-8 bytes, each followed by LF (definitions column).\n')
+            w('# status: merged (in the merged set), open (owning task not landed), decision (Reuben\'s call; defaults\n')
+            w('#   to a named residual), unowned (no rule and no task). Single-family rows: a definition needing two\n')
+            w('#   non-merged families is in neither row.\n')
+            w('family\tkind\tstatus\titems\tvariant\tcount\tnew\tsha256\tnew_definitions\tdefinitions\n')
+            rows = [('merged', 'baseline', 'merged', set())] + [tuple(x) for x in fams]
+            for name, kind, status, items in rows:
+                ss = sets(M | items)
+                for v in ('src', 'direct', 'nf', 'tf'):
+                    st, nw = ss[v], ss[v] - base[v]
+                    k = lambda x: x.encode()
+                    w('%s\t%s\t%s\t%s\t%s\t%d\t%d\t%s\t%s\t%s\n' % (
+                        name, kind, status, ','.join(sorted(items)) or '-', v, len(st), len(nw), names_hash(st),
+                        ','.join(sorted(nw, key=k)) or '-', ','.join(sorted(st, key=k)) or '-'))
+
     # ---- TSV
     with open(out_tsv, 'w') as o:
         o.write('# feature_census.py: census, not proof. One row per stage 0 definition.\n')
@@ -560,7 +720,13 @@ def main(s0, cap, judge, out_tsv):
                 ','.join(fams_req) or '-', ','.join(sorted(r['fams'])) or '-', ident[n],
                 'yes' if n in big else 'no', len(CL[n]) - 1, len(CL_inl[n]) - 1,
                 ','.join(sorted(r['fx'].inlined)) or '-'))
-    return 1 if mism else 0
+    return 1 if mism or acc_bad else 0
 
 if __name__ == '__main__':
-    sys.exit(main(*sys.argv[1:5]))
+    a = sys.argv[1:]
+    if a and a[0] == '--check-tsv':
+        sys.exit(check_tsv(a[1], a[2]))
+    opts = {}
+    while len(a) > 4 and a[-2] in ('--accepted', '--forecast'):
+        opts[a[-2][2:]] = a[-1]; a = a[:-2]
+    sys.exit(main(*a[:4], **opts))
