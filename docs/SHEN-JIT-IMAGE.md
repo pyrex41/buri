@@ -4,7 +4,9 @@ Status: **code objects lane-checked; the rest scoped into four sub-obligations w
 discharged.** Since r21-image-lane, `scripts/check-shen-jit.sh` decodes the pinned binary's image with
 [`rocq/JitImage.v`](../rocq/JitImage.v) and Rocq proves `image_code_ok` by `vm_compute`: every one of the 955 stage 0
 definitions of the 24 files loads (`JitBytecode.build_code`) to exactly the code object its function cell holds in the
-image. `code_check_sound` (in `Audit_Jit`, closed) states what that gives. The lane also proves two one-word image
+image. `code_check_sound` (in `Audit_Jit`, closed) states what that gives. `image_code_ok` itself assumes only Rocq's
+primitive 63-bit integers (`int`, `lsr`, `land`, `eqb`), which join the reader's 32-bit halves into words, and the lane
+checks that exact list. The lane also proves two one-word image
 mutants caught, and compares the census Rocq computes on the image with `tests/shen-jit/image-facts.txt`. The proof
 mutant `ShenJitImageNoCodeEq` is rejected.
 
@@ -22,7 +24,7 @@ names its measurement; the commands and log hashes are under Evidence.
 | `OB-JIT-IMAGE-CODE` | partial (lane evidence; depends on `-READER`) | For each of the 955 `(defun F Code)` of the 24 `.sbc` files, F's function cell holds a capture-free closure whose code object decodes to `build_code prim_tree 64 Code` | **Done in the lane** (`image_code_ok`, instance-validation via `code_check_sound`). Stays partial only because the reader is trusted | lane step `image:`; Img.log |
 | `OB-JIT-IMAGE-INIT` | open | The 7 code objects not reachable from the 955, the 357 closures outside function cells, the 55 bound value cells and the data they reach denote the store initialisation reaches | **Code part feasible, data part infeasible now** (below) | Rocq census in the lane (`image_facts`) and `census.py` |
 | `OB-JIT-IMAGE-SEALING` | open | The top theorem excludes redefinition of the 65 extension names, which the image leaves unsealed behind 115 sealed call sites | **Feasible only as a premise.** The alternative, FunRel surviving redefinition, is false on the binary (test below) | `redef.shen` in the binary; Rocq census `sealed_by_file`; `census.py` |
-| `OB-JIT-IMAGE-READER` | open | The reader's 32-bit halves are the image's words, and `image_load`'s rebasing and raw-field rebuild give the heap JitImage decodes | **Feasible by review plus a Rocq model of `rebase_heap`; not done.** The reader is now a word split (`--image`) and Rocq does the join (`words_of_reader`, which uses Rocq's primitive 63-bit integers) | split hashes (`split.out`) |
+| `OB-JIT-IMAGE-READER` | open | The reader's 32-bit halves are the image's words, and `image_load`'s rebasing and raw-field rebuild give the heap JitImage decodes | **Feasible by review plus a Rocq model of `rebase_heap`; not done.** The reader is now a word split (`--image`) and Rocq does the join (`JitImage.words_of_halves`, over Rocq's primitive 63-bit integers, the only assumptions `image_code_ok` prints) | split hashes (`split.out`) |
 | `OB-JIT-IMAGE-FILE` | partial | The run opens the pinned binary as its image: `SHEN_JIT_IMAGE` unset, `argv[0]` resolves to a file whose last image is `fd8485a5...` | **Feasible only as a stated premise** (a process-model fact, not provable from the image) | split hashes (`split.out`) |
 
 ### INIT, precisely
@@ -47,6 +49,9 @@ relate it to the KLambda store the initialisation calls reach, which needs a sou
 no model has. The decoder could print the data; nothing yet says what it should equal.
 
 ### The initial-store facts share's HT and HP need
+
+HT and HP are the premises of share's `check_share_sound`. They, `ht_not_com`, `thaw_defun_refused`, `hd_tl_fixed` and
+`hd_tl_defun_refused` are on branch `p2/r1-share-ht`, not yet on `p2/int`.
 
 Measured by Rocq in the lane (`name_facts`: sealed bit, function cell, `Match`) and by the binary (`redef.shen`, test):
 
@@ -223,7 +228,19 @@ image (890 names; the lane's `sealed_by_file` proves it per file). The 6 files b
 not sealed in the image. Columns: definitions, sealed in the image (Rocq, lane), stage 0 sealed sites that target the
 file's definitions, and their caller files (`census.py`, `gap` lines).
 
-@@GAPTABLE@@
+| Stage 0 file | Definitions | Sealed at stage 0 | Sealed in the image | Sealed sites targeting it | From caller files (callers) | Image-run lowerer differences (CENSUS.md) |
+|---|---:|---:|---:|---:|---|---:|
+| extension-features | 4 | 4 | 0 | 2 | extension-features 2 (1) | 2 |
+| extension-launcher | 11 | 11 | 0 | 15 | extension-launcher 13, shen-jit 2 (`shen.x.launcher.main`) (5) | 3 |
+| extension-programmable-pattern-matching | 16 | 16 | 0 | 24 | itself 24 (11) | 3 |
+| extension-namespaces | 11 | 11 | 0 | 22 | itself 22 (9) | 3 |
+| extension-expand-dynamic | 16 | 16 | 0 | 32 | itself 32 (13) | 0 |
+| extension-type-annotations | 7 | 7 | 0 | 20 | itself 20 (6) | 0 |
+| **total** | **65** | **65** | **0** | **115** | 45 callers | 11 |
+
+So 6 files with 65 definitions make up the 24 minus 18. Each is fully unsealed in the image. All but 2 of the 115 sites
+are calls inside the same extension file. The other 2 are `shen.x.launcher.main` (file `shen-jit`, sealed) calling
+into extension-launcher.
 
 **Redefinition, tested in the pinned binary** (`spikes/image-decode/redef.shen`, run under qemu: test evidence, not
 proof). `shen.x.launcher.eval-command-h` reaches `shen.x.launcher.execute-all`, one of the 65, through a
@@ -303,18 +320,26 @@ The steps the r1-image scoping listed are done. `scripts/check-shen-jit.sh` now 
 2. `stage0_to_rocq.py --image BIN Img.v` is the reader. It finds the image from the trailer and writes each word as two
    32-bit halves, as `Uint63` literals. It reads no `.sbc`: `Img.v` imports the stage 0 step's own `Buri.s0.S0_<file>`
    modules, so the trees the image is compared with are the trees the stage 0 judge read.
-3. `Img.v` builds `words` once by `vm_compute` of `JitImage.words_of_halves`. `words_of_reader` records that join,
-   and its proof uses Rocq's primitive integers. Then Rocq proves, each by `vm_compute`:
+3. `Img.v` defines `words := JitImage.words_of_halves halves`, and Rocq proves, each by `vm_compute`:
    - `image_files`: the 24 files are stage 1's, in order;
-   - `image_code_ok : code_check words fs = true`, and Rocq prints that it is closed under the global context;
+   - `image_code_ok : code_check words fs = true`;
    - `image_mutants_caught`: print's code object with its arity word raised by one, and with bit 1 of its first
-     bytecode byte flipped, each no longer `Match`. The word positions are found in Rocq, not given. Also closed.
+     bytecode byte flipped, each no longer `Match`. The word positions are found in Rocq, not given.
+
+   **Assumptions.** `Print Assumptions` on both lemmas lists exactly `int`, `lsr`, `land` and `eqb`. These are Rocq's
+   primitive 63-bit integer type and operations (`Uint63`), which the join of the halves uses. The lane fails on any
+   other assumption, or on a missing one (`IMAGE_ASSUMPTIONS`). This is not "closed under the global context":
+   evaluating the primitives is part of Rocq's kernel, and it is listed under `OB-JIT-IMAGE-READER`. The general
+   theorems (`code_check_sound` and the rest) are closed. An attempt to make the instance closed failed:
+   - Rocq first computed the words as an N list and stored it as a constant. That compile was stopped after 616 s,
+     because VM-compiling a constant of about 6 million constructors is the slow part.
+   - Writing the words as N literals in the file was stopped after 140 s.
 4. `image_facts`, the census Rocq computes on the image, is diffed with `tests/shen-jit/image-facts.txt`. It covers the
    word and definition counts, the code, closure and cell census, the sealing by file, and the thaw, hd and tl facts.
    A change fails the lane (`IMAGE_FACTS_CHANGED`).
 
 Cost: N literals were the 18-minute part. A file of the 97887 words as N literals had not compiled after 140 s and was
-stopped. The same words as Uint63 halves compiled in 5 s. The whole image step costs @@IMGCOST@@.
+stopped. The same words as Uint63 halves compiled in 5 s. The whole image step, with the reader, the compile of `Img.v`, `image_code_ok`, the mutants and the census, compiled in 116 s in the experiment run (`Img.v` only, the stage 0 modules already built).
 
 The proof mutant `ShenJitImageNoCodeEq` (`tests/mutate-shen-jit.py`) makes `check_def` give `Match` without
 comparing code, and `check_def_sound` then fails.

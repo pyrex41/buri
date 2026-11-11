@@ -1382,11 +1382,21 @@ Eight are in `rocq/JitFrontProlog.v` (r1-f-prolog, branch `p2/r1-f-prolog`): nor
 Merged into `p2/int` by merge-r1-f-prolog (p2/r1-f-prolog 675aa35 after r1-f-sugar 5a478a7): the union has 523 audited statements (515 + the 8 of JitFrontProlog) and mutation pin 229 (222 + the 7 `ShenJitFrontProlog*` mutants); no statement changed. The source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
-Heap image (spike, not gated; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): a Rocq decoder in `spikes/image-decode/` reads the
-pinned binary's image (`fd8485a5...`, the last 783096 bytes) and finds, by a Rocq 9.3 `vm_compute` measurement, that
-the function-cell code of 955 of 955 stage 0 definitions equals `JitBytecode.build_code` of their `.sbc`. It is not in
-the lane or in `Audit_Jit`. `OB-JIT-IMAGE` is partial and split into `-CODE`, `-INIT` (7 code objects and all data made by
-initialisation), `-SEALING` (65 extension names unsealed in the image), `-READER` and `-FILE`.
+Heap image (lane-checked since r21-image-lane; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): `rocq/JitImage.v` decodes the
+pinned binary's image (`fd8485a5...`, the last 783096 bytes) in `scripts/check-shen-jit.sh`. Rocq proves
+`image_code_ok` by `vm_compute`: 955 of 955 stage 0 code objects equal the code objects their image function cells
+hold. It assumes only Rocq's primitive Uint63 `int`, `lsr`, `land` and `eqb`, which join the reader's halves, and the
+lane checks that exact list. `code_check_sound`, `check_def_sound`, `tally_sound` and `code_eqb_true` are in
+`Audit_Jit` (527 statements) and closed. Two image mutants are proved caught, and the proof mutant
+`ShenJitImageNoCodeEq` is added (mutation pin 230). `OB-JIT-IMAGE` stays partial:
+- `-CODE` is partial behind the trusted `-READER`;
+- `-INIT`: code part feasible, data part infeasible now;
+- `-SEALING`: tested in the binary that sealed sites keep the load-time closure after a redefinition, so only an
+  exclusion premise is feasible;
+- `-READER` is open;
+- `-FILE` is a premise only.
+
+No validated count changes.
 
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
 its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 174 of 955

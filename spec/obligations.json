@@ -4609,6 +4609,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: open -> partial. Code objects: a Rocq decoder (spikes/image-decode, not in the lane) relates 955 of 955 stage 0 definitions to the code in their function cells; 7 code objects made by initialisation, all data initialisation built, the 18-vs-24 sealing gap and the reader stay open as sub-obligations."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial. CODE lane-checked (partial, behind READER); INIT, SEALING, READER, FILE each carry a measured verdict."
     }
    ]
   },
@@ -4643,6 +4648,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: open -> partial. Measured the split of the pinned binary into runtime and image and how main.c finds its image (executable_file over argv[0] and PATH, overridden by SHEN_JIT_IMAGE); the premise is still not stated."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial; split re-measured (split.out a2703018...). Verdict: feasible only as a stated premise of the top theorem (SHEN_JIT_IMAGE unset, argv[0] resolves to the pinned binary), not derivable from the image."
     }
    ]
   },
@@ -4663,20 +4673,33 @@
    "evidence": [
     {
      "kind": "review",
-     "ref": "spikes/image-decode/JitImage.v",
+     "ref": "rocq/JitImage.v",
      "establishes": "artifact-correspondence",
-     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context"
+     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context (the spike decoder, since moved to rocq/JitImage.v by r21-image-lane)"
+    },
+    {
+     "kind": "instance-validation",
+     "ref": "JitImage.JitImage.code_check_sound",
+     "establishes": "artifact-correspondence",
+     "note": "lane step of scripts/check-shen-jit.sh: Img.v (stage0_to_rocq.py --image) proves image_code_ok, code_check over the pinned image and the 24 files' stage 0 trees (Buri.s0 modules), by vm_compute; its only printed assumptions are Rocq's primitive Uint63 int, lsr, land, eqb (the reader's halves join), checked exactly by the lane; image_mutants_caught (two print code mutants) proved; proof mutant ShenJitImageNoCodeEq rejected. Partial only because OB-JIT-IMAGE-READER is open"
     }
    ],
    "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "rocq/JitImage.v",
+    "scripts/check-shen-jit.sh"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial (depends on OB-JIT-IMAGE-READER, open). JitImage.v moved to rocq/, in Audit_Jit (code_eqb_true, check_def_sound, tally_sound, code_check_sound) and the lane: 955 of 955 stage 0 code objects equal their image function cells' code objects, lane-checked."
     }
    ]
   },
@@ -4692,7 +4715,14 @@
    "statement": "Everything stage 1 built by running shen.initialise, shen.x.features.initialise, shen.x.programmable-pattern-matching.initialise, shen.x.namespaces.initialise and shen-jit.initialise denotes the KLambda store those calls reach: the 7 code objects not reachable from the 955 function cells (thread, defined by eval-kl in shen-jit.initialise, and 6 lambda code objects of the lambda-form entries in *property-vector*), every global value, the property vector, dictionaries and streams.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "census, not proof (Rocq image_facts in the lane, tests/shen-jit/image-facts.txt; census.py, measurement /tmp/p2-r21-image-meas.sh on the committed tree in buri-lps, log /tmp/p2-r21-image-meas.log sha256 4a6c4124...6d85): 7 of 2371 code objects unreached from the 955 (thread, 6 lambda); 1313 closures, 956 in function cells, 357 elsewhere (3 in value cells), 352 of them running code reached from the 955, none with captures; 55 bound value cells. Verdict: INIT-CODE (the 7) feasible by capturing initialisation's eval-kl forms and judging them, not done; INIT-DATA (values, property vector, dictionaries, streams) infeasible now (needs validated initialisation code or a source run of initialisation)"
+    }
+   ],
    "completion_evidence": "Stage 1 proved an instance of the main theorem over validated initialisation code, or the initialised store decoded and related in Rocq.",
    "sources": [
     "docs/SHEN-JIT-IMAGE.md"
@@ -4702,6 +4732,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; split into INIT-CODE (feasible, not done) and INIT-DATA (infeasible now) with measured counts."
     }
    ]
   },
@@ -4717,7 +4752,14 @@
    "statement": "Stage 0 lowered all 24 files with every definition sealed, but stage 1 seals only the first 18: in the image, 890 of the 955 names carry the sealed bit and the 65 definitions of the 6 extension files do not, while 115 call-sealed sites in 45 definitions are bound to extension closures at load. The claim either excludes redefining those 65 names or shows sealed calls to them still agree with the source's late binding.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spikes/image-decode/redef.shen",
+     "establishes": "artifact-correspondence",
+     "note": "test, not proof (pinned binary under qemu, measurement /tmp/p2-r21-image-meas.sh on the committed tree in buri-lps, log /tmp/p2-r21-image-meas.log sha256 4a6c4124...6d85, redef.out sha256 46329b98...cb7): after eval-kl of (defun shen.x.launcher.execute-all (X) redefined) the open call gives redefined while the sealed caller shen.x.launcher.eval-command-h still gives [success]; defun of a sealed name and of thaw, hd, tl is refused. Rocq census in the lane: 890 sealed names, exactly the 18 files; the 6 extension files' 65 definitions unsealed, targeted by 115 sealed sites (file-by-file table in docs/SHEN-JIT-IMAGE.md). Verdict: FunRel surviving redefinition is false for the binary; only the premise route is feasible"
+    }
+   ],
    "completion_evidence": "A stated premise or exclusion in the top theorem for redefinition of the 65 unsealed extension names, or Rocq evidence that FunRel survives it.",
    "sources": [
     "docs/SHEN-JIT-IMAGE.md"
@@ -4727,6 +4769,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; redefinition tested in the binary (sealed sites keep the load-time closure), so the completion route is the stated exclusion of redefining the 65 names."
     }
    ]
   },
@@ -4739,10 +4786,17 @@
    "status": "open",
    "boundary": "Reading and loading the image",
    "identity": "",
-   "statement": "The trusted reader (spikes/image-decode/image_to_rocq.py) gives the image's bytes as little-endian 64-bit words, and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
+   "statement": "The trusted reader (tests/shen-jit/stage0_to_rocq.py --image, formerly spikes/image-decode/image_to_rocq.py) gives the image's bytes as 32-bit halves of its little-endian 64-bit words, joined in Rocq over the primitive Uint63 integers, and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "identity-hash",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "measured (measurement /tmp/p2-r21-image-meas.sh on the committed tree in buri-lps, log /tmp/p2-r21-image-meas.log sha256 4a6c4124...6d85, split.out sha256 a2703018...6919): binary e0acd513... = runtime 13afde42... (4657760 bytes) + image fd8485a5... (783096 bytes) ending SJHI-END. Verdict: feasible by review of the word split plus a Rocq model of rebase_heap/restore_raw; not done"
+    }
+   ],
    "completion_evidence": "The loader's rebasing and raw-field reconstruction modelled or reviewed against image.c, and the reader reviewed as a word split only.",
    "sources": [
     "docs/SHEN-JIT-IMAGE.md"
@@ -4752,6 +4806,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; the reader is now the lane's --image mode (a word split into halves), the join is in Rocq."
     }
    ]
   },
