@@ -331,6 +331,22 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 | `rocq/JitFrontD.v` | D00: the front rules' store D (a lowered store), built from decoded stage 0 data; `D_compiled'`; the allowed store facts; the inline relation `inl_site` and `aeq`, with their soundness statements (unproved) |
+| `rocq/JitFrontCopyFold.v` | r1-f-copy-fold-apply: the checker `cf_chk` (congruence plus fold-arith), `cf_chk_sound` from the compat lemmas; fold-cons as the identity at KLambda (`fold_cons_erase`); `uncurry_not_kref`, the counterexample to dynamic-application uncurrying |
+
+**Constant folding, uncurrying and copying** (`rocq/JitFrontCopyFold.v`, r1-f-copy-fold-apply, 11 November 2026).
+`cf_chk D fuel g e0 e` accepts equal literals, a variable in scope, the same head constructor with its parts accepted,
+and fold-arith: a source `+`/`-` of integer literals (nested) against the folded literal, when D binds `+` (`-`) to the
+primitive and every intermediate is in jit_rules' fixnum range. `cf_chk_sound_hyp` proves it sound under Section
+hypotheses naming the `compat_*` statements; `cf_chk_sound` instantiates them, with `D_wf` the only premise. The fold
+case is source anti-reduction to a returned value (`cfold_run`, `ERel_src_ret`). fold-cons needs no rule: the erasure of
+a folded pair is the cons chain (`fold_cons_erase`), so the witness equals the source at KLambda. fold-arith accepts
+nothing on a D built by `D_of` (D00 interface item 2: `+` and `-` are not sealed). Dynamic-application uncurrying is not
+a KRef refinement: `uncurry_not_kref` (no premise) binds F to a partial application of a 2-ary g, where `(F 1 2)`
+returns and `((F 1) 2)` raises XArity under jit_rules' arity errors; `cf_chk` rejects the curried witness, and the way
+forward is a decision (`OB-JIT-FRONT-UNCURRY`). Freeze copying (let-frozen copy, frozen-late hoist, inline-frozen) and
+lambda copying (let-lambda) are not proved: the use-site step needs a source-only fact that a name is bound to a known
+closure, which KRef's environment relation does not carry and an intermediate source term cannot express. Mutants
+`ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds` and `ShenJitFrontCfVarScope`.
 
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
 definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes

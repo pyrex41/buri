@@ -6231,7 +6231,8 @@
     "the callees b0 calls are the store's, which under FunRel are the lowered bodies, not the kernel's source definitions; composing definitions with each other needs function tables related by KRef, not equal",
     "front-end checkers must reject norm's (fn F) rewrites, open-call inlining guarded by shen-jit.inlined?, and eval-kl to shen-jit.eval-kl: none can satisfy KRef in Buri's KLambda (none fires at stage 0)",
     "fresh_ok is parametric in the lowerer's namespace: stage 0 emits stage0.lower.*, the run-time lowerer shen-jit.lower.*, and fresh_ok in the run-time namespace fails on the lowerer's own definitions",
-    "D is a lowered store (D00, rocq/JitFrontD.v): each callee's body in D is its erased stage 0 normal form, so D_compiled is the emit check on the callee; the inline rule relates the inlined normal body to that body by inl_site (alpha-equivalence, integer substitution, thaw-with, depth cut), and JitKRef.fresh_ok over D_bodies is false on lowered bodies, so the fresh premise the front rules use is fresh_front (b0 and the callees' source bodies)"
+    "D is a lowered store (D00, rocq/JitFrontD.v): each callee's body in D is its erased stage 0 normal form, so D_compiled is the emit check on the callee; the inline rule relates the inlined normal body to that body by inl_site (alpha-equivalence, integer substitution, thaw-with, depth cut), and JitKRef.fresh_ok over D_bodies is false on lowered bodies, so the fresh premise the front rules use is fresh_front (b0 and the callees' source bodies)",
+    "norm's dynamic-application uncurrying is not in KRef against JitNorm.erase's curried form (JitFrontCopyFold.uncurry_not_kref: a head bound to a partial application returns in the source (F A B) and raises XArity in ((F A) B) under jit_rules' arity errors); no sound checker accepts it until OB-JIT-FRONT-UNCURRY is decided"
    ],
    "depends_on": [
     "OB-JIT-LOWER-FRAGMENT",
@@ -6251,7 +6252,8 @@
     "rocq/JitKRefFv.v",
     "rocq/JitKRefCompatCall.v",
     "rocq/JitKRefFund.v",
-    "rocq/JitFrontD.v"
+    "rocq/JitFrontD.v",
+    "rocq/JitFrontCopyFold.v"
    ],
    "history": [
     {
@@ -6323,6 +6325,43 @@
      "source": "rocq/JitFrontD.v",
      "recorded": "2026-11-11: open. Merge of p2/r1-d00-merge (3338413) into p2/int after r1-term (cd991df): no statement changed; the union has 475 Audit_Jit statements (463 + the 12 of JitFrontD) and mutation pin 216 (203 + the 13 ShenJitFront mutants; tests/mutate-shen-jit.py has 60 mutate calls).",
      "reconciliation": "merge-r1-d00-merge, Phase 2 integration, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open. r1-f-copy-fold-apply proved and audited (7 statements in rocq/Audit_Jit.v, 482 in all, each Closed under the global context): fold_cons_erase (erase of a folded pair constant equals erase of the unfolded [prim cons] node, so fold-cons is the identity at KLambda and the congruence checker accepts it), cfold_run and ERel_src_ret (source anti-reduction to a returned value), fold_arith_kref (+ and - of integer literals, nested, against the folded literal, given (+, FPrim PAdd) / (-, FPrim PSub) in D, checked by the checker, and every intermediate in jit_rules' fixnum range), cf_chk_sound_hyp (the checker cf_chk, congruence plus fold-arith, sound under Section hypotheses naming the compat_* statements and D_wf), cf_chk_sound (instantiated from JitKRefCompatCtl, JitKRefCompatClo and JitKRefFund; D_wf the only premise) and uncurry_not_kref (counterexample, no premise: uncurrying is not a KRef refinement). Not proved: freeze copying (let-frozen copy, frozen-late hoist, inline-frozen) and lambda copying (let-lambda); each needs a source-only known-closure environment fact KRef's environment relation does not carry, so source anti-reduction to an intermediate source term cannot state the use-site step. fold-arith accepts nothing on a D built by D_of (JitFrontD interface item 2: + and - are not sealed). Mutants ShenJitFrontFoldNoRange, ShenJitFrontFoldNoPrim, ShenJitFrontFoldMinusAdds and ShenJitFrontCfVarScope (mutation pin 220).",
+     "reconciliation": "r1-f-copy-fold-apply, Phase 2 front track, 11 November 2026; built on p2/int at 7cb676e."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-FRONT-UNCURRY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "lower.shen norm-apply against KRef (KLambda to KLambda)",
+   "identity": "rocq/JitFrontCopyFold.v",
+   "statement": "norm-apply's rewrite of a dynamic call (F A1 ... An), n >= 2, to ((F A1) ... An) is validated per definition against KRef, or each definition that needs it is a named residual with its reason.",
+   "premises": [
+    "JitFrontCopyFold.uncurry_not_kref (Rocq, no premise): KRef fails for (F 1 2) against ((F 1) 2) when F is bound to VPartial g [] with g of arity 2: the source calls g with both arguments and returns, the target calls g with one, which jit_rules refuses (arity errors), and raises XArity",
+    "independently, for a non-atomic An the source evaluates An before applying F to the earlier arguments and the witness after, an IO-order difference when F's application has effects (not checked in Rocq)"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Reuben's decision between (a) JitNorm.erase mapping an apply chain back to the multi-argument EApp of the source (uncurrying then the identity at KLambda, as fold-cons is; the emit relation then owns the chain, whose apply-all evaluates every argument first when they are variables or constants), (b) a KRef variant whose environments exclude partial applications (a reviewed statement change), or (c) every definition with a chain of two or more arguments a named residual; then the chosen option checked in Rocq.",
+   "sources": [
+    "rocq/JitFrontCopyFold.v",
+    "rocq/JitNorm.v",
+    "rocq/KLPort.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open; a decision item, Reuben's call. r1-f-copy-fold-apply proved uncurry_not_kref (audited, Closed under the global context); cf_chk rejects the curried witness (Example cf_uncurry_rejected). Census (spikes/pass-split/CENSUS.md, not proof): dynamic application in 40 stage 0 definitions, 157 sites, how many with two or more arguments not counted here (UNKNOWN).",
+     "reconciliation": "r1-f-copy-fold-apply, Phase 2 front track, 11 November 2026."
     }
    ]
   },

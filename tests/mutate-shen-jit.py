@@ -144,6 +144,13 @@ ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arg
   source call's. pair_src_lrules_wrong must fail.
 ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
   marker. isites_fbound must fail.
+ShenJitFrontFoldNoRange: cfold folds + without the fixnum range check, where jit_rules' + raises.
+  cfold_run must fail.
+ShenJitFrontFoldNoPrim: cfold folds + without asking that D binds + to the primitive, so the store's
+  + may be any function. cfold_run must fail.
+ShenJitFrontFoldMinusAdds: cfold's - case computes x + y. cfold_run must fail.
+ShenJitFrontCfVarScope: cf_same accepts a variable without asking that it is in scope, where the two
+  environments may bind it to unrelated values. cf_same_sound must fail.
 """
 import re
 from pathlib import Path
@@ -386,4 +393,17 @@ mutate('ShenJitFrontPairReadBack', front,
 mutate('ShenJitFrontIsitesNoLets', front,
        ' | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O',
        ' | (x, NVar _, _) :: anc => if bound ps x then O else O')
+cf = 'rocq/JitFrontCopyFold.v'
+mutate('ShenJitFrontFoldNoRange', cf,
+       "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
+       "     if (text_eqb f plus_name && d_has D plus_name is_add)%bool then Some (x + y)%Z")
+mutate('ShenJitFrontFoldNoPrim', cf,
+       "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
+       "     if (text_eqb f plus_name && fits (x + y))%bool then Some (x + y)%Z")
+mutate('ShenJitFrontFoldMinusAdds', cf,
+       "     else if (text_eqb f minus_name && d_has D minus_name is_sub && fits (x - y))%bool then Some (x - y)%Z",
+       "     else if (text_eqb f minus_name && d_has D minus_name is_sub && fits (x - y))%bool then Some (x + y)%Z")
+mutate('ShenJitFrontCfVarScope', cf,
+       " | EVar x, EVar y => text_eqb x y && bound g x\n",
+       " | EVar x, EVar y => text_eqb x y\n")
 print(' '.join(names))
