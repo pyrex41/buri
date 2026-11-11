@@ -117,6 +117,12 @@ ShenJitFrontShareElseSwap: share's chain base accepts (if T' (thaw G) X'), the e
   swapped. Rejected first at the decision: share_rejects_swap (vm_compute, before every proof).
 ShenJitFrontShareThawAny: share accepts (thaw H) for any variable H as the else branch, not only the
   ElseN the let binds. Rejected first at the decision: share_rejects_thaw_other (vm_compute).
+ShenJitFrontShareReuseOpBlind: share's reuse compares a reused path by its base variable only, not
+  its hd/tl operations (path_eqb without the operation list). Rejected first at the decision:
+  share_reuse_rejects_wrong_op (vm_compute: (hd V) against a variable bound to (tl V)).
+ShenJitFrontShareChainFactUnchecked: a chain let records the fact of the source's (hd y)/(tl y)
+  without checking that the target's let binds the same expression. Rejected at chain_fact_cases
+  (the fact must be the target's own path; JitFrontShare.v, the proof's expr_eqb_eq step).
 """
 import re
 from pathlib import Path
@@ -325,7 +331,12 @@ mutate('ShenJitFrontNoScope', 'rocq/JitFrontCheck.v',
 mutate('ShenJitFrontSameFuel', 'rocq/JitFrontCheck.v',
        '          || existsb (fun r => r (fchk rules f) g e0 e) rules', '          || existsb (fun r => r (fchk rules fuel) g e0 e) rules')
 mutate('ShenJitFrontShareElseSwap', 'rocq/JitFrontShare.v',
-       " | EIf T' X' Z => is_thaw_of G Z && rec g C T' && rec g0 X X'", " | EIf T' Z X' => is_thaw_of G Z && rec g C T' && rec g0 X X'")
+       " | EIf T' X' Z => is_thaw_of G Z && rec g C T' && then_chk rec g0 [] Pt X X'", " | EIf T' Z X' => is_thaw_of G Z && rec g C T' && then_chk rec g0 [] Pt X X'")
 mutate('ShenJitFrontShareThawAny', 'rocq/JitFrontShare.v',
        ' | ECall t [EVar H] => text_eqb t thaw_name && text_eqb H G', ' | ECall t [EVar H] => text_eqb t thaw_name')
+mutate('ShenJitFrontShareReuseOpBlind', 'rocq/JitFrontShare.v',
+       "Definition path_eqb (p q : path) : bool := text_eqb (fst p) (fst q) && forall2b Bool.eqb (snd p) (snd q).",
+       "Definition path_eqb (p q : path) : bool := text_eqb (fst p) (fst q).")
+mutate('ShenJitFrontShareChainFactUnchecked', 'rocq/JitFrontShare.v',
+       "   | Some o => if expr_eqb E E' && bound g y then", "   | Some o => if bound g y then")
 print(' '.join(names))

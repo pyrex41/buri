@@ -1,4 +1,4 @@
-(* Shen/JIT Phase 2, F00: the share pass's checker, an instance of JitFrontCheck.fchk.
+(* Shen/JIT Phase 2, F00 and r1-share-ht: the share pass's checker, an instance of JitFrontCheck.fchk.
    lower.shen (934cfa5) `share` rewrites (if C X Y), where C is a chain of `and` tests and `let`
    bindings, to
        (let ElseN (freeze Y') (unchain C X' ElseN))
@@ -6,6 +6,8 @@
          (unchain (let V E S) Then G) = (let V E (unchain S Then G)),
          (unchain T Then G)           = (if T Then (thaw G)),
    and recurses into let bodies, do's second argument and if branches (the same-head case of fchk).
+   In the then branch X' it reuses a chain variable bound to (hd V) or (tl V) for the same path
+   (lower.shen's reuse/canon): (tl V) becomes the variable the chain bound to it.
 
    share_rule accepts (if C X Y) against (let G (freeze Y') U) when
    - G is not in the scope g and id_key is not in g (the target-only bindings G and the frozen
@@ -13,24 +15,36 @@
    - rec g Y Y';
    - chain_chk: U is C unchained, each test checked by rec in the chain's scope, each chain
      binder V outside g and different from G, every else branch exactly (thaw G) for this G, and
-     the then branch checked by rec g X X' in the OUTER scope g.
+     the then branch checked by then_chk in the OUTER scope g, with the target facts the chain's
+     lets of (hd y)/(tl y) recorded (chain_fact): a path fact (W, (X, ops)) says W holds X's value
+     with hd/tl applied as ops, X a variable of g.
+   then_chk accepts what rec accepts, a source path against a target variable whose fact is the
+   same path over a variable of the scope (reuse_var), and the same named call or let with its
+   parts checked again; a let of a reused path records the fact on both sides.
    share_rule_sound: the target's let, freeze and the push of the frozen closure take three target
    steps; the frozen closure's cell is target-only and lies outside the world (SRel_with_cell_tgt);
    each (thaw G) takes six target steps to reach Y' in the closure's environment, paid from the
    index (thaw_erel); the source's and/KAndR/if frames are related to the target's if frames
-   frame by frame (kif_base, kand_frame), and a chain let binds the same name on both sides
-   (chain_sound). The thaw steps go through the store's thaw, so the soundness takes, as a
-   premise, that D defines thaw as the kernel does: (defun thaw (V) (V)) (Section hypothesis HT).
-   HT is necessary: share_rule_needs_thaw (below, no premise) proves that share_rule is not
-   rule_sound at D = [], so the FrontHyps-only form the spec asked for holds at D = [] only
-   vacuously, if FrontHyps sealed [] is false (share_rule_sound_needs_thaw); kref-fund is to prove
-   FrontHyps for every D_wf D, D = [] included.
+   frame by frame (kif_base, kand_frame); a chain let binds the same name on both sides
+   (chain_let), and a chain let of a path steps both sides through the primitive call, so that
+   the target's value is the path's (chain_let_path); the then branch is related by then_sound
+   (the source re-evaluates a reused path silently, src_path, to a value related to the target
+   variable's, VRel_pops).
+   Premises (Section hypotheses of Share, each explicit in check_share_sound's statement):
+   - HT: D defines thaw as the kernel does, (defun thaw (V) (V)): the thaw steps go through the
+     store's thaw. Necessary: share_needs_thaw_outright (D_wf, FrontHyps and HP hold at D_hp, and
+     share_rule is not rule_sound there). Not dischargeable for the pinned D on this back end:
+     thaw's entry can only be the initial store's (thaw_stable, thaw_defun_refused), and with HT no
+     store meeting D has Com (ht_not_com: Comp has no dynamic apply), so call_preservation_src's
+     premises cannot all hold with it. Named residual: OB-JIT-SHARE-THAW.
+   - HP: D holds hd and tl as the primitives, so that a reused path re-evaluated on the source
+     gives the value the target's variable holds. Any store with Com meets it (hp_of_com).
+   - D_wf, for then_chk's named-call congruence (compat_call_core needs fund_below).
+   FrontHyps is no premise: front_hyps derives it from D_wf.
 
-   NOT covered: share's REUSE of a chain-bound variable for a hd/tl the chain already took (the
-   `reuse` / `canon` part of lower.shen's share, "share chains"). Relating (hd V) on the source to
-   a variable bound to its value on the target needs an environment invariant KRef does not carry.
-   Every share rewrite of stage 0 reuses, so check_share rejects those definitions, each named with
-   a Rocq rejection trace (share_trace).
+   Stage 0: share_rewrites_validated (vm_compute) accepts the four definitions share rewrites at
+   v0.6 (shen.macros, shen.process-let, shen.lambda-of-defun, shen.process-assoc); judge_share_sound
+   turns acceptance into KRef under HT, HP and D_wf.
 
    Freshness: the checker tests the freshness facts it needs (G and the chain binders outside the
    scope, and from each other) directly; fresh_not_bound shows that fresh_ok's reserved-name
@@ -64,6 +78,8 @@ Definition is_thaw_of (G : name) (e : expr) : bool := match e with
    hypothesis HP below). *)
 Definition hd_name : name := of_string "hd".
 Definition tl_name : name := of_string "tl".
+(* D holds hd and tl as the primitives (HP) and nothing else: no thaw. *)
+Definition D_hp : list (name * fundef) := [(hd_name, FPrim PHd); (tl_name, FPrim PTl)].
 Definition path : Type := (name * list bool)%type.
 Definition pop (o : bool) (v : value) : option value := match v with
  | VCons a d => Some (if o then a else d) | _ => None end.
@@ -186,6 +202,28 @@ Proof. vm_compute. reflexivity. Qed.
 Theorem share_accepts_basic : check_share [sx_p] share_src share_ok = true.
 Proof. vm_compute. reflexivity. Qed.
 
+(* Share's reuse, over the parameter V: (if (and (cons? V) (let S (tl V) (cons? S))) T 0) against
+   (let G (freeze 0) (if (cons? V) (let S (tl V) (if (cons? S) S (thaw G))) (thaw G))):
+   - reuse_ok:      T = (tl V), the path S was bound to: accepted (S reused for (tl V));
+   - reuse_wrong_op: T = (hd V): rejected, S holds (tl V), not (hd V);
+   - reuse_wrong_base: T = (tl W) for another parameter W: rejected, the same operation on another
+     variable. Rejections first, so that a mutant that accepts a wrong path fails at the rejection. *)
+Definition sx_V : name := of_string "V".
+Definition sx_W : name := of_string "W".
+Definition sx_S : name := of_string "S".
+Definition consp (e : expr) : expr := ECall (of_string "cons?") [e].
+Definition reuse_src (T : expr) : expr :=
+ EIf (EAnd (consp (EVar sx_V)) (ELet sx_S (ECall tl_name [EVar sx_V]) (consp (EVar sx_S)))) T (ENum (NInt 0)).
+Definition reuse_tgt : expr :=
+ ELet sx_G (EFreeze (ENum (NInt 0))) (EIf (consp (EVar sx_V))
+   (ELet sx_S (ECall tl_name [EVar sx_V]) (EIf (consp (EVar sx_S)) (EVar sx_S) (thaw_e sx_G))) (thaw_e sx_G)).
+Theorem share_reuse_rejects_wrong_op : check_share [sx_V; sx_W] (reuse_src (ECall hd_name [EVar sx_V])) reuse_tgt = false.
+Proof. vm_compute. reflexivity. Qed.
+Theorem share_reuse_rejects_wrong_base : check_share [sx_V; sx_W] (reuse_src (ECall tl_name [EVar sx_W])) reuse_tgt = false.
+Proof. vm_compute. reflexivity. Qed.
+Theorem share_reuse_accepts : check_share [sx_V; sx_W] (reuse_src (ECall tl_name [EVar sx_V])) reuse_tgt = true.
+Proof. vm_compute. reflexivity. Qed.
+
 (* A rejection trace: the path of target constructors from the root to the deepest node where
    neither equality, the same head nor the share rule holds. Computed by Rocq, for the record of a
    rejection only; it decides nothing. *)
@@ -294,6 +332,24 @@ Definition tally_share (fs ss : list sx) : nat * nat * nat * list (string * list
 Definition kernel_thaw_form : sx := XList [XSym "defun"; XSym "thaw"; XList [XSym "V3830"]; XList [XSym "V3830"]].
 Theorem kernel_thaw_parses : parse [] (to_value kernel_thaw_form) =
  Some (EDefun thaw_name [of_string "V3830"] (EApp (EVar (of_string "V3830")) [])).
+Proof. vm_compute. reflexivity. Qed.
+
+(* The four definitions of the pinned stage 0 (macros.forms lines 5, 9, 14 and 20) that share
+   rewrites, with their share witnesses (the witness set of sha256 6881eb29..., macros.share at
+   the same lines), as stage 0 prints them; generated by tests/shen-jit/stage0_to_rocq.py's
+   tokenizer (its `rocq` function) from those two files. share_rewrites_validated: check_share
+   accepts each, through share_rule with reuse (the pairs differ, so equality cannot). *)
+Definition share_rewrite_forms : list sx := [(XList [(XSym "defun");(XSym "shen.macros");(XList [(XSym "V7180")]);(XList [(XSym "let");(XSym "GoTo7181");(XList [(XSym "freeze");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "V7180")]);(XList [(XSym "let");(XSym "Select7195");(XList [(XSym "hd");(XSym "V7180")]);(XList [(XSym "let");(XSym "Select7196");(XList [(XSym "tl");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "defmacro");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.process-def");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "defcc");(XSym "Select7195")]);(XList [(XSym "shen.yacc->shen");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "u!");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "cons");(XSym "protect");(XList [(XSym "cons");(XList [(XSym "shen.make-uppercase");(XList [(XSym "hd");(XSym "Select7196")])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "error");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "simple-error");(XList [(XSym "cons");(XList [(XSym "shen.mkstr");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "output");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "pr");(XList [(XSym "cons");(XList [(XSym "shen.mkstr");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stoutput");(XList [])]);(XList [])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "pr");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "cons");(XSym "pr");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stoutput");(XList [])]);(XList [])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "make-string");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.mkstr");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "lineread");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "lineread");(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stinput");(XList [])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "input");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "input");(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stinput");(XList [])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "read");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "read");(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stinput");(XList [])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "input+");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.process-input+");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "read-byte");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "shen.process-read-byte")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "prolog?");(XSym "Select7195")]);(XList [(XSym "shen.call-prolog");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "defprolog");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.compile-prolog");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "datatype");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.process-datatype");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "@s");(XSym "Select7195")]);(XList [(XSym "shen.process-@s");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "synonyms");(XSym "Select7195")]);(XList [(XSym "shen.process-synonyms");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "nl");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "nl");(XList [(XSym "cons");(XInt (1));(XList [])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "let");(XSym "Select7195")]);(XList [(XSym "shen.process-let");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "/.");(XSym "Select7195")]);(XList [(XSym "shen.process-lambda");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "cases");(XSym "Select7195")]);(XList [(XSym "shen.process-cases");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "time");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "shen.process-time");(XList [(XSym "hd");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "put");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7182");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7182")]);(XList [(XSym "let");(XSym "Select7184");(XList [(XSym "tl");(XSym "Select7182")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7184")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7184")])])])])])])])]);(XList [(XSym "let");(XSym "Select7183");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "cons");(XSym "put");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7183")]);(XList [(XSym "cons");(XList [(XSym "hd");(XList [(XSym "tl");(XSym "Select7183")])]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "value");(XList [(XSym "cons");(XSym "*property-vector*");(XList [])])]);(XList [])])])])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "get");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7185");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7185")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7185")])])])])])]);(XList [(XSym "cons");(XSym "get");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "hd");(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "value");(XList [(XSym "cons");(XSym "*property-vector*");(XList [])])]);(XList [])])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "unput");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7186");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7186")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7186")])])])])])]);(XList [(XSym "cons");(XSym "unput");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "hd");(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "value");(XList [(XSym "cons");(XSym "*property-vector*");(XList [])])]);(XList [])])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "shen.@c");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "shen.rcons_form");(XList [(XSym "hd");(XSym "Select7196")])]);(XList [(XSym "let");(XSym "GoTo7188");(XList [(XSym "freeze");(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7187");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7187")]);(XList [(XSym "and");(XList [(XSym "cons?");(XList [(XSym "tl");(XSym "Select7187")])]);(XList [(XSym "element?");(XSym "Select7195");(XList [(XSym "cons");(XSym "@p");(XList [(XSym "cons");(XSym "@v");(XList [(XSym "cons");(XSym "append");(XList [(XSym "cons");(XSym "and");(XList [(XSym "cons");(XSym "or");(XList [(XSym "cons");(XSym "+");(XList [(XSym "cons");(XSym "*");(XList [(XSym "cons");(XSym "do");(XList [])])])])])])])])])])])])])]);(XList [(XSym "cons");(XSym "Select7195");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "shen.process-assoc");(XList [(XSym "cons");(XSym "Select7195");(XList [(XSym "tl");(XSym "Select7196")])])]);(XList [])])])]);(XList [(XSym "thaw");(XSym "GoTo7181")])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "shen.@ch");(XSym "Select7195")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7193");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7194");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7193")]);(XList [(XSym "let");(XSym "Select7190");(XList [(XSym "tl");(XSym "Select7193")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7190")]);(XList [(XSym "let");(XSym "Select7192");(XList [(XSym "tl");(XSym "Select7190")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7192")]);(XList [(XSym "and");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7192")])]);(XList [(XSym "and");(XList [(XSym "=");(XList []);(XSym "Select7194")]);(XList [(XSym "=");(XList [(XSym "hd");(XSym "Select7190")]);(XList [(XSym "intern");(XStr [58%N])])])])])])])])])]);(XList [(XSym "let");(XSym "Select7191");(XList [(XSym "tl");(XSym "Select7193")]);(XList [(XSym "shen.cons-form-respect-modes");(XList [(XSym "cons");(XSym "-");(XList [(XSym "cons");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7193")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7191")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "+");(XList [(XSym "tl");(XSym "Select7191")])]);(XList [])])])]);(XList [])])])])]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XSym "Select7194")]);(XList [(XSym "shen.cons-form-respect-modes");(XSym "Select7193")]);(XList [(XSym "thaw");(XSym "GoTo7188")])])])])]);(XList [(XSym "thaw");(XSym "GoTo7188")])]);(XList [(XSym "thaw");(XSym "GoTo7188")])])])])])])])])])])])])])])])])])])])])])])])])])])])])])])]);(XList [(XSym "thaw");(XSym "GoTo7181")])])])]);
+ (XList [(XSym "defun");(XSym "shen.process-let");(XList [(XSym "V7213")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "cons?");(XSym "V7213")]);(XList [(XSym "let");(XSym "Select7214");(XList [(XSym "tl");(XSym "V7213")]);(XList [(XSym "and");(XList [(XSym "=");(XSym "let");(XList [(XSym "hd");(XSym "V7213")])]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7214")]);(XList [(XSym "let");(XSym "Select7216");(XList [(XSym "tl");(XSym "Select7214")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7216")]);(XList [(XSym "let");(XSym "Select7217");(XList [(XSym "tl");(XSym "Select7216")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7217")]);(XList [(XSym "cons?");(XList [(XSym "tl");(XSym "Select7217")])])])])])])])])])]);(XList [(XSym "let");(XSym "Select7215");(XList [(XSym "tl");(XSym "V7213")]);(XList [(XSym "cons");(XSym "let");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7215")]);(XList [(XSym "cons");(XList [(XSym "hd");(XList [(XSym "tl");(XSym "Select7215")])]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "let");(XList [(XSym "tl");(XList [(XSym "tl");(XSym "Select7215")])])]);(XList [])])])])])]);(XSym "V7213")])]);
+ (XList [(XSym "defun");(XSym "shen.lambda-of-defun");(XList [(XSym "V7237")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "cons?");(XSym "V7237")]);(XList [(XSym "let");(XSym "Select7238");(XList [(XSym "tl");(XSym "V7237")]);(XList [(XSym "and");(XList [(XSym "=");(XSym "defun");(XList [(XSym "hd");(XSym "V7237")])]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7238")]);(XList [(XSym "let");(XSym "Select7240");(XList [(XSym "tl");(XSym "Select7238")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7240")]);(XList [(XSym "let");(XSym "Select7241");(XList [(XSym "hd");(XSym "Select7240")]);(XList [(XSym "let");(XSym "Select7242");(XList [(XSym "tl");(XSym "Select7240")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7241")]);(XList [(XSym "and");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7241")])]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7242")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7242")])])])])])])])])])])])])]);(XList [(XSym "let");(XSym "Select7239");(XList [(XSym "tl");(XSym "V7237")]);(XList [(XSym "eval");(XList [(XSym "cons");(XSym "/.");(XList [(XSym "cons");(XList [(XSym "hd");(XList [(XSym "hd");(XList [(XSym "tl");(XSym "Select7239")])])]);(XList [(XSym "tl");(XList [(XSym "tl");(XSym "Select7239")])])])])])]);(XList [(XSym "shen.f-error");(XSym "shen.lambda-of-defun")])])]);
+ (XList [(XSym "defun");(XSym "shen.process-assoc");(XList [(XSym "V7275")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "cons?");(XSym "V7275")]);(XList [(XSym "let");(XSym "Select7276");(XList [(XSym "tl");(XSym "V7275")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7276")]);(XList [(XSym "let");(XSym "Select7279");(XList [(XSym "tl");(XSym "Select7276")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7279")]);(XList [(XSym "cons?");(XList [(XSym "tl");(XSym "Select7279")])])])])])])]);(XList [(XSym "let");(XSym "Select7277");(XList [(XSym "hd");(XSym "V7275")]);(XList [(XSym "let");(XSym "Select7278");(XList [(XSym "tl");(XSym "V7275")]);(XList [(XSym "cons");(XSym "Select7277");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7278")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "Select7277");(XList [(XSym "tl");(XSym "Select7278")])]);(XList [])])])])])]);(XSym "V7275")])])].
+Definition share_rewrite_shares : list sx := [(XList [(XSym "defun");(XSym "shen.macros");(XList [(XSym "V7180")]);(XList [(XSym "let");(XSym "GoTo7181");(XList [(XSym "freeze");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "V7180")]);(XList [(XSym "let");(XSym "Select7195");(XList [(XSym "hd");(XSym "V7180")]);(XList [(XSym "let");(XSym "Select7196");(XList [(XSym "tl");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "defmacro");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.process-def");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "defcc");(XSym "Select7195")]);(XList [(XSym "shen.yacc->shen");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "u!");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "cons");(XSym "protect");(XList [(XSym "cons");(XList [(XSym "shen.make-uppercase");(XList [(XSym "hd");(XSym "Select7196")])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "error");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "simple-error");(XList [(XSym "cons");(XList [(XSym "shen.mkstr");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "output");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "pr");(XList [(XSym "cons");(XList [(XSym "shen.mkstr");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stoutput");(XList [])]);(XList [])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "pr");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "cons");(XSym "pr");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stoutput");(XList [])]);(XList [])])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "make-string");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.mkstr");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "lineread");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "lineread");(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stinput");(XList [])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "input");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "input");(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stinput");(XList [])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "read");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "read");(XList [(XSym "cons");(XList [(XSym "cons");(XSym "stinput");(XList [])]);(XList [])])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "input+");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.process-input+");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "read-byte");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "shen.process-read-byte")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "prolog?");(XSym "Select7195")]);(XList [(XSym "shen.call-prolog");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "defprolog");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.compile-prolog");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "datatype");(XSym "Select7195")]);(XList [(XSym "cons?");(XSym "Select7196")])]);(XList [(XSym "shen.process-datatype");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "tl");(XSym "Select7196")])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "@s");(XSym "Select7195")]);(XList [(XSym "shen.process-@s");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "synonyms");(XSym "Select7195")]);(XList [(XSym "shen.process-synonyms");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "nl");(XSym "Select7195")]);(XList [(XSym "=");(XList []);(XSym "Select7196")])]);(XList [(XSym "cons");(XSym "nl");(XList [(XSym "cons");(XInt (1));(XList [])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "let");(XSym "Select7195")]);(XList [(XSym "shen.process-let");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "/.");(XSym "Select7195")]);(XList [(XSym "shen.process-lambda");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "cases");(XSym "Select7195")]);(XList [(XSym "shen.process-cases");(XSym "V7180")]);(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "time");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "shen.process-time");(XList [(XSym "hd");(XSym "Select7196")])]);(XList [(XSym "let");(XSym "stage0.lower.else1");(XList [(XSym "freeze");(XList [(XSym "let");(XSym "stage0.lower.else2");(XList [(XSym "freeze");(XList [(XSym "let");(XSym "stage0.lower.else3");(XList [(XSym "freeze");(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "=");(XSym "shen.@c");(XSym "Select7195")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7196")])])])]);(XList [(XSym "shen.rcons_form");(XList [(XSym "hd");(XSym "Select7196")])]);(XList [(XSym "let");(XSym "GoTo7188");(XList [(XSym "freeze");(XList [(XSym "if");(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7187");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "and");(XList [(XSym "cons?");(XSym "Select7187")]);(XList [(XSym "and");(XList [(XSym "cons?");(XList [(XSym "tl");(XSym "Select7187")])]);(XList [(XSym "element?");(XSym "Select7195");(XList [(XSym "cons");(XSym "@p");(XList [(XSym "cons");(XSym "@v");(XList [(XSym "cons");(XSym "append");(XList [(XSym "cons");(XSym "and");(XList [(XSym "cons");(XSym "or");(XList [(XSym "cons");(XSym "+");(XList [(XSym "cons");(XSym "*");(XList [(XSym "cons");(XSym "do");(XList [])])])])])])])])])])])])])]);(XList [(XSym "cons");(XSym "Select7195");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "shen.process-assoc");(XList [(XSym "cons");(XSym "Select7195");(XList [(XSym "tl");(XSym "Select7196")])])]);(XList [])])])]);(XList [(XSym "thaw");(XSym "GoTo7181")])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "shen.@ch");(XSym "Select7195")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7193");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7194");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "let");(XSym "stage0.lower.else4");(XList [(XSym "freeze");(XList [(XSym "if");(XList [(XSym "=");(XList []);(XSym "Select7194")]);(XList [(XSym "shen.cons-form-respect-modes");(XSym "Select7193")]);(XList [(XSym "thaw");(XSym "GoTo7188")])])]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7193")]);(XList [(XSym "let");(XSym "Select7190");(XList [(XSym "tl");(XSym "Select7193")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7190")]);(XList [(XSym "let");(XSym "Select7192");(XList [(XSym "tl");(XSym "Select7190")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7192")]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7192")])]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XSym "Select7194")]);(XList [(XSym "if");(XList [(XSym "=");(XList [(XSym "hd");(XSym "Select7190")]);(XList [(XSym "intern");(XStr [58%N])])]);(XList [(XSym "let");(XSym "Select7191");(XSym "Select7190");(XList [(XSym "shen.cons-form-respect-modes");(XList [(XSym "cons");(XSym "-");(XList [(XSym "cons");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7193")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7191")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "+");(XSym "Select7192")]);(XList [])])])]);(XList [])])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else4")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else4")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else4")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else4")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else4")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else4")])])])])]);(XList [(XSym "thaw");(XSym "GoTo7188")])]);(XList [(XSym "thaw");(XSym "GoTo7188")])])])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "unput");(XSym "Select7195")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7186");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7186")]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7186")])]);(XList [(XSym "cons");(XSym "unput");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7186")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "value");(XList [(XSym "cons");(XSym "*property-vector*");(XList [])])]);(XList [])])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else3")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else3")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else3")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else3")])])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "get");(XSym "Select7195")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7185");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7185")]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7185")])]);(XList [(XSym "cons");(XSym "get");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7185")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "value");(XList [(XSym "cons");(XSym "*property-vector*");(XList [])])]);(XList [])])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else2")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else2")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else2")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else2")])])])]);(XList [(XSym "if");(XList [(XSym "=");(XSym "put");(XSym "Select7195")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7196")]);(XList [(XSym "let");(XSym "Select7182");(XList [(XSym "tl");(XSym "Select7196")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7182")]);(XList [(XSym "let");(XSym "Select7184");(XList [(XSym "tl");(XSym "Select7182")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7184")]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7184")])]);(XList [(XSym "let");(XSym "Select7183");(XSym "Select7182");(XList [(XSym "cons");(XSym "put");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7196")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7183")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7184")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "value");(XList [(XSym "cons");(XSym "*property-vector*");(XList [])])]);(XList [])])])])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])])])])])])])])])])])])])])])])])])])])])])])])])]);(XList [(XSym "thaw");(XSym "GoTo7181")])])])]);
+ (XList [(XSym "defun");(XSym "shen.process-let");(XList [(XSym "V7213")]);(XList [(XSym "let");(XSym "stage0.lower.else1");(XList [(XSym "freeze");(XSym "V7213")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "V7213")]);(XList [(XSym "let");(XSym "Select7214");(XList [(XSym "tl");(XSym "V7213")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "let");(XList [(XSym "hd");(XSym "V7213")])]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7214")]);(XList [(XSym "let");(XSym "Select7216");(XList [(XSym "tl");(XSym "Select7214")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7216")]);(XList [(XSym "let");(XSym "Select7217");(XList [(XSym "tl");(XSym "Select7216")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7217")]);(XList [(XSym "if");(XList [(XSym "cons?");(XList [(XSym "tl");(XSym "Select7217")])]);(XList [(XSym "let");(XSym "Select7215");(XSym "Select7214");(XList [(XSym "cons");(XSym "let");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7215")]);(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7216")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "let");(XSym "Select7217")]);(XList [])])])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])])]);
+ (XList [(XSym "defun");(XSym "shen.lambda-of-defun");(XList [(XSym "V7237")]);(XList [(XSym "let");(XSym "stage0.lower.else1");(XList [(XSym "freeze");(XList [(XSym "shen.f-error");(XSym "shen.lambda-of-defun")])]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "V7237")]);(XList [(XSym "let");(XSym "Select7238");(XList [(XSym "tl");(XSym "V7237")]);(XList [(XSym "if");(XList [(XSym "=");(XSym "defun");(XList [(XSym "hd");(XSym "V7237")])]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7238")]);(XList [(XSym "let");(XSym "Select7240");(XList [(XSym "tl");(XSym "Select7238")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7240")]);(XList [(XSym "let");(XSym "Select7241");(XList [(XSym "hd");(XSym "Select7240")]);(XList [(XSym "let");(XSym "Select7242");(XList [(XSym "tl");(XSym "Select7240")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7241")]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7241")])]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7242")]);(XList [(XSym "if");(XList [(XSym "=");(XList []);(XList [(XSym "tl");(XSym "Select7242")])]);(XList [(XSym "let");(XSym "Select7239");(XSym "Select7238");(XList [(XSym "eval");(XList [(XSym "cons");(XSym "/.");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7241")]);(XSym "Select7242")])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])])]);
+ (XList [(XSym "defun");(XSym "shen.process-assoc");(XList [(XSym "V7275")]);(XList [(XSym "let");(XSym "stage0.lower.else1");(XList [(XSym "freeze");(XSym "V7275")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "V7275")]);(XList [(XSym "let");(XSym "Select7276");(XList [(XSym "tl");(XSym "V7275")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7276")]);(XList [(XSym "let");(XSym "Select7279");(XList [(XSym "tl");(XSym "Select7276")]);(XList [(XSym "if");(XList [(XSym "cons?");(XSym "Select7279")]);(XList [(XSym "if");(XList [(XSym "cons?");(XList [(XSym "tl");(XSym "Select7279")])]);(XList [(XSym "let");(XSym "Select7277");(XList [(XSym "hd");(XSym "V7275")]);(XList [(XSym "let");(XSym "Select7278");(XSym "Select7276");(XList [(XSym "cons");(XSym "Select7277");(XList [(XSym "cons");(XList [(XSym "hd");(XSym "Select7278")]);(XList [(XSym "cons");(XList [(XSym "cons");(XSym "Select7277");(XSym "Select7279")]);(XList [])])])])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])]);(XList [(XSym "thaw");(XSym "stage0.lower.else1")])])])])].
+Theorem share_rewrites_validated : judge_share_all share_rewrite_forms share_rewrite_shares =
+ [SAccepted (of_string "shen.macros"); SAccepted (of_string "shen.process-let");
+  SAccepted (of_string "shen.lambda-of-defun"); SAccepted (of_string "shen.process-assoc")].
 Proof. vm_compute. reflexivity. Qed.
 Local Close Scope string_scope.
 
@@ -578,6 +634,282 @@ Qed.
 (* The chain, in the form the induction needs: from any related continuations and stores, the
    source evaluating C over m KAndR frames and the chain's if is related to the target evaluating
    U. *)
+(* ---------- share's reuse: soundness ----------
+   HP: D holds hd and tl as the primitives, so that a path re-evaluated on the source gives the
+   value the target's variable was bound to. Dw: D_wf, for the named-call congruence of then_chk
+   (JitKRefCompatCall.compat_call_core from fund_below, which JitKRefFund proves from D_wf). *)
+Hypothesis HP : In (hd_name, FPrim PHd) D /\ In (tl_name, FPrim PTl) D.
+Hypothesis Dw : JitKRef.JitKRef.D_wf sealed D.
+
+Definition hd_tl (s : store) : Prop :=
+ lookup hd_name (gfuns s) = Some (FPrim PHd) /\ lookup tl_name (gfuns s) = Some (FPrim PTl).
+
+Lemma hd_tl_src : forall k w s0 s, SRel k w s0 s -> hd_tl s0.
+Proof. intros k w s0 s (_ & H0 & _). split; apply H0; [exact (proj1 HP)|exact (proj2 HP)]. Qed.
+Lemma hd_tl_tgt : forall k w s0 s, SRel k w s0 s -> hd_tl s.
+Proof. intros k w s0 s (_ & _ & H1 & _). split; apply H1; [exact (proj1 HP)|exact (proj2 HP)]. Qed.
+
+Lemma op_of_some : forall f o, op_of f = Some o -> f = (if o then hd_name else tl_name).
+Proof.
+ intros f o H. unfold op_of in H. destruct (text_eqb f hd_name) eqn:E1.
+ - injection H as <-. apply text_eqb_eq. exact E1.
+ - destruct (text_eqb f tl_name) eqn:E2; [|discriminate]. injection H as <-. apply text_eqb_eq. exact E2.
+Qed.
+
+Lemma prim_pop_next : forall (o : bool) v rho K s, hd_tl s ->
+ next_r R P (Cfg (Ret v) (KCallArgs (if o then hd_name else tl_name) [] [] rho :: K) s) =
+ MTau (match pop o v with Some a => Cfg (Ret a) K s | None => Cfg (Throw (XPrim (if o then PHd else PTl))) K s end).
+Proof.
+ intros o v rho K s [Hh Ht].
+ change (next_r R P (Cfg (Ret v) (KCallArgs (if o then hd_name else tl_name) [] [] rho :: K) s))
+   with (call_named_r R P (if o then hd_name else tl_name) [v] K s).
+ unfold call_named_r. destruct o; [rewrite Hh|rewrite Ht]; destruct v; reflexivity.
+Qed.
+
+Lemma pops_app : forall ops0 ops v, pops v (ops0 ++ ops) = match pops v ops0 with Some v' => pops v' ops | None => None end.
+Proof. induction ops0 as [|o ops0 IH]; intros ops v; cbn; [reflexivity|]. destruct (pop o v); [apply IH|reflexivity]. Qed.
+
+(* Related values have the same shape under hd and tl. *)
+Lemma VRel_pop : forall o k w v0 v, VRel k w v0 v ->
+ match pop o v0, pop o v with Some a0, Some a => VRel k w a0 a | None, None => True | _, _ => False end.
+Proof.
+ intros o k w v0 v H. rewrite (JitKRefGround.JitKRefGround.VRel_unfold sealed D k) in H.
+ destruct v0, v; cbn in H |- *; try contradiction; try exact I.
+ destruct H as [H1 H2]. rewrite (JitKRefGround.JitKRefGround.VRel_unfold sealed D k). destruct o; assumption.
+Qed.
+
+Lemma VRel_pops : forall ops k w v0 v a, VRel k w v0 v -> pops v ops = Some a -> exists a0, pops v0 ops = Some a0 /\ VRel k w a0 a.
+Proof.
+ induction ops as [|o ops IH]; intros k w v0 v a H E; cbn in E |- *.
+ - injection E as <-. exists v0. split; [reflexivity|exact H].
+ - pose proof (VRel_pop o k w v0 v H) as Hp. destruct (pop o v) as [v'|]; [|discriminate].
+   destruct (pop o v0) as [a0|]; [|contradiction]. exact (IH _ _ _ _ _ Hp E).
+Qed.
+
+Lemma src_path : forall e x ops rho vx v K s, path_of e = Some (x, ops) -> lookup x rho = Some vx ->
+ pops vx ops = Some v -> hd_tl s -> srun (Cfg (Eval rho e) K s) [] (Cfg (Ret v) K s).
+Proof.
+ induction e using expr_ind'; intros x0 ops rho vx v K st Hp Hx Hv Hs; cbn in Hp; try discriminate.
+ - injection Hp as <- <-. cbn in Hv. injection Hv as <-.
+   eapply KB.srun_tau; [apply KB.sval_next; cbn; exact Hx|apply KB.srun_refl].
+ - destruct l as [|a [|b l]]; try discriminate.
+   destruct (op_of f) as [o|] eqn:Eo; [|discriminate]. destruct (path_of a) as [[y ops']|] eqn:Ea; [|discriminate].
+   injection Hp as <- <-. rewrite (op_of_some f o Eo).
+   rewrite pops_app in Hv. destruct (pops vx ops') as [va|] eqn:Ev; [|discriminate]. cbn in Hv.
+   destruct (pop o va) as [v'|] eqn:Eop; [|discriminate]. injection Hv as <-.
+   inversion H as [|a' l' Ha _]; subst.
+   apply (KB.srun_tau sealed _ (Cfg (Eval rho a) (KCallArgs (if o then hd_name else tl_name) [] [] rho :: K) st)); [reflexivity|].
+   change (@nil event) with (@nil event ++ @nil event). eapply KB.srun_trans; [eapply Ha; eauto|].
+   eapply KB.srun_tau; [rewrite (prim_pop_next o va rho K st Hs), Eop; reflexivity|apply KB.srun_refl].
+Qed.
+
+(* Facts: every entry holds (not only the first per name), so a let that rebinds x keeps the
+   others valid once fdrop has removed those about x or over x. *)
+Definition FactsAll (Pf : facts) (rho : lenv) : Prop := forall y p, In (y, p) Pf ->
+ exists v vb, lookup y rho = Some v /\ lookup (fst p) rho = Some vb /\ pops vb (snd p) = Some v.
+
+Lemma flookup_in : forall y Pf p, flookup y Pf = Some p -> In (y, p) Pf.
+Proof.
+ intros y Pf. induction Pf as [|[z q] Pf IH]; intros p E; cbn in E; [discriminate|].
+ destruct (text_eqb y z) eqn:T; [injection E as <-; apply text_eqb_eq in T; subst; left; reflexivity|right; apply IH; exact E].
+Qed.
+
+Lemma lookup_other : forall {A} y x (v : A) rho, text_eqb y x = false -> lookup y ((x, v) :: rho) = lookup y rho.
+Proof. intros A y x v rho T. cbn. rewrite T. reflexivity. Qed.
+
+Lemma FactsAll_nil : forall rho, FactsAll [] rho.
+Proof. intros rho y p []. Qed.
+
+Lemma fdrop_in : forall x Pf y p, In (y, p) (fdrop x Pf) -> In (y, p) Pf /\ text_eqb y x = false /\ text_eqb (fst p) x = false.
+Proof.
+ intros x Pf y p I. unfold fdrop in I. apply filter_In in I as [I B]. cbn in B.
+ apply andb_true_iff in B as [B1 B2]. apply negb_true_iff in B1, B2. auto.
+Qed.
+
+Lemma FactsAll_drop : forall Pf rho x v, FactsAll Pf rho -> FactsAll (fdrop x Pf) ((x, v) :: rho).
+Proof.
+ intros Pf rho x v H y p I. destruct (fdrop_in x Pf y p I) as (I' & T1 & T2).
+ rewrite !lookup_other by assumption. exact (H y p I').
+Qed.
+
+Lemma FactsAll_add : forall Pf rho x v b ops vb, FactsAll Pf rho -> lookup b rho = Some vb -> pops vb ops = Some v ->
+ text_eqb b x = false -> FactsAll ((x, (b, ops)) :: fdrop x Pf) ((x, v) :: rho).
+Proof.
+ intros Pf rho x v b ops vb H Hb Hv T y p [E|I].
+ - injection E as <- <-. exists v, vb. cbn [fst snd]. rewrite (lookup_other b x v rho T). cbn. rewrite text_eqb_refl. auto.
+ - exact (FactsAll_drop Pf rho x v H y p I).
+Qed.
+
+Lemma FactsAll_incl : forall P1 P2 rho, incl P1 P2 -> FactsAll P2 rho -> FactsAll P1 rho.
+Proof. intros P1 P2 rho I H y p J. exact (H y p (I _ J)). Qed.
+
+Lemma path_eqb_eq : forall p q, path_eqb p q = true -> p = q.
+Proof.
+ intros [x ops] [y qs] E. unfold path_eqb in E. cbn [fst snd] in E. apply andb_true_iff in E as [E1 E2].
+ apply text_eqb_eq in E1. subst y. f_equal. revert qs E2. induction ops as [|o ops IH]; intros [|q qs] E; cbn in E; try discriminate; [reflexivity|].
+ apply andb_true_iff in E as [E3 E4]. apply Bool.eqb_prop in E3. subst q. rewrite (IH qs E4). reflexivity.
+Qed.
+
+Lemma bound_in : forall g x, bound g x = true -> In x g.
+Proof.
+ intros g x B. unfold bound in B. apply existsb_exists in B as (y & I & T). apply text_eqb_eq in T. subst y. exact I.
+Qed.
+
+Lemma canon_val : forall Pf rho e x ops b ops', FactsAll Pf rho -> path_of e = Some (x, ops) -> canon Pf e = Some (b, ops') ->
+ forall vb v, lookup b rho = Some vb -> pops vb ops' = Some v -> exists vx, lookup x rho = Some vx /\ pops vx ops = Some v.
+Proof.
+ intros Pf rho e x ops b ops' HF Hp Hc vb v Hb Hv. unfold canon in Hc. rewrite Hp in Hc.
+ destruct (flookup x Pf) as [[b0 ops0]|] eqn:Hl.
+ - injection Hc as <- <-. destruct (HF x (b0, ops0) (flookup_in _ _ _ Hl)) as (vx & vb' & E1 & E2 & E3). cbn [fst snd] in E2, E3.
+   rewrite Hb in E2. injection E2 as <-. rewrite pops_app, E3 in Hv. exists vx. split; assumption.
+ - injection Hc as <- <-. exists vb. split; assumption.
+Qed.
+
+Definition ThenInv (k : nat) (w : world) (g : list name) (Ps Pt : facts) (rho0 rho : lenv) : Prop :=
+ wf_world w /\ EnvRel_with (VRel k) w g rho0 rho /\ FactsAll Ps rho0 /\ FactsAll Pt rho.
+
+Lemma ThenInv_mono : forall k j w w' g Ps Pt r0 r, (j <= k)%nat -> wext w w' -> ThenInv k w g Ps Pt r0 r -> ThenInv j w' g Ps Pt r0 r.
+Proof.
+ intros k j w w' g Ps Pt r0 r L W (Wf & HE & H1 & H2). split; [exact (proj2 W)|split; [eapply KB.EnvRel_mono; eauto|split; assumption]].
+Qed.
+
+(* What a reused path gives: the source's path and the target's variable hold related values, each
+   the reused path's value on its side. *)
+Lemma reuse_path_vals : forall k w g Ps Pt rho0 rho X y p, ThenInv k w g Ps Pt rho0 rho ->
+ reuse_path g Ps Pt X (EVar y) = Some p ->
+ exists x ops vx v0 v vb0 vb, path_of X = Some (x, ops) /\ lookup x rho0 = Some vx /\ pops vx ops = Some v0 /\
+   lookup y rho = Some v /\ VRel k w v0 v /\
+   lookup (fst p) rho0 = Some vb0 /\ pops vb0 (snd p) = Some v0 /\ lookup (fst p) rho = Some vb /\ pops vb (snd p) = Some v.
+Proof.
+ intros k w g Ps Pt rho0 rho X y p (Wf & HE & HFs & HFt) Hr. unfold reuse_path in Hr.
+ destruct (flookup y Pt) as [p'|] eqn:Hy; [|discriminate]. destruct (canon Ps X) as [q|] eqn:Hc; [|discriminate].
+ destruct (path_eqb p' q && bound g (fst p')) eqn:B; [|discriminate]. injection Hr as <-.
+ apply andb_true_iff in B as [B1 B2]. apply path_eqb_eq in B1. subst q.
+ destruct (HFt y p' (flookup_in _ _ _ Hy)) as (v & vb & Ey & Eb & Ev).
+ destruct (HE (fst p') (bound_in _ _ B2)) as (vb0 & vb' & Eb0 & Eb' & HV). rewrite Eb in Eb'. injection Eb' as <-.
+ destruct (VRel_pops (snd p') k w vb0 vb v HV Ev) as (v0 & Ev0 & HV0).
+ assert (Hp : exists xo, path_of X = Some xo) by (unfold canon in Hc; destruct (path_of X); [eauto|discriminate]).
+ destruct Hp as ([x ops] & Hp). destruct p' as [b ops'].
+ destruct (canon_val Ps rho0 X x ops b ops' HFs Hp Hc vb0 v0 Eb0 Ev0) as (vx & Ex & Evx).
+ exists x, ops, vx, v0, v, vb0, vb. auto 10.
+Qed.
+
+(* Throws from the source's continuation against target frames, at every lower index. *)
+Lemma thr : forall k w K0 K s0 s, KRel k w K0 K -> SRel k w s0 s -> forall Fs j x, forallb KB.nontrap Fs = true ->
+ (j <= k)%nat -> ObsT j w (Cfg (Throw x) K0 s0) (Cfg (Throw x) (Fs ++ K) s).
+Proof.
+ intros k w K0 K s0 s HK HS Fs j x N L.
+ apply (throw_pop k w K0 K [] Fs HK eq_refl N j w x s0 s L); [eapply KB.wext_self; exact HS|eapply KB.SRel_down; [|exact HS]; exact L].
+Qed.
+
+Lemma ERel_reuse_var : forall k w g Ps Pt rho0 rho X y p, ThenInv k w g Ps Pt rho0 rho ->
+ reuse_path g Ps Pt X (EVar y) = Some p -> ERel k w rho0 X rho (EVar y).
+Proof.
+ intros k w g Ps Pt rho0 rho X y p Hi Hr.
+ destruct (reuse_path_vals k w g Ps Pt rho0 rho X y p Hi Hr) as (x & ops & vx & v0 & v & _ & _ & Hp & Ex & Ev0 & Ey & HV & _).
+ apply KB.ERel_iff. intros j L w' W K0 K HK s0 s HS. destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Ret v) K s)); [reflexivity|apply KB.sval_next; cbn; exact Ey| |].
+ - intros x'. apply (thr (S j) w' K0 K s0 s HK HS []); [reflexivity|lia].
+ - eapply KB.ObsT_anti; [apply (src_path X x ops rho0 vx v0 K0 s0 Hp Ex Ev0); eapply hd_tl_src; exact HS|].
+   apply (KB.KRel_ret sealed D); [eapply KB.KRel_down; [|exact HK]; lia|eapply KB.VRel_mono; [|exact W|exact HV]; lia|eapply KB.SRel_down; [|exact HS]; lia].
+Qed.
+
+Lemma EnvRel_cons_same' : forall k w g x v0 v r0 r, VRel k w v0 v ->
+ EnvRel_with (VRel k) w g r0 r -> EnvRel_with (VRel k) w (x :: g) ((x, v0) :: r0) ((x, v) :: r).
+Proof.
+ intros k w g x v0 v r0 r Hv H y I. cbn. destruct (text_eqb y x) eqn:T.
+ - exists v0, v. auto.
+ - destruct I as [<-|I]; [rewrite text_eqb_refl in T; discriminate|]. exact (H y I).
+Qed.
+
+(* A then-branch let whose bound expression is a reused path: the source evaluates the path, the
+   target reads its variable; the fact is recorded on both sides. *)
+Lemma ERel_reuse_let : forall k w g Ps Pt rho0 rho x a b0 y b p, ThenInv k w g Ps Pt rho0 rho ->
+ reuse_path g Ps Pt a (EVar y) = Some p -> text_eqb (fst p) x = false ->
+ (forall j w' v0 v, (j <= k)%nat -> wext w w' ->
+   ThenInv j w' (x :: g) ((x, p) :: fdrop x Ps) ((x, p) :: fdrop x Pt) ((x, v0) :: rho0) ((x, v) :: rho) ->
+   ERel j w' ((x, v0) :: rho0) b0 ((x, v) :: rho) b) ->
+ ERel k w rho0 (ELet x a b0) rho (ELet x (EVar y) b).
+Proof.
+ intros k w g Ps Pt rho0 rho x a b0 y b p Hi Hr Tx Hb.
+ destruct (reuse_path_vals k w g Ps Pt rho0 rho a y p Hi Hr) as (x1 & ops & vx & v0 & v & vb0 & vb & Hp & Ex & Ev0 & Ey & HV & Eb0 & Ep0 & Eb & Ep).
+ apply KB.ERel_iff. intros j L w' W K0 K HK s0 s HS.
+ destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Eval rho (EVar y)) (KLet x b rho :: K) s)); [reflexivity|reflexivity| |].
+ { intros x'. apply (thr (S j) w' K0 K s0 s HK HS []); [reflexivity|lia]. }
+ destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Ret v) (KLet x b rho :: K) s)); [reflexivity|apply KB.sval_next; cbn; exact Ey| |].
+ { intros x'. apply (thr (S (S j)) w' K0 K s0 s HK HS [KLet x b rho]); [reflexivity|lia]. }
+ destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Eval ((x, v) :: rho) b) K s)); [reflexivity|reflexivity| |].
+ { intros x'. apply (thr (S (S (S j))) w' K0 K s0 s HK HS [KLet x b rho]); [reflexivity|lia]. }
+ eapply KB.ObsT_anti.
+ { apply (KB.srun_tau sealed _ (Cfg (Eval rho0 a) (KLet x b0 rho0 :: K0) s0)); [reflexivity|].
+   change (@nil event) with (@nil event ++ @nil event). eapply KB.srun_trans.
+   - apply (src_path a x1 ops rho0 vx v0 _ s0 Hp Ex Ev0). eapply hd_tl_src; exact HS.
+   - apply (KB.srun_tau sealed _ (Cfg (Eval ((x, v0) :: rho0) b0) K0 s0)); [reflexivity|apply KB.srun_refl]. }
+ assert (Hi' : ThenInv j w' (x :: g) ((x, p) :: fdrop x Ps) ((x, p) :: fdrop x Pt) ((x, v0) :: rho0) ((x, v) :: rho)).
+ { destruct (ThenInv_mono k j w w' g Ps Pt rho0 rho ltac:(lia) W Hi) as (Wf & HE & HFs & HFt).
+   split; [exact Wf|split; [apply EnvRel_cons_same'; [eapply KB.VRel_mono; [|exact W|exact HV]; lia|exact HE]|split]].
+   - destruct p as [pb pops0]. eapply FactsAll_add; [exact HFs|exact Eb0|exact Ep0|exact Tx].
+   - destruct p as [pb pops0]. eapply FactsAll_add; [exact HFt|exact Eb|exact Ep|exact Tx]. }
+ eapply KB.ERel_apply; [apply (Hb j w' v0 v); [lia|exact W|exact Hi']|apply le_n|eapply KB.wext_self; exact HS| |].
+ - eapply KB.KRel_down; [|exact HK]; lia.
+ - eapply KB.SRel_down; [|exact HS]; lia.
+Qed.
+
+Lemma fund_below_all : forall k, JitKRef.JitKRef.fund_below sealed D k.
+Proof.
+ intros k. apply (JitKRefFund.JitKRefFund.fund_below_le sealed D (S k) k (Nat.le_succ_diag_r k)).
+ exact (JitKRefFund.JitKRefFund.fund_gen sealed D Dw k).
+Qed.
+
+Lemma then_head : forall rec, chk_sound rec -> forall X X' g Ps Pt k w rho0 rho,
+ (rec g X X' || reuse_var g Ps Pt X X') = true -> ThenInv k w g Ps Pt rho0 rho -> ERel k w rho0 X rho X'.
+Proof.
+ intros rec Hr X X' g Ps Pt k w rho0 rho E Hi. apply orb_true_iff in E as [E|E].
+ - destruct Hi as (Wf & HE & _). exact (Hr g X X' E k w rho0 rho Wf HE).
+ - unfold reuse_var in E. destruct (reuse_path g Ps Pt X X') as [p|] eqn:Ep; [|discriminate].
+   destruct X' as [| | | | | y | | | | | | | | | | | |]; try (cbn in Ep; discriminate).
+   exact (ERel_reuse_var k w g Ps Pt rho0 rho X y p Hi Ep).
+Qed.
+
+Theorem then_sound : forall rec, chk_sound rec -> forall X X' g Ps Pt, then_chk rec g Ps Pt X X' = true ->
+ forall k w rho0 rho, ThenInv k w g Ps Pt rho0 rho -> ERel k w rho0 X rho X'.
+Proof.
+ intros rec Hr X. induction X using expr_ind'; intros X' g Ps Pt E k w rho0 rho Hi.
+ all: match goal with |- ERel _ _ _ ?Xe _ _ =>
+   destruct (rec g Xe X' || reuse_var g Ps Pt Xe X') eqn:Eh; [exact (then_head rec Hr Xe X' g Ps Pt k w rho0 rho Eh Hi)|] end.
+ all: cbn [then_chk] in E; rewrite Eh in E; cbn [orb] in E; try discriminate.
+ - (* let *)
+   match goal with |- ERel _ _ _ (ELet ?x ?a ?b) _ _ => rename x into lx, a into la, b into lb end.
+   match goal with H : forall X' g Ps Pt, then_chk rec g Ps Pt la X' = true -> _ |- _ => rename H into IHa end.
+   match goal with H : forall X' g Ps Pt, then_chk rec g Ps Pt lb X' = true -> _ |- _ => rename H into IHb end.
+   destruct X' as [| | | | | | | x' a' b' | | | | | | | | | |]; try discriminate.
+   apply andb_true_iff in E as [Ex E]. apply text_eqb_eq in Ex. subst x'. apply orb_true_iff in E as [E|E].
+   + destruct (reuse_path g Ps Pt la a') as [p|] eqn:Er; [|discriminate].
+     apply andb_true_iff in E as [Tx E]. apply negb_true_iff in Tx.
+     destruct a' as [| | | | | y | | | | | | | | | | | |]; try (cbn in Er; discriminate).
+     eapply ERel_reuse_let; [exact Hi|exact Er|exact Tx|].
+     intros j w' v0 v L W Hi'. exact (IHb b' _ _ _ E j w' _ _ Hi').
+   + apply andb_true_iff in E as [Ea Eb].
+     apply (JitKRefCompatCtl.JitKRefCompatCtl.ERel_let sealed D); [exact (IHa a' g Ps Pt Ea k w rho0 rho Hi)|].
+     intros j w' v0 v L W HV. apply (IHb b' (lx :: g) (fdrop lx Ps) (fdrop lx Pt) Eb j w').
+     destruct (ThenInv_mono k j w w' g Ps Pt rho0 rho L W Hi) as (Wf & HE & HFs & HFt).
+     split; [exact Wf|split; [apply EnvRel_cons_same'; [exact HV|exact HE]|split; apply FactsAll_drop; assumption]].
+ - (* named call *)
+   match goal with |- ERel _ _ _ (ECall ?f ?l) _ _ => rename f into cf, l into cl end.
+   match goal with H : Forall _ cl |- _ => rename H into Fl end.
+   destruct X' as [| | | | | | | | | | | | | | | | | f' l']; try discriminate.
+   apply andb_true_iff in E as [Ef E]. apply text_eqb_eq in Ef. subst f'.
+   apply (JitKRefCompatCall.JitKRefCompatCall.compat_call_core sealed D k w rho0 cf cl rho l' (fund_below_all k)
+     (JitKRefPrim.JitKRefPrim.prim_compat sealed D)).
+   clear Eh. revert l' E. induction Fl as [|a l Ha F IH]; intros [|b l'] E; cbn in E; try discriminate; [constructor|].
+   apply andb_true_iff in E as [E1 E2]. constructor.
+   + intros j w' L W. exact (Ha b g Ps Pt E1 j w' rho0 rho (ThenInv_mono k j w w' g Ps Pt rho0 rho ltac:(lia) W Hi)).
+   + exact (IH l' E2).
+Qed.
+
 Definition CRel (k : nat) (w : world) (X Y : expr) (rho0 rho0i : lenv) (C : expr) (rhoi : lenv) (U : expr)
   (m : nat) : Prop :=
  forall j w' K0 K s0 s, (j <= k)%nat -> wext w w' -> KRel j w' K0 K -> SRel j w' s0 s ->
@@ -588,27 +920,29 @@ Variable rec : list name -> expr -> expr -> bool.
 Hypothesis Hr : chk_sound rec.
 Variables (g0 : list name) (G : name) (X Y Y' : expr) (rT rho0 : lenv).
 
-Definition chain_hyps (k : nat) (w : world) (g : list name) (rho0i rhoi : lenv) : Prop :=
+(* Pt: the target facts the chain has recorded so far, each over a variable of g0. *)
+Definition chain_hyps (k : nat) (w : world) (Pt : facts) (g : list name) (rho0i rhoi : lenv) : Prop :=
  wf_world w /\ EnvRel_with (VRel k) w g rho0i rhoi /\ EnvRel_with (VRel k) w g0 rho0 rhoi /\
- lookup G rhoi = Some (VFrozen Y' rT) /\ ERel k w rho0 Y rT Y'.
+ lookup G rhoi = Some (VFrozen Y' rT) /\ ERel k w rho0 Y rT Y' /\
+ FactsAll Pt rhoi /\ (forall y p, In (y, p) Pt -> In (fst p) g0).
 
-Lemma chain_hyps_mono : forall k j w w' g r0 r, (j <= k)%nat -> wext w w' -> chain_hyps k w g r0 r -> chain_hyps j w' g r0 r.
+Lemma chain_hyps_mono : forall k j w w' Pt g r0 r, (j <= k)%nat -> wext w w' -> chain_hyps k w Pt g r0 r -> chain_hyps j w' Pt g r0 r.
 Proof.
- intros k j w w' g r0 r L W (Wf & H1 & H2 & H3 & H4). split; [exact (proj2 W)|].
- split; [eapply KB.EnvRel_mono; eauto|split; [eapply KB.EnvRel_mono; eauto|split; [exact H3|eapply KB.ERel_mono; eauto]]].
+ intros k j w w' Pt g r0 r L W (Wf & H1 & H2 & H3 & H4 & H5 & H6). split; [exact (proj2 W)|].
+ split; [eapply KB.EnvRel_mono; eauto|split; [eapply KB.EnvRel_mono; eauto|split; [exact H3|split; [eapply KB.ERel_mono; eauto|auto]]]].
 Qed.
 
-Lemma thaw_from_hyps : forall k w g r0 r, chain_hyps k w g r0 r ->
+Lemma thaw_from_hyps : forall k w Pt g r0 r, chain_hyps k w Pt g r0 r ->
  forall j w', (j <= k)%nat -> wext w w' -> ERel j w' rho0 Y r (thaw_e G).
 Proof.
- intros k w g r0 r (Wf & H1 & H2 & H3 & H4) j w' L W. eapply thaw_erel; [exact H3|]. eapply KB.ERel_mono; eauto.
+ intros k w Pt g r0 r (Wf & H1 & H2 & H3 & H4 & _) j w' L W. eapply thaw_erel; [exact H3|]. eapply KB.ERel_mono; eauto.
 Qed.
 
-Lemma then_from_hyps : forall k w g r0 r X', rec g0 X X' = true -> chain_hyps k w g r0 r ->
+Lemma then_from_hyps : forall k w Pt g r0 r X', then_chk rec g0 [] Pt X X' = true -> chain_hyps k w Pt g r0 r ->
  forall j w', (j <= k)%nat -> wext w w' -> ERel j w' rho0 X r X'.
 Proof.
- intros k w g r0 r X' E (Wf & H1 & H2 & H3 & H4) j w' L W. apply (Hr g0 X X' E); [exact (proj2 W)|].
- eapply KB.EnvRel_mono; eauto.
+ intros k w Pt g r0 r X' E (Wf & H1 & H2 & H3 & H4 & H5 & H6) j w' L W. apply (then_sound rec Hr X X' g0 [] Pt E).
+ split; [exact (proj2 W)|split; [eapply KB.EnvRel_mono; eauto|split; [apply FactsAll_nil|exact H5]]].
 Qed.
 
 Lemma is_thaw_of_eq : forall Z, is_thaw_of G Z = true -> Z = thaw_e G.
@@ -621,18 +955,25 @@ Proof.
  apply text_eqb_eq in E1. apply text_eqb_eq in E2. subst. reflexivity.
 Qed.
 
-Lemma chain_base : forall k w m g rho0i rhoi C U, chain_hyps k w g rho0i rhoi ->
- base_chk rec g0 G X g C U = true -> CRel k w X Y rho0 rho0i C rhoi U m.
+(* Throws while the target runs ahead of a source that is still at the chain's node. *)
+Lemma chain_thr : forall j w' m K0 K s0 s Fs x, KRel j w' K0 K -> SRel j w' s0 s -> forallb KB.nontrap Fs = true ->
+ forall i, (i <= j)%nat -> ObsT i w' (Cfg (Throw x) (andRs m ++ KIf X Y rho0 :: K0) s0) (Cfg (Throw x) (Fs ++ K) s).
 Proof.
- intros k w m g rho0i rhoi C U Hh E. unfold base_chk in E. destruct U as [| | | | | | | | U1 U2 U3 | | | | | | | | |]; try discriminate.
+ intros j w' m K0 K s0 s Fs x HK HS N i L. rewrite stack_eq.
+ apply (throw_pop j w' K0 K (andRs m ++ [KIf X Y rho0]) Fs); [exact HK|apply nontrap_andRs; reflexivity|exact N|exact L|eapply KB.wext_self; exact HS|].
+ eapply KB.SRel_down; [|exact HS]; exact L.
+Qed.
+
+Lemma chain_base : forall k w m Pt g rho0i rhoi C U, chain_hyps k w Pt g rho0i rhoi ->
+ base_chk rec g0 Pt G X g C U = true -> CRel k w X Y rho0 rho0i C rhoi U m.
+Proof.
+ intros k w m Pt g rho0i rhoi C U Hh E. unfold base_chk in E. destruct U as [| | | | | | | | U1 U2 U3 | | | | | | | | |]; try discriminate.
  apply andb_true_iff in E as [E E3]. apply andb_true_iff in E as [E1 E2]. apply is_thaw_of_eq in E1. subst U3.
  intros j w' K0 K s0 s L W HK HS. destruct j as [|j]; [apply KB.ObsT_0|].
  apply (tgt_tau _ _ _ _ (Cfg (Eval rhoi U1) (KIf U2 (thaw_e G) rhoi :: K) s)); [reflexivity|reflexivity| |].
- - intros x. cbn [kont mem]. rewrite stack_eq.
-   apply (throw_pop (S j) w' K0 K (andRs m ++ [KIf X Y rho0]) []); [exact HK|apply nontrap_andRs; reflexivity|reflexivity|lia|eapply KB.wext_self; exact HS|].
-   eapply KB.SRel_down; [|exact HS]; lia.
- - assert (Hj : chain_hyps j w' g rho0i rhoi) by (eapply chain_hyps_mono; [|exact W|exact Hh]; lia).
-   pose proof Hj as Hjj. destruct Hj as (Wf & HE & HE0 & HG & HY).
+ - intros x. cbn [kont mem]. apply (chain_thr (S j) w' m K0 K s0 s [] x HK HS); [reflexivity|lia].
+ - assert (Hj : chain_hyps j w' Pt g rho0i rhoi) by (eapply chain_hyps_mono; [|exact W|exact Hh]; lia).
+   pose proof Hj as Hjj. destruct Hj as (Wf & HE & HE0 & HG & HY & _).
    eapply KB.ERel_apply; [apply (Hr g C U1 E2); [exact Wf|exact HE]|apply le_n|eapply KB.wext_self; exact HS| |].
    + apply kif_base; [eapply KB.KRel_down; [|exact HK]; lia| |].
      * intros j' w'' L' W'. eapply then_from_hyps; [exact E3|exact Hjj|exact L'|exact W'].
@@ -640,22 +981,20 @@ Proof.
    + eapply KB.SRel_down; [|exact HS]; lia.
 Qed.
 
-Lemma chain_and : forall k w m g rho0i rhoi T Sc U1 T' Z,
- chain_hyps k w g rho0i rhoi -> is_thaw_of G Z = true -> rec g T T' = true ->
+Lemma chain_and : forall k w m Pt g rho0i rhoi T Sc U1 T' Z,
+ chain_hyps k w Pt g rho0i rhoi -> is_thaw_of G Z = true -> rec g T T' = true ->
  CRel k w X Y rho0 rho0i Sc rhoi U1 (S m) ->
  CRel k w X Y rho0 rho0i (EAnd T Sc) rhoi (EIf T' U1 Z) m.
 Proof.
- intros k w m g rho0i rhoi T Sc U1 T' Z Hh Ez Et IH. apply is_thaw_of_eq in Ez. subst Z.
+ intros k w m Pt g rho0i rhoi T Sc U1 T' Z Hh Ez Et IH. apply is_thaw_of_eq in Ez. subst Z.
  intros j w' K0 K s0 s L W HK HS. destruct j as [|j]; [apply KB.ObsT_0|].
  apply KB.ObsT_running; [reflexivity|unfold KB.nonterm; cbn; exact I| | |].
- - intros x. cbn [kont mem]. rewrite stack_eq.
-   apply (throw_pop (S j) w' K0 K (andRs m ++ [KIf X Y rho0]) []); [exact HK|apply nontrap_andRs; reflexivity|reflexivity|lia|eapply KB.wext_self; exact HS|].
-   eapply KB.SRel_down; [|exact HS]; lia.
+ - intros x. cbn [kont mem]. apply (chain_thr (S j) w' m K0 K s0 s [] x HK HS); [reflexivity|lia].
  - intros c1 E1. cbn in E1. injection E1 as <-.
    exists (Cfg (Eval rho0i T) (KAnd Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) s0).
    split; [eapply KB.srun_tau; [reflexivity|apply KB.srun_refl]|].
-   assert (Hj : chain_hyps j w' g rho0i rhoi) by (eapply chain_hyps_mono; [|exact W|exact Hh]; lia).
-   pose proof Hj as Hjj. destruct Hj as (Wf & HE & HE0 & HG & HY).
+   assert (Hj : chain_hyps j w' Pt g rho0i rhoi) by (eapply chain_hyps_mono; [|exact W|exact Hh]; lia).
+   pose proof Hj as Hjj. destruct Hj as (Wf & HE & HE0 & HG & HY & _).
    eapply KB.ERel_apply; [apply (Hr g T T' Et); [exact Wf|exact HE]|apply le_n|eapply KB.wext_self; exact HS| |].
    + apply kand_frame; [eapply KB.KRel_down; [|exact HK]; lia| |].
      * intros j' w'' L' W'. eapply thaw_from_hyps; [exact Hjj|exact L'|exact W'].
@@ -665,23 +1004,22 @@ Proof.
  - intros q kk r E1. cbn in E1. discriminate.
 Qed.
 
-Lemma chain_let : forall k w m g rho0i rhoi x E Sc E' U1,
- chain_hyps k w g rho0i rhoi -> bound g0 x = false -> text_eqb x G = false -> rec g E E' = true ->
- (forall k' w' v0 v, (k' <= k)%nat -> wext w w' -> chain_hyps k' w' (x :: g) ((x, v0) :: rho0i) ((x, v) :: rhoi) ->
+(* A chain let whose expression is checked by rec only: the binder's facts are dropped. *)
+Lemma chain_let : forall k w m Pt g rho0i rhoi x E Sc E' U1,
+ chain_hyps k w Pt g rho0i rhoi -> bound g0 x = false -> text_eqb x G = false -> rec g E E' = true ->
+ (forall k' w' v0 v, (k' <= k)%nat -> wext w w' -> chain_hyps k' w' (fdrop x Pt) (x :: g) ((x, v0) :: rho0i) ((x, v) :: rhoi) ->
     CRel k' w' X Y rho0 ((x, v0) :: rho0i) Sc ((x, v) :: rhoi) U1 m) ->
  CRel k w X Y rho0 rho0i (ELet x E Sc) rhoi (ELet x E' U1) m.
 Proof.
- intros k w m g rho0i rhoi x E Sc E' U1 Hh Bx Gx Ee IH.
+ intros k w m Pt g rho0i rhoi x E Sc E' U1 Hh Bx Gx Ee IH.
  intros j w' K0 K s0 s L W HK HS. destruct j as [|j]; [apply KB.ObsT_0|].
  apply KB.ObsT_running; [reflexivity|unfold KB.nonterm; cbn; exact I| | |].
- - intros x'. cbn [kont mem]. rewrite stack_eq.
-   apply (throw_pop (S j) w' K0 K (andRs m ++ [KIf X Y rho0]) []); [exact HK|apply nontrap_andRs; reflexivity|reflexivity|lia|eapply KB.wext_self; exact HS|].
-   eapply KB.SRel_down; [|exact HS]; lia.
+ - intros x'. cbn [kont mem]. apply (chain_thr (S j) w' m K0 K s0 s [] x' HK HS); [reflexivity|lia].
  - intros c1 E1. cbn in E1. injection E1 as <-.
    exists (Cfg (Eval rho0i E) (KLet x Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) s0).
    split; [eapply KB.srun_tau; [reflexivity|apply KB.srun_refl]|].
-   assert (Hj : chain_hyps j w' g rho0i rhoi) by (eapply chain_hyps_mono; [|exact W|exact Hh]; lia).
-   pose proof Hj as Hjj. destruct Hj as (Wf & HE & HE0 & HG & HY).
+   assert (Hj : chain_hyps j w' Pt g rho0i rhoi) by (eapply chain_hyps_mono; [|exact W|exact Hh]; lia).
+   pose proof Hj as Hjj. destruct Hj as (Wf & HE & HE0 & HG & HY & _).
    eapply KB.ERel_apply; [apply (Hr g E E' Ee); [exact Wf|exact HE]|apply le_n|eapply KB.wext_self; exact HS| |].
    + change (KLet x Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) with ([KLet x Sc rho0i] ++ andRs m ++ KIf X Y rho0 :: K0).
      rewrite stack_eq, app_assoc.
@@ -689,13 +1027,15 @@ Proof.
      * intros j' w'' v0 v s0' s' c1 L' W' HV HS' E2. cbn in E2. injection E2 as <-.
        rewrite <- app_assoc, <- stack_eq. cbn [app].
        eexists; split; [eapply KB.srun_tau; [reflexivity|apply KB.srun_refl]|].
-       assert (Hx : chain_hyps j' w'' (x :: g) ((x, v0) :: rho0i) ((x, v) :: rhoi)).
-       { destruct (chain_hyps_mono j j' w' w'' g rho0i rhoi ltac:(lia) W' Hjj) as (Wf' & HE' & HE0' & HG' & HY').
-         split; [exact Wf'|split; [|split; [|split; [|exact HY']]]].
+       assert (Hx : chain_hyps j' w'' (fdrop x Pt) (x :: g) ((x, v0) :: rho0i) ((x, v) :: rhoi)).
+       { destruct (chain_hyps_mono j j' w' w'' Pt g rho0i rhoi ltac:(lia) W' Hjj) as (Wf' & HE' & HE0' & HG' & HY' & HF' & HB').
+         split; [exact Wf'|split; [|split; [|split; [|split; [exact HY'|split]]]]].
          - apply EnvRel_cons_same; [eapply KB.VRel_down; [|exact HV]; lia|exact HE'].
          - apply EnvRel_cons_r; [apply bound_false; exact Bx|exact HE0'].
          - cbn. rewrite text_eqb_neq in Gx. destruct (text_eqb G x) eqn:T; [|exact HG'].
-           apply text_eqb_eq in T. subst. contradiction. }
+           apply text_eqb_eq in T. subst. contradiction.
+         - apply FactsAll_drop. exact HF'.
+         - intros y p I. apply fdrop_in in I as (I & _). exact (HB' y p I). }
        pose proof (IH j' w'' v0 v ltac:(lia) (KB.wext_trans _ _ _ W W') Hx) as Hc.
        apply (Hc j' w'' K0 K s0' s'); [apply le_n|eapply KB.wext_self; exact HS'| |].
        -- eapply KB.KRel_mono; [|exact W'|exact HK]. lia.
@@ -705,15 +1045,123 @@ Proof.
  - intros q kk r E1. cbn in E1. discriminate.
 Qed.
 
-Theorem chain_sound : forall C k w m g rho0i rhoi U, chain_hyps k w g rho0i rhoi ->
- chain_chk rec g0 G X g C U = true -> CRel k w X Y rho0 rho0i C rhoi U m.
+(* A chain let of (hd y) or (tl y): both sides run the same three steps (the call's frame, y, the
+   primitive), on related values, so they bind related values or raise the same XPrim; the target's
+   value is the path's, which is the fact recorded. *)
+Lemma chain_let_path : forall k w m Pt g rho0i rhoi x (o : bool) y Sc U1 b ops,
+ chain_hyps k w Pt g rho0i rhoi -> bound g0 x = false -> text_eqb x G = false -> In y g -> In b g0 ->
+ (forall vy, lookup y rhoi = Some vy -> exists vb, lookup b rhoi = Some vb /\ pops vb ops = Some vy) ->
+ (forall k' w' v0 v, (k' <= k)%nat -> wext w w' ->
+    chain_hyps k' w' ((x, (b, ops ++ [o])) :: fdrop x Pt) (x :: g) ((x, v0) :: rho0i) ((x, v) :: rhoi) ->
+    CRel k' w' X Y rho0 ((x, v0) :: rho0i) Sc ((x, v) :: rhoi) U1 m) ->
+ CRel k w X Y rho0 rho0i (ELet x (ECall (if o then hd_name else tl_name) [EVar y]) Sc) rhoi
+   (ELet x (ECall (if o then hd_name else tl_name) [EVar y]) U1) m.
 Proof.
- induction C; intros k w m g rho0i rhoi U Hh E; cbn [chain_chk] in E;
+ intros k w m Pt g rho0i rhoi x o y Sc U1 b ops Hh Bx Gx Iy Ib Hb IH.
+ set (f := if o then hd_name else tl_name). set (E := ECall f [EVar y]).
+ intros j w' K0 K s0 s L W HK HS.
+ destruct (chain_hyps_mono k j w w' Pt g rho0i rhoi L W Hh) as (Wf & HE & HE0 & HG & HY & HF & HB).
+ destruct (HE y Iy) as (vy0 & vy & Ey0 & Ey & HVy).
+ destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Eval rhoi E) (KLet x U1 rhoi :: K) s)); [reflexivity|reflexivity| |].
+ { intros x'. cbn [kont mem]. apply (chain_thr (S j) w' m K0 K s0 s [] x' HK HS); [reflexivity|lia]. }
+ destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Eval rhoi (EVar y)) (KCallArgs f [] [] rhoi :: KLet x U1 rhoi :: K) s)); [reflexivity|reflexivity| |].
+ { intros x'. cbn [kont mem]. apply (chain_thr (S (S j)) w' m K0 K s0 s [KLet x U1 rhoi] x' HK HS); [reflexivity|lia]. }
+ destruct j as [|j]; [apply KB.ObsT_0|].
+ apply (tgt_tau _ _ _ _ (Cfg (Ret vy) (KCallArgs f [] [] rhoi :: KLet x U1 rhoi :: K) s)); [reflexivity|apply KB.sval_next; cbn; exact Ey| |].
+ { intros x'. cbn [kont mem]. apply (chain_thr (S (S (S j))) w' m K0 K s0 s [KCallArgs f [] [] rhoi; KLet x U1 rhoi] x' HK HS); [reflexivity|lia]. }
+ assert (Hs : hd_tl s) by (eapply hd_tl_tgt; exact HS). assert (Hs0 : hd_tl s0) by (eapply hd_tl_src; exact HS).
+ (* the source, up to its Ret at the call frame *)
+ assert (Src : srun (Cfg (Eval rho0i (ELet x E Sc)) (andRs m ++ KIf X Y rho0 :: K0) s0) []
+   (Cfg (Ret vy0) (KCallArgs f [] [] rho0i :: KLet x Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) s0)).
+ { apply (KB.srun_tau sealed _ (Cfg (Eval rho0i E) (KLet x Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) s0)); [reflexivity|].
+   apply (KB.srun_tau sealed _ (Cfg (Eval rho0i (EVar y)) (KCallArgs f [] [] rho0i :: KLet x Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) s0)); [reflexivity|].
+   eapply KB.srun_tau; [apply KB.sval_next; cbn; exact Ey0|apply KB.srun_refl]. }
+ pose proof (VRel_pop o (S (S (S j))) w' vy0 vy HVy) as Hp.
+ destruct (pop o vy) as [v|] eqn:Ev; destruct (pop o vy0) as [v0|] eqn:Ev0; try contradiction.
+ - destruct j as [|j]; [apply KB.ObsT_0|].
+   apply (tgt_tau _ _ _ _ (Cfg (Ret v) (KLet x U1 rhoi :: K) s)); [reflexivity|unfold f; rewrite (prim_pop_next o vy rhoi _ s Hs), Ev; reflexivity| |].
+   { intros x'. cbn [kont mem]. apply (chain_thr (S (S (S (S j)))) w' m K0 K s0 s [KCallArgs f [] [] rhoi; KLet x U1 rhoi] x' HK HS); [reflexivity|lia]. }
+   destruct j as [|j]; [apply KB.ObsT_0|].
+   apply (tgt_tau _ _ _ _ (Cfg (Eval ((x, v) :: rhoi) U1) K s)); [reflexivity|reflexivity| |].
+   { intros x'. cbn [kont mem]. apply (chain_thr (S (S (S (S (S j))))) w' m K0 K s0 s [KLet x U1 rhoi] x' HK HS); [reflexivity|lia]. }
+   eapply KB.ObsT_anti.
+   { change (@nil event) with (@nil event ++ @nil event). eapply KB.srun_trans; [exact Src|].
+     eapply KB.srun_tau; [unfold f; rewrite (prim_pop_next o vy0 rho0i _ s0 Hs0), Ev0; reflexivity|].
+     apply (KB.srun_tau sealed _ (Cfg (Eval ((x, v0) :: rho0i) Sc) (andRs m ++ KIf X Y rho0 :: K0) s0)); [reflexivity|apply KB.srun_refl]. }
+   assert (Hx : chain_hyps j w' ((x, (b, ops ++ [o])) :: fdrop x Pt) (x :: g) ((x, v0) :: rho0i) ((x, v) :: rhoi)).
+   { destruct (chain_hyps_mono k j w w' Pt g rho0i rhoi ltac:(lia) W Hh) as (Wf' & HE' & HE0' & HG' & HY' & HF' & HB').
+     assert (Tbx : text_eqb b x = false).
+     { apply Bool.not_true_iff_false. intro T. apply text_eqb_eq in T. subst b. apply (bound_false g0 x Bx). exact Ib. }
+     split; [exact Wf'|split; [|split; [|split; [|split; [exact HY'|split]]]]].
+     - apply EnvRel_cons_same; [|exact HE']. eapply KB.VRel_down; [|exact Hp]. lia.
+     - apply EnvRel_cons_r; [apply bound_false; exact Bx|exact HE0'].
+     - cbn. rewrite text_eqb_neq in Gx. destruct (text_eqb G x) eqn:T; [|exact HG'].
+       apply text_eqb_eq in T. subst. contradiction.
+     - destruct (Hb vy Ey) as (vb & Eb & Ep). eapply FactsAll_add; [exact HF'|exact Eb| |exact Tbx].
+       rewrite pops_app, Ep. cbn. rewrite Ev. reflexivity.
+     - intros y' p [Ey'|I]; [injection Ey' as <- <-; exact Ib|]. apply fdrop_in in I as (I & _). exact (HB' y' p I). }
+   apply (IH j w' v0 v ltac:(lia) W Hx j w' K0 K s0 s (le_n _) (KB.wext_self sealed D _ _ _ _ HS)).
+   + eapply KB.KRel_down; [|exact HK]; lia.
+   + eapply KB.SRel_down; [|exact HS]; lia.
+ - (* hd or tl of a non-pair: both raise XPrim *)
+   destruct j as [|j]; [apply KB.ObsT_0|].
+   apply (tgt_tau _ _ _ _ (Cfg (Throw (XPrim (if o then PHd else PTl))) (KLet x U1 rhoi :: K) s));
+    [reflexivity|unfold f; rewrite (prim_pop_next o vy rhoi _ s Hs), Ev; reflexivity| |].
+   { intros x'. cbn [kont mem]. apply (chain_thr (S (S (S (S j)))) w' m K0 K s0 s [KCallArgs f [] [] rhoi; KLet x U1 rhoi] x' HK HS); [reflexivity|lia]. }
+   eapply KB.ObsT_anti.
+   { change (@nil event) with (@nil event ++ @nil event). eapply KB.srun_trans; [exact Src|].
+     eapply KB.srun_tau; [unfold f; rewrite (prim_pop_next o vy0 rho0i _ s0 Hs0), Ev0; reflexivity|apply KB.srun_refl]. }
+   change (KLet x Sc rho0i :: andRs m ++ KIf X Y rho0 :: K0) with ([KLet x Sc rho0i] ++ andRs m ++ KIf X Y rho0 :: K0).
+   rewrite stack_eq, app_assoc.
+   apply (throw_pop (S (S (S (S j)))) w' K0 K ([KLet x Sc rho0i] ++ andRs m ++ [KIf X Y rho0]) [KLet x U1 rhoi]);
+    [exact HK|cbn; apply nontrap_andRs; reflexivity|reflexivity|lia|eapply KB.wext_self; exact HS|].
+   eapply KB.SRel_down; [|exact HS]; lia.
+Qed.
+
+(* What chain_fact recorded: nothing new (the binder's facts dropped), or the path fact of a let
+   of (hd y) or (tl y). *)
+Lemma chain_fact_cases : forall g Pt x E E', chain_fact g g0 Pt x E E' = fdrop x Pt \/
+ exists (o : bool) y b ops, E = ECall (if o then hd_name else tl_name) [EVar y] /\ E' = E /\ In y g /\
+   chain_fact g g0 Pt x E E' = (x, (b, ops ++ [o])) :: fdrop x Pt /\
+   ((flookup y Pt = Some (b, ops)) \/ (b = y /\ ops = [] /\ In y g0)).
+Proof.
+ intros g Pt x E E'. unfold chain_fact.
+ destruct E as [| | | | | | | | | | | | | | | | | f args]; try (left; reflexivity).
+ destruct args as [|a [|a2 args]]; try (left; reflexivity); [|left; destruct a; reflexivity].
+ destruct a as [| | | | | y | | | | | | | | | | | |]; try (left; reflexivity).
+ destruct (op_of f) as [o|] eqn:Eo; [|left; reflexivity].
+ destruct (expr_eqb (ECall f [EVar y]) E' && bound g y) eqn:B; [|left; reflexivity].
+ apply andb_true_iff in B as [B1 B2]. apply expr_eqb_eq in B1. apply bound_in in B2.
+ rewrite (op_of_some f o Eo) in *.
+ destruct (flookup y Pt) as [[b ops]|] eqn:Fl.
+ - right. exists o, y, b, ops. split; [reflexivity|split; [symmetry; exact B1|split; [exact B2|split; [reflexivity|left; exact Fl]]]].
+ - destruct (bound g0 y) eqn:B0; [|left; reflexivity].
+   right. exists o, y, y, []. split; [reflexivity|split; [symmetry; exact B1|split; [exact B2|split; [reflexivity|]]]].
+   right. split; [reflexivity|split; [reflexivity|apply bound_in; exact B0]].
+Qed.
+
+Theorem chain_sound : forall C k w m Pt g rho0i rhoi U, chain_hyps k w Pt g rho0i rhoi ->
+ chain_chk rec g0 Pt G X g C U = true -> CRel k w X Y rho0 rho0i C rhoi U m.
+Proof.
+ induction C; intros k w m Pt g rho0i rhoi U Hh E; cbn [chain_chk] in E;
   (apply orb_true_iff in E as [E|E]; [eapply chain_base; eassumption|]); try (destruct U; discriminate).
  - (* let *) destruct U as [| | | | | | | x' E' U1 | | | | | | | | | |]; try discriminate.
-   repeat (apply andb_true_iff in E as [E ?]). apply text_eqb_eq in E. subst x'.
-   eapply chain_let; [exact Hh|apply negb_true_iff; eassumption|apply negb_true_iff; eassumption|eassumption|].
-   intros k' w' v0 v L W Hx. eapply IHC2; [exact Hx|eassumption].
+   apply andb_true_iff in E as [E EC]. apply andb_true_iff in E as [E Ee].
+   apply andb_true_iff in E as [E Gx]. apply andb_true_iff in E as [E Bx]. apply text_eqb_eq in E. subst x'.
+   apply negb_true_iff in Gx, Bx.
+   match goal with |- CRel _ _ _ _ _ _ (ELet ?lx ?lE _) _ _ _ => rename lx into cx, lE into cE end.
+   destruct (chain_fact_cases g Pt cx cE E') as [Ef|(o & y & b & ops & -> & -> & Iy & Ef & Hf)]; rewrite Ef in EC.
+   + eapply chain_let; [exact Hh|exact Bx|exact Gx|exact Ee|].
+     intros k' w' v0 v L W Hx. eapply IHC2; [exact Hx|exact EC].
+   + apply (chain_let_path k w m Pt g rho0i rhoi cx o y C2 U1 b ops); [exact Hh|exact Bx|exact Gx|exact Iy| | |].
+     * destruct Hf as [Hf|(-> & -> & I0)]; [|exact I0].
+       destruct Hh as (_ & _ & _ & _ & _ & _ & HB). exact (HB y (b, ops) (flookup_in _ _ _ Hf)).
+     * intros vy Ey. destruct Hf as [Hf|(-> & -> & _)]; [|exists vy; split; [exact Ey|reflexivity]].
+       destruct Hh as (_ & _ & _ & _ & _ & HF & _). destruct (HF y (b, ops) (flookup_in _ _ _ Hf)) as (v & vb & E1 & E2 & E3).
+       rewrite Ey in E1. injection E1 as <-. exists vb. split; assumption.
+     * intros k' w' v0 v L W Hx. eapply IHC2; [exact Hx|exact EC].
  - (* and *) destruct U as [| | | | | | | | T' U1 Z | | | | | | | | |]; try discriminate.
    repeat (apply andb_true_iff in E as [E ?]).
    eapply chain_and; [exact Hh|exact E|eassumption|]. eapply IHC2; [exact Hh|eassumption].
@@ -729,7 +1177,7 @@ Proof.
  rename E into BG. apply negb_true_iff, bound_false in BG.
  match goal with B : negb (bound g id_key) = true |- _ => apply negb_true_iff, bound_false in B; rename B into BI end.
  match goal with B : rec g Y Y' = true |- _ => rename B into EY end.
- match goal with B : chain_chk rec g G X g C U = true |- _ => rename B into EC end.
+ match goal with B : chain_chk rec g [] G X g C U = true |- _ => rename B into EC end.
  intros k w rho0 rho Wf0 HE. apply KB.ERel_iff. intros j L w' W K0 K HK s0 s HS.
  destruct j as [|j]; [apply KB.ObsT_0|].
  apply KB.ObsT_running; [reflexivity|unfold KB.nonterm; cbn; exact I| | |].
@@ -747,11 +1195,11 @@ Proof.
      apply SRel_with_cell_tgt. eapply KB.SRel_down; [|exact HS]; lia. }
    assert (Wf' : wf_world w') by exact (proj2 W).
    assert (HE' : EnvRel_with (VRel j) w' g rho0 rho) by (eapply KB.EnvRel_mono; [|exact W|exact HE]; lia).
-   assert (Hh : chain_hyps g G Y Y' (tagged_env rho s) rho0 j w' g rho0 ((G, fr) :: rho)).
-   { split; [exact Wf'|split; [apply EnvRel_cons_r; assumption|split; [apply EnvRel_cons_r; assumption|split]]].
+   assert (Hh : chain_hyps g G Y Y' (tagged_env rho s) rho0 j w' [] g rho0 ((G, fr) :: rho)).
+   { split; [exact Wf'|split; [apply EnvRel_cons_r; assumption|split; [apply EnvRel_cons_r; assumption|split; [|split; [|split; [apply FactsAll_nil|intros y p []]]]]]].
      - cbn [lookup]. rewrite text_eqb_refl. reflexivity.
      - apply (Hr g Y Y' EY); [exact Wf'|]. unfold tagged_env. apply EnvRel_cons_r; assumption. }
-   apply (chain_sound rec Hr g G X Y Y' (tagged_env rho s) rho0 C j w' 0 g rho0 ((G, fr) :: rho) U Hh EC j w' K0 K s0 (with_cell s));
+   apply (chain_sound rec Hr g G X Y Y' (tagged_env rho s) rho0 C j w' 0 [] g rho0 ((G, fr) :: rho) U Hh EC j w' K0 K s0 (with_cell s));
     [apply le_n|eapply KB.wext_self; exact HS| |].
    + eapply KB.KRel_down; [|exact HK]; lia.
    + apply SRel_with_cell_tgt. eapply KB.SRel_down; [|exact HS]; lia.
@@ -762,11 +1210,38 @@ Theorem share_rules_sound : Forall rule_sound share_rules.
 Proof. constructor; [exact share_rule_sound|constructor]. Qed.
 
 (* check_share is sound under FrontHyps and thaw's definition in D. *)
-(* check_share is sound for every D_wf D in which thaw is the kernel's (HT, the Section
-   hypothesis above). FrontHyps is no longer a premise: front_hyps derives it from D_wf. *)
-Theorem check_share_sound : JitKRef.JitKRef.D_wf sealed D -> forall ps b0 b, check_share ps b0 b = true -> KRef ps b0 b.
-Proof. intros Dw ps b0 b E. exact (fchk_sound sealed D (front_hyps sealed D Dw) share_rules share_rules_sound _ ps b0 b E). Qed.
+(* check_share is sound for every D_wf D (Dw) in which thaw is the kernel's (HT) and hd and tl are
+   the primitives (HP), the Section hypotheses above. FrontHyps is no longer a premise: front_hyps
+   derives it from D_wf. *)
+Theorem check_share_sound : forall ps b0 b, check_share ps b0 b = true -> KRef ps b0 b.
+Proof. intros ps b0 b E. exact (fchk_sound sealed D (front_hyps sealed D Dw) share_rules share_rules_sound _ ps b0 b E). Qed.
 End Share.
+
+(* A pair judge_share accepts is a definition and its share witness of the same name and
+   parameters whose bodies are in KRef, for every D meeting check_share_sound's premises. *)
+Theorem judge_share_sound : forall form share f, judge_share form share = SAccepted f ->
+ exists ps b0 b, parse [] (to_value form) = Some (EDefun f ps b0) /\ parse [] (to_value share) = Some (EDefun f ps b) /\
+ forall sealed D tp, In (thaw_name, FUser [tp] (EApp (EVar tp) [])) D ->
+  In (hd_name, FPrim PHd) D /\ In (tl_name, FPrim PTl) D -> JitKRef.JitKRef.D_wf sealed D ->
+  JitKRef.JitKRef.KRef sealed D ps b0 b.
+Proof.
+ intros form share f E. unfold judge_share in E.
+ destruct (parse [] (to_value form)) as [e0|] eqn:E1; destruct (parse [] (to_value share)) as [e|] eqn:E2; try discriminate;
+  destruct e0 as [| | | | | | | | | | | | | | | g0 qs0 c0 | |]; try discriminate;
+  destruct e as [| | | | | | | | | | | | | | | g1 qs1 c1 | |]; try discriminate.
+ destruct (text_eqb g0 g1 && forall2b text_eqb qs0 qs1) eqn:Ep; [|discriminate].
+ destruct (check_share qs0 c0 c1) eqn:Ec; [|discriminate]. injection E as <-.
+ apply andb_true_iff in Ep as [Ef Eps]. apply text_eqb_eq in Ef. apply text_list_eq in Eps. subst g1 qs1.
+ exists qs0, c0, c1. split; [reflexivity|split; [reflexivity|]].
+ intros sealed D tp HT HP Dw. exact (check_share_sound sealed D tp HT HP Dw qs0 c0 c1 Ec).
+Qed.
+
+(* HP is what any store of call_preservation_src meets: Com's FunRel gives every primitive name
+   its primitive (fr_name), so a store with Com s m holds D_hp, hd and tl as the primitives. *)
+Theorem hp_of_com : forall s m, JitLowerStep.JitLowerStep.Com s m -> JitKRef.JitKRef.StoreHas D_hp s.
+Proof.
+ intros s m [_ F] f d [E|[E|[]]]; injection E as <- <-; apply (JitLowerStep.JitLowerStep.fr_name s m F); vm_compute; reflexivity.
+Qed.
 
 (* ---------- a literal refines itself, for every D ----------
    Proved directly (one tau step to Ret on each side, then the continuations' Ret clause), with no
@@ -800,25 +1275,22 @@ Qed.
 End Lit.
 
 (* ---------- HT is necessary: share_rule_sound fails for a D without thaw ----------
-   Take D = [] (D_wf holds) and the empty store, which meets it. The pair
+   Take D = D_hp (hd and tl as the primitives, no thaw: HP holds, and D_wf when hd and tl are
+   sealed) and a store holding exactly D_hp, which meets it. The pair
        (if false 0 1)   against   (let G (freeze 1) (if false 0 (thaw G)))
    is accepted by share_rule with rec = cx_rec, syntactic equality of literals, sound at every D by
    lit_kref (proved above, no FrontHyps). The source returns 1. The target, in 9 steps, reaches
    (thaw G), finds no function thaw in the store and raises (XUndefinedFun thaw); every throw the
    source can reach is a resource error (XUser "out of memory" / "stack overflow"). KRef demands
    the source match the target's throw, so the pair is not in KRef and share_rule is not
-   rule_sound for this D: share_rule_needs_thaw, with no premise.
-   SRel forces both stores to share one function table but D = [] says nothing of thaw, so no
-   FrontHyps field constrains what (thaw G) does: a premise on thaw's definition in D (HT) is
-   needed. share_rule_sound_needs_thaw restates it against the FrontHyps-only statement: that
-   statement, at D = [], refutes FrontHyps sealed [], which kref-fund is to prove for every D_wf
-   store spec. *)
+   rule_sound for this D: share_rule_needs_thaw, with no premise. share_needs_thaw_outright (below)
+   adds that D_wf, FrontHyps and HP hold there: of share_rule_sound's premises, HT cannot go. *)
 Definition cx_G : name := of_string "G".
 Definition cx_src : expr := EIf (EBool false) (ENum (NInt 0)) (ENum (NInt 1)).
 Definition cx_tgt : expr := ELet cx_G (EFreeze (ENum (NInt 1))) (EIf (EBool false) (ENum (NInt 0)) (thaw_e cx_G)).
 Definition cx_rec (g : list name) (a b : expr) : bool :=
  expr_eqb a b && match lit_val b with Some _ => true | None => false end.
-Definition cx_s : store := Store [] [] [].
+Definition cx_s : store := Store [] [] D_hp.
 Definition cx_kif : frame := KIf (ENum (NInt 0)) (ENum (NInt 1)) [].
 Definition cx_det : list config :=
  [Cfg (Eval [] cx_src) [] cx_s; Cfg (Eval [] (EBool false)) [cx_kif] cx_s;
@@ -862,21 +1334,22 @@ Lemma cx_runs_tau : forall n c c1 c2, next_r R P c = MTau c1 ->
 Proof. intros n c c1 c2 E H. exact (JitKRef.JitKRef.runs_S sealed n c Tau c1 [] c2 (step_r_tau R P c c1 E) H). Qed.
 
 Lemma cx_tgt_runs : JitKRef.JitKRef.runs sealed 9 (Cfg (Eval [] cx_tgt) [] cx_s) []
- (Cfg (Throw (XUndefinedFun thaw_name)) [] (Store [[]] [] [])).
+ (Cfg (Throw (XUndefinedFun thaw_name)) [] (Store [[]] [] D_hp)).
 Proof. do 9 (eapply cx_runs_tau; [reflexivity|]). constructor. Qed.
 
-Theorem share_rule_needs_thaw : ~ JitFrontCheck.rule_sound sealed [] share_rule.
+Theorem share_rule_needs_thaw : ~ JitFrontCheck.rule_sound sealed D_hp share_rule.
 Proof.
  intros H.
- assert (Hs : JitFrontCheck.chk_sound sealed [] cx_rec).
+ assert (Hs : JitFrontCheck.chk_sound sealed D_hp cx_rec).
  { intros g a b E. apply andb_true_iff in E as [E1 E2]. apply expr_eqb_eq in E1. subst b.
-   destruct (lit_val a) as [v|] eqn:Hl; [|discriminate]. exact (lit_kref sealed [] g a v Hl). }
+   destruct (lit_val a) as [v|] eqn:Hl; [|discriminate]. exact (lit_kref sealed D_hp g a v Hl). }
  assert (W0 : wf_world []) by (split; constructor).
  pose proof (H cx_rec Hs [] cx_src cx_tgt cx_accepted 20%nat [] [] [] W0 (fun x I => match I with end)) as K.
- assert (HK : JitKRef.JitKRef.KRel sealed [] 20 [] [] []) by exact (JitKRefGround.JitKRefGround.KRel_top sealed [] 20 [] W0).
- assert (HS : JitKRef.JitKRef.SRel sealed [] 20 [] cx_s cx_s).
- { unfold JitKRef.JitKRef.SRel, JitKRef.JitKRef.SRel_with.
-   split; [exact W0|split; [intros f d []|split; [intros f d []|split; [reflexivity|split; [constructor|]]]]].
+ assert (HK : JitKRef.JitKRef.KRel sealed D_hp 20 [] [] []) by exact (JitKRefGround.JitKRefGround.KRel_top sealed D_hp 20 [] W0).
+ assert (HS : JitKRef.JitKRef.SRel sealed D_hp 20 [] cx_s cx_s).
+ { assert (SH : JitKRef.JitKRef.StoreHas D_hp cx_s) by (intros f d [E|[E|[]]]; injection E as <- <-; reflexivity).
+   unfold JitKRef.JitKRef.SRel, JitKRef.JitKRef.SRel_with.
+   split; [exact W0|split; [exact SH|split; [exact SH|split; [reflexivity|split; [constructor|]]]]].
    intros l0 l []. }
  pose proof (K 20%nat (le_n _) [] (JitKRefGround.JitKRefGround.wext_refl [] W0) [] [] HK cx_s cx_s HS) as O.
  destruct (O 9%nat [] _ ltac:(lia) cx_tgt_runs) as (_ & B & _).
@@ -887,20 +1360,31 @@ Proof.
    injection E as -> _. destruct r; discriminate.
 Qed.
 
-(* The FrontHyps-only form of share_rule_sound, at D = [], would refute FrontHyps there. *)
+(* The form of share_rule_sound without HT, at D_hp, would refute FrontHyps there. *)
 Corollary share_rule_sound_needs_thaw :
- (JitFrontCheck.FrontHyps sealed [] -> JitFrontCheck.rule_sound sealed [] share_rule) ->
- ~ JitFrontCheck.FrontHyps sealed [].
+ (JitFrontCheck.FrontHyps sealed D_hp -> JitFrontCheck.rule_sound sealed D_hp share_rule) ->
+ ~ JitFrontCheck.FrontHyps sealed D_hp.
 Proof. intros H FH. exact (share_rule_needs_thaw (H FH)). Qed.
 End Cx.
 
-(* With KRef's fundamental property proved, FrontHyps holds at D = [] (D_wf [] is trivial), so the
-   counterexample above is unconditional: FrontHyps holds there and share_rule is still not
-   rule_sound. No premise on FrontHyps can stand in for HT. *)
-Theorem share_needs_thaw_outright : forall sealed,
- FrontHyps sealed [] /\ ~ JitFrontCheck.rule_sound sealed [] share_rule.
+(* With KRef's fundamental property proved, FrontHyps holds at D_hp whenever hd and tl are sealed
+   (D_wf), and HP holds there, so the counterexample above is unconditional: D_wf, FrontHyps and HP
+   hold at D_hp, and share_rule is still not rule_sound. Of share_rule_sound's premises (HT, HP,
+   D_wf), HT cannot be dropped. *)
+Lemma hd_tl_differ : hd_name <> tl_name.
+Proof. intro E. vm_compute in E. discriminate E. Qed.
+
+Theorem share_needs_thaw_outright : forall sealed, In hd_name sealed -> In tl_name sealed ->
+ JitKRef.JitKRef.D_wf sealed D_hp /\ FrontHyps sealed D_hp /\
+ (In (hd_name, FPrim PHd) D_hp /\ In (tl_name, FPrim PTl) D_hp) /\
+ ~ JitFrontCheck.rule_sound sealed D_hp share_rule.
 Proof.
- intros sealed. split; [apply front_hyps; split; constructor|exact (share_rule_needs_thaw sealed)].
+ intros sealed Ih It.
+ assert (Dw : JitKRef.JitKRef.D_wf sealed D_hp).
+ { split; [repeat constructor; assumption|]. constructor; [|constructor; [intros []|constructor]].
+   intros [E|[]]. exact (hd_tl_differ (eq_sym E)). }
+ split; [exact Dw|split; [apply front_hyps; exact Dw|split; [split; [left; reflexivity|right; left; reflexivity]|]]].
+ exact (share_rule_needs_thaw sealed).
 Qed.
 
 (* ---------- HT for the real D: where thaw's entry comes from, and what blocks it ----------
