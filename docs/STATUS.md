@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Two hundred and sixty-eight statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Two hundred and seventy-five statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1359,12 +1359,12 @@ answers at |S| + 1 (no lok hypothesis, global or S-local; induction on |S| with 
 on the decidable goal, so no excluded middle). `eq_core` is `eq_core_statement (jit_rules sealed)`, with S all cells, and
 `eq_budget` is `JitLowerEquiv.eq_budget_statement sealed`, through `eq_budget_from_core`. Proof mutants `ShenJitEqCoreNoTrans`
 and `ShenJitEqCoreNoClosure` are rejected.
-Five are in `rocq/JitFrontD.v` (D00, branch `p2/D00`): the store D of the front rules is a lowered store, each
+Twelve are in `rocq/JitFrontD.v` (D00, branch `p2/D00`, merged by `p2/r1-d00-merge`): the store D of the front rules is a lowered store, each
 callee's erased stage 0 normal form, because Com's FunRel makes a store body the one its code lowers. Proved:
 `D_compiled'_spec` and `D_compiled'_D_compiled` (the per-callee emit check), `D_of_nodup` and `D_of_wf` (D built in
 Rocq from decoded stage 0 data is well formed), and `D_cons_prim_of_Com`. Stated, not proved: `aeq_sound_statement`,
 `inline_site_sound_statement` (the inline rule's fact: alpha-equivalence, integer substitution, thaw-with, depth cut)
-and `bind_site_sound_statement`. Test, not proof: `bind_site` accepts all 37 stage 0 bound-now sites (6 definitions) against their `D_of` store; `shen.bindv` and `shen.unwind` enter D as inline callees; `D_compiled'` holds today for `do` and `protect` only among the kernel and port callees (false for `thaw`, `shen.bind!`, `shen.bindv`, `shen.unwind` and the three port forms). Mutants `ShenJitFrontAlphaCapture`, `ShenJitFrontInlFrozenFree`, `ShenJitFrontDCompiled`, `ShenJitFrontPortUnify`, `ShenJitFrontInlHidden` and `ShenJitFrontBindLetdo` are rejected (each compiled in Rocq 9.3 against the lane build).
+and `bind_site_sound_statement`. Proved by r1-d00-merge: `Comp_sfx`, `ops_safe_lit`, `prim_gate_ok`, `cblk_of_Comp` (a JitLowerRel.Comp derivation has no blocker: no special form, primitive outside `pmap`, `=` without a literal operand, or named call missing from the code), `cblk_CompFn`, `cblk_reject` and `D_why_spec`, so why `D_compiled'` fails is Rocq-derived: `thaw` needs apply (emit family App); `shen-jit.deref=`, `shen-jit.unify=`, `shen-jit.unify=!`, `shen.bind!`, `shen.bindv` and `shen.unwind` call port primitives with no approved source meaning (`OB-JIT-PORT-PRIMS`; identity, `OB-JIT-IDENTITY-MODEL`, for the port forms), a decision-gated named residual, besides Store/DoFold/App/Eq features. Test, not proof: `bind_site` accepts all 37 stage 0 bound-now sites (6 definitions) against their `D_of` store with X, Y and B from the source call; `inl_site` accepts all 5430 real inline sites (5360 alpha, 24 integer, 22 thaw-with, 18 depth cut, 6 only with fold), matching the Python census; `shen.bindv` and `shen.unwind` enter D as inline callees. Mutants `ShenJitFrontAlphaCapture`, `ShenJitFrontInlFrozenFree`, `ShenJitFrontDCompiled`, `ShenJitFrontPortUnify`, `ShenJitFrontInlHidden`, `ShenJitFrontBindLetdo` and, from r1-d00-merge, `ShenJitFrontCblkCondTrue`, `ShenJitFrontCblkEqAll`, `ShenJitFrontWhyOther`, `ShenJitFrontSiteNargsNoInfer`, `ShenJitFrontPairReadBack` and `ShenJitFrontIsitesNoLets` are rejected (each compiled in Rocq 9.3 against the lane build).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Heap image (spike, not gated; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): a Rocq decoder in `spikes/image-decode/` reads the

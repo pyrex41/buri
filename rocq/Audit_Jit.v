@@ -268,3 +268,10 @@ Print Assumptions JitFrontD.JitFrontD.D_compiled'_D_compiled.
 Print Assumptions JitFrontD.JitFrontD.D_of_nodup.
 Print Assumptions JitFrontD.JitFrontD.D_of_wf.
 Print Assumptions JitFrontD.JitFrontD.D_cons_prim_of_Com.
+Print Assumptions JitFrontD.JitFrontD.Comp_sfx.
+Print Assumptions JitFrontD.JitFrontD.ops_safe_lit.
+Print Assumptions JitFrontD.JitFrontD.prim_gate_ok.
+Print Assumptions JitFrontD.JitFrontD.cblk_of_Comp.
+Print Assumptions JitFrontD.JitFrontD.cblk_CompFn.
+Print Assumptions JitFrontD.JitFrontD.cblk_reject.
+Print Assumptions JitFrontD.JitFrontD.D_why_spec.

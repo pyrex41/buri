@@ -119,6 +119,17 @@ ShenJitFrontInlHidden: inl_eq thaws a frozen argument in place without checking 
   inside N hides one of its free names. site_frozen_hidden must fail.
 ShenJitFrontBindLetdo: bind_site stops reading e_B's unused let as do, so no real bound-now site
   matches. site_bind (and site_bind_real) must fail.
+ShenJitFrontCblkCondTrue: cblk_of walks the clauses after a (true X) clause of cond, which
+  C_cond_true never compiles. cblk_of_Comp must fail.
+ShenJitFrontCblkEqAll: cblk_of reports = as a blocker unless EVERY operand is a literal; pguard asks
+  for one. prim_gate_ok (and so cblk_of_Comp) must fail.
+ShenJitFrontWhyOther: D_why drops an entry check_fn rejects with no blocker. D_why_spec must fail.
+ShenJitFrontSiteNargsNoInfer: site_nargs cannot read back an integer argument, so integer sites
+  are unread. class_hds must fail.
+ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arguments, not the
+  source call's. pair_src_lrules_wrong must fail.
+ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
+  marker. isites_fbound must fail.
 """
 import re
 from pathlib import Path
@@ -338,4 +349,18 @@ mutate('ShenJitFrontInlHidden', front,
 mutate('ShenJitFrontBindLetdo', front,
        '     inl_eq (S (dsize eB)) fold true D [(p4, SFrozen ex)]',
        '     inl_eq (S (dsize eB)) fold false D [(p4, SFrozen ex)]')
+mutate('ShenJitFrontCblkCondTrue', front,
+       '     | (t, a) :: rest => if is_true_lit t then cblk_of c a else cblk_of c t ++ cblk_of c a ++ go rest end) cl',
+       '     | (t, a) :: rest => cblk_of c t ++ cblk_of c a ++ go rest end) cl')
+mutate('ShenJitFrontCblkEqAll', front,
+       '(if existsb is_lit args then [] else [KEq])', '(if forallb is_lit args then [] else [KEq])')
+mutate('ShenJitFrontWhyOther', front,
+       '         | [] => if check_fn c ps b then [] else [(fst p, DOther)]', '         | [] => []')
+mutate('ShenJitFrontSiteNargsNoInfer', front,
+       '           | Some (SInt z) => Some (ENum (NInt z) :: l)', '           | Some (SInt z) => None')
+mutate('ShenJitFrontPairReadBack', front,
+       '[x; y; b; _] => bind_site false D [x; y; b; ex] s', '[x; y; b; _] => bind_site false D rb s')
+mutate('ShenJitFrontIsitesNoLets', front,
+       ' | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O',
+       ' | (x, NVar _, _) :: anc => if bound ps x then O else O')
 print(' '.join(names))

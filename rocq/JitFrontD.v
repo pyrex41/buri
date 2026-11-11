@@ -60,7 +60,9 @@
    since a callee whose only rewrite is fold-cons erases back to its source and could count); under
    (A) the same end state predicts 955 (T02's every-option forecast, given the inline relation's
    four classes; with alpha alone, 915).
-   These are predictions. Progress is unchanged: 111 of 955 stage 0 definitions validated (src).
+   These are predictions. They change no count: the source judge accepts 148 of 955 stage 0
+   definitions (p2/int at this merge); the full-pipeline validated count is UNKNOWN (no
+   full-pipeline judge exists).
 
    ALLOWED STORE FACTS (each a named Definition below; nothing else about the store may be used by
    a front-end rule's soundness proof):
@@ -85,14 +87,19 @@
      the inline rule inlines bindv and unwind in it, exactly as norm inlined them in bind!'s own
      source body to give e_B; neither side has a call to shen.bindv or shen.unwind (Example
      bind_real_inlined), and inl_eq relates the two inlined regions by congruence and renaming.
-     Test on real data (NOT proof; Rocq vm_compute of bind_report over the decoded table, witness
-     set e45add98..., the --D smoke data): 37 of 37 bound-now sites, in 6 definitions
+     Test on real data (NOT proof; Rocq vm_compute of bind_src_report over the decoded table,
+     witness set e45add98..., r1-d00-merge): 37 bound-now sites, in 6 definitions
      (shen.system-S-h 18, shen.primitive 3, shen.l-rules 1, shen.myassume 6, shen.p-hyps 6,
-     shen.variancy-signature 3), are accepted by bind_site (fold = false) against their D_of store.
-     The 37 match the (const shen.bindv) markers in those 6 definitions, 18+3+1+6+6+3, so the
-     extractor missed none; 25 sites have a literal (freeze E) and 12 come from let-frozen. The
-     site's arguments are read back from the expansion (bind_args), so what is tested is N against
-     e_B, not the normalisation of the arguments. Example site_bind_real pins one (shen.l-rules).
+     shen.variancy-signature 3; the 37 match the (const shen.bindv) markers there). With X, Y and
+     B taken from the SOURCE call (pair_src: each site paired with a distinct one of the 49 source
+     candidates, 23+8+1+6+6+4, such that the site's three let values are expr_eqb to the call's
+     arguments and bind_site accepts), all 37 are accepted. With all four arguments read back from
+     the expansion, as D00 ran it, also 37. E is still read back: its normal form is norm's, and no
+     Rocq normaliser exists (F-* scope), so what is checked independently of the expansion is X, Y,
+     B (against the source) and e_B (against the table). The 12 candidates no site takes are
+     let-frozen binds whose G is also thawed beside the bind (stage 0 leaves those as calls).
+     Examples site_bind_real and pair_src_lrules pin the l-rules site; pair_src_lrules_wrong shows
+     a site is not paired with a source call whose first argument differs.
    - D_has_port_deref_eq, D_has_port_unify : shen-jit.deref=, shen-jit.unify=, shen-jit.unify=! (port
      KL defuns, src/port/shen-jit.kl, stage 0's shen-jit.forms). These rules replace kernel
      functions (= on shen.deref, is/is!) by DIFFERENT port functions; their soundness is a semantic
@@ -120,13 +127,37 @@
      it, since + and - are primitives with no stage 0 row (interface item 2), so the fold-enabled
      inline sites (fold = true) and fold-arith cannot use a D_of store until item 2 is settled;
      D_cons_prim is about the store, not D, and holds under Com.
-   - D_COMPILED' TODAY (test, NOT proof: Rocq vm_compute of D_compiled' on single-entry Ds built by
-     D_low from the decoded table, against the table's code objects, witness set e45add98...):
-     true for do and protect; FALSE for thaw (apply-dynamic, see above), shen-jit.deref=,
-     shen-jit.unify=, shen-jit.unify=!, shen.bind!, shen.bindv and shen.unwind (reasons not
-     diagnosed here). So every D_of store holding any of those fails D_compiled' at this commit:
-     the 6 definitions with bound-now sites, the 10 holding bindv, the 8 holding unwind, and every D holding
-     thaw or a port defun. Making them pass is Comp's work (the emit families), not D's.
+   - D_COMPILED' TODAY, AND WHY (r1-d00-merge). D_why (below) names, per entry D_compiled'
+     rejects, a missing code object, the wrong shape, or Comp's BLOCKERS against the entry's code
+     (cblk_of): constructs at positions Comp compiles that no Comp rule admits. cblk_of_Comp
+     proves a Comp derivation has none, so each blocker is a Rocq-proved reason for rejection
+     (cblk_reject; D_why_spec: D_why is empty exactly when D_compiled' holds). The run (vm_compute
+     of why_report on single-entry Ds built by D_low from the decoded table, against the table's
+     code objects, witness set e45add98...) gives: do and protect pass; the others fail with these
+     blockers (all DBlk, none DOther, none a shape or missing-code failure):
+       thaw           : apply (dynamic application) -> missing Comp feature, emit family App.
+       shen-jit.deref= : no call instruction for shen-jit.deref and for shen-jit.same? (Comp reads a
+                        port primitive as a named call; the code has the primitive's instruction),
+                        = with no literal operand.
+       shen-jit.unify=, shen-jit.unify=! : shen-jit.same?, shen-jit.deref, shen-jit.pvar?,
+                        shen-jit.pvar-offset (as for deref=), = with no literal operand, prim
+                        address->, no call instruction for do (stage 0 lowers do in place).
+       shen.bind!      : prim address->, shen-jit.pvar-offset, apply, do.
+       shen.bindv      : prim address->, shen-jit.pvar-offset.
+       shen.unwind     : do, prim address->, shen-jit.pvar-offset.
+     Classification. Missing Comp features, each with its emit family (rocq/JitEmitRule<X>.v):
+     apply -> App; do -> DoFold; address-> -> Store; = on two computed operands -> Eq, whose NaN
+     case is decision-gated (OB-JIT-NAN-IDENTITY). But every one of the six also needs a port
+     primitive with no approved source meaning: shen-jit.pvar-offset, shen-jit.pvar? and
+     shen-jit.deref have no candidate ("Prolog variables: KL has no value for one",
+     JitProfile.jit_port_prims_residual; OB-JIT-PORT-PRIMS), and shen-jit.same? and shen-jit.deref
+     are identity primitives (OB-JIT-IDENTITY-MODEL). So all six are NAMED RESIDUALS, decision-gated
+     (port primitives without an approved source meaning; identity primitives for deref= and the
+     unify forms), whatever the emit families do; thaw is a missing feature only (App).
+     Consequence for D: every D_of store holding bind!, bindv, unwind or a port form (the 6
+     definitions with bound-now sites, the 10 holding bindv, the 8 holding unwind, and those
+     holding a port form) cannot meet D_compiled' until Reuben decides OB-JIT-PORT-PRIMS (and, for
+     the port forms, OB-JIT-IDENTITY-MODEL); a D holding thaw waits for emit family App.
 
    INTERFACE ITEMS (1, 2; not changed here, JitKRef.v is the KRef track's interface) AND A NOTE (3):
    1. fresh names. JitKRef.fresh_ok ns (b0 :: D_bodies D) is FALSE under (A): lowered bodies bind
@@ -143,11 +174,25 @@
       the body scoped in G's parameters), and the call in the store, which D_has_inline_callee
       gives for G.
 
+   INLINE SITES ON REAL DATA (r1-d00-merge; test, NOT proof: Rocq vm_compute of inl_report over the
+   decoded table, witness set e45add98...). isites finds every marker of every normal form with
+   the lets above it (5430 sites, the census's number), site_nargs reads the arguments lower.shen
+   did not bind back off N against e_F (a kept argument is its fresh let's value), and inl_site
+   decides each against the owner's D_of store: 5360 alpha (accepted against F's entry alone,
+   nothing substituted), 24 integer substitution, 22 thaw-with, 18 depth cut (accepted only with the
+   whole D_of store), 6 only with fold = true (the vector sites; fold needs D_prims_fold, which no
+   D_of store has: interface item 2), 0 rejected, 0 unread, 0 without a store. Of the 528
+   definitions with a marker, 522 have every site accepted with fold = false and all 528 with fold
+   allowed. The Rocq run agrees with the Python census class by class (5360 / 30 = 24 + 6 / 22 /
+   18). What is read back from the expansion: the argument values (integers, thawed terms, kept
+   lets' values); what is checked independently of it: e_F (the table's erased witness of F) and
+   that every occurrence agrees with the value read.
    Stated, NOT proved here (owner F-inline): aeq_sound_statement, inline_site_sound_statement,
-   bind_site_sound_statement. inl_site was NOT run on real inline sites (only the Examples); the
-   Python census above classifies them, Rocq has not checked them (UNKNOWN).
+   bind_site_sound_statement.
    Proved here: D_compiled'_spec, D_compiled'_D_compiled, D_cons_prim_of_Com, dedup_nodup,
-   D_of_nodup, D_of_wf; and Examples pinning the checkers (tests, not evidence of anything general).
+   D_of_nodup, D_of_wf; Comp_sfx, ops_safe_lit, prim_gate_ok, cblk_of_Comp, cblk_CompFn,
+   cblk_reject, D_why_spec (r1-d00-merge); and Examples pinning the checkers and harnesses (tests,
+   not evidence of anything general).
    No axioms, nothing Admitted. *)
 From Coq Require Import List ZArith NArith PArith Bool String.
 From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitLowerRel JitLowerStep JitLowerCheck JitKRef JitLowerStage0 JitNorm JitNormStage0.
@@ -368,6 +413,246 @@ Proof.
  intros p I. specialize (H p I). destruct (snd p) as [q|ps b]; [reflexivity|].
  destruct (lookup (fst p) cs) as [c|]; [|discriminate].
  apply andb_true_iff in H as [_ Ck]. exact Ck.
+Qed.
+
+(* ---------- why D_compiled' fails: what JitLowerRel.Comp can reach ---------- *)
+(* A blocker is a construct at a position Comp compiles that no Comp rule admits, against code c:
+   KApp, KLam, KFreeze, KTrap, KDefun : the special form (Comp has no rule for it);
+   KPrim f  : a KL primitive outside JitLowerRel.pmap;
+   KArity f : a primitive of pmap called with the wrong number of arguments, or with none;
+   KEq      : = with no literal operand (types stripped), which pguard refuses (no safe constant);
+   KCall f n: a named call (prim_of_name f = None: a sealed or kernel function such as do, or a
+              port primitive such as shen-jit.pvar-offset) where c has no call instruction to f
+              with n arguments (C_call and C_tail need one).
+   `cblk_of_Comp` below proves that a Comp derivation has none, so a blocker is a Rocq-checked
+   reason that check_fn rejects (cblk_reject), whatever lies elsewhere in the body. (cond after a
+   (true X) clause is not walked: C_cond_true compiles X alone.) It is a sufficient cause, not a
+   complete one: an empty list says nothing about acceptance. *)
+Inductive cblk := KApp | KLam | KFreeze | KTrap | KDefun
+ | KPrim (f : name) | KArity (f : name) | KEq | KCall (f : name) (n : N).
+
+Fixpoint strip_type (e : expr) : expr := match e with EType a => strip_type a | _ => e end.
+Definition is_lit (e : expr) : bool := match lit_val (strip_type e) with Some _ => true | None => false end.
+Definition is_true_lit (e : expr) : bool := match e with EBool true => true | _ => false end.
+
+Definition is_call_to (f : name) (n : N) (i : B.instr) : bool := match i with
+ | B.ICall _ _ g m | B.ICallSealed _ _ g m | B.ITail _ g m | B.ITailSealed _ g m =>
+   Pos.eqb g (B.sym_of_text f) && N.eqb m n
+ | _ => false end.
+Definition has_call (c : B.code) (f : name) (n : N) : bool := existsb (is_call_to f n) (B.code_ins c).
+
+Definition prim_gate (f : name) (args : list expr) : list cblk :=
+ match prim_of_name f with
+ | Some p => match pmap p with
+   | None => [KPrim f]
+   | Some q =>
+     (if Nat.eqb (List.length args) (prim_arity p) && negb (Nat.eqb (List.length args) 0) then [] else [KArity f])
+     ++ (if q_eqb q B.PEq then (if existsb is_lit args then [] else [KEq]) else [])
+   end
+ | None => [] end.
+
+Fixpoint cblk_of (c : B.code) (e : expr) : list cblk := match e with
+ | ENum _ | EStr _ | ESym _ | EBool _ | ENil | EVar _ => []
+ | EType a => cblk_of c a
+ | ELet _ a b | EAnd a b | EOr a b => cblk_of c a ++ cblk_of c b
+ | EIf t a b => cblk_of c t ++ cblk_of c a ++ cblk_of c b
+ | ECond cl => (fix go (cl : list (expr * expr)) : list cblk := match cl with
+     | [] => []
+     | (t, a) :: rest => if is_true_lit t then cblk_of c a else cblk_of c t ++ cblk_of c a ++ go rest end) cl
+ | ECall f args =>
+   match prim_of_name f with
+   | Some _ => prim_gate f args
+   | None => let n := N.of_nat (List.length args) in if has_call c f n then [] else [KCall f n] end
+   ++ flat_map (cblk_of c) args
+ | EApp h args => KApp :: cblk_of c h ++ flat_map (cblk_of c) args
+ | ELam _ b => KLam :: cblk_of c b
+ | EFreeze b => KFreeze :: cblk_of c b
+ | ETrap a b => KTrap :: cblk_of c a ++ cblk_of c b
+ | EDefun _ _ b => KDefun :: cblk_of c b
+ end.
+
+Scheme Comp_m := Induction for Comp Sort Prop
+ with CompT_m := Induction for CompT Sort Prop
+ with CompOp_m := Induction for CompOp Sort Prop
+ with CompOps_m := Induction for CompOps Sort Prop
+ with CompW_m := Induction for CompW Sort Prop
+ with CompTA_m := Induction for CompTA Sort Prop.
+Combined Scheme Comp_mut from Comp_m, CompT_m, CompOp_m, CompOps_m, CompW_m, CompTA_m.
+
+Definition sfx (r r' : list B.instr) : Prop := exists q, r = q ++ r'.
+Lemma sfx_refl : forall r, sfx r r.
+Proof. intro r. exists []. reflexivity. Qed.
+Lemma sfx_trans : forall a b d, sfx a b -> sfx b d -> sfx a d.
+Proof. intros a b d [p ->] [q ->]. exists (p ++ q). apply app_assoc. Qed.
+Lemma sfx_cons_r : forall a x b, sfx a (x :: b) -> sfx a b.
+Proof. intros a x b [p ->]. exists (p ++ [x]). rewrite <- app_assoc. reflexivity. Qed.
+Lemma sfx_incl : forall a b, sfx a b -> incl b a.
+Proof. intros a b [p ->]. apply incl_appr, incl_refl. Qed.
+Lemma sfx_cons_l : forall a x b, sfx a b -> sfx (x :: a) b.
+Proof. intros a x b [p ->]. exists (x :: p). reflexivity. Qed.
+Lemma sfx_app_l : forall q b, sfx (q ++ b) b.
+Proof. intros q b. exists q. reflexivity. Qed.
+
+(* Each relation's code list ends with the code after it. *)
+Lemma Comp_sfx : forall c,
+ (forall g top e dst r r', Comp c g top e dst r r' -> sfx r r') /\
+ (forall g top e l r r', CompT c g top e l r r' -> sfx r r') /\
+ (forall g top e o top2 r r', CompOp c g top e o top2 r r' -> sfx r r') /\
+ (forall g top es os r r', CompOps c g top es os r r' -> sfx r r') /\
+ (forall g s es r r', CompW c g s es r r' -> sfx r r') /\
+ (forall g s t es ms r r', CompTA c g s t es ms r r' -> sfx r r').
+Proof.
+ intro c. apply Comp_mut; intros;
+  repeat match goal with H : sfx _ (_ :: _) |- _ => apply sfx_cons_r in H end;
+  first [ apply sfx_refl | apply sfx_app_l | apply sfx_cons_l, sfx_refl | eauto 6 using sfx_trans, sfx_refl ].
+Qed.
+
+Lemma op_const_lit : forall c g top e o top2 r r', CompOp c g top e o top2 r r' ->
+ forall k, o = B.OConst k -> is_lit e = true.
+Proof.
+ intros c g top e o top2 r r' H. induction H; intros k0 E; try discriminate.
+ - unfold is_lit. destruct e; cbn in *; try discriminate; reflexivity.
+ - exact (IHCompOp k0 E).
+Qed.
+
+Lemma ops_safe_lit : forall c g top es os r r', CompOps c g top es os r r' ->
+ existsb (eq_safe_op c) os = true -> existsb is_lit es = true.
+Proof.
+ intros c g top es os r r' H. induction H as [|g top e es o os top2 r r1 r' Ho Hs IH]; cbn; [discriminate|].
+ intro E. apply orb_true_iff in E as [E|E].
+ - destruct o as [s|k]; [discriminate|]. rewrite (op_const_lit _ _ _ _ _ _ _ _ Ho k eq_refl). reflexivity.
+ - rewrite (IH E). apply orb_true_r.
+Qed.
+
+Lemma has_call_of : forall c f n i, In i (B.code_ins c) -> is_call_to f n i = true -> has_call c f n = true.
+Proof. intros c f n i I E. apply existsb_exists. exists i. split; assumption. Qed.
+
+Lemma is_call_to_call : forall f n i d a, call_instr i d a (B.sym_of_text f) n -> is_call_to f n i = true.
+Proof. intros f n i d a [->| ->]; cbn; rewrite Pos.eqb_refl, N.eqb_refl; reflexivity. Qed.
+Lemma is_call_to_tail : forall f n i a, tail_instr i a (B.sym_of_text f) n -> is_call_to f n i = true.
+Proof. intros f n i a [->| ->]; cbn; rewrite Pos.eqb_refl, N.eqb_refl; reflexivity. Qed.
+
+Lemma lit_cblk : forall c e v, lit_val e = Some v -> cblk_of c e = [].
+Proof. intros c e v H. destruct e; cbn in H; try discriminate; reflexivity. Qed.
+
+Lemma prim_gate_ok : forall f p q args, prim_of_name f = Some p -> pmap p = Some q ->
+ List.length args = prim_arity p -> args <> [] -> (q = B.PEq -> existsb is_lit args = true) -> prim_gate f args = [].
+Proof.
+ intros f p q args Hp Hq Ha Hn He. unfold prim_gate. rewrite Hp. cbv beta iota. rewrite Hq. cbv beta iota.
+ assert (A : (Nat.eqb (List.length args) (prim_arity p) && negb (Nat.eqb (List.length args) 0))%bool = true).
+ { destruct args as [|x args]; [contradiction|]. rewrite <- Ha, Nat.eqb_refl. reflexivity. }
+ rewrite A. destruct (q_eqb q B.PEq) eqn:Q; [|reflexivity].
+ apply q_eqb_eq in Q. rewrite (He Q). reflexivity.
+Qed.
+
+Ltac cblk_in_code I S :=
+ apply I; apply (sfx_incl _ _ S); left; reflexivity.
+
+(* Comp's reach: a derivation, over code whose instructions are c's, has no blocker. *)
+Theorem cblk_of_Comp : forall c,
+ (forall g top e dst r r', Comp c g top e dst r r' -> incl r (B.code_ins c) -> cblk_of c e = []) /\
+ (forall g top e l r r', CompT c g top e l r r' -> incl r (B.code_ins c) -> cblk_of c e = []) /\
+ (forall g top e o top2 r r', CompOp c g top e o top2 r r' -> incl r (B.code_ins c) -> cblk_of c e = []) /\
+ (forall g top es os r r', CompOps c g top es os r r' -> incl r (B.code_ins c) -> flat_map (cblk_of c) es = []) /\
+ (forall g s es r r', CompW c g s es r r' -> incl r (B.code_ins c) -> flat_map (cblk_of c) es = []) /\
+ (forall g s t es ms r r', CompTA c g s t es ms r r' -> incl r (B.code_ins c) -> flat_map (cblk_of c) es = []).
+Proof.
+ intro c. destruct (Comp_sfx c) as (S1 & S2 & S3 & S4 & S5 & S6).
+ apply Comp_mut; intros;
+  (* every premise's code list is a suffix of r, so its instructions are c's *)
+  repeat match goal with
+  | H : Comp c _ _ _ _ ?a ?b |- _ => lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (S1 _ _ _ _ _ _ H) end
+  | H : CompT c _ _ _ _ ?a ?b |- _ => lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (S2 _ _ _ _ _ _ H) end
+  | H : CompOp c _ _ _ _ _ ?a ?b |- _ => lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (S3 _ _ _ _ _ _ _ H) end
+  | H : CompOps c _ _ _ _ ?a ?b |- _ => lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (S4 _ _ _ _ _ _ H) end
+  | H : CompW c _ _ _ ?a ?b |- _ => lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (S5 _ _ _ _ _ H) end
+  | H : CompTA c _ _ _ _ _ ?a ?b |- _ => lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (S6 _ _ _ _ _ _ _ H) end
+  end;
+  repeat match goal with H : sfx ?a (_ :: ?b) |- _ =>
+    lazymatch goal with _ : sfx a b |- _ => fail | _ => pose proof (sfx_cons_r _ _ _ H) end end;
+  repeat match goal with
+  | I : incl ?r (B.code_ins c), IH : incl ?a (B.code_ins c) -> _ |- _ =>
+    let J := fresh "J" in
+    assert (J : incl a (B.code_ins c)) by (eapply incl_tran; [apply sfx_incl; eauto 6 using sfx_trans, sfx_refl|exact I]);
+    specialize (IH J)
+  end;
+  cbn [cblk_of flat_map is_true_lit] in *;
+  repeat match goal with H : ?x = [] |- _ => progress rewrite H in * end;
+  try reflexivity;
+  first
+  [ (* C_lit, O_lit *)
+    match goal with H : lit_val ?e = Some _ |- cblk_of c ?e = [] => exact (lit_cblk c e _ H) end
+  | (* C_prim *)
+    match goal with
+    | Hp : prim_of_name ?f = Some ?p, Hq : pmap ?p = Some ?q, Ha : List.length ?args = prim_arity ?p,
+      Hn : ?args <> [], Hops : CompOps c _ _ ?args ?ops _ _, Hg : pguard c ?q ?ops = true |- _ =>
+      rewrite Hp; cbv beta iota;
+      rewrite (prim_gate_ok f p q args Hp Hq Ha Hn
+                 (fun E => ops_safe_lit _ _ _ _ _ _ _ Hops (eq_ind q (fun y => pguard c y ops = true) Hg B.PEq E)));
+      reflexivity
+    end
+  | (* C_chain *)
+    match goal with
+    | Hp : prim_of_name ?f = Some PCons, Hl : lit_val ?a = Some _ |- _ =>
+      rewrite (lit_cblk c a _ Hl); unfold prim_gate; rewrite Hp; reflexivity
+    end
+  | (* C_call *)
+    match goal with
+    | Hp : not_prim_name ?f, I : incl ?r (B.code_ins c), S : sfx ?r (?i :: _), Ci : call_instr ?i _ _ (B.sym_of_text ?f) ?n,
+      Hn : ?n = N.of_nat _ |- _ =>
+      unfold not_prim_name in Hp; rewrite Hp; cbv beta iota zeta; subst n;
+      rewrite (has_call_of c f _ i ltac:(cblk_in_code I S) (is_call_to_call _ _ _ _ _ Ci)); reflexivity
+    end
+  | (* C_tail *)
+    match goal with
+    | Hp : not_prim_name ?f, I : incl ?r (B.code_ins c), S : sfx ?r (?i :: _), Ci : tail_instr ?i _ (B.sym_of_text ?f) ?n,
+      Hn : ?n = N.of_nat _ |- _ =>
+      unfold not_prim_name in Hp; rewrite Hp; cbv beta iota zeta; subst n;
+      rewrite (has_call_of c f _ i ltac:(cblk_in_code I S) (is_call_to_tail _ _ _ _ Ci)); reflexivity
+    end
+  | (* cond clauses *)
+    destruct (is_true_lit _); reflexivity
+  ].
+Qed.
+
+Theorem cblk_CompFn : forall c ps b, CompFn c ps b -> cblk_of c b = [].
+Proof.
+ intros c ps b [r' H]. exact (proj1 (cblk_of_Comp c) _ _ _ _ _ _ H (incl_refl _)).
+Qed.
+
+(* A blocker is a reason check_fn rejects, for this code. *)
+Theorem cblk_reject : forall c ps b, cblk_of c b <> [] -> check_fn c ps b = false.
+Proof.
+ intros c ps b N. destruct (check_fn c ps b) eqn:E; [|reflexivity].
+ exfalso. apply N. eapply cblk_CompFn. apply check_fn_sound. exact E.
+Qed.
+
+(* Why D_compiled' fails, per user entry of D: no code object, the wrong shape (arity, entry
+   point), or Comp's blockers against the entry's code. *)
+Inductive dfail := DNoCode | DShape | DBlk (bs : list cblk) | DOther.
+Definition D_why (D : list (name * fundef)) (cs : list (name * B.code)) : list (name * dfail) :=
+ flat_map (fun p => match snd p with
+   | FPrim _ => []
+   | FUser ps b => match lookup (fst p) cs with
+     | None => [(fst p, DNoCode)]
+     | Some c =>
+       if negb (N.eqb (B.code_arity c) (N.of_nat (List.length ps))
+                && match B.code_entry c with None => true | Some _ => false end) then [(fst p, DShape)]
+       else match cblk_of c b with
+         | [] => if check_fn c ps b then [] else [(fst p, DOther)]
+         | bs => [(fst p, DBlk bs)] end end end) D.
+
+(* D_why names a failure for exactly the entries D_compiled' rejects; a DBlk failure is a proof. *)
+Theorem D_why_spec : forall D cs, D_compiled' D cs = true <-> D_why D cs = [].
+Proof.
+ intros D cs. unfold D_compiled', D_why. induction D as [|[f d] D IH]; cbn; [split; reflexivity|].
+ rewrite andb_true_iff, IH. destruct d as [q|ps b]; cbn; [tauto|].
+ destruct (lookup f cs) as [c|]; cbn; [|split; [intros [H _]; discriminate|discriminate]].
+ destruct (N.eqb (B.code_arity c) (N.of_nat (List.length ps)) && match B.code_entry c with None => true | Some _ => false end)%bool eqn:Sh; cbn.
+ - destruct (cblk_of c b) as [|k bs] eqn:K.
+   + destruct (check_fn c ps b); cbn; [tauto|split; [intros [H _]; discriminate|discriminate]].
+   + rewrite (cblk_reject c ps b) by (rewrite K; discriminate). cbn. split; [intros [H _]; discriminate|discriminate].
+ - split; [intros [H _]; discriminate|discriminate].
 Qed.
 
 (* ---------- D_of is well formed for stage 0's sealed list ---------- *)
@@ -803,7 +1088,216 @@ Definition D_holders (rows : list row) (f : name) : list string :=
    | Some D => match lookup f D with Some _ => [show (r_name r)] | None => [] end
    | None => [] end) rows.
 
+(* Why D_compiled' fails for one callee: D_why on the single-entry store of its lowered body,
+   against the table's code, with the blockers named (duplicates dropped). A KCall/KPrim/... entry
+   is a proof of rejection (cblk_reject); "other" would mean check_fn rejects with no blocker. *)
+Definition cblk_show (b : cblk) : string := (match b with
+ | KApp => "apply" | KLam => "lambda" | KFreeze => "freeze" | KTrap => "trap" | KDefun => "defun"
+ | KPrim f => "prim " ++ show f | KArity f => "arity " ++ show f
+ | KEq => "= with no literal operand" | KCall f _ => "no call instruction for " ++ show f end)%string.
+Fixpoint sdedup (l : list string) : list string := match l with
+ | [] => [] | x :: l => x :: filter (fun y => negb (String.eqb x y)) (sdedup l) end.
+Definition dfail_show (d : dfail) : list string := match d with
+ | DNoCode => ["no code object"%string] | DShape => ["arity or entry point"%string]
+ | DBlk bs => sdedup (map cblk_show bs) | DOther => ["check_fn rejects; no blocker"%string] end.
+Definition why_report (rows : list row) (f : string) : option (list (string * list string)) :=
+ option_map (fun d => map (fun p => (show (fst p), dfail_show (snd p))) (D_why d (codes rows)))
+   (D_low rows [of_string f]).
+
+(* ---------- inline sites on real data (a TEST harness, not proof) ---------- *)
+(* Every inlining marker (let stage0.lower.inlining (const F) N) of every normal form, with the
+   lets lower.shen put above it: m parameter lets (q (var a)), q among F's parameters, innermost,
+   and the m fresh lets (a v) above those. The site is the erased term from the outermost fresh
+   let, as inl_site takes it. anc: the enclosing lets, innermost first, each with its scope. *)
+Fixpoint trailing (ps : list name) (anc : list (name * nexpr * list name)) : nat := match anc with
+ | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O
+ | _ => O end.
+
+Fixpoint isites (rows : list row) (sc : list name) (anc : list (name * nexpr * list name)) (n : nexpr) {struct n}
+  : list (name * nat * option expr) :=
+ let all := fix all (l : list nexpr) : list (name * nat * option expr) := match l with
+   | [] => [] | a :: l => isites rows sc [] a ++ all l end in
+ match n with
+ | NConst _ | NVar _ => []
+ | NLet x v b =>
+   if is_marker_name x then
+     (match v with
+      | NConst (VSym f) =>
+        let m := match find_row rows f with Some r => trailing (r_params r) anc | None => O end in
+        let k := (m + m)%nat in
+        let s0 := match k with O => sc | S k' => match nth_error anc k' with Some (_, _, s) => s | None => sc end end in
+        [(f, m, if Nat.leb k (List.length anc)
+                then erase s0 (fold_left (fun acc t => let '(y, w, _) := t in NLet y w acc) (firstn k anc) n)
+                else None)]
+      | _ => [] end) ++ isites rows sc [] v ++ isites rows (x :: sc) [] b
+   else isites rows sc [] v ++ isites rows (x :: sc) ((x, v, sc) :: anc) b
+ | NIf c a b => isites rows sc [] c ++ isites rows sc [] a ++ isites rows sc [] b
+ | NAnd a b | NOr a b | NDo a b | NApply1 a b => isites rows sc [] a ++ isites rows sc [] b
+ | NTrap a x b => isites rows sc [] a ++ isites rows (x :: sc) [] b
+ | NLambda x b => isites rows (x :: sc) [] b
+ | NFreeze b | NApply0 b => isites rows sc [] b
+ | NPrim _ l | NCall _ l => all l end.
+
+(* The values of F's parameters that lower.shen did not bind, read off N against e_F (READ BACK
+   from the expansion: an integer where e_F has the free parameter, the term where e_F thaws it).
+   inl_site then checks every occurrence, not only the one read. *)
+Fixpoint infer (unk bnd : list name) (e0 e : expr) {struct e0} : list (name * sarg) :=
+ let args := fix args (l0 l : list expr) : list (name * sarg) := match l0, l with
+   | a0 :: l0, a :: l => infer unk bnd a0 a ++ args l0 l | _, _ => [] end in
+ let cls := fix cls (l0 l : list (expr * expr)) : list (name * sarg) := match l0, l with
+   | (c0, b0) :: l0, (c, b) :: l => infer unk bnd c0 c ++ infer unk bnd b0 b ++ cls l0 l | _, _ => [] end in
+ let free p := bound unk p && negb (bound bnd p) in
+ match e0, e with
+ | EVar p, ENum (NInt z) => if free p then [(p, SInt z)] else []
+ | EApp (EVar p) [], _ =>
+   if free p then [(p, SFrozen e)] else []
+ | ELam x b0, ELam _ b => infer unk (x :: bnd) b0 b
+ | ELet x a0 b0, ELet _ a b => infer unk bnd a0 a ++ infer unk (x :: bnd) b0 b
+ | EIf c0 a0 b0, EIf c a b => infer unk bnd c0 c ++ infer unk bnd a0 a ++ infer unk bnd b0 b
+ | EAnd a0 b0, EAnd a b | EOr a0 b0, EOr a b | ETrap a0 b0, ETrap a b => infer unk bnd a0 a ++ infer unk bnd b0 b
+ | EFreeze a0, EFreeze a | EType a0, EType a => infer unk bnd a0 a
+ | ECond l0, ECond l => cls l0 l
+ | EApp h0 l0, EApp h l => infer unk bnd h0 h ++ args l0 l
+ | ECall _ l0, ECall _ l => args l0 l
+ | _, _ => [] end.
+
+(* The site's argument list: a kept parameter's argument is its fresh let's value (read back, as
+   lower.shen put the normalised argument there); any other from `infer`. None if a parameter is
+   neither kept nor found (an unused parameter with no let). Also returns what was inferred. *)
+Definition site_nargs (ps : list name) (eF : expr) (m : nat) (e : expr) : option (list expr * list (name * sarg)) :=
+ match take_lets m e with
+ | Some (fr, rest) => match take_lets m rest with
+   | Some (pl, N) =>
+     let unk := filter (fun p => negb (existsb (fun q => text_eqb (fst q) p) pl)) ps in
+     let found := infer unk [] eF N in
+     match fold_right (fun p acc => match acc with
+       | None => None
+       | Some l => match lookup p pl with
+         | Some (EVar a) => match lookup a fr with Some v => Some (v :: l) | None => None end
+         | Some _ => None
+         | None => match lookup p found with
+           | Some (SInt z) => Some (ENum (NInt z) :: l)
+           | Some (SFrozen x) => Some (EFreeze x :: l)
+           | None => None end end end) (Some []) ps with
+     | Some l => Some (l, found)
+     | None => None end
+   | None => None end
+ | None => None end.
+
+(* A site's verdict. IAlpha/IInt/IThaw: inl_site (fold = false) accepts against F's entry alone,
+   with nothing substituted / an integer / a thawed argument; ICut: accepted only with the owner's
+   whole D_of store (a depth cut through another callee); IFold: accepted only with fold = true
+   (needs D_prims_fold, interface item 2); IRej: rejected; IUnrec: the argument list could not be
+   read back; INoD: no D_of store, or F not in it. *)
+Inductive iclass := IAlpha | IInt | IThaw | ICut | IFold | IRej | IUnrec | INoD.
+Definition site_class (D : list (name * fundef)) (f : name) (m : nat) (oe : option expr) : iclass :=
+ match oe, lookup f D with
+ | Some e, Some (FUser ps eF) =>
+   match site_nargs ps eF m e with
+   | None => IUnrec
+   | Some (nargs, found) =>
+     if inl_site false false [(f, FUser ps eF)] f nargs e then
+       if existsb (fun q => match snd q with SInt _ => true | _ => false end) found then IInt
+       else if existsb (fun q => match snd q with SFrozen _ => true | _ => false end) found then IThaw
+       else IAlpha
+     else if inl_site false false D f nargs e then ICut
+     else if inl_site true false D f nargs e then IFold
+     else IRej end
+ | None, Some _ => IUnrec
+ | _, _ => INoD end.
+
+Definition iclass_eqb (a b : iclass) : bool := match a, b with
+ | IAlpha, IAlpha | IInt, IInt | IThaw, IThaw | ICut, ICut | IFold, IFold | IRej, IRej | IUnrec, IUnrec | INoD, INoD => true
+ | _, _ => false end.
+
+(* Per definition: its sites' classes. *)
+Definition inl_classes (rows : list row) : list (name * list (name * iclass)) :=
+ map (fun r =>
+   let ss := isites rows (r_params r) [] (r_nf r) in
+   (r_name r, match D_of rows (r_name r) with
+     | Some D => map (fun s => let '(f, m, oe) := s in (f, site_class D f m oe)) ss
+     | None => map (fun s => let '(f, _, _) := s in (f, INoD)) ss end)) rows.
+
+(* Totals: sites per class (alpha, int, thaw, cut, fold, rejected, unread, no D), definitions with
+   a marker, definitions whose every site is accepted with fold = false, the same allowing fold,
+   and up to 40 (owner, callee, class) of the sites not accepted with fold = false. *)
+Definition inl_report (rows : list row) : list nat * nat * nat * nat * list (string * string * nat) :=
+ let cl := inl_classes rows in
+ let all := flat_map snd cl in
+ let cnt k := List.length (filter (fun p => iclass_eqb (snd p) k) all) in
+ let ok0 k := match k with IAlpha | IInt | IThaw | ICut => true | _ => false end in
+ let ok1 k := ok0 k || iclass_eqb k IFold in
+ let withm := filter (fun p => match snd p with [] => false | _ => true end) cl in
+ ([cnt IAlpha; cnt IInt; cnt IThaw; cnt ICut; cnt IFold; cnt IRej; cnt IUnrec; cnt INoD],
+  List.length withm,
+  List.length (filter (fun p => forallb (fun s => ok0 (snd s)) (snd p)) withm),
+  List.length (filter (fun p => forallb (fun s => ok1 (snd s)) (snd p)) withm),
+  firstn 40 (flat_map (fun p => flat_map (fun s => if ok0 (snd s) then [] else
+     [(show (fst p), show (fst s), match snd s with IFold => 4 | IRej => 5 | IUnrec => 6 | INoD => 7 | _ => 0 end)]) (snd p)) cl)).
+
+(* ---------- bound-now sites with the arguments from the SOURCE (a TEST harness) ---------- *)
+(* The source's candidate bound-now calls, in preorder: (shen.bind! X Y B (freeze E)), and
+   (shen.bind! X Y B G) under (let G (freeze E) ...) (let-frozen). The candidates over-approximate
+   the sites: lower.shen freezes G in only under a size and use-count condition, which is not
+   replicated here (on stage 0, 37 sites against 49 candidates). X, Y and B are the source's own
+   terms; nothing here normalises them, so a site whose arguments norm rewrote matches no
+   candidate (and is counted, not hidden). *)
+Fixpoint src_binds (fz : list (name * expr)) (e : expr) : list (list expr) :=
+ let go := fix go (l : list expr) : list (list expr) := match l with
+   | [] => [] | a :: l => src_binds fz a ++ go l end in
+ let drop x := filter (fun p => negb (text_eqb (fst p) x)) fz in
+ match e with
+ | ECall f args =>
+   (if text_eqb f bind_name then match args with
+     | [x; y; b; EFreeze ex] => [[x; y; b; EFreeze ex]]
+     | [x; y; b; EVar g] => match lookup g fz with Some ex => [[x; y; b; EFreeze ex]] | None => [] end
+     | _ => [] end else []) ++ go args
+ | ELet x a b => src_binds fz a ++
+   src_binds (match a with EFreeze ex => (x, ex) :: drop x | _ => drop x end) b
+ | ELam x b => src_binds (drop x) b
+ | EFreeze b | EType b => src_binds fz b
+ | EDefun _ ps b => src_binds (filter (fun p => negb (bound ps (fst p))) fz) b
+ | EAnd a b | EOr a b | ETrap a b => src_binds fz a ++ src_binds fz b
+ | EIf c a b => src_binds fz c ++ src_binds fz a ++ src_binds fz b
+ | ECond cl => (fix gc (l : list (expr * expr)) : list (list expr) := match l with
+     | [] => [] | (c, b) :: l => src_binds fz c ++ src_binds fz b ++ gc l end) cl
+ | EApp h args => src_binds fz h ++ go args
+ | _ => [] end.
+
+(* Each expansion site, in order, takes the first unused candidate with which bind_site
+   (fold = false, the definition's D_of store) accepts it, X, Y and B being the candidate's (from
+   the source) and E the site's own (read back from the expansion: its normal form is norm's).
+   A site is paired with a distinct source call, and no site is accepted unless its three let
+   values are expr_eqb to a source call's three arguments. *)
+Fixpoint pair_src (D : list (name * fundef)) (cand : list (list expr)) (cs : list (list expr * expr)) : nat :=
+ match cs with
+ | [] => O
+ | (rb, s) :: cs =>
+   let ex := match rb with [_; _; _; e4] => e4 | _ => ENil end in
+   let fit a := match a with [x; y; b; _] => bind_site false D [x; y; b; ex] s | _ => false end in
+   let fix pick (l : list (list expr)) : option (list (list expr)) := match l with
+     | [] => None
+     | a :: l => if fit a then Some l else option_map (cons a) (pick l) end in
+   match pick cand with
+   | Some rest => S (pair_src D rest cs)
+   | None => pair_src D cand cs end end.
+
+(* Per definition with a site or a candidate: name, expansion sites, source candidates, sites
+   accepted with X, Y and B from the source (pair_src), sites accepted with all four read back
+   from the expansion. *)
+Definition bind_src_report (rows : list row) : list (string * nat * nat * nat * nat) :=
+ flat_map (fun r =>
+   let cs := flat_map (fun s => match bind_args s with Some a => [(a, s)] | None => [] end) (subterms (r_low r)) in
+   let sh := src_binds [] (r_src r) in
+   match cs, sh with [], [] => [] | _, _ =>
+     match D_of rows (r_name r) with
+     | Some D =>
+       [(show (r_name r), List.length cs, List.length sh, pair_src D sh cs,
+         List.length (filter (fun p => bind_site false D (fst p) (snd p)) cs))]
+     | None => [(show (r_name r), List.length cs, List.length sh, O, O)] end end) rows.
+
 (* ======================= examples (tests, not evidence) ======================= *)
+Definition no_code0 : B.code := B.Code B.VNil 0 None 0 [] [] [] B.VNil.
 Definition v (s : string) : expr := EVar (of_string s).
 Definition nm (s : string) : name := of_string s.
 
@@ -998,6 +1492,59 @@ Example site_bind_real : match bind_real, lrules_site with
  | _, _ => false end = true.
 Proof. vm_compute. reflexivity. Qed.
 
+(* The bind test with the arguments from the source: the l-rules site's let values are the source
+   call's (W5447, (cons W5453 W5454), V5357), so pair_src pairs it; a source call with another
+   first argument (W5446) is no partner. *)
+Definition lrules_D : list (name * fundef) :=
+ match bind_real with Some (ps, eB) => [(bind_name, FUser ps eB); (do_name, FUser [nm "A"; nm "B"] (v "B"))] | None => [] end.
+Definition lrules_src (x : string) : list expr :=
+ [v x; ECall (nm "cons") [v "W5453"; v "W5454"]; v "V5357"; EFreeze ENil].
+Example pair_src_lrules : match lrules_site with
+ | Some e => match bind_args e with Some a => pair_src lrules_D [lrules_src "W5447"] [(a, e)] | None => O end
+ | None => O end = 1%nat.
+Proof. vm_compute. reflexivity. Qed.
+Example pair_src_lrules_wrong : match lrules_site with
+ | Some e => match bind_args e with Some a => pair_src lrules_D [lrules_src "W5446"] [(a, e)] | None => 1%nat end
+ | None => 1%nat end = O.
+Proof. vm_compute. reflexivity. Qed.
+
+(* site_class on the transcribed sites: the argument list read back, then inl_site. *)
+Example class_fbound : site_class D_not (nm "not") 1 (Some fb_site) = IAlpha.
+Proof. vm_compute. reflexivity. Qed.
+Example class_hds : site_class D_hds (nm "shen.hds=?") 1 (Some hds_site) = IInt.
+Proof. vm_compute. reflexivity. Qed.
+Example class_when : site_class D_when (nm "when") 1 (Some when_site) = IThaw.
+Proof. vm_compute. reflexivity. Qed.
+Example class_cut : site_class D_lock (nm "shen.locked?") 1 (Some lock_site) = ICut.
+Proof. vm_compute. reflexivity. Qed.
+Example class_vector : site_class D_vec (nm "vector") 0 (Some vec_site) = IFold.
+Proof. vm_compute. reflexivity. Qed.
+
+(* isites on a small caller: (not V7092) inlined with one parameter let, so the site has m = 1 and
+   starts at the fresh let; its class is alpha. *)
+Definition not_row : row := Row (nm "not") [nm "V4070"] ENil (NConst VNil) not_body no_code0.
+Definition fb_nf : nexpr :=
+ NLet (nm "stage0.lower.arg1") (NVar (nm "V7092")) (NLet (nm "V4070") (NVar (nm "stage0.lower.arg1"))
+  (NLet stage0_inlining_name (NConst (VSym (nm "not")))
+   (NIf (NVar (nm "V4070")) (NConst (VBool false)) (NConst (VBool true))))).
+Example isites_fbound : map (fun s => let '(f, m, oe) := s in (m, option_map (fun e => expr_eqb e (ELet (nm "stage0.lower.arg1") (v "V7092") (ELet (nm "V4070") (v "stage0.lower.arg1") not_body))) oe))
+ (isites [not_row] [nm "V7092"] [] fb_nf) = [(1%nat, Some true)].
+Proof. vm_compute. reflexivity. Qed.
+
+(* Comp's reach on small bodies, against a code object with no instructions: a thaw is a blocker,
+   so is = on two variables, and a named call with no call instruction; = against a literal is not. *)
+Definition no_code : B.code := no_code0.
+Example cblk_thaw : cblk_of no_code (EApp (v "K") []) = [KApp].
+Proof. reflexivity. Qed.
+Example cblk_eq_vars : cblk_of no_code (ECall (nm "=") [v "X"; v "Y"]) = [KEq].
+Proof. vm_compute. reflexivity. Qed.
+Example cblk_eq_lit : cblk_of no_code (ECall (nm "=") [v "X"; EType (ESym (nm "a"))]) = [].
+Proof. vm_compute. reflexivity. Qed.
+Example cblk_do : cblk_of no_code (ECall do_name [v "X"; v "Y"]) = [KCall do_name 2].
+Proof. vm_compute. reflexivity. Qed.
+(* After a (true X) clause cond is not walked: C_cond_true compiles X alone. *)
+Example cblk_cond_true : cblk_of no_code (ECond [(EBool true, v "X"); (v "Y", EApp (v "K") [])]) = [].
+Proof. vm_compute. reflexivity. Qed.
 (* inl_eq's hidden-name check is the only guard against a thawed-in-place argument captured by a
    binder inside N (frozen_free covers only the expansion's own lets): callee (let Y 1 (thaw K)),
    argument (freeze Y), expansion (let Y 1 Y). The same with Z, which no binder hides, passes. *)
