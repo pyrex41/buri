@@ -6250,7 +6250,8 @@
     "rocq/JitEmitRel.v",
     "rocq/JitEmitKont.v",
     "rocq/JitEmitInv.v",
-    "docs/decisions/p2-decisions.md"
+    "docs/decisions/p2-decisions.md",
+    "rocq/JitEmitCheck.v"
    ],
    "history": [
     {
@@ -6312,6 +6313,11 @@
      "source": "rocq/JitEmitInv.v",
      "recorded": "2026-11-11: open (r21-emit-spec-land, branch p2/r21-emit-spec-land, not yet merged into p2/int; the integrator records that merge). The branch merges p2/r1-emit-spec-merge 7bb9bb7 onto p2/int f42d6c4 (52f913c) and then p2/int da4b545 (fc0a9fd); JitEmit files byte-identical to 7bb9bb7; call_preservation_src_statement byte-identical to 4a7346e. Lane on b02db36 (SKIP_DIFF=1, Rocq 9.3): exit 0, 704 Closed, syntactic and term-level non-inversion gates 0 violations, source judge 148 of 955 as recorded, differential NOT RUN; log sha256 5366da18... All 116 mutants refused (37 ShenJitEmit*). Lane rerun on head 38d321d (proof tree identical to b02db36): exit 0, 704 Closed, log sha256 4417b761...; verifier's independent run on 38d321d: exit 0, log sha256 5383dc4d.... While every Rule_X hook is empty the syntactic gate's constructor check is vacuous (0 hook constructors); the term-level gate is the operative non-inversion check. Back-end statements stay unproved, truth UNKNOWN. make prove, make report, gate_tests, the norm check and the full-pipeline judge: NOT RUN (UNKNOWN).",
      "reconciliation": "r21-emit-spec-land branch evidence, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitEmitCheck.v",
+     "recorded": "2026-11-11: open (r22-emit-check, branch p2/r22-emit-check off p2/int fe461f4, not yet merged; the integrator records that merge). rocq/JitEmitCheck.v adds a checker for JitEmitRel's Comp' (JitLowerCheck's six functions over callbacks, falling back to the seven families' Comp, CompT and CompOp hooks) and its soundness, proved in Section Chk under LiftC/LiftT/LiftO and then instantiated: check_emit_sound (base hooks, every family empty), check_emit_sound_hooks (any Hooks record), judge_emit_sound; 43 statements in Audit_Jit. No Rule_X is inverted; the family lifts use only Rule_X_map and Rule_X_all, and the hook constructors through the inj_C_X/inj_T_X/inj_O_X definitions appended to rocq/JitEmitRel.v (construction only; outside the task's file list, pending integrator approval). Mutants ShenJitEmitCheckLabel, ShenJitEmitCheckHookRest, ShenJitEmitCheckMismatch, ShenJitEmitCheckNoneAccept. Every family hook is still empty, so with the base hooks the source judge accepts exactly JitLowerStage0's 148 of 955 (tests/shen-jit/judge_hooks.sh). No construct this entry lists is admitted by the checker yet; the full-pipeline validated count is UNKNOWN. Lane and mutant evidence: docs/STATUS.md (r22-emit-check).",
+     "reconciliation": "r22-emit-check branch, 11 November 2026."
     }
    ]
   },

@@ -271,6 +271,9 @@ ShenJitEmitCheckHookRest: JitEmitCheck's orC, when it falls back to a hook, retu
 ShenJitEmitCheckMismatch: the Eq family's lift injects through Comp's Store hook (inj_C_Store), so
   the checker would read an Eq hook's derivation as a Store rule's. liftC_Eq must fail (Rocq refuses
   the mismatched Rule_X).
+ShenJitEmitCheckNoneAccept: the empty hook noneC (every family's hook while its Rule_X is empty)
+  accepts, returning the code it was given, so the checker accepts a hook node for which no Rule_X
+  derivation exists. A behavioural mutant: it changes what the checker accepts. none_okC must fail.
 """
 import re
 from pathlib import Path
@@ -664,4 +667,7 @@ mutate('ShenJitEmitCheckHookRest', emitcheck,
        " orelse (h1 rc rt ro rs rw ra c cv g top e d r) (fun _ => match h2 rc rt ro rs rw ra c cv g top e d r with Some _ => Some r | None => None end).")
 mutate('ShenJitEmitCheckMismatch', emitcheck,
        "JitEmitRuleEq.Rule_Eq_all inj_C_Eq.", "JitEmitRuleEq.Rule_Eq_all inj_C_Store.")
+mutate('ShenJitEmitCheckNoneAccept', emitcheck,
+       "Definition noneC : HkC := fun _ _ _ _ _ _ _ _ _ _ _ _ _ => None.",
+       "Definition noneC : HkC := fun _ _ _ _ _ _ _ _ _ _ _ _ r => Some r.")
 print(' '.join(names))

@@ -875,8 +875,22 @@ back to the Comp, CompT and CompOp hooks.
   lost, or if the base hooks gain one. A family passes its own hook module. The counts are
   source-judge counts, not full-pipeline counts.
 - **Mutants.** `ShenJitEmitCheckLabel` (stepC skips an else label), `ShenJitEmitCheckHookRest`
-  (the fallback returns the starting code) and `ShenJitEmitCheckMismatch` (the Eq lift injects
-  through the Store hook).
+  (the fallback returns the starting code), `ShenJitEmitCheckMismatch` (the Eq lift injects
+  through the Store hook) and `ShenJitEmitCheckNoneAccept` (the empty hook accepts a hook node
+  with no Rule_X derivation). `Mismatch` is rejected by a type error, because Rule_Eq and
+  Rule_Store are distinct inductives, so it shows only that a lift cannot be built from the wrong
+  family's rule. `Label`, `HookRest` and `NoneAccept` change what the checker accepts, and the
+  soundness proof fails (`stepC_sound`, `lift_orC`, `none_okC`).
+- **Deviations for review.** (1) The spec says the checker uses "only Comp_ind'". It uses no
+  induction over Comp at all: soundness runs from the checker to the relation, so it builds
+  derivations (by induction on fuel) and never takes one apart; Comp_ind' is for proofs that
+  consume a Comp derivation. What the spec forbids, inverting a Rule_X outside its family file, is
+  not done, and the lane's syntactic and term-level gates check it. (2) `rocq/JitEmitRel.v` is
+  outside this task's file list. The 21 appended `inj_*` definitions are the only change to it.
+  Each is a hook constructor named as a definition, used only to build a derivation; the gate that
+  forbids naming `C_X` outside JitEmitRel.v exists to stop inversion, which a definition equal to
+  a constructor cannot do. The alternative, building `C_X` by tactic (`constructor`) in
+  JitEmitCheck.v, would get past the gate silently. This needs the integrator's approval.
 - **Does NOT say.** That the checker accepts every lowering (rejection proves nothing), or anything
   about the semantics of accepted code (JitEmitInv).
 
