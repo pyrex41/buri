@@ -134,14 +134,25 @@ Inputs that overflow the C stack through `=` are not covered (`OB-JIT-ISSUE-3`).
 The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (runtime `13afde42...`, image
 `fd8485a5...`), which stage 1 made by loading stage 0 and running initialisation. Validating stage 0 doesn't cover that.
 `OB-JIT-IMAGE` is now partial and split into five sub-obligations ([SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)):
-- `OB-JIT-IMAGE-CODE` (partial): a Rocq decoder, run as a spike measurement and not in the lane, finds that the
-  function-cell code of 955 of 955 stage 0 definitions equals `JitBytecode.build_code` of their `.sbc`.
-- `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, and all data it built.
+- `OB-JIT-IMAGE-CODE` (partial, lane-checked since r21-image-lane): `rocq/JitImage.v` decodes the image in the lane.
+  Rocq proves `image_code_ok`: 955 of 955 stage 0 code objects equal the code objects their image function cells hold
+  (`code_check_sound`, closed). `image_code_ok` is closed under the global context too: the reader copies the
+  image's bytes as `byte` constructors and Rocq joins them. It stays partial because it depends on `-READER`, which
+  is open (the reader is trusted), and the ledger does not discharge over an open dependency.
+- `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, 357 closures
+  outside function cells (352 of which run code reached from the 955), 55 bound value cells and the data they reach.
+  The code part is feasible by judging initialisation's `eval-kl` forms. The data part is infeasible now.
 - `OB-JIT-IMAGE-SEALING` (open): stage 1 seals 18 files where stage 0 sealed 24, which leaves 65 names redefinable
-  behind 115 sealed call sites.
-- `OB-JIT-IMAGE-READER` (open): the trusted reader and `image_load`.
+  behind 115 sealed call sites. Tested in the binary: after a redefinition, sealed sites keep the old closure while
+  open calls see the new one. So only a stated exclusion of redefining the 65 is feasible.
+- `OB-JIT-IMAGE-READER` (open): the reader (now `stage0_to_rocq.py --image`) and `image_load`.
 - `OB-JIT-IMAGE-FILE` (partial): the run reads the image from `argv[0]` (resolved through `PATH`) unless
-  `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary.
+  `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary. Feasible only as a
+  stated premise.
+
+Share's HT and HP (premises on branch `p2/r1-share-ht`), the image facts (Rocq, lane): thaw is sealed and its cell holds stage 0's code for it. hd and tl
+are not sealed and have no function. The binary refuses `defun` of all three as fixed names. HP's requirement that hd
+and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN-JIT-IMAGE.md).
 
 ## What exists
 
@@ -157,7 +168,8 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
 | `rocq/JitFrontProlog.v` | norm's Prolog rewrites: the bound-now rule, proved sound (`bind_rule_sound`); D00's `bind_site_sound_statement` refuted (`bind_site_unsound`); the source-shape scan `prolog_scan` |
-| `rocq/Audit_Jit.v` | Assumption audit of 523 statements |
+| `rocq/JitImage.v` | r21-image-lane: the heap image decoder, `check_def` against `build_code`, `code_check_sound` (closed), and the census the lane's image step prints (OB-JIT-IMAGE-CODE) |
+| `rocq/Audit_Jit.v` | Assumption audit of 527 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |

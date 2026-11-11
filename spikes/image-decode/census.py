@@ -96,3 +96,34 @@ for o in codes:
     cb, nk, nc = H[o+4], H[o+5], H[o+6]
     if cb <= 7698 < cb+nk+nc: print('slot 7698 inside window of', val_name(H[o+7]))
 print('consts total', cc, 'max window end', max(H[o+4]+H[o+5]+H[o+6] for o in codes))
+# --- r21-image-lane additions (census only, not proof) ---
+# The 18 vs 24 sealing gap, by target file: for each extension file, its definitions, how many carry
+# the sealed bit in the image, and the stage 0 call-sealed / tail-call-sealed sites that target them,
+# by caller file.
+ext = {nm: f for f, nm in names if f.startswith('extension')}
+sbc = {}
+for f in FILES:
+    for line in open('%s/%s.sbc' % (d, f)):
+        m = re.match(r'\(defun (\S+) ', line); sbc[m.group(1)] = (f, line)
+by_target = collections.defaultdict(collections.Counter); callers_t = collections.defaultdict(set)
+for nm, (f, line) in sbc.items():
+    for m in re.finditer(r'\((?:tail-)?call-sealed \d+ (?:\d+ )?(\S+) \d+\)', line):
+        if m.group(1) in ext: by_target[ext[m.group(1)]][f] += 1; callers_t[ext[m.group(1)]].add(nm)
+for f in FILES[18:]:
+    nd = sum(1 for g, _ in names if g == f)
+    print('gap', f, 'defs', nd, 'sealed in image', sealed[f], 'sealed sites targeting it', sum(by_target[f].values()),
+          'by caller file', dict(by_target[f]), 'callers', len(callers_t[f]))
+print('gap total sites', sum(sum(c.values()) for c in by_target.values()))
+# INIT: closures outside function cells, value cells, and the names share's HT/HP are about.
+fncl = set(C[2*i+1] >> 3 for i in range(ce // 2) if C[2*i+1] & 7 == 5)
+valcl = set(C[2*i] >> 3 for i in range(ce // 2) if C[2*i] & 7 == 5)
+clos = [o for o, t in objs.items() if t == 6]
+other = [o for o in clos if o not in fncl]
+print('closures', len(clos), 'in function cells', len(fncl), 'in value cells', len(valcl), 'elsewhere', len(other),
+      'elsewhere with code reached from the 955', sum(1 for o in other if (H[o+2] >> 3) in acc),
+      'elsewhere with captures', sum(1 for o in other if H[o] >> 8 > 0))
+bound = sorted(nm for nm, w in syms.items() if C[2*(w & ((1<<56)-1))] != 26)
+print('value cells bound', len(bound), bound)
+for s in ['thaw', 'hd', 'tl', 'thread', 'shen.x.launcher.execute-all', 'shen.x.launcher.main']:
+    w = syms[s]; cell = w & ((1<<56)-1); fv = C[2*cell+1]
+    print('name', s, 'sealed bit', (w >> 58) & 1, 'function cell', 'closure' if fv & 7 == 5 else ('unbound' if fv == 26 else hex(fv)))
