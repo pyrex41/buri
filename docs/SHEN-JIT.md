@@ -822,6 +822,8 @@ unsoundness witness: with rec = fchk share_rules, (hd y) or (tl y) is accepted o
 check changes no decision of check_share, and no decision lemma can reject it. The reuse relation's decision-level
 mutant is `ShenJitFrontShareReuseOpBlind`.
 
+Re-checked under Rocq 9.3 only, at commit `b86a4cd` (git archive into `/work/p2-r1-share-ht-b86`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-c scripts/check-shen-jit.sh` in buri-lps, rc 0, log sha256 `5ddcb05386f07e7a099a1a8915d1a46f9039f532c086dbddeb15cdbc182f7f68`: 328 audited statements closed, rocqchk passed, stage 0 148 of 955 as recorded. Not run at `b86a4cd`: the differential, the mutants, `make prove`, `make report`, gate_tests.sh (UNKNOWN).
+
 Checked under Rocq 9.3 only, at commit `eb65acc` (branch `p2/r1-share-ht`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-b
 scripts/check-shen-jit.sh` in buri-lps, rc 0, log sha256 `7a478cae8a15735ce2588014473dddfa3efd61d776bdabdfad9af0d94eaed94e`:
 323 audited statements closed, rocqchk passed, stage 0 148 of 955 as recorded (each of the 36 compiled files equal to
