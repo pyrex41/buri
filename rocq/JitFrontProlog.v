@@ -36,9 +36,6 @@
    - bind_rule_report (a test, not proof; stage0_to_rocq.py --prolog-D over the decoded table,
      witness set e45add98...): bind_rule, with a recursive checker accepting everything, accepts all
      37 bound-now sites of stage 0 (6 definitions) against their D_of stores.
-   - bind_rule_report (a test, not proof; stage0_to_rocq.py --prolog-D over the decoded table,
-     witness set e45add98...): bind_rule, with a recursive checker accepting everything, accepts all
-     37 bound-now sites of stage 0 (6 definitions) against their D_of stores.
 
    Residuals (named, each with a ledger entry in spec/obligations.json):
    - OB-JIT-FRONT-PROLOG-UNIFY (decision-gated: identity primitives and port primitives without an
