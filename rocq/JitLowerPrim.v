@@ -178,6 +178,7 @@ Proof.
     | destruct (Z.eqb _ _); reflexivity
     | destruct (B.compare_fix_real _ _) as [[]|]; reflexivity
     | rewrite text_eqb_same; destruct (text_eqb _ _); reflexivity
+    | rewrite B.sym_of_text_eqb, text_eqb_same; destruct (text_eqb _ _); reflexivity
     | destruct (Bool.eqb _ _); reflexivity
     | match goal with |- context [JitFloat.JitFloat.is_nan ?x && JitFloat.JitFloat.is_nan ?y] =>
         replace (JitFloat.JitFloat.is_nan x && JitFloat.JitFloat.is_nan y)%bool with false

@@ -1,0 +1,460 @@
+(* Shen/JIT Phase 2: the heap image's code objects (OB-JIT-IMAGE-CODE, docs/SHEN-JIT-IMAGE.md; a spike, not in the lane).
+
+   An image (src/runtime/image.c, IMAGE_VERSION 2) is a header of 13 words, the heap after a
+   collection with every pointer stored as its byte offset from the heap base and raw native fields
+   stored as 0, the global cell array, the constant array, and a trailer of 2 words. Here the image
+   is a map from word index (0 = the header's first word) to the little-endian 64-bit word there.
+   The only trusted step is reading the file's bytes as those words
+   (spikes/image-decode/image_to_rocq.py, OB-JIT-IMAGE-READER); everything below is Rocq.
+
+   `parse_image` checks the header and trailer and walks the heap object by object as
+   rebase_heap does (a header word starts an object of obj_words words; any other word starts a
+   two-word pair), and the walk must end exactly at the header's heap size. Pointers are then read
+   only into object starts of the right type. `fn_code` decodes the code object of the closure in a
+   symbol's function cell into JitBytecode's `code`: the packed bytecode is unpacked as
+   bytecode_unpack does and decoded with the operand layout of loader.c's `encode`; constants and
+   nested code objects come from the constant array at the code's base; a call's function operand
+   is a cell index, read back to the symbol owning that cell; a sealed call's operand is a constant
+   slot, read back to the symbol whose function cell holds the procedure in that slot. A cell or
+   procedure owned by two symbols reads back as nothing.
+
+   `check_def` relates one stage 0 definition (defun F Code) to the image: it holds when the code
+   object loaded from Code (JitBytecode.build_code, the model of the loader) equals the decoded code
+   of F's function cell. `check_def_sound` states what that gives. It says nothing about global
+   values, the property vector or anything else initialisation built: see docs/SHEN-JIT-IMAGE.md. *)
+From Coq Require Import List ZArith NArith PArith Bool String Ascii.
+From Buri Require Import JitBytecode.
+Import ListNotations.
+Module JitImage.
+Module B := JitBytecode.JitBytecode.
+Import B.
+Local Open Scope N_scope.
+
+(* ---------- words ---------- *)
+Definition mem := tree N.
+Definition key (i : N) : positive := N.succ_pos i.
+Definition rd (m : mem) (i : N) : option N := tget (key i) m.
+Fixpoint mem_go (i : N) (ws : list N) (m : mem) : mem := match ws with
+ | [] => m | w :: r => mem_go (N.succ i) r (tset (key i) w m) end.
+Definition mem_of (base : N) (ws : list N) (m : mem) : mem := mem_go base ws m.
+
+Definition mask32 : N := 4294967295.
+Definition is_hdr (w : N) : bool := N.eqb (N.land w 7) 7.
+Definition htype (w : N) : N := N.land (N.shiftr w 3) 31.
+Definition hsize (w : N) : N := N.shiftr w 8.
+Definition tag (v : N) : N := N.land v 7.
+Definition woff (v : N) : N := N.shiftr v 3.
+
+(* obj_words of value.h; 0 for a type that does not exist. *)
+Definition obj_words (t n : N) : N :=
+ match t with
+ | 1 | 2 => N.max 2 (1 + (n + 7) / 8)
+ | 3 => 4 | 4 => 2 | 5 => N.max 2 (1 + n) | 6 => 3 + n | 7 => 5 | 8 => 10
+ | 9 => 3 | 10 => 3 | 11 => 5 | _ => 0 end.
+
+(* ---------- header and trailer ---------- *)
+Record header := Header {
+ h_build : list N; h_heap : N; h_cells : N; h_consts : N; h_nsym : N;
+ h_intern : N; h_pcount : N; h_pcheck : N }.
+
+(* "SJHI" then version 2; and "SJHI-END", as little-endian words. *)
+Definition magic_word : N := 83 + 74 * 256 + 72 * 65536 + 73 * 16777216 + 2 * 4294967296.
+Definition end_word : N := Eval compute in
+ fold_right (fun b acc => b + 256 * acc) 0 (map N_of_ascii (list_ascii_of_string "SJHI-END")).
+
+Fixpoint bytes8 (w : N) (k : nat) : list N := match k with
+ | O => [] | S k => N.land w 255 :: bytes8 (N.shiftr w 8) k end.
+
+Definition get (m : mem) (i : N) : N := match rd m i with Some w => w | None => 0 end.
+
+(* The header of an image of n words, checked as image_load does (the build identifier and the
+   primitive checksum are read, not checked: the checksum is XXH3 over the primitive names). *)
+Definition parse_header (m : mem) (n : N) : option header :=
+ match rd m 0, rd m 5, rd m 6, rd m 7, rd m 8, rd m (n - 2), rd m (n - 1) with
+ | Some w0, Some ws, Some hw, Some ce, Some cc, Some len, Some em =>
+   if (N.eqb w0 magic_word && N.eqb ws 8 && N.eqb em end_word && N.eqb len (8 * n)
+       && N.eqb n (13 + hw + ce + cc + 2))%bool
+   then Some (Header (flat_map (fun i => bytes8 (get m i) 8) [1; 2; 3; 4]) hw ce cc
+                     (get m 9) (get m 10) (get m 11) (get m 12))
+   else None
+ | _, _, _, _, _, _, _ => None end.
+
+(* ---------- the heap walk ---------- *)
+(* From heap word s to e, the objects in order: (offset, type), type 0 for a pair. *)
+Fixpoint walk (fuel : nat) (m : mem) (hb s e : N) (acc : list (N * N)) : option (list (N * N)) :=
+ if N.eqb s e then Some (rev acc) else
+ match fuel with O => None | S f =>
+ if N.ltb e s then None else
+ match rd m (hb + s) with
+ | None => None
+ | Some w =>
+   if is_hdr w then
+     let k := obj_words (htype w) (hsize w) in
+     if N.eqb k 0 then None else walk f m hb (s + k) e ((s, htype w) :: acc)
+   else walk f m hb (s + 2) e ((s, 0) :: acc) end end.
+
+Fixpoint starts_of (l : list (N * N)) (t : tree N) : tree N := match l with
+ | [] => t | (o, ty) :: r => starts_of r (tset (key o) ty t) end.
+
+Fixpoint walk_ranges (fuel : nat) (m : mem) (hb : N) (rs : list (N * N)) : option (list (N * N)) :=
+ match rs with
+ | [] => Some []
+ | (s, e) :: r => match walk fuel m hb s e [], walk_ranges fuel m hb r with
+   | Some a, Some b => Some (a ++ b) | _, _ => None end end.
+
+(* ---------- the context: bases, object starts, and who owns each cell ---------- *)
+Record ctx := Ctx {
+ c_mem : mem; c_hb : N; c_cb : N; c_kb : N; c_fuel : nat;
+ c_objs : list (N * N); c_starts : tree N;
+ c_cellsym : tree (option positive);  (* cell index -> its symbol; None when two claim it *)
+ c_symcell : tree N;                  (* symbol -> its cell *)
+ c_closym : tree (option positive) }. (* closure offset -> the symbol whose function it is *)
+
+Definition at_type (st : tree N) (v : N) : option N := tget (key (woff v)) st.
+
+Definition byte_at (m : mem) (a i : N) : option N :=
+ option_map (fun w => N.land (N.shiftr w (8 * (i mod 8))) 255) (rd m (a + 1 + i / 8)).
+Fixpoint bytes_go (m : mem) (a i : N) (k : nat) : option (list N) := match k with
+ | O => Some []
+ | S k => match byte_at m a i, bytes_go m a (N.succ i) k with
+   | Some b, Some r => Some (b :: r) | _, _ => None end end.
+(* The bytes of the string or byte object whose header is at absolute word a. *)
+Definition obj_bytes (m : mem) (a : N) : option (list N) :=
+ match rd m a with Some h => bytes_go m a 0 (N.to_nat (hsize h)) | None => None end.
+
+(* A pointer with tag tg to an object start of type ty (0 for a pair): its absolute word. *)
+Definition deref (m : mem) (hb : N) (st : tree N) (v tg ty : N) : option N :=
+ if N.eqb (tag v) tg then
+   match at_type st v with Some t => if N.eqb t ty then Some (hb + woff v) else None | None => None end
+ else None.
+
+Definition str_bytes (m : mem) (hb : N) (st : tree N) (v ty : N) : option (list N) :=
+ match deref m hb st v 1 ty with Some a => obj_bytes m a | None => None end.
+
+(* A symbol's name: the string at SYM_NAME. *)
+Definition sym_text (m : mem) (hb : N) (st : tree N) (v : N) : option text :=
+ match deref m hb st v 6 3 with
+ | Some a => match rd m (a + 1) with Some nm => str_bytes m hb st nm 1 | None => None end
+ | None => None end.
+
+Definition cell_mask : N := 72057594037927935. (* 2^56 - 1 *)
+
+Definition claim (k : positive) (s : positive) (t : tree (option positive)) : tree (option positive) :=
+ match tget k t with None => tset k (Some s) t | Some _ => tset k None t end.
+
+(* The symbols among the objects: (symbol, its cell, the raw SYM_CELL word). *)
+Fixpoint symbols (m : mem) (hb : N) (st : tree N) (l : list (N * N)) : list (positive * N * N) :=
+ match l with
+ | [] => []
+ | (o, 3) :: r =>
+   let w := get m (hb + o + 3) in
+   match sym_text m hb st (o * 8 + 6) with
+   | Some s => (sym_of_text s, N.land w cell_mask, w) :: symbols m hb st r
+   | None => symbols m hb st r end
+ | _ :: r => symbols m hb st r end.
+
+Definition ctx_of (m : mem) (hb cb kb : N) (fuel : nat) (rs : list (N * N)) : option ctx :=
+ match walk_ranges fuel m hb rs with
+ | None => None
+ | Some objs =>
+   let st := starts_of objs Leaf in
+   let syms := symbols m hb st objs in
+   let cs := fold_left (fun t '(s, c, _) => claim (key c) s t) syms Leaf in
+   let sc := fold_left (fun t '(s, c, _) => tset s c t) syms Leaf in
+   let cl := fold_left (fun t '(s, c, _) =>
+               match rd m (cb + 2 * c + 1) with
+               | Some f => if N.eqb (tag f) 5 then claim (key (woff f)) s t else t
+               | None => t end) syms Leaf in
+   Some (Ctx m hb cb kb fuel objs st cs sc cl) end.
+
+Definition image := (header * ctx)%type.
+Definition parse_image (m : mem) (n : N) : option image :=
+ match parse_header m n with
+ | None => None
+ | Some h =>
+   match ctx_of m 13 (13 + h_heap h) (13 + h_heap h + h_cells h) (N.to_nat (h_heap h))
+                [(0, h_heap h)] with
+   | Some c => Some (h, c) | None => None end end.
+
+(* ---------- values ---------- *)
+Definition fixz (v : N) : Z :=
+ if N.ltb v 9223372036854775808 then Z.of_N (v / 4) else (Z.of_N (v / 4) - 4611686018427387904)%Z.
+
+Fixpoint dval (c : ctx) (fuel : nat) (v : N) : option val :=
+ match fuel with O => None | S f =>
+ let m := c_mem c in let hb := c_hb c in let st := c_starts c in
+ if N.eqb (N.land v 3) 0 then Some (VFix (fixz v)) else
+ match tag v with
+ | 2 => if N.eqb v 2 then Some VNil else if N.eqb v 10 then Some (VBool false)
+        else if N.eqb v 18 then Some (VBool true) else None
+ | 3 => match deref m hb st v 3 0 with
+        | Some a => match rd m a, rd m (a + 1) with
+          | Some x, Some y => match dval c f x, dval c f y with
+            | Some x, Some y => Some (VPair x y) | _, _ => None end
+          | _, _ => None end
+        | None => None end
+ | 6 => option_map (fun s => VSym (sym_of_text s)) (sym_text m hb st v)
+ | 1 => match at_type st v with
+        | Some 1 => option_map VStr (str_bytes m hb st v 1)
+        | Some 4 => option_map VReal (rd m (hb + woff v + 1))
+        | _ => None end
+ | _ => None end end.
+
+(* ---------- bytecode ---------- *)
+(* bytecode_unpack: seven bits a byte, low first, the top bit on all but a word's last byte; then
+   each word rotated right by one, so OPERAND_CONST comes back to bit 31. *)
+Definition rotr1 (x : N) : N := N.lor (N.shiftr x 1) (N.shiftl (N.land x 1) 31).
+Fixpoint unpack (bs : list N) (x sh : N) : list N := match bs with
+ | [] => if N.eqb sh 0 then [] else [rotr1 (N.land x mask32)]
+ | b :: r =>
+   let x' := N.lor x (N.shiftl (N.land b 127) sh) in
+   if N.eqb (N.land b 128) 0 then rotr1 (N.land x' mask32) :: unpack r 0 0
+   else unpack r x' (sh + 7) end.
+
+Definition operand_of_word (x : N) : operand :=
+ if N.testbit x 31 then OConst (x - 2147483648) else OSlot x.
+
+Definition prim_at (i : N) : option prim :=
+ match nth_error prim_table (N.to_nat i) with Some (_, p, _) => Some p | None => None end.
+
+Fixpoint take (n : nat) (l : list N) : option (list N * list N) := match n, l with
+ | O, _ => Some ([], l)
+ | S n, x :: r => match take n r with Some (a, b) => Some (x :: a, b) | None => None end
+ | S _, [] => None end.
+
+(* The symbol owning cell k, and the symbol whose function is the procedure in constant slot k
+   (or the symbol there, if the slot was never bound). *)
+Definition cell_sym (c : ctx) (k : N) : option positive :=
+ match tget (key k) (c_cellsym c) with Some (Some s) => Some s | _ => None end.
+Definition slot_sym (c : ctx) (k : N) : option positive :=
+ match rd (c_mem c) (c_kb c + k) with
+ | Some v =>
+   if N.eqb (tag v) 5 then match tget (key (woff v)) (c_closym c) with Some (Some s) => Some s | _ => None end
+   else if N.eqb (tag v) 6 then option_map sym_of_text (sym_text (c_mem c) (c_hb c) (c_starts c) v)
+   else None
+ | None => None end.
+
+(* One instruction from its words (opcode numbers from ops.h; loader.c lays out each operand
+   position by its kind). Opcodes from 21 on (loop, again, real and word registers) are outside
+   JitBytecode's instructions and decode to nothing. *)
+Definition dins1 (c : ctx) (op : N) (r : list N) : option (instr * list N) :=
+ match op, r with
+ | 0, d :: s :: r => Some (IMove d s, r)
+ | 1, d :: k :: r => Some (IConst d k, r)
+ | 2, d :: i :: r => Some (ICapture d i, r)
+ | 3, d :: k :: n :: r => match take (N.to_nat n) r with Some (ss, r) => Some (IClosure d k ss, r) | None => None end
+ | 4, d :: p :: n :: r =>
+   match prim_at p, take (N.to_nat n) r with
+   | Some pr, Some (os, r) => Some (IPrim d pr (map operand_of_word os), r) | _, _ => None end
+ | 5, l :: r => Some (ILabel l, r)
+ | 6, l :: r => Some (IJump l, r)
+ | 7, o :: l :: r => Some (IJumpIfFalse (operand_of_word o) l, r)
+ | 8, d :: a :: f :: n :: r => option_map (fun f => (ICall d a f n, r)) (cell_sym c f)
+ | 9, d :: a :: f :: n :: r => option_map (fun f => (ICallSealed d a f n, r)) (slot_sym c f)
+ | 10, d :: a :: n :: r => Some (ICallValue d a n, r)
+ | 11, a :: f :: n :: r => option_map (fun f => (ITail a f n, r)) (cell_sym c f)
+ | 12, a :: f :: n :: r => option_map (fun f => (ITailSealed a f n, r)) (slot_sym c f)
+ | 13, a :: n :: r => Some (ITailValue a n, r)
+ | 14, o :: r => Some (IReturn (operand_of_word o), r)
+ | 15, l :: r => Some (IPushHandler l, r)
+ | 16, r => Some (IPopHandler, r)
+ | 17, d :: r => Some (IException d, r)
+ | 18, n :: l :: r => Some (IEntry n l, r)
+ | 19, s :: n :: l :: r => Some (IJumpUnlessEntry s n l, r)
+ | 20, f :: n :: r => option_map (fun f => (IInline f n, r)) (cell_sym c f)
+ | _, _ => None end.
+
+Fixpoint dins (c : ctx) (fuel : nat) (ws : list N) : option (list instr) := match ws with
+ | [] => Some []
+ | op :: r => match fuel with O => None | S f =>
+   match dins1 c op r with
+   | Some (i, r) => option_map (cons i) (dins c f r)
+   | None => None end end end.
+
+Fixpoint seqN (b : N) (k : nat) : list N := match k with O => [] | S k => b :: seqN (N.succ b) k end.
+
+(* The code object v points to. CODE_ARITY carries an entry's count above bit 32 (loader.c). *)
+Fixpoint dcode (c : ctx) (fuel : nat) (v : N) : option code :=
+ match fuel with O => None | S f =>
+ let m := c_mem c in
+ match deref m (c_hb c) (c_starts c) v 1 8 with
+ | None => None
+ | Some a =>
+   let vf := c_fuel c in
+   let fld i := get m (a + i) in
+   let ar := fld 2 in let fr := fld 3 in let cb := fld 4 in let nk := fld 5 in let nc := fld 6 in
+   match dval c vf (fld 7), dval c vf (fld 9),
+         str_bytes m (c_hb c) (c_starts c) (fld 8) 2,
+         all_some (map (fun i => match rd m (c_kb c + cb + i) with Some w => dval c vf w | None => None end)
+                       (seqN 0 (N.to_nat nk))),
+         all_some (map (fun i => match rd m (c_kb c + cb + nk + i) with Some w => dcode c f w | None => None end)
+                       (seqN 0 (N.to_nat nc))) with
+   | Some name, Some il, Some bs, Some ks, Some ns =>
+     let ws := unpack bs 0 0 in
+     match dins c (List.length ws) ws with
+     | None => None
+     | Some ins =>
+       let e := match ins with IEntry n l :: _ => Some (n, l) | _ => None end in
+       let hi := N.shiftr ar 32 in
+       if N.eqb hi (match e with Some (n, _) => n | None => 0 end)
+       then Some (Code name (N.land ar mask32) e fr ks ins ns il) else None end
+   | _, _, _, _, _ => None end end end.
+
+(* The code of the closure, without captures, in the function cell of symbol s. *)
+Definition fn_code (c : ctx) (s : positive) : option code :=
+ match tget s (c_symcell c) with
+ | None => None
+ | Some k =>
+   match rd (c_mem c) (c_cb c + 2 * k + 1) with
+   | None => None
+   | Some fv =>
+     match deref (c_mem c) (c_hb c) (c_starts c) fv 5 6 with
+     | Some a => if N.eqb (hsize (get (c_mem c) a)) 0 then dcode c (c_fuel c) (get (c_mem c) (a + 2)) else None
+     | None => None end end end.
+
+(* ---------- equality ---------- *)
+Definition prim_idx (p : prim) : nat := match p with PAdd => 0 | PSub => 1 | PMul => 2 | PDiv => 3 | PLt => 4 | PGt => 5 | PLe => 6 | PGe => 7 | PEq => 8 | PNumberp => 9 | PCons => 10 | PHd => 11 | PTl => 12 | PConsp => 13 | PCn => 14 | PPos => 15 | PTlstr => 16 | PStr => 17 | PStringp => 18 | PNString => 19 | PStringN => 20 | PIntern => 21 | PAbsvector => 22 | PAbsvectorp => 23 | PGetAddress => 24 | PSetAddress => 25 | PSet => 26 | PValue => 27 | PSimpleError => 28 | PErrorToString => 29 | PEvalKl => 30 | PGetTime => 31 | POpen => 32 | PClose => 33 | PReadByte => 34 | PWriteByte => 35 | PCharStreamp => 36 | PReadUnitString => 37 | PWriteString => 38 | PInstall => 39 | PSymbolp => 40 | PHash => 41 | PExit => 42 | PSymbolKind => 43 | PFilledVector => 44 | PDictFind => 45 | PDictPut => 46 | PDictRemove => 47 | PDictEntries => 48 | PTaggedp => 49 | PSealedp => 50 | PSealing => 51 | PInlineBody => 52 | PVectorp => 53 | PAbsvector3 => 54 | PQuietp => 55 | PMarkToplevel => 56 | PTraceText => 57 | PBacktrace => 58 | PReadFile => 59 | PIntegerp => 60 | PAppend => 61 | PArityp => 62 | PInlinedp => 63 | PSaveExecutable => 64 | PBytesNew => 65 | PBytesp => 66 | PBytesLength => 67 | PU8 => 68 | PU16 => 69 | PU32 => 70 | PSetU8 => 71 | PSetU16 => 72 | PSetU32 => 73 | PS32 => 74 | PS64 => 75 | PF32 => 76 | PF64 => 77 | PSetS32 => 78 | PSetS64 => 79 | PSetF32 => 80 | PSetF64 => 81 | PStringBytes => 82 | PBytesString => 83 | PCopyBytes => 84 | PBitAnd => 85 | PBitOr => 86 | PBitXor => 87 | PBitNot => 88 | PShiftLeft => 89 | PShiftRight => 90 | PRotate32 => 91 | PBswap32 => 92 | PPopcount => 93 | PClz => 94 | PCtz => 95 | PDecimal => 96 | PPvar => 97 | PPvarp => 98 | PPvarOffset => 99 | PDeref => 100 | PSamep => 101 | PThread => 102 | PForeign => 103 | PPointerp => 104 | PPointerKind => 105 | PPointerAddress => 106 | PBytesPointer => 107 | PPointerString => 108 | PPointerBytes => 109 | PErrno => 110 | PCErrno => 111 | PPointerKill => 112 | PPointerSized => 113 | PSetPointer => 114 | PPointerGuard => 115 | PPointerOwner => 116 | PPointersDead => 117 | PPointerReadOnly => 118 | PCollect => 119 | PWriteBytes => 120 | PRaiseCond => 121 end.
+Lemma prim_idx_ok : forall p, prim_at (N.of_nat (prim_idx p)) = Some p.
+Proof. destruct p; reflexivity. Qed.
+Definition prim_eqb (a b : prim) : bool := Nat.eqb (prim_idx a) (prim_idx b).
+Lemma prim_eqb_true : forall a b, prim_eqb a b = true -> a = b.
+Proof.
+ unfold prim_eqb. intros a b H. apply Nat.eqb_eq in H.
+ assert (E : Some a = Some b) by (rewrite <- (prim_idx_ok a), <- (prim_idx_ok b), H; reflexivity).
+ injection E; auto.
+Qed.
+
+Fixpoint list_eqb {A} (f : A -> A -> bool) (a b : list A) : bool := match a, b with
+ | [], [] => true | x :: a, y :: b => (f x y && list_eqb f a b)%bool | _, _ => false end.
+Lemma list_eqb_true : forall A (f : A -> A -> bool), (forall x y, f x y = true -> x = y) ->
+  forall a b, list_eqb f a b = true -> a = b.
+Proof.
+ intros A f Hf a. induction a as [|x a IH]; intros [|y b] H; simpl in H; try discriminate; auto.
+ apply andb_true_iff in H as [H1 H2]. f_equal; auto.
+Qed.
+
+Fixpoint val_eqb (a b : val) : bool := match a, b with
+ | VFix x, VFix y => Z.eqb x y | VReal x, VReal y => N.eqb x y | VSym x, VSym y => Pos.eqb x y
+ | VBool x, VBool y => Bool.eqb x y | VNil, VNil => true | VCleared, VCleared => true
+ | VStr x, VStr y => list_eqb N.eqb x y | VPair a d, VPair a' d' => (val_eqb a a' && val_eqb d d')%bool
+ | VVec x, VVec y | VBytes x, VBytes y | VClo x, VClo y | VExn x, VExn y | VStream x, VStream y => Pos.eqb x y
+ | VPvar x, VPvar y => Z.eqb x y
+ | _, _ => false end.
+
+Ltac eqb_split := repeat match goal with
+ | H : (_ && _)%bool = true |- _ => apply andb_true_iff in H as [? ?]
+ | H : N.eqb _ _ = true |- _ => apply N.eqb_eq in H
+ | H : Z.eqb _ _ = true |- _ => apply Z.eqb_eq in H
+ | H : Pos.eqb _ _ = true |- _ => apply Pos.eqb_eq in H
+ | H : Nat.eqb _ _ = true |- _ => apply Nat.eqb_eq in H
+ | H : Bool.eqb _ _ = true |- _ => apply Bool.eqb_prop in H
+ | H : list_eqb N.eqb _ _ = true |- _ => apply (list_eqb_true _ _ (fun x y => proj1 (N.eqb_eq x y))) in H
+ | H : prim_eqb _ _ = true |- _ => apply prim_eqb_true in H
+ end; subst.
+
+Lemma val_eqb_true : forall a b, val_eqb a b = true -> a = b.
+Proof.
+ induction a; intros [] H; simpl in H; try discriminate; eqb_split; try reflexivity.
+ f_equal; auto.
+Qed.
+
+Definition operand_eqb (a b : operand) : bool := match a, b with
+ | OSlot x, OSlot y | OConst x, OConst y => N.eqb x y | _, _ => false end.
+Lemma operand_eqb_true : forall a b, operand_eqb a b = true -> a = b.
+Proof. intros [] [] H; simpl in H; try discriminate; eqb_split; reflexivity. Qed.
+
+Definition instr_eqb (a b : instr) : bool := match a, b with
+ | IMove d s, IMove d' s' => N.eqb d d' && N.eqb s s'
+ | IConst d k, IConst d' k' => N.eqb d d' && N.eqb k k'
+ | ICapture d i, ICapture d' i' => N.eqb d d' && N.eqb i i'
+ | IClosure d k ss, IClosure d' k' ss' => N.eqb d d' && N.eqb k k' && list_eqb N.eqb ss ss'
+ | IPrim d p os, IPrim d' p' os' => N.eqb d d' && prim_eqb p p' && list_eqb operand_eqb os os'
+ | ILabel l, ILabel l' | IJump l, IJump l' | IPushHandler l, IPushHandler l' => N.eqb l l'
+ | IJumpIfFalse o l, IJumpIfFalse o' l' => operand_eqb o o' && N.eqb l l'
+ | ICall d a f n, ICall d' a' f' n' | ICallSealed d a f n, ICallSealed d' a' f' n' =>
+   N.eqb d d' && N.eqb a a' && Pos.eqb f f' && N.eqb n n'
+ | ICallValue d a n, ICallValue d' a' n' => N.eqb d d' && N.eqb a a' && N.eqb n n'
+ | ITail a f n, ITail a' f' n' | ITailSealed a f n, ITailSealed a' f' n' =>
+   N.eqb a a' && Pos.eqb f f' && N.eqb n n'
+ | ITailValue a n, ITailValue a' n' => N.eqb a a' && N.eqb n n'
+ | IReturn o, IReturn o' => operand_eqb o o'
+ | IPopHandler, IPopHandler => true
+ | IException d, IException d' => N.eqb d d'
+ | IEntry n l, IEntry n' l' => N.eqb n n' && N.eqb l l'
+ | IJumpUnlessEntry s n l, IJumpUnlessEntry s' n' l' => N.eqb s s' && N.eqb n n' && N.eqb l l'
+ | IInline f n, IInline f' n' => Pos.eqb f f' && N.eqb n n'
+ | _, _ => false end%bool.
+Lemma instr_eqb_true : forall a b, instr_eqb a b = true -> a = b.
+Proof.
+ intros [] [] H; simpl in H; try discriminate; eqb_split; try reflexivity.
+ - apply (list_eqb_true _ _ operand_eqb_true) in H0. subst. reflexivity.
+ - apply operand_eqb_true in H. subst. reflexivity.
+ - apply operand_eqb_true in H. subst. reflexivity.
+Qed.
+
+Definition entry_eqb (a b : option (N * N)) : bool := match a, b with
+ | None, None => true | Some (n, l), Some (n', l') => (N.eqb n n' && N.eqb l l')%bool | _, _ => false end.
+Lemma entry_eqb_true : forall a b, entry_eqb a b = true -> a = b.
+Proof. intros [[]|] [[]|] H; simpl in H; try discriminate; eqb_split; reflexivity. Qed.
+
+Fixpoint code_eqb (a b : code) : bool :=
+ match a, b with
+ | Code n ar e fr ks xs ns il, Code n' ar' e' fr' ks' xs' ns' il' =>
+   (val_eqb n n' && N.eqb ar ar' && entry_eqb e e' && N.eqb fr fr' && list_eqb val_eqb ks ks'
+    && list_eqb instr_eqb xs xs'
+    && (fix go (l1 l2 : list code) : bool := match l1, l2 with
+        | [], [] => true | x :: r, y :: s => (code_eqb x y && go r s)%bool | _, _ => false end) ns ns'
+    && val_eqb il il')%bool end.
+
+Fixpoint code_eqb_true (a : code) : forall b, code_eqb a b = true -> a = b.
+Proof.
+ destruct a as [n ar e fr ks xs ns il]. intros [n' ar' e' fr' ks' xs' ns' il'] H. simpl in H.
+ apply andb_true_iff in H as [H Hil]. apply andb_true_iff in H as [H Hns].
+ apply andb_true_iff in H as [H Hxs]. apply andb_true_iff in H as [H Hks].
+ apply andb_true_iff in H as [H Hfr]. apply andb_true_iff in H as [H He].
+ apply andb_true_iff in H as [Hn Har].
+ apply val_eqb_true in Hn. apply N.eqb_eq in Har. apply entry_eqb_true in He. apply N.eqb_eq in Hfr.
+ apply (list_eqb_true _ _ val_eqb_true) in Hks. apply (list_eqb_true _ _ instr_eqb_true) in Hxs.
+ apply val_eqb_true in Hil. subst. f_equal.
+ revert ns ns' Hns. clear -code_eqb_true.
+ fix go 1. intros [|x r] [|y s] H; simpl in H; try discriminate; try reflexivity.
+ apply andb_true_iff in H as [H1 H2]. f_equal; [exact (code_eqb_true x y H1)|exact (go r s H2)].
+Qed.
+
+(* ---------- the relation ---------- *)
+Inductive verdict := Match (f : positive) | Differ (f : positive) | Unbuilt (f : positive)
+ | Undecoded (f : positive) | Unparsed.
+
+(* One stage 0 definition (defun F Code), as the loader's reader gives it. *)
+Definition check_def (c : ctx) (form : val) : verdict :=
+ match form with
+ | VPair (VSym d) (VPair (VSym g) (VPair code VNil)) =>
+   if negb (Pos.eqb d S_defun) then Unparsed else
+   match build_code prim_tree 64 code with
+   | LErr _ => Unbuilt g
+   | LOk k => match fn_code c g with
+     | None => Undecoded g
+     | Some k' => if code_eqb k k' then Match g else Differ g end end
+ | _ => Unparsed end.
+
+Theorem check_def_sound : forall c form g, check_def c form = Match g ->
+  exists code k, form = VPair (VSym S_defun) (VPair (VSym g) (VPair code VNil))
+    /\ build_code prim_tree 64 code = LOk k /\ fn_code c g = Some k.
+Proof.
+ intros c form g H. unfold check_def in H.
+ repeat match type of H with
+ | match ?x with _ => _ end = _ => destruct x eqn:?; try discriminate
+ end.
+ injection H as <-.
+ repeat match goal with
+ | Hx : negb _ = false |- _ => apply negb_false_iff, Pos.eqb_eq in Hx
+ | Hx : code_eqb _ _ = true |- _ => apply code_eqb_true in Hx
+ end. subst. eauto.
+Qed.
+
+Fixpoint tally (c : ctx) (fs : list val) : nat * list verdict :=
+ match fs with
+ | [] => (O, [])
+ | f :: r => let '(n, bad) := tally c r in
+   match check_def c f with Match _ => (S n, bad) | v => (n, v :: bad) end end.
+End JitImage.

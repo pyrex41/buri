@@ -4579,18 +4579,38 @@
    "scope": "instance",
    "owner": "E2E-41",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Heap image",
    "identity": "",
    "statement": "The heap image in the binary denotes the KLambda store reached after stage 0 and initialisation.",
    "premises": [],
-   "depends_on": [],
-   "evidence": [],
+   "depends_on": [
+    "OB-JIT-IMAGE-CODE",
+    "OB-JIT-IMAGE-INIT",
+    "OB-JIT-IMAGE-SEALING",
+    "OB-JIT-IMAGE-READER",
+    "OB-JIT-IMAGE-FILE"
+   ],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "scope and feasibility verdict from measured image facts (binary e0acd513..., image fd8485a5..., heap 87059 words, 2371 code objects); split into the five sub-obligations it depends on"
+    }
+   ],
    "completion_evidence": "Image bytes decoded in Rocq and related to that store, or stage 1 proved an instance of the main theorem.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "docs/SHEN-JIT-IMAGE.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: open -> partial. Code objects: a Rocq decoder (spikes/image-decode, not in the lane) relates 955 of 955 stage 0 definitions to the code in their function cells; 7 code objects made by initialisation, all data initialisation built, the 18-vs-24 sealing gap and the reader stay open as sub-obligations."
+    }
+   ]
   },
   {
    "id": "OB-JIT-IMAGE-FILE",
@@ -4598,19 +4618,142 @@
    "scope": "instance",
    "owner": "E2E-41",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "Reading the image",
    "identity": "",
    "statement": "The run reads its image from its own executable file, which the process model's file system does not relate to the loaded binary.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
-   "completion_evidence": "The image embedded in the ELF, or a stated premise that the file holds those bytes.",
+   "evidence": [
+    {
+     "kind": "identity-hash",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "measured: the binary e0acd513... (5440856 bytes) is the runtime 13afde42... (4657760 bytes) followed by the image fd8485a5... (783096 bytes), found from the SJHI-END trailer; the run opens argv[0] (resolved through PATH) unless SHEN_JIT_IMAGE is set. No premise about the file system is stated in any theorem yet"
+    }
+   ],
+   "completion_evidence": "A stated premise, used by the top theorem, that the file the run opens (argv[0] resolved through PATH, SHEN_JIT_IMAGE unset) holds the pinned binary, whose final image is fd8485a5...; or the image embedded in the ELF.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "spikes/riscv-build/RESULTS.md"
+    "spikes/riscv-build/RESULTS.md",
+    "docs/SHEN-JIT-IMAGE.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: open -> partial. Measured the split of the pinned binary into runtime and image and how main.c finds its image (executable_file over argv[0] and PATH, overridden by SHEN_JIT_IMAGE); the premise is still not stated."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-CODE",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "partial",
+   "boundary": "Image code objects",
+   "identity": "",
+   "statement": "For each of the 955 stage 0 definitions (defun F Code), the closure in F's function cell of the pinned image has no captures and its code object, decoded with its constants, nested code objects, sealed call targets and inline field, equals the code object JitBytecode.build_code makes from Code.",
+   "premises": [],
+   "depends_on": [
+    "OB-JIT-IMAGE-READER"
+   ],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spikes/image-decode/JitImage.v",
+     "establishes": "artifact-correspondence",
+     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context"
+    }
+   ],
+   "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-INIT",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Image state built by initialisation",
+   "identity": "",
+   "statement": "Everything stage 1 built by running shen.initialise, shen.x.features.initialise, shen.x.programmable-pattern-matching.initialise, shen.x.namespaces.initialise and shen-jit.initialise denotes the KLambda store those calls reach: the 7 code objects not reachable from the 955 function cells (thread, defined by eval-kl in shen-jit.initialise, and 6 lambda code objects of the lambda-form entries in *property-vector*), every global value, the property vector, dictionaries and streams.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "Stage 1 proved an instance of the main theorem over validated initialisation code, or the initialised store decoded and related in Rocq.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-SEALING",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Sealing at stage 0 and in the image",
+   "identity": "",
+   "statement": "Stage 0 lowered all 24 files with every definition sealed, but stage 1 seals only the first 18: in the image, 890 of the 955 names carry the sealed bit and the 65 definitions of the 6 extension files do not, while 115 call-sealed sites in 45 definitions are bound to extension closures at load. The claim either excludes redefining those 65 names or shows sealed calls to them still agree with the source's late binding.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "A stated premise or exclusion in the top theorem for redefinition of the 65 unsealed extension names, or Rocq evidence that FunRel survives it.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-IMAGE-READER",
+   "kind": "artifact-correspondence",
+   "scope": "instance",
+   "owner": "E2E-41",
+   "packages": [],
+   "status": "open",
+   "boundary": "Reading and loading the image",
+   "identity": "",
+   "statement": "The trusted reader (spikes/image-decode/image_to_rocq.py) gives the image's bytes as little-endian 64-bit words, and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
+   "premises": [],
+   "depends_on": [],
+   "evidence": [],
+   "completion_evidence": "The loader's rebasing and raw-field reconstruction modelled or reviewed against image.c, and the reader reviewed as a word split only.",
+   "sources": [
+    "docs/SHEN-JIT-IMAGE.md"
+   ],
+   "history": [
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
+     "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    }
+   ]
   },
   {
    "id": "OB-JIT-BYTECODE-SEMANTICS",
@@ -4676,7 +4819,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerThm.JitLowerThm.preservation",
      "establishes": "model-proof",
-     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end: the bytecode runs to a machine whose next step returns a value related to the source's, or raises an error the source also raises (Ends takes that machine as a parameter; Ends_final). Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, = when one operand is a constant fixnum, string, boolean, () or non-NaN real (JitLowerRel.pguard), the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, = without such a constant, dynamic application, globals, defun or eval-kl."
+     "note": "for every store, configuration and machine in the simulation relation of JitLowerStep.v, over code the relation of JitLowerRel.v accepts: after any number of bytecode steps the source is related, or both end: the bytecode runs to a machine whose next step returns a value related to the source's, or raises an error the source also raises (Ends takes that machine as a parameter; Ends_final). Covers literals, variables, let, if, cond, and, or, type, the primitives JitLowerRel.pmap names, = when one operand is a constant fixnum, string, symbol, boolean, () or non-NaN real (JitLowerRel.pguard), the one-slot cons chain with constant heads (0.4), named calls and named tail calls; no closures, handlers, = without such a constant, dynamic application, globals, defun or eval-kl."
     },
     {
      "kind": "universal-theorem",
@@ -4727,7 +4870,7 @@
      "kind": "universal-theorem",
      "ref": "JitLowerCheck.JitLowerCheck.check_fn_sound",
      "establishes": "artifact-correspondence",
-     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 111 of 955 definitions accepted at 934cfa5 (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 844 rejected are unvalidated, not refuted."
+     "note": "scripts/check-shen-jit.sh decodes each stage 0 definition in Rocq and runs the checker: 148 of 955 definitions accepted at 934cfa5 (tests/shen-jit/stage0-accepted.txt). Each accepted one is a lowering of its kernel KLambda in the sense of JitLowerRel; the 807 rejected are unvalidated, not refuted."
     }
    ],
    "completion_evidence": "Instance validation of the 24 .sbc files named by generated.sha256.",
@@ -4759,6 +4902,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-09: partial, 111 of 955 definitions accepted at 0.6 (110 of 950 at 0.4). By name: shen-jit.lower.constant-index lost (removed upstream), shen-jit.lower.list-key (new) and shen-jit.lower.prim-arity (rewritten) gained; the other 109 accepted at both pins.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-10: partial, 148 of 955 definitions accepted at 0.6 (was 111). pguard admits symbol constants now that sym_of_text is injective (OB-JIT-SYM-INJECTIVE), ported from pass/eq 906b389 (145 of 950 at 0.4); 37 definitions were blocked only by = against a symbol, exactly the features.tsv eq-symbol-const-only rows; none is lost.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6, 10 November 2026."
     }
    ]
   },
@@ -5042,9 +5190,21 @@
    "evidence": [],
    "completion_evidence": "Identity added to the model, or a theorem that admitted programs never reach it.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "tests/shen-jit/stage0-residuals.txt"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt (generated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts at p2/int 2e45d67 on the pinned v0.6 stage 0 set ec9b3872 and norm witness e45add98; source judge 111 of 955, 844 residual) lists the definitions whose norm witness calls shen-jit.same?, shen-jit.tagged?, shen-jit.deref or shen-jit.deref= (census): 5 with one as first label, 48 touching one. Options: model identity (an identity carrier, or JitProfile's proposed pp_samep/pp_taggedp wired with OB-JIT-PORT-PRIMS) or keep them named exceptions. Default until Reuben decides: named residual.",
+     "reconciliation": "r1-residual-ledger, Phase 2 stage 0 track, 10 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 5 with an identity primitive as first label (unchanged), 48 touching one (unchanged). Supersedes the counts in the entry above.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-SEALED-SLOTS",
@@ -5178,13 +5338,24 @@
    "completion_evidence": "A rule in the profile or the semantics, or a named limit of the claim.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "rocq/JitProfile.v"
+    "rocq/JitProfile.v",
+    "tests/shen-jit/stage0-residuals.txt"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-08: open. The lowerer proof admits = only against a constant that is not a NaN (JitLowerRel.pguard), where neither semantics depends on identity; the deviation itself is unchanged.",
      "reconciliation": "Admitting = with a safe constant operand, 8 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt (generated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts at p2/int 2e45d67 on the pinned v0.6 stage 0 set ec9b3872 and norm witness e45add98; source judge 111 of 955, 844 residual) lists the definitions whose norm witness has = with no safe constant operand, outside JitLowerRel.pguard (census): 43 with it as first label, 206 touching it. Options: a proved static non-real judgment in Rocq (an operand provably never a real, extending pguard and the Comp simulation), a rule for NaN identity in the profile or semantics, or a named limit. The Python NONREAL heuristic in tests/shen-jit/feature_census.py is a census only and is not used. A Rocq judgment means changing pguard/Comp and redoing their soundness, which is not cheap and is outside this task, so the default until Reuben decides is a named residual. Separately, 152 definitions are first blocked by = against a symbol constant only, filed under OB-JIT-LOWER-FRAGMENT (a symbol is never a NaN; it is an emit gap, not this decision).",
+     "reconciliation": "r1-residual-ledger, Phase 2 stage 0 track, 10 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 59 with = on two computed operands as first label (was 43; definitions formerly first blocked by = against a symbol now show their next label), 206 touching it (unchanged). The 152 definitions the entry above lists as first blocked by = against a symbol constant: 37 are now accepted by the source judge and the other 115 are filed under their next census label; = against a symbol is no longer a residual label. Supersedes the counts in the entry above.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
     }
    ]
   },
@@ -5869,13 +6040,24 @@
     "rocq/KLPort.v",
     "rocq/JitProfile.v",
     "docs/SHEN-JIT.md",
-    "rocq/JitKRefPrim.v"
+    "rocq/JitKRefPrim.v",
+    "tests/shen-jit/stage0-residuals.txt"
    ],
    "history": [
     {
      "source": "rocq/JitKRefPrim.v",
      "recorded": "2026-11-09: open. JitKRefPrim.port_compat_of gives the port half of prim_compat_statement for any port_prim table whose rules each satisfy rule_param (parametricity under VRel/SRel); jit_rules gives none, so it holds vacuously (port_param_jit). Wiring in a table needs rule_param for each of its rules. Not proved for any proposed rule; for the hashing rules (shen-jit.hash, dict-find, dict-put, dict-remove) a proof would need the environment's hash invariant under the world's bijection (not proved; no counterexample checked in Rocq).",
      "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt (generated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts at p2/int 2e45d67 on the pinned v0.6 stage 0 set ec9b3872 and norm witness e45add98; source judge 111 of 955, 844 residual) lists the definitions whose norm witness calls a port primitive (census): 24 with one as first label, 178 touching one; each row gives the operator's status read from rocq/JitProfile.v: a candidate in jit_port_prims_proposed (unwired) or no source meaning, with jit_port_prims_residual's reason. Options: wire jit_port_prims_proposed (adds the hash parameter to the rules) or list those operators as named exceptions. jit_port_prims_proposed stays unwired: jit_rules has no port primitives. Default until Reuben decides: named residual, for both the proposed and the no-carrier operators.",
+     "reconciliation": "r1-residual-ledger, Phase 2 stage 0 track, 10 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 26 with a port primitive as first label (was 24), 178 touching one (unchanged). Supersedes the counts in the entry above.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
     }
    ]
   },
@@ -5990,6 +6172,11 @@
      "source": "rocq/JitEmitInv.v",
      "recorded": "2026-11-09: open. Statements and design only (emit-spec): JitEmitRel extends a copy of Comp, indexed by code object and capture names, with one empty rule per family (Eq, Store, Prim, DoFold, Clo, App, Trap) for each of Comp, CompT and CompOp, and a hand-written nested induction principle Comp_ind' (proved, closed; JitEmitNestTest checks it on a non-empty nested rule). JitEmitKont defines the frames; JitEmitInv states the generalized invariant (mu, VRh, SM, evolving store, equal IO traces) and sim_X_statement per family, preservation', call_preservation', call_preservation_src', none proved. A first version of sim'_statement was false (adversarial review): frames for get-time (untranslated clock request), absvector (2^48 allocates in the source, raises in the bytecode), error-to-string (\"error\" vs the message), open (*home-directory* prefix), close/read-byte/write-byte (closed or wrong-direction stream), = without pguard (NaN, cycle), dynamic calls of two or more arguments (over-application), and IO failure responses (no-handler continuation resumes the machine). Hand-argued, not mechanized. The fix: frame_prim admits none of those six primitives and keeps pguard on =; the window takes at most one argument; ev_of translates the clock; run statements quantify over env_ok environments (well-kinded responses, no failure). Open here: frames for the excluded primitives, wider dynamic calls and = on two variables, and IO failure. The old invariant embeds at any mu with StoreRel (ms_embed). Fix round 2: each old-fragment corollary has the old conclusion (MS with the store constant, JitLowerThm.Ends, JitKRef.EndsSrc) at mu = [] under the old premises plus GvalsRel [] s m, and follows (closed) from its new statement plus a reflection obligation (old_reflect_statement, old_reflect_src_statement) that is stated, not proved; whether a family overlapping the old fragment must re-prove it is a review decision. The index-shape deviation is evidenced in the tree (JitEmitNestTest.NestShape, under Fail). Pending review: the index shape, the frame exclusions and env_ok narrowing, the reflection. JitLowerRel's derivations embed (comp_embed) and VR is VRh (VR_VRh). No construct this entry lists is simulated yet.",
      "reconciliation": "Back-end statements for the extended emission relation (emit-spec), 9 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-10: open, narrowed further. = against a symbol constant is admitted (OB-JIT-SYM-INJECTIVE); = on two computed values, and against a NaN or pair constant, stay here.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6, 10 November 2026."
     }
    ]
   },
@@ -6243,13 +6430,24 @@
    "evidence": [],
    "completion_evidence": "A universal theorem over a source-linked lowerer model, or a proved checker run on every runtime lowering.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "tests/shen-jit/stage0-residuals.txt"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-06: open.",
      "reconciliation": "Phase 2 of the Shen/JIT lane, 6 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt (generated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts at p2/int 2e45d67 on the pinned v0.6 stage 0 set ec9b3872 and norm witness e45add98; source judge 111 of 955, 844 residual) lists the definitions whose norm witness calls shen-jit.eval-kl (census): 3 with it as first label, 16 touching it, including shen.lambda-entry, rejected on src (its source form calls the KL primitive eval-kl) and accepted on nf, where norm has made that a call of shen-jit.eval-kl. Scope: eval-kl, both the KL primitive and norm's rewrite to a call of shen-jit.eval-kl, whose meaning is this obligation (the lowerer for every runtime input). Options: prove it (this obligation) or exclude it as a named exception. Default until Reuben decides: named residual; no rule for eval-kl is admitted.",
+     "reconciliation": "r1-residual-ledger, Phase 2 stage 0 track, 10 November 2026."
+    },
+    {
+     "source": "tests/shen-jit/stage0-residuals.txt",
+     "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 6 with a call of shen-jit.eval-kl as first label (was 3), 16 touching it (unchanged). Supersedes the counts in the entry above.",
+     "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
     }
    ]
   }

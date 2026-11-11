@@ -1256,7 +1256,7 @@ and in `rocq/JitEmitInv.v`'s `resp_ok`), see [SHEN-JIT](SHEN-JIT.md)). Eighteen 
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
 `OB-JIT-PORT-PRIMS`). The five added at 0.6 state `shen-jit.write-bytes`, the read-error raise
 and `n->string`'s UTF-8 rule, which 0.6 changed (`write_bytes_io`, `write_bytes_empty`, `read_byte_error_raises`,
-`n_to_string_utf8`, `jit_n_to_string_agrees`). Stage 0: 111 of 955 kernel definitions validated at 0.6. Some relate the bytecode to KLambda for the fragment the lowerer relation
+`n_to_string_utf8`, `jit_n_to_string_agrees`). Stage 0: 148 of 955 kernel definitions accepted by the stage 0 source judge at 0.6 (111 before `=` against a symbol constant was admitted). The 807 others are listed in `tests/shen-jit/stage0-residuals.txt`, generated from the Rocq judge verdicts, each with a census first blocker and an open ledger entry; four residual classes are decisions for Reuben, each a named residual by default (docs/SHEN-JIT.md, Decisions for Reuben). Some relate the bytecode to KLambda for the fragment the lowerer relation
 admits: `preservation`, `related_progress` and `call_preservation` (`rocq/JitLowerThm.v`) relate runs of
 `KLPort.step_r (jit_rules sealed) jit_profile` to runs of `JitBytecode.next`, with the end case tied to the bytecode's
 final machine (`Ends_final`), and `chk_sound` and `check_fn_sound` make the per-definition checker establish that
@@ -1325,7 +1325,13 @@ on the decidable goal, so no excluded middle). `eq_core` is `eq_core_statement (
 and `ShenJitEqCoreNoClosure` are rejected.
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
+Heap image (spike, not gated; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): a Rocq decoder in `spikes/image-decode/` reads the
+pinned binary's image (`fd8485a5...`, the last 783096 bytes) and finds, by a Rocq 9.3 `vm_compute` measurement, that
+the function-cell code of 955 of 955 stage 0 definitions equals `JitBytecode.build_code` of their `.sbc`. It is not in
+the lane or in `Audit_Jit`. `OB-JIT-IMAGE` is partial and split into `-CODE`, `-INIT` (7 code objects and all data made by
+initialisation), `-SEALING` (65 extension names unsealed in the image), `-READER` and `-FILE`.
+
 Pass split, wave 1b (opt-in, not gated): `rocq/JitNorm.v` and `rocq/JitNormStage0.v` model `lower.shen`'s normal form,
-its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 133 of 955
-stage 0 definitions are accepted at 0.6 (131 of 950 at 0.4), all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
+its erasure to KLambda, and a judge of the emit pass alone on witnesses `capture_passes.sh` regenerates. 174 of 955
+stage 0 definitions are accepted at 0.6 since `=` against a symbol constant was admitted (133 before; 131 of 950 at 0.4), all with the front end unchecked: acceptance relates code to the erased witness, not to the source body.
 Their statements are not in an audit count; `scripts/check-shen-jit-norm.sh` checks that they use no axioms.

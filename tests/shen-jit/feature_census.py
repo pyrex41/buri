@@ -196,7 +196,9 @@ def walk(n, fx, stack=0):
     else:
         raise ValueError('not a normal form: %r' % (n,))
 
-BASE = {'eq-safe-const'}   # what Comp admits today beyond the plain constructs
+# what Comp admits today beyond the plain constructs: JitLowerRel.eq_safe_val takes symbols too
+# since = against a symbol constant was admitted (OB-JIT-SYM-INJECTIVE)
+BASE = {'eq-safe-const', 'eq-symbol-const'}
 
 def read(path):
     return parse(tokens(open(path).read()))

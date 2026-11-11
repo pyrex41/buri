@@ -4,9 +4,10 @@
 checkers would admit if each named feature or front family were added to `JitLowerRel.Comp` and to the front-end
 checkers. Python (`tests/shen-jit/feature_census.py`) computed everything here except the per-definition verdicts of
 the existing Rocq judge (`rocq/JitLowerStage0.v`, `judge`). It only reads those. Progress stays as Rocq states it:
-**111 of 955 stage 0 definitions are validated**, by the src judge (source form against code). The only validation
-counts in this file are the Rocq verdict counts: src 111, nf 112, tf 133. Every other number is a prediction or a
-count of syntax.
+**148 of 955 stage 0 definitions are accepted by the src judge** (source form against code; no full-pipeline judge
+exists, so the full-pipeline validated count is UNKNOWN). The only acceptance counts in this file are the Rocq verdict
+counts: src 148, nf 150, tf 174, from the rerun after `=` against a symbol constant was admitted (below; src 111, nf 112,
+tf 133 at the T02 run, before it). Every other number is a prediction or a count of syntax.
 
 Family tasks use `features.tsv` for their count-floor checks. A definition counts toward a task's floor if its
 `features` or `required_families` column names that task's item. The forecast assumes every other item the row lists
@@ -26,6 +27,28 @@ diff tests/shen-jit/stage0-accepted.txt /tmp/p2-T02-judge/src.counts         # e
 python3 tests/shen-jit/feature_census.py /lps/p6/sj/build/stage0 /tmp/p2-T02-capture /tmp/p2-T02-judge \
      spikes/pass-split/features.tsv > tables.md                               # exit 0 (0 mismatches)
 ```
+
+**Rerun, 10 November 2026 (branch `p2/eq-guard-merge`, on `p2/int` 335348c, rocq/ as at its commit 00071fe).** After
+`JitLowerRel.eq_safe_val` was extended to symbol constants (port of `pass/eq` 906b389), `feature_census.py`'s
+`BASE` gained `eq-symbol-const` (the feature set `Comp` admits today), and the judge and census were rerun on the
+same stage 0 set and the T02 capture (whose witness hashes are the ones below):
+
+```
+rocq-slot bash tests/shen-jit/judge_split_rocq.sh /tmp/p2-eq-guard-merge-crocq2                     # ROCQ_OK
+JOBS=2 rocq-slot bash tests/shen-jit/judge_split.sh /tmp/p2-eq-guard-merge-crocq2 /lps/p6/sj/build/stage0      /tmp/p2-T02-capture/witness /tmp/p2-eq-guard-merge-judge2                                      # JUDGE_SPLIT_DONE
+diff tests/shen-jit/stage0-accepted.txt /tmp/p2-eq-guard-merge-judge2/src.counts                   # empty
+python3 tests/shen-jit/feature_census.py /lps/p6/sj/build/stage0 /tmp/p2-T02-capture /tmp/p2-eq-guard-merge-judge2      spikes/pass-split/features.tsv > tables.md                                                     # exit 0 (0 mismatches)
+```
+
+Rocq verdicts src 148, nf 150, tf 174 of 955, none unreadable. The 37 definitions gained on src are exactly the rows
+the T02 `features.tsv` gave `eq-symbol-const` as their only feature and no required family; none was lost (by name).
+The T02 forecast's row A2 (`eq-symbol-const` after `value/set`) predicted this: the rerun's row A1 (`value/set`) equals
+T02 row A2, and each rerun row A(k) for k >= 2 equals T02 row A(k+1). Rerun verdict files (`<v>/*.codes`, C order): src
+`6a4816e8cec7cf5c5fe459f795bab1eb76bc5998bd49d42bde69339eebcc534c`, nf
+`e5bb67fa37a3fe41e9aa37252c900af2d95a8da8cd2bcfc9f21de4a48b974560`, tf
+`59bf05943b55fff986ab3a082dd104868e175801e3ddbef5c0f7029f44cd6f84`. `feature_census.py` sha256 `a870685cdbe6182497227b4bb2822b7fb4c99d2311b9e28594c690d9235973a4`,
+`features.tsv` `6eeef6975e3aa820dc7668ce3df8b30ae92bba3ae40a4f63cde2b2baa47c98a3`. The generated tables at the end of
+this file are the rerun's. The table below, and the analysis sections, are the T02 run's unless they say otherwise.
 
 | what | value |
 |---|---|
@@ -97,8 +120,9 @@ There are 0 mismatches on each. Two rules were fitted on src and tf:
 - eval-kl counts as a front rewrite to a plain sealed call. The first run had 2 tf mismatches,
   `shen.lambda-entry` and `eval`, until eval-kl was taken out of the emit features.
 
-nf was not used for fitting. It is a held-out check, and it matches 112 of 112 accepted, including
-`shen.lambda-entry`, the one definition accepted on nf and not on src.
+nf was not used for fitting. It is a held-out check, and it matches 112 of 112 accepted at T02 (150 of 150 at the
+rerun), including `shen.lambda-entry`, accepted on nf and not on src (at the rerun also
+`shen.x.expand-dynamic.expand-declare/checked`).
 
 ### `features.tsv`
 
@@ -132,9 +156,9 @@ that limit in two ways:
 
 Findings:
 
-1. **Today's 111 shrinks to 46 under the closure limit, in both designs.** Of the 111, 65 reach a definition the
-   current judge rejects. All 18 accepted definitions in the giant component are among them (next item). D-inl stays
-   at 111: no accepted definition carries a marker.
+1. **Today's 148 shrinks to 63 under the closure limit, in both designs** (rerun; at T02, 111 to 46). Of the 148, 85
+   reach a definition the current judge rejects. All 25 accepted definitions in the giant component (18 at T02) are
+   among them (next item). D-inl stays at 148: no accepted definition carries a marker.
 2. **One strongly connected component holds 181 definitions, and 450 definitions reach it.** Most of it is the lowerer's
    own code (71, from `lower`), the reader (34) and core (31), with writer, sys and shen-jit (10 each) and a few
    others. Under D-src or D-low none of the 450 counts until all
@@ -171,7 +195,8 @@ How to read it:
 - (b)'s guard set (`NONREAL` in the script) is a Python heuristic. A Rocq version would need its own static kind
   judgment.
 - `eq-symbol-const` (201 definitions) is **not** a decision item. OB-JIT-SYM-INJECTIVE is discharged, so `=` with a
-  symbol constant is an ordinary emit feature, and it is row A2 of the forecast.
+  symbol constant is an ordinary emit feature. It was row A2 of the T02 forecast; `Comp` now admits it, so at the
+  rerun it is part of row 0.
 
 ## Residuals, in short
 
@@ -184,7 +209,7 @@ is listed under the first decision item it needs:
   `shen-jit.integer?` 10
 - eval-kl: 16
 
-The full list is below. These counts are predictions; nothing was validated beyond Rocq's 111.
+The full list is below. These counts are predictions; nothing was accepted beyond Rocq's 148 (src judge).
 
 ## Not done, or UNKNOWN
 
@@ -196,7 +221,8 @@ The full list is below. These counts are predictions; nothing was validated beyo
 - The callee closure leaves out dynamic application and function-symbol constants, as above.
 - `SKIP_DIFF=1 scripts/check-shen-jit.sh` passed on this branch: tables match, 70 audited statements closed, rocqchk
   passed, stage0 111 accepted of 955 as recorded. The differential was not run, and neither were `gate_tests.sh` or
-  the full gate: UNKNOWN on this branch. This change adds no theorem, checker or relation.
+  the full gate: UNKNOWN on this branch. This change adds no theorem, checker or relation. (That is the T02 run; the
+  rerun's lane result is in the `p2/eq-guard-merge` commit message.)
 
 ---
 
@@ -208,9 +234,9 @@ The rest of this file is `feature_census.py`'s output, unedited.
 
 | variant | Rocq accepted | predicted | mismatches |
 |---|---:|---:|---:|
-| src | 111 | 111 | 0 |
-| tf | 133 | 133 | 0 |
-| nf (held out) | 112 | 112 | 0 |
+| src | 148 | 148 | 0 |
+| tf | 174 | 174 | 0 |
+| nf (held out) | 150 | 150 | 0 |
 
 definitions: 955; unreadable (verdict 0) in src, nf or tf: 0; unexplained mismatches: 0
 
@@ -230,39 +256,38 @@ Census forecast, not proof.
 
 | # | added | direct | D-src | D-low | D-inl | emit |
 |---:|---|---:|---:|---:|---:|---:|
-| 0 | (current Comp; row 0 direct = Rocq src, emit = Rocq tf) | 111 | 46 | 46 | 111 | 133 |
-| A1 | `value/set` | 151 | 75 | 75 | 151 | 180 |
-| A2 | `eq-symbol-const` | 189 | 93 | 93 | 189 | 224 |
-| A3 | `simple-error` | 225 | 119 | 120 | 225 | 264 |
-| A4 | `vector` | 247 | 141 | 142 | 247 | 293 |
-| A5 | `fam:inline` | 273 | 157 | 158 | 273 | 293 |
-| A6 | `do` | 298 | 165 | 166 | 298 | 328 |
-| A7 | `fam:cond` | 323 | 168 | 168 | 323 | 328 |
-| A8 | `prim:cn` | 360 | 171 | 171 | 360 | 365 |
-| A9 | `lambda` | 394 | 171 | 171 | 394 | 400 |
-| A10 | `apply-dynamic` | 410 | 178 | 178 | 410 | 416 |
-| A11 | `io` | 417 | 179 | 179 | 417 | 423 |
-| A12 | `prim:str` | 425 | 181 | 181 | 425 | 431 |
-| A13 | `prim:intern` | 455 | 191 | 191 | 455 | 462 |
-| A14 | `freeze` | 459 | 191 | 191 | 459 | 468 |
-| A15 | `prim:n->string` | 463 | 194 | 194 | 463 | 472 |
-| A16 | `error-to-string` | 464 | 194 | 194 | 464 | 473 |
-| A17 | `fam:fold-arith` | 465 | 194 | 194 | 465 | 473 |
-| A18 | `fam:sugar` | 466 | 194 | 194 | 466 | 473 |
-| A19 | `prim:/` | 467 | 197 | 197 | 467 | 474 |
-| A20 | `prim:pos` | 468 | 198 | 198 | 468 | 475 |
-| A21 | `prim:tlstr` | 477 | 203 | 203 | 477 | 484 |
-| A22 | `prim:string->n` | 484 | 209 | 209 | 484 | 491 |
-| A23 | `thaw` | 485 | 210 | 210 | 485 | 499 |
-| A24 | `fam:thaw-sugar` | 492 | 213 | 213 | 492 | 499 |
-| A25 | `fam:fold-cons` | 492 | 213 | 213 | 492 | 499 |
-| A26 | `folded-const` | 533 | 224 | 224 | 533 | 542 |
-| A27 | `fam:trap-sugar` | 533 | 224 | 224 | 533 | 542 |
-| A28 | `trap` | 556 | 229 | 229 | 556 | 565 |
-| A29 | `let-freeze` | 556 | 229 | 230 | 556 | 573 |
-| A30 | `fam:copy` | 561 | 233 | 233 | 561 | 573 |
-| A31 | `fam:share` | 564 | 235 | 235 | 564 | 573 |
-| A32 | `fam:bind` | 564 | 235 | 235 | 564 | 573 |
+| 0 | (current Comp; row 0 direct = Rocq src, emit = Rocq tf) | 148 | 63 | 63 | 148 | 174 |
+| A1 | `value/set` | 189 | 93 | 93 | 189 | 224 |
+| A2 | `simple-error` | 225 | 119 | 120 | 225 | 264 |
+| A3 | `vector` | 247 | 141 | 142 | 247 | 293 |
+| A4 | `fam:inline` | 273 | 157 | 158 | 273 | 293 |
+| A5 | `do` | 298 | 165 | 166 | 298 | 328 |
+| A6 | `fam:cond` | 323 | 168 | 168 | 323 | 328 |
+| A7 | `prim:cn` | 360 | 171 | 171 | 360 | 365 |
+| A8 | `lambda` | 394 | 171 | 171 | 394 | 400 |
+| A9 | `apply-dynamic` | 410 | 178 | 178 | 410 | 416 |
+| A10 | `io` | 417 | 179 | 179 | 417 | 423 |
+| A11 | `prim:str` | 425 | 181 | 181 | 425 | 431 |
+| A12 | `prim:intern` | 455 | 191 | 191 | 455 | 462 |
+| A13 | `freeze` | 459 | 191 | 191 | 459 | 468 |
+| A14 | `prim:n->string` | 463 | 194 | 194 | 463 | 472 |
+| A15 | `error-to-string` | 464 | 194 | 194 | 464 | 473 |
+| A16 | `fam:fold-arith` | 465 | 194 | 194 | 465 | 473 |
+| A17 | `fam:sugar` | 466 | 194 | 194 | 466 | 473 |
+| A18 | `prim:/` | 467 | 197 | 197 | 467 | 474 |
+| A19 | `prim:pos` | 468 | 198 | 198 | 468 | 475 |
+| A20 | `prim:tlstr` | 477 | 203 | 203 | 477 | 484 |
+| A21 | `prim:string->n` | 484 | 209 | 209 | 484 | 491 |
+| A22 | `thaw` | 485 | 210 | 210 | 485 | 499 |
+| A23 | `fam:thaw-sugar` | 492 | 213 | 213 | 492 | 499 |
+| A24 | `fam:fold-cons` | 492 | 213 | 213 | 492 | 499 |
+| A25 | `folded-const` | 533 | 224 | 224 | 533 | 542 |
+| A26 | `fam:trap-sugar` | 533 | 224 | 224 | 533 | 542 |
+| A27 | `trap` | 556 | 229 | 229 | 556 | 565 |
+| A28 | `let-freeze` | 556 | 229 | 230 | 556 | 573 |
+| A29 | `fam:copy` | 561 | 233 | 233 | 561 | 573 |
+| A30 | `fam:share` | 564 | 235 | 235 | 564 | 573 |
+| A31 | `fam:bind` | 564 | 235 | 235 | 564 | 573 |
 | B1 | `eq-two-computed` (decision) | 662 | 253 | 253 | 642 | 672 |
 | B2 | `eq-two-computed-unguarded` (decision) | 735 | 364 | 364 | 735 | 746 |
 | B3 | `port:shen-jit.symbol-kind` (decision) | 778 | 405 | 405 | 778 | 789 |
@@ -308,19 +333,18 @@ Census forecast, not proof.
 |---|---:|---:|
 | `fam:inline` | 528 | 13 |
 | `fam:cond` | 462 | 0 |
-| `value/set` | 242 | 40 |
-| `simple-error` | 214 | 20 |
+| `value/set` | 242 | 41 |
+| `simple-error` | 214 | 26 |
 | `eq-two-computed` | 206 | 0 |
-| `eq-symbol-const` | 201 | 37 |
-| `prim:cn` | 168 | 3 |
-| `do` | 129 | 6 |
+| `prim:cn` | 168 | 4 |
+| `do` | 129 | 7 |
 | `vector` | 118 | 19 |
 | `eq-two-computed-unguarded` | 98 | 0 |
 | `lambda` | 98 | 7 |
 | `fam:fold-cons` | 96 | 0 |
 | `folded-const` | 96 | 0 |
 | `prim:intern` | 90 | 0 |
-| `prim:str` | 81 | 1 |
+| `prim:str` | 81 | 2 |
 | `port:shen-jit.symbol-kind` | 50 | 2 |
 | `port:shen-jit.append` | 41 | 1 |
 | `fam:thaw-sugar` | 37 | 0 |
