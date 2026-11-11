@@ -159,7 +159,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
 | `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
 | `rocq/JitFrontShare.v` | share's checker (`check_share`, reuse included), `front_hyps`, `check_share_sound` under HT, HP and D_wf, the HT analysis, and the 4 validated share rewrites |
-| `rocq/Audit_Jit.v` | Assumption audit of 323 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 328 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -752,8 +752,7 @@ left and no FrontHyps:
 - **HT**: D defines `thaw` as the kernel does, `(defun thaw (V) (V))` (`kernel_thaw_parses`: stage 0's form of thaw
   parses to exactly that);
 - **HP**: D holds `hd` and `tl` as the primitives, so a re-evaluated path gives the value the target's variable holds.
-  This task added it; its necessity is argued, not proved in Rocq (a store binding `tl` to a user function with an IO
-  effect makes the source, which re-evaluates `(tl V)`, perform the effect twice and the target once). Its store side
+  This task added it; each half is necessary, proved in Rocq (`share_needs_hd_tl`, below). Its store side
   holds wherever call_preservation_src applies: any store with `Com s m` holds them (`hp_of_com`, from FunRel's
   `fr_name`). Its sealed side does not follow: D_wf puts hd and tl in `sealed`, which is the image's, and
   `jit_rules (hd :: tl :: sealed)` equals `jit_rules sealed` only extensionally. Part of the residual below;
@@ -765,6 +764,20 @@ FrontHyps and HP all hold, and share_rule is not rule_sound. share_rule with rec
 G)))`; the source returns 1, the target in 9 steps (`cx_tgt_runs`) calls thaw, which the store does not bind, and raises
 `XUndefinedFun thaw`, a throw no source run matches (`cx_inv_star`). SRel makes both stores share one function table,
 but nothing else says what that table's thaw does.
+
+**HP is necessary, each half.** `share_needs_hd_tl o` (closed), for o each of hd and tl: at D = [thaw as the kernel's;
+the other of hd/tl as its primitive] with sealed = [thaw; hd; tl], D_wf, FrontHyps and HT hold, D leaves o open, and
+share_rule is not rule_sound. KRef ranges over every store meeting D, and one store holds o as a user function that
+returns a global counter's old value and sets it to 1. share_rule with rec = scoped syntactic equality (sound by
+`KRef_refl`) accepts `(if (let S (o V) true) (o V) 0)` against `(let G (freeze 0) (let S (o V) (if true S (thaw G))))`
+(`hx_accepted`): the target calls o once and returns 0 (`hx_tgt_runs`, 25 steps); every source run stays on its
+deterministic path (computed by `reach`, closed under steps by `reach_closed`), which calls o twice and returns only 1,
+or is a throw under trap-free frames (`hx_inv_star`). No related source value exists.
+
+**The premises hold together.** `share_premises_sat` (closed): at D_share = [thaw as the kernel's; hd; tl as the
+primitives] with sealed = [thaw; hd; tl], D_wf, HT and HP all hold, so check_share_sound is not vacuous. This is a
+model instance, not the pinned build: whether the pinned D and sealed meet them is UNKNOWN (the residual below), and
+with HT no store has Com (`ht_not_com`).
 
 **HT (and HP's sealed side) for the pinned D: not discharged, a named residual (`OB-JIT-SHARE-THAW`).** D_wf of a D
 holding thaw, hd and tl also needs them in the pinned sealed list (OB-JIT-IMAGE-SEALING), not established. For HT,
@@ -781,8 +794,8 @@ two facts, each proved in Rocq:
   (`ht_not_com`), and `D_compiled` is false for every code list (`ht_not_compiled`). `call_preservation_src` takes
   StoreHas and Com, so with HT its premises cannot all hold: the share link does not yet compose end to end, for any
   definition. It does once an emit family relates the 0-ary dynamic apply (the binary's `tail-call-value`) and the
-  image's table is related (OB-JIT-IMAGE-CODE). `ht_dwf_sat` shows HT is consistent with D_wf, so check_share_sound is
-  not vacuous.
+  image's table is related (OB-JIT-IMAGE-CODE). `ht_dwf_sat` shows HT alone is consistent with D_wf;
+  `share_premises_sat` shows HT, HP and D_wf together are.
 
 Freshness is tested directly by the checker; `fresh_not_bound` shows fresh_ok's reserved-name premise implies the tests
 for the lowerer's names. no_keyword_binders is not used by check_share: both it and its soundness read Rocq's parse.
@@ -804,7 +817,10 @@ Mutants rejected by Rocq: `ShenJitFrontNoScope` (`fchk_rejects_unscoped` fails),
 compared by base only: `share_reuse_rejects_wrong_op` fails, (hd V) against a variable bound to (tl V)), each at a
 vm_compute decision lemma placed before every proof; `ShenJitFrontSameFuel` at the Fixpoint guard; and
 `ShenJitFrontShareChainFactUnchecked` (a chain fact recorded without checking that the target's let binds the same
-expression) at `chain_fact_cases`, whose statement needs that check.
+expression) at `chain_fact_cases`, whose statement needs that check. That last one is a proof-level mutant, not an
+unsoundness witness: with rec = fchk share_rules, (hd y) or (tl y) is accepted only against itself, so dropping the
+check changes no decision of check_share, and no decision lemma can reject it. The reuse relation's decision-level
+mutant is `ShenJitFrontShareReuseOpBlind`.
 
 Checked under Rocq 9.3 only, at commit `eb65acc` (branch `p2/r1-share-ht`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-b
 scripts/check-shen-jit.sh` in buri-lps, rc 0, log sha256 `7a478cae8a15735ce2588014473dddfa3efd61d776bdabdfad9af0d94eaed94e`:

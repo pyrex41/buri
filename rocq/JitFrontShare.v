@@ -38,7 +38,10 @@
      store meeting D has Com (ht_not_com: Comp has no dynamic apply), so call_preservation_src's
      premises cannot all hold with it. Named residual: OB-JIT-SHARE-THAW.
    - HP: D holds hd and tl as the primitives, so that a reused path re-evaluated on the source
-     gives the value the target's variable holds. Any store with Com meets it (hp_of_com).
+     gives the value the target's variable holds. Necessary, each half: share_needs_hd_tl (D_wf,
+     FrontHyps and HT hold, D leaves hd or tl open, a store holds it as a user function with an
+     effect, and share_rule is not rule_sound there). Any store with Com meets it (hp_of_com).
+   HT, HP and D_wf hold together (share_premises_sat), so check_share_sound is not vacuous.
    - D_wf, for then_chk's named-call congruence (compat_call_core needs fund_below).
    FrontHyps is no premise: front_hyps derives it from D_wf.
 
@@ -1398,7 +1401,8 @@ Qed.
        Com s m (ht_not_com), and D_compiled is false for every code list (ht_not_compiled).
        call_preservation_src takes StoreHas s and Com s m, so with HT its premises cannot all hold
        until an emission family relates the 0-ary dynamic apply (the binary's tail-call-value).
-   (c) HT is consistent with D_wf (ht_dwf_sat), so check_share_sound is not vacuous. *)
+   (c) HT is consistent with D_wf (ht_dwf_sat, HT alone); HT, HP and D_wf hold together at D_share
+       (share_premises_sat, below), so check_share_sound is not vacuous. *)
 Definition kernel_thaw (tp : name) : fundef := FUser [tp] (EApp (EVar tp) []).
 
 Theorem thaw_fixed : is_fixed_name thaw_name = true.
@@ -1458,6 +1462,176 @@ Proof.
  intros tp. split; [split|left; reflexivity].
  - constructor; [left; reflexivity|constructor].
  - constructor; [intros []|constructor].
+Qed.
+
+(* ---------- HP is necessary: share's reuse fails for a D that leaves hd or tl open ----------
+   Take o in {hd, tl} and D = [thaw as the kernel's; the other of hd/tl as its primitive], sealed
+   = [thaw; hd; tl]: D_wf, FrontHyps and HT hold, and HP fails on o's half only. KRef ranges over
+   every store meeting D, and a store may hold o as a user function with an effect: here o returns
+   the counter hx-counter's old value and sets it to 1. The pair (rec: scoped syntactic equality,
+   sound by KRef_refl)
+       (if (let S (o V) true) (o V) 0)   against   (let G (freeze 0) (let S (o V) (if true S (thaw G))))
+   is share_rule's reuse of S for (o V) (hx_accepted). From the counter at 0 the target calls o once
+   and returns 0 (hx_tgt_runs, 25 steps); every run of the source is on its deterministic path,
+   which calls o twice and returns 1 and nothing else, or a throw under frames without a trap
+   (hx_inv_star, over the path reach computes). KRef demands a source value equal to the target's
+   0, so share_rule is not rule_sound at that D: share_needs_hd_tl. Of share_rule_sound's
+   premises, neither half of HP can be dropped. *)
+Definition share_sealed : list name := [thaw_name; hd_name; tl_name].
+Definition hx_V : name := of_string "V".
+Definition hx_S : name := of_string "S".
+Definition hx_G : name := of_string "G".
+Definition hx_O : name := of_string "Old".
+Definition hx_Z : name := of_string "Z".
+Definition hx_c : name := of_string "hx-counter".
+Definition hx_tp : name := of_string "X".
+Definition hx_op (o : bool) : name := if o then hd_name else tl_name.
+Definition hx_prim (o : bool) : prim := if o then PHd else PTl.
+Definition hx_D (o : bool) : list (name * fundef) :=
+ [(thaw_name, kernel_thaw hx_tp); (hx_op (negb o), FPrim (hx_prim (negb o)))].
+Definition hx_src (o : bool) : expr :=
+ EIf (ELet hx_S (ECall (hx_op o) [EVar hx_V]) (EBool true)) (ECall (hx_op o) [EVar hx_V]) (ENum (NInt 0)).
+Definition hx_tgt (o : bool) : expr :=
+ ELet hx_G (EFreeze (ENum (NInt 0))) (ELet hx_S (ECall (hx_op o) [EVar hx_V]) (EIf (EBool true) (EVar hx_S) (thaw_e hx_G))).
+Definition hx_rec (g : list name) (a b : expr) : bool := expr_eqb a b && JitKRef.JitKRef.scoped g a.
+Definition hx_body : expr := ELet hx_O (ECall (of_string "value") [ESym hx_c])
+  (ELet hx_Z (ECall (of_string "set") [ESym hx_c; ENum (NInt 1)]) (EVar hx_O)).
+Definition hx_s (o : bool) : store := Store [] [(hx_c, VNum (NInt 0))]
+  ((thaw_name, kernel_thaw hx_tp) :: (hx_op (negb o), FPrim (hx_prim (negb o))) :: (hx_op o, FUser [hx_tp] hx_body) ::
+   (of_string "value", FPrim PValue) :: (of_string "set", FPrim PSet) :: []).
+Definition hx_rho : lenv := [(hx_V, VNil)].
+
+Theorem hx_accepted : forall o, share_rule hx_rec [hx_V] (hx_src o) (hx_tgt o) = true.
+Proof. intros [|]; vm_compute; reflexivity. Qed.
+
+Section Hx.
+Notation R := (jit_rules share_sealed).
+Notation P := jit_profile.
+
+Fixpoint reach (n : nat) (c : config) : option (list config) := match n with
+ | 0 => None
+ | S n => match next_r R P c with MTau c1 => option_map (cons c) (reach n c1) | _ => Some [c] end end.
+
+Lemma reach_head : forall n c l, reach n c = Some l -> In c l.
+Proof.
+ intros [|n] c l H; cbn in H; [discriminate|]. destruct (next_r R P c); try (injection H as <-; left; reflexivity).
+ destruct (reach n c0); cbn in H; [injection H as <-; left; reflexivity|discriminate].
+Qed.
+
+Lemma reach_closed : forall n c l, reach n c = Some l -> forall x x1, In x l -> next_r R P x = MTau x1 -> In x1 l.
+Proof.
+ induction n as [|n IH]; intros c l H x x1 I E; cbn in H; [discriminate|].
+ destruct (next_r R P c) eqn:Ec; try (injection H as <-; destruct I as [<-|[]]; rewrite Ec in E; discriminate).
+ destruct (reach n c0) as [l'|] eqn:El; cbn in H; [|discriminate]. injection H as <-.
+ destruct I as [<-|I].
+ - rewrite Ec in E. injection E as <-. right. exact (reach_head n _ _ El).
+ - right. exact (IH _ _ El x x1 I E).
+Qed.
+
+Definition hx_inv (l : list config) (c : config) : Prop :=
+ In c l \/ exists x K s, c = Cfg (Throw x) K s /\ forallb KB.nontrap K = true.
+
+Lemma hx_inv_step : forall n c0 l, reach n c0 = Some l ->
+ forallb (fun c => match next_r R P c with MIO _ _ => false | _ => true end) l = true ->
+ forallb (fun c => forallb KB.nontrap (kont c)) l = true ->
+ forall c lb c1, step_r R P c lb c1 -> hx_inv l c -> hx_inv l c1.
+Proof.
+ intros n c0 l Hl Hio Hnt c lb c1 St [I|(x & K & s & -> & Hk)].
+ - inversion St as [c' c'' E|c' q kk r E|c' r x Rs Rx]; subst.
+   + left. exact (reach_closed n c0 l Hl c c1 I E).
+   + rewrite forallb_forall in Hio. specialize (Hio c I). rewrite E in Hio. discriminate.
+   + right. exists x, (kont c), (mem c). split; [reflexivity|]. rewrite forallb_forall in Hnt. exact (Hnt c I).
+ - right. destruct K as [|f K].
+   + inversion St as [c' c'' E|c' q kk r E|c' r y Rs Rx]; subst; cbn in *; discriminate.
+   + cbn in Hk. apply andb_true_iff in Hk as [Hf Hk]. pose proof (KB.throw_frame_next share_sealed f x K s Hf) as T.
+     inversion St as [c' c'' E|c' q kk r E|c' r y Rs Rx]; subst; [|rewrite T in E; discriminate|cbn in Rs; discriminate].
+     rewrite T in E. injection E as <-. exists x, K, s. split; [reflexivity|exact Hk].
+Qed.
+
+Lemma hx_inv_star : forall n c0 l, reach n c0 = Some l ->
+ forallb (fun c => match next_r R P c with MIO _ _ => false | _ => true end) l = true ->
+ forallb (fun c => forallb KB.nontrap (kont c)) l = true ->
+ forall c t c', star (step_r R P) c t c' -> hx_inv l c -> hx_inv l c'.
+Proof.
+ intros n c0 l Hl Hio Hnt c t c' H. induction H as [|c lb c1 t c2 St _ IH]; intros I; [exact I|].
+ apply IH. exact (hx_inv_step n c0 l Hl Hio Hnt _ _ _ St I).
+Qed.
+
+Definition ret_one (c : config) : bool := match ctl c, kont c with
+ | Ret (VNum (NInt 1)), [] => true | Ret _, [] => false | _, _ => true end.
+
+Lemma hx_src_reach : forall o, exists l, reach 60 (Cfg (Eval hx_rho (hx_src o)) [] (hx_s o)) = Some l /\
+ forallb (fun c => match next_r R P c with MIO _ _ => false | _ => true end) l = true /\
+ forallb (fun c => forallb KB.nontrap (kont c)) l = true /\ forallb ret_one l = true.
+Proof. intros [|]; (eexists; split; [vm_compute; reflexivity|vm_compute; repeat split]). Qed.
+
+Lemma hx_tgt_runs : forall o, exists s', JitKRef.JitKRef.runs share_sealed 25 (Cfg (Eval hx_rho (hx_tgt o)) [] (hx_s o)) []
+ (Cfg (Ret (VNum (NInt 0))) [] s').
+Proof. intros [|]; eexists; do 25 (eapply cx_runs_tau; [vm_compute; reflexivity|]); constructor. Qed.
+
+Lemma thaw_hd_differ : thaw_name <> hd_name.
+Proof. intro E. vm_compute in E. discriminate E. Qed.
+Lemma thaw_tl_differ : thaw_name <> tl_name.
+Proof. intro E. vm_compute in E. discriminate E. Qed.
+
+Theorem share_needs_hd_tl : forall o,
+ JitKRef.JitKRef.D_wf share_sealed (hx_D o) /\ FrontHyps share_sealed (hx_D o) /\
+ In (thaw_name, kernel_thaw hx_tp) (hx_D o) /\
+ In (hx_op (negb o), FPrim (hx_prim (negb o))) (hx_D o) /\ ~ In (hx_op o, FPrim (hx_prim o)) (hx_D o) /\
+ ~ JitFrontCheck.rule_sound share_sealed (hx_D o) share_rule.
+Proof.
+ intros o.
+ assert (Dw : JitKRef.JitKRef.D_wf share_sealed (hx_D o)).
+ { split.
+   - destruct o; (constructor; [cbn; tauto|constructor; [cbn; tauto|constructor]]).
+   - constructor; [|constructor; [intros []|constructor]].
+     intros [E|[]]. destruct o; cbn in E; [exact (thaw_tl_differ (eq_sym E))|exact (thaw_hd_differ (eq_sym E))]. }
+ split; [exact Dw|split; [apply front_hyps; exact Dw|split; [left; reflexivity|split; [right; left; reflexivity|split]]]].
+ { intros [E|[E|[]]]; injection E; destruct o; discriminate. }
+ intros H.
+ assert (Hs : JitFrontCheck.chk_sound share_sealed (hx_D o) hx_rec).
+ { intros g a b E. apply andb_true_iff in E as [E1 E2]. apply expr_eqb_eq in E1. subst b.
+   exact (JitKRefFund.JitKRefFund.KRef_refl share_sealed (hx_D o) g a Dw E2). }
+ assert (W0 : JitKRef.JitKRef.wf_world []) by (split; constructor).
+ assert (HE : JitKRef.JitKRef.EnvRel_with (JitKRef.JitKRef.VRel share_sealed (hx_D o) 40) [] [hx_V] hx_rho hx_rho).
+ { intros x [<-|[]]. exists VNil, VNil. split; [vm_compute; reflexivity|split; [vm_compute; reflexivity|]].
+   exact (lit_vrel share_sealed (hx_D o) ENil VNil 40 [] eq_refl). }
+ pose proof (H hx_rec Hs [hx_V] (hx_src o) (hx_tgt o) (hx_accepted o) 40%nat [] hx_rho hx_rho W0 HE) as K.
+ assert (HK : JitKRef.JitKRef.KRel share_sealed (hx_D o) 40 [] [] []) by exact (JitKRefGround.JitKRefGround.KRel_top share_sealed (hx_D o) 40 [] W0).
+ assert (HS : JitKRef.JitKRef.SRel share_sealed (hx_D o) 40 [] (hx_s o) (hx_s o)).
+ { assert (SH : JitKRef.JitKRef.StoreHas (hx_D o) (hx_s o)) by (intros f d [E|[E|[]]]; injection E as <- <-; destruct o; vm_compute; reflexivity).
+   unfold JitKRef.JitKRef.SRel, JitKRef.JitKRef.SRel_with.
+   split; [exact W0|split; [exact SH|split; [exact SH|split; [reflexivity|split]]]].
+   - constructor; [split; [reflexivity|cbn [snd]; exact (lit_vrel share_sealed (hx_D o) (ENum (NInt 0)) (VNum (NInt 0)) 40 [] eq_refl)]|constructor].
+   - intros l0 l []. }
+ pose proof (proj1 (KB.ERel_iff share_sealed (hx_D o) _ _ _ _ _ _) K 40%nat (le_n _) [] (JitKRefGround.JitKRefGround.wext_refl [] W0) [] [] HK (hx_s o) (hx_s o) HS) as O.
+ destruct (hx_tgt_runs o) as (s' & Rt).
+ destruct (O 25%nat [] _ ltac:(lia) Rt) as (B & _).
+ destruct (B _ _ eq_refl) as (v0 & s0 & w' & S0 & _ & G & _).
+ destruct (hx_src_reach o) as (l & Hl & Hio & Hnt & H1).
+ destruct (hx_inv_star 60 _ l Hl Hio Hnt _ _ _ S0 (or_introl (reach_head 60 _ _ Hl))) as [I|(x & K' & s1 & E & _)]; [|discriminate E].
+ rewrite forallb_forall in H1. specialize (H1 _ I). unfold ret_one in H1. cbn in H1.
+ destruct v0 as [n| | | | | | | | | | |]; try discriminate; destruct n as [z|]; try discriminate.
+ cbn in G. destruct z as [|[| |]|]; try discriminate.
+Qed.
+End Hx.
+
+(* The premises of check_share_sound hold together: D_share (thaw as the kernel's, hd and tl as the
+   primitives, the three sealed) meets D_wf, HT and HP. So check_share_sound is not vacuous. This
+   says nothing of the pinned build's D or sealed: relating them to the image is OB-JIT-IMAGE and
+   OB-JIT-IMAGE-SEALING, and with HT no store has Com (ht_not_com). *)
+Definition D_share (tp : name) : list (name * fundef) :=
+ [(thaw_name, kernel_thaw tp); (hd_name, FPrim PHd); (tl_name, FPrim PTl)].
+
+Theorem share_premises_sat : forall tp, JitKRef.JitKRef.D_wf share_sealed (D_share tp) /\
+ In (thaw_name, FUser [tp] (EApp (EVar tp) [])) (D_share tp) /\
+ (In (hd_name, FPrim PHd) (D_share tp) /\ In (tl_name, FPrim PTl) (D_share tp)).
+Proof.
+ intros tp. split; [split|split; [left; reflexivity|split; [right; left; reflexivity|right; right; left; reflexivity]]].
+ - constructor; [left; reflexivity|constructor; [right; left; reflexivity|constructor; [right; right; left; reflexivity|constructor]]].
+ - constructor; [|constructor; [|constructor; [intros []|constructor]]].
+   + intros [E|[E|[]]]; cbn in E; [exact (thaw_hd_differ (eq_sym E))|exact (thaw_tl_differ (eq_sym E))].
+   + intros [E|[]]. cbn in E. exact (hd_tl_differ (eq_sym E)).
 Qed.
 
 (* fresh_ok's premise gives the checker's freshness tests for the lowerer's own names: a name the

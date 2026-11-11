@@ -122,7 +122,9 @@ ShenJitFrontShareReuseOpBlind: share's reuse compares a reused path by its base 
   share_reuse_rejects_wrong_op (vm_compute: (hd V) against a variable bound to (tl V)).
 ShenJitFrontShareChainFactUnchecked: a chain let records the fact of the source's (hd y)/(tl y)
   without checking that the target's let binds the same expression. Rejected at chain_fact_cases
-  (the fact must be the target's own path; JitFrontShare.v, the proof's expr_eqb_eq step).
+  (the fact must be the target's own path; JitFrontShare.v, the proof's expr_eqb_eq step). A proof-level
+  mutant: with rec = fchk share_rules, (hd y)/(tl y) is accepted only against itself, so no decision of
+  check_share changes; ShenJitFrontShareReuseOpBlind is the reuse relation's decision-level mutant.
 """
 import re
 from pathlib import Path

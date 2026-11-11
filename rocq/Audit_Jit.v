@@ -323,3 +323,8 @@ Print Assumptions JitFrontShare.JitFrontShare.chain_fact_cases.
 Print Assumptions JitFrontShare.JitFrontShare.judge_share_sound.
 Print Assumptions JitFrontShare.JitFrontShare.hp_of_com.
 Print Assumptions JitFrontShare.JitFrontShare.hd_tl_differ.
+Print Assumptions JitFrontShare.JitFrontShare.hx_accepted.
+Print Assumptions JitFrontShare.JitFrontShare.reach_closed.
+Print Assumptions JitFrontShare.JitFrontShare.hx_inv_star.
+Print Assumptions JitFrontShare.JitFrontShare.share_needs_hd_tl.
+Print Assumptions JitFrontShare.JitFrontShare.share_premises_sat.
