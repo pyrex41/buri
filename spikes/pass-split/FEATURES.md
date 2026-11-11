@@ -86,8 +86,10 @@ rocq-slot bash scripts/check-shen-jit.sh`, 21:17:59Z to 22:03:37Z, LANE_RC=0, lo
 rocqchk passed, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded, image step as recorded. The
 differential, `gate_tests.sh`, `make prove` and the mutation suite were not run: UNKNOWN. This branch adds no
 theorem, checker or relation, so no audit entry, mutant or pin changes. The commit after `fe556f2` touches only this
-file. `tests/shen-jit/stage0-residuals.txt` still records `feature_census.py` as `a870685c...` in its header (the
-script is now `b4eb11f4...`); that file is regenerated at the merge.
+file and regenerates `tests/shen-jit/stage0-residuals.txt` (`stage0_residuals.py /lps/p6/sj/build/stage0
+/tmp/p2-T02-capture/witness /tmp/p2-r22-t02-refresh-judge ...`, rc 0, 148 of 955, residual 807): the only changed
+line is the header's `feature_census.py` sha256 (`a870685c...` to `b4eb11f4...`), so the rows, which use
+`feature_census.eq_kind`, are byte-identical. The lane result for that commit is recorded in the commit message.
 
 | what | value |
 |---|---|
