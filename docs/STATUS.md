@@ -1380,23 +1380,28 @@ and `bind_site_sound_statement`. Proved by r1-d00-merge: `Comp_sfx`, `ops_safe_l
 Forty are in `rocq/JitFrontSugar.v` (r1-f-sugar, branch `p2/r1-f-sugar` on `p2/int` 7cb676e): the norm checkers of the cond, sugar, thaw-sugar and trap-sugar families, each proved to establish KRef from the source to its rewrite for any recursive checker that does (`chk_cond_sound`, `chk_sugar_sound`, `chk_thaw_sound`, `chk_trap_sound`), from the rule theorems `sugar_type`, `sugar_protect`, `sugar_lamapp`, `cond_true`, `cond_if`, `thaw_sugar` and `trap_sugar`; `chk_front` (congruence plus the four, by fuel) is proved sound under Section hypotheses naming the compatibility statements and then instantiated (`chk_front_sound`, premise `D_wf` only). fn sugar, eval-kl to `shen-jit.eval-kl`, curried dynamic application and multi-argument lambda application have no rule (argued unsound, not refuted in Rocq). Mutants `ShenJitFrontSugarCondTrueAny`, `ShenJitFrontSugarCondIfSwap`, `ShenJitFrontSugarProtectAny`, `ShenJitFrontSugarLamIdKey`, `ShenJitFrontSugarThawAny` and `ShenJitFrontSugarTrapScope` are rejected (Rocq 9.3, against the branch's build). Test, not proof: on the decoded table `chk_front` accepts 418 of 955 norm links (source form against the erased `.norm` witness), including all 390 whose fired families are within these four. The branch has 515 audited statements and mutation pin 222. No validated count changes.
 Eight are in `rocq/JitFrontProlog.v` (r1-f-prolog, branch `p2/r1-f-prolog`): norm's bound-now rule `bind_rule` is proved sound for every store D from `D_wf` (`bind_rule_sound`; with `beq_sound`, `ERel_letdo`, `KRel_do_tail`, `KRel_ca_let`, `KRel_ca_last`), and D00's `bind_site_sound_statement` is refuted in Rocq (`bind_site_unsound`, with `star_reach`): bind_site does not guard the thawed body against KLPort's `id_key`, which the source's freeze closure binds to its own cell. Test, not proof (Rocq `prolog_scan` over the 955 parsed stage 0 sources): cut-fail's and deref='s source shapes occur in 0 definitions; bound-now's direct shape in 6 (25 sites), unified-now's in 4 (7). Residuals with ledger entries: `OB-JIT-FRONT-PROLOG-UNIFY` and `OB-JIT-FRONT-PROLOG-DEREFEQ` (decision-gated: identity and port primitives), `OB-JIT-FRONT-PROLOG-CUTFAIL` (no rule; vacuous for stage 0). Seven proof mutants (`ShenJitFrontProlog*`) rejected; audit 483 statements, mutation pin 223 on the branch. The full-pipeline validated count is UNKNOWN.
 Merged into `p2/int` by merge-r1-f-prolog (p2/r1-f-prolog 675aa35 after r1-f-sugar 5a478a7): the union has 523 audited statements (515 + the 8 of JitFrontProlog) and mutation pin 229 (222 + the 7 `ShenJitFrontProlog*` mutants); no statement changed. The source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN.
-Twenty-four are in `rocq/JitFrontCopyFold.v` (r1-f-copy-fold-apply, branch `p2/r1-f-copy-fold-apply` off `p2/int`
-7cb676e): the checker `cf_chk` (congruence plus fold-arith) and `cf_chk_sound`, proved under Section hypotheses naming the
-`compat_*` statements (`cf_chk_sound_hyp`) and then instantiated, `D_wf` its only premise; `cfold_run`, `ERel_src_ret`
-and `fold_arith_kref` (+ and - of integer literals against the folded literal, with `+`/`-` bound to the primitive in D
-and every intermediate in range); `fold_arith_needs_store`, a counterexample showing that store fact is necessary (a
-store SRel allows binds `+` to a user function); `fold_cons_erase` (fold-cons is the identity at KLambda);
-`uncurry_not_kref`, a counterexample: dynamic-application uncurrying is not in KRef (a partial-application head returns
-in the source and raises XArity in the curried witness), recorded as decision item `OB-JIT-FRONT-UNCURRY`; and freeze
-and lambda copying through the known-closure relation `KRefF` (`KRefF_nil`, `KRefF_let`, `KRefF_lam`, `KRefF_letfrz`,
-`KRefF_letlam`, `ERel_thaw_site`, `KRefF_thaw`, `KRefF_thaw_call`, `apply_chain`, `lam_krel`, `ERel_lam_site`,
-`KRefF_lamsite`, `cc_same_sound`, `cc_sound_hyp`, `cc_sound`, `copy_chk_sound`: the copy checker `cc` sound with `D_wf`
-its only premise when given no extra site rule). Not proved: the bind site under a known frozen closure (every
-let-frozen copy has one), frozen-late hoist, and inline-frozen's site rule (F-inline's); `cc` has not been run on stage 0
-data. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds`, `ShenJitFrontCfVarScope`,
-`ShenJitFrontCopyLetScope`, `ShenJitFrontCopyNoDrop`, `ShenJitFrontLamArgScope`, `ShenJitFrontKcInvIdKey` and
-`ShenJitFrontThawNoD`. On the branch: 499 audited statements, mutation pin 225. No definition count changes (source
-judge 148 of 955); the full-pipeline validated count is UNKNOWN (no full-pipeline judge exists).
+Twenty-seven are in `rocq/JitFrontCopyFold.v` (r1-f-copy-fold-apply, branch `p2/r1-f-copy-fold-apply` off `p2/int`
+7cb676e, with p2/int f42d6c4 merged in for JitFrontProlog): the checker `cf_chk` (congruence plus fold-arith) and
+`cf_chk_sound`, proved under Section hypotheses naming the `compat_*` statements (`cf_chk_sound_hyp`) and then
+instantiated, `D_wf` its only premise; `cfold_run`, `ERel_src_ret` and `fold_arith_kref` (+ and - of integer literals
+against the folded literal, with `+`/`-` bound to the primitive in D and every intermediate in range);
+`fold_arith_needs_store`, a counterexample showing that store fact is necessary (a store SRel allows binds `+` to a user
+function), so no D built by `D_of` (which never holds `+` or `-`) lets fold-arith accept a real site until D00's interface
+item 2 is settled; `fold_cons_erase` (fold-cons is the identity at KLambda); `uncurry_not_kref`, a counterexample:
+dynamic-application uncurrying is not in KRef (a partial-application head returns in the source and raises XArity in the
+curried witness), recorded as decision item `OB-JIT-FRONT-UNCURRY`; `uncurry_scan` (a test: 0 dynamic applications of two
+or more arguments in the 955 stage 0 sources, so the item changes no stage 0 verdict); and freeze and lambda copying
+through the known-closure relation `KRefF` (`KRefF_nil`, `KRefF_let`, `KRefF_lam`, `KRefF_letfrz`, `KRefF_letlam`,
+`ERel_thaw_site`, `KRefF_thaw`, `KRefF_thaw_call`, `apply_chain`, `lam_krel`, `ERel_lam_site`, `KRefF_lamsite`,
+`cc_same_sound`, `cc_sound_hyp`, `cc_sound`, `copy_chk_sound`), including bound-now under a known frozen closure
+(`KRel_ca_lastvar`, `KRefF_bindsite`, `cc_bind_sound`, through JitFrontProlog's `beq_sound`). Not proved: frozen-late
+hoist, and inline-frozen's site rule (F-inline's); every D holding `shen.bind!` fails `D_compiled'` today
+(`OB-JIT-PORT-PRIMS`), so the let-frozen-copy definitions stay full-pipeline residuals. `cc` has not been run over whole
+stage 0 definitions. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds`,
+`ShenJitFrontCfVarScope`, `ShenJitFrontCopyLetScope`, `ShenJitFrontCopyNoDrop`, `ShenJitFrontLamArgScope`,
+`ShenJitFrontKcInvIdKey`, `ShenJitFrontThawNoD`, `ShenJitFrontCopyBindScope` and `ShenJitFrontCopyBindDrop`. On the
+branch: 550 audited statements (523 of p2/int f42d6c4 + 27), mutation pin 240 (229 + 11). No definition count changes
+(source judge 148 of 955); the full-pipeline validated count is UNKNOWN (no full-pipeline judge exists).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Heap image (spike, not gated; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): a Rocq decoder in `spikes/image-decode/` reads the

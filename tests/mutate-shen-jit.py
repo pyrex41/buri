@@ -188,6 +188,10 @@ ShenJitFrontKcInvIdKey: the frozen entry's invariant forgets that its free names
   first proof that destructures the invariant (Inv_tag also needs the dropped conjunct).
 ShenJitFrontThawNoD: the (thaw X) site is accepted without the kernel's thaw body in D, so the store's
   thaw may be any function. cc_thaw_sound must fail.
+ShenJitFrontCopyBindScope: cc_bind checks the expansion's fresh names against no scope, so a let may
+  shadow a name of g the next argument reads. cc_bind_sound must fail.
+ShenJitFrontCopyBindDrop: cc_bind checks Y0 with every known-closure entry, though the first let may
+  shadow a name of an entry's closure scope. cc_bind_sound must fail.
 """
 import re
 from pathlib import Path
@@ -490,4 +494,10 @@ mutate('ShenJitFrontKcInvIdKey', cf,
 mutate('ShenJitFrontThawNoD', cf,
        " | ECall f [EVar x] => text_eqb f FD.thaw_name && d_has D FD.thaw_name is_thaw_body &&",
        " | ECall f [EVar x] => text_eqb f FD.thaw_name &&")
+mutate('ShenJitFrontCopyBindScope', cf,
+       "     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] g &&",
+       "     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] [] &&")
+mutate('ShenJitFrontCopyBindDrop', cf,
+       "     rec F g x0 x && rec (dropl [a1] F) g y0 y && rec (dropl [a2; a1] F) g b0 b &&",
+       "     rec F g x0 x && rec F g y0 y && rec (dropl [a2; a1] F) g b0 b &&")
 print(' '.join(names))

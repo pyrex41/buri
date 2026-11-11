@@ -547,3 +547,6 @@ Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_same_sound.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_sound_hyp.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_sound.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.copy_chk_sound.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRel_ca_lastvar.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_bindsite.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_bind_sound.

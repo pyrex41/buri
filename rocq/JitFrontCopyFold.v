@@ -22,7 +22,11 @@
      from a store (allowed by SRel, which asks only StoreHas D) where + is a user function
      returning its first argument. JitFrontD's interface item 2 says a D built by D_of never holds
      + or - (they are not in stage 0's sealed list), so on real D stores fold-arith (and the 6
-     folding `vector` inline sites) is accepted only once that item is settled (OB-JIT-LOWER-FRONT).
+     folding `vector` inline sites) is accepted only once that item is settled (OB-JIT-LOWER-FRONT);
+     Example cf_fold_no_prim pins the rejection. A candidate fix, outside this file: + and - are
+     fixed names (JitProfile.is_fixed_name; defun of one raises, jit_defun_fixed_refused), so a
+     store reachable under jit_rules keeps their primitive binding; K.D_wf (every D name sealed)
+     would have to admit fixed-name FPrim entries, with a fixed_stable lemma like sealed_stable.
    - dynamic application: norm-apply turns (F A B) into ((F A) B). Erased, the source is
      EApp F [A; B] and the witness EApp (EApp F [A]) [B]. This is NOT a KRef refinement:
      uncurry_not_kref proves, with no premise, that for F bound to a partial application
@@ -36,6 +40,16 @@
      applications. Either changes a reviewed statement and is Reuben's call
      (OB-JIT-FRONT-UNCURRY). Where F is a KNOWN lambda (let-lambda below) the rewrite is sound
      and cc accepts it.
+     Two facts for that decision. (a) Under jit_rules no VPartial value is ever made: arity_errors
+     is true, so KLPort.call_named_r's arity_mismatch raises XArity before its Nat.ltb branch could
+     return a VPartial (shen-jit's semantics.md s9 at 934cfa5: applying a closure to too few
+     arguments raises). The counterexample's value is one VRel relates but no jit_rules run makes,
+     so excluding VPartial from KRef's environments is one candidate fix; for a non-atomic
+     trailing argument the evaluation order (above) also needs atomic trailing arguments or a
+     let-binding of them in lower.shen. (b) The rewrite never fires in stage 0: uncurry_scan, run
+     by stage0_to_rocq.py --uncurry over the 955 parsed stage 0 sources (Rocq vm_compute; a test,
+     not proof), finds 0 dynamic applications of two or more arguments (0 with a non-atomic
+     trailing argument). So OB-JIT-FRONT-UNCURRY changes no stage 0 verdict.
    - freeze and lambda copying: a KNOWN-CLOSURE relation, KRefF F g e0 e: e refines e0 in scope g
      from every pair of related environments that also meets the entries F. An entry (kc) names a
      let-bound closure the source made and the target copied away: KF X E0 gl for
@@ -69,15 +83,23 @@
          entries whose name or free names it rebinds (drop, Inv_bind), closures made in the body
          capture the entries' environment (Inv_tag).
      The checker cc (hook, D, fuel, entries, scope, source, witness) tries cf_chk, a hook, the
-     thaw and lambda sites, the two intro rules and congruence. cc_sound: D_wf and the hook's
+     thaw and lambda sites, the two intro rules, the bind site and congruence. cc_sound: D_wf and the hook's
      soundness give KRef; copy_chk_sound: with no hook, D_wf alone.
-     What this does NOT cover, so what still blocks the real copying sites (census, CENSUS.md:
-     let-frozen-copy 5 definitions, frozen-late-hoist 3, inline-frozen 6, let-lambda 6):
-       - let-frozen-copy: lower.shen copies only when frozen-binds? holds, so every such let also
-         has a (shen.bind! A B C X) use, which frozen-in turns into bound-now with E copied in. That
-         site needs a bind rule under a known frozen closure (the bound-now rewrite is the bind
-         family's; JitFrontD.bind_site_sound_statement relates KRef arguments, and X has no KRef
-         counterpart in the target). cc takes it as its hook; not written here.
+       KRefF_bindsite (cc_bind, cc_bind_sound): bound-now under a known frozen closure.
+         lower.shen copies a let-bound freeze only when frozen-binds? holds, so every let-frozen
+         copy has a (shen.bind! A B C X) use, which frozen-in turns into bound-now's expansion with
+         E copied in. The rule is JitFrontProlog.bind_rule's checks with the fourth argument the
+         entry's name X instead of (freeze E0): the source reads X (KRel_ca_lastvar, no new cell)
+         and JitFrontProlog.beq_sound runs with the closure's captured environment and the entry's
+         scope gl (its HE is the entry's EnvRel on gl). Each copied place is checked against E0 in
+         KRef, in the scope of its free names in gl; Y0 and B0 are checked with the entries the
+         earlier lets may shadow dropped. Examples cc_bind_copy / cc_bind_wrong_body /
+         cc_bind_shadow are tests.
+     What this does NOT cover (census, CENSUS.md: let-frozen-copy 5 definitions, frozen-late-hoist
+     3, inline-frozen 6, let-lambda 6):
+       - every D holding shen.bind! fails D_compiled' today (JitFrontD's D_why: shen-jit.pvar-offset,
+         OB-JIT-PORT-PRIMS), so the let-frozen-copy definitions stay residual in the full pipeline
+         whatever cc_bind proves; and cc_bind needs shen.bind!'s and do's bodies in D.
        - inline-frozen: an inlined parameter bound to (freeze E) and thawed once. ERel_thaw_site
          and KRefF_thaw are the lemmas F-inline's inline-site rule can use; the site rule itself
          is F-inline's.
@@ -85,9 +107,13 @@
          (if C1 Y1 Y2)) false) evaluates C1 twice in the target; needs a target-side purity and
          determinism lemma for simple tests, and simple-test? admits shen-jit.pvar?, a port
          primitive with no source meaning (OB-JIT-PORT-PRIMS). Not proved here.
-       - real-data counts: cc has not been run over the stage 0 tables; how many of the 955
-         definitions it accepts is UNKNOWN (the source judge's 148 of 955 is unchanged by this
-         file).
+       - real-data counts: cc has not been run over whole stage 0 definitions. Alone it cannot
+         accept one that needs another family's rewrite (inline, sugar, ...), so a per-definition
+         count for cc alone would say nothing; the composed front checker is the merge's. How many
+         of the 955 it helps accept is UNKNOWN (the source judge's 148 of 955 is unchanged by this
+         file). cc_bind's structural part is beq, the same check r1-f-prolog's bind_rule_report
+         ran on all 37 real bound-now sites (37 accepted, a test), which include the let-frozen
+         ones; cc_bind was not run on them.
      Ledger: OB-JIT-FRONT-COPY.
 
    The checker cf_chk (fuel, scope, source, witness) accepts: equal literals; a variable in scope;
@@ -100,11 +126,12 @@
    ERel_src_ret, fold_arith_kref, cf_chk_sound_hyp, cf_chk_sound, uncurry_not_kref,
    fold_arith_needs_store, KRefF_nil, KRefF_let, KRefF_lam, KRefF_letfrz, KRefF_letlam,
    ERel_thaw_site, KRefF_thaw, KRefF_thaw_call, apply_chain, lam_krel, ERel_lam_site, KRefF_lamsite,
-   cc_same_sound, cc_sound_hyp, cc_sound, copy_chk_sound.
+   cc_same_sound, cc_sound_hyp, cc_sound, copy_chk_sound, KRel_ca_lastvar, KRefF_bindsite,
+   cc_bind_sound.
    Tests, not evidence of anything general: the Examples at the end.
    No axioms, nothing Admitted. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
-From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitProfile JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatCtl JitKRefCompatClo JitKRefCompatCall JitKRefFv JitKRefPrim JitKRefFund JitNorm JitFrontD.
+From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitBytecode JitProfile JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatCtl JitKRefCompatClo JitKRefCompatCall JitKRefFv JitKRefPrim JitKRefFund JitLowerStage0 JitNorm JitFrontD JitFrontProlog.
 Import ListNotations.
 Set Warnings "-notation-for-abbreviation".
 Module JitFrontCopyFold.
@@ -118,6 +145,7 @@ Module CC := JitKRefCompatCtl.JitKRefCompatCtl.
 Module CL := JitKRefCompatClo.JitKRefCompatClo.
 Module CA := JitKRefCompatCall.JitKRefCompatCall.
 Module FD := JitFrontD.JitFrontD.
+Module PL := JitFrontProlog.JitFrontProlog.
 
 (* ======================= fold-cons: the erasure undoes it ======================= *)
 Theorem fold_cons_erase : forall sc a d,
@@ -1003,6 +1031,122 @@ Proof.
      * eapply EnvRel_incl; [intros y Iy; apply In_reml in Iy; exact (proj1 Iy)|]. eapply KB.EnvRel_mono; [exact L|exact W'|exact HE].
    + apply Inv_tgt_app; [exact Hy|]. eapply Inv_mono; [exact L|exact W'|exact HI].
 Qed.
+
+(* ---------- bound-now under a known frozen closure ---------- *)
+(* The source's last argument is the known closure's name, X: it reads X (a value, no new cell)
+   and enters the callee's body. Against the expansion's last let. *)
+Lemma KRel_ca_lastvar : forall k w f ps eB done0 X vf rho0 x n rho K0 K,
+ In (f, FUser ps eB) D -> List.length ps = S (S (List.length done0)) -> lookup X rho0 = Some vf ->
+ KRel k w K0 K ->
+ (forall j w' v0 v, (j <= k)%nat -> K.wext w w' -> VRel j w' v0 v ->
+    ERel j w' (combine ps (rev (vf :: v0 :: done0))) eB ((x, v) :: rho) n) ->
+ KRel k w (KCallArgs f done0 [EVar X] rho0 :: K0) (KLet x n rho :: K).
+Proof.
+ intros k w f ps eB done0 X vf rho0 x n rho K0 K Id Lp LX HK H.
+ apply KB.ret_frame_tau; [exact HK|reflexivity|reflexivity| |intros v s; eexists; apply KB.next_KLet].
+ intros j w' v0 v s0 s c1 L W HV HS E. rewrite KB.next_KLet in E. injection E as <-.
+ assert (Hs0 : K.StoreHas D s0) by (destruct HS as (_ & H0 & _); exact H0).
+ eexists; split.
+ - eapply KB.srun_tau; [apply KB.next_KCallArgs_cons|].
+   eapply KB.srun_tau; [apply KB.sval_next; exact LX|].
+   eapply KB.srun_tau; [|apply KB.srun_refl].
+   rewrite PL.next_ca_call. apply KB.call_named_user; [exact (Hs0 f _ Id)|rewrite PL.len_rev', Lp; reflexivity].
+ - eapply KB.ERel_apply.
+   + apply (H j w' v0 v); [lia|exact W|eapply KB.VRel_down; [|exact HV]; lia].
+   + apply le_n.
+   + eapply KB.wext_self; exact HS.
+   + eapply KB.KRel_mono; [|exact W|exact HK]; lia.
+   + eapply KB.SRel_down; [|exact HS]; lia.
+Qed.
+
+(* (shen.bind! X0 Y0 B0 X), X a known frozen closure KF X E0 gl, against bound-now's expansion
+   (let a1 X' (let a2 Y' (let a3 B' N))) with E copied in: the same proof as
+   JitFrontProlog.bind_rule_sound, except that the frozen argument is the closure X names, whose
+   captured environment the entry relates on gl to the target's at the call. So JitFrontProlog's
+   beq_sound applies with that environment and gl as its scope, and each copied place is checked
+   against E0 in KRef (premise HTK). The arguments are checked with the entries the earlier lets
+   may shadow dropped. *)
+Lemma KRefF_bindsite : forall F g X ex0 gl x0 y0 b0 a1 x a2 y a3 b n p1 p2 p3 p4 eB v1 v2 (tk : expr -> bool),
+ K.D_wf sealed D -> In (KF X ex0 gl) F ->
+ lookup FD.bind_name D = Some (FUser [p1; p2; p3; p4] eB) -> lookup PL.do_name D = Some (FUser [v1; v2] (EVar v2)) ->
+ v1 <> v2 -> p1 <> p2 -> p1 <> p3 -> p1 <> p4 -> p2 <> p3 -> p2 <> p4 -> p3 <> p4 -> p4 <> id_key ->
+ FD.binder_ok p1 a1 = true -> FD.binder_ok p2 a2 = true -> FD.binder_ok p3 a3 = true ->
+ ~ In a1 g -> ~ In a2 g -> ~ In a3 g ->
+ KRefF F g x0 x -> KRefF (dropl [a1] F) g y0 y -> KRefF (dropl [a2; a1] F) g b0 b ->
+ (forall e', tk e' = true -> KRef (PL.gfv gl e') ex0 e') ->
+ PL.beq (S (FD.dsize eB)) tk p4 [(p3, a3); (p2, a2); (p1, a1)] eB n = true ->
+ KRefF F g (ECall FD.bind_name [x0; y0; b0; EVar X]) (ELet a1 x (ELet a2 y (ELet a3 b n))).
+Proof.
+ intros F g X ex0 gl x0 y0 b0 a1 x a2 y a3 b n p1 p2 p3 p4 eB v1 v2 tk Dw IX LB LD V12 D12 D13 D14 D23 D24 D34 P4
+   B1 B2 B3 N1 N2 N3 Kx Ky Kb HTK Bq.
+ destruct (PL.binder_ok_ne _ _ B1) as [Np1 Na1]. destruct (PL.binder_ok_ne _ _ B2) as [Np2 Na2].
+ destruct (PL.binder_ok_ne _ _ B3) as [Np3 Na3].
+ pose proof (PL.lookup_some_In _ _ _ LB) as IB. pose proof (PL.lookup_some_In _ _ _ LD) as ID.
+ intros k w rho0 rho Ww HEnv HI.
+ destruct (HI _ IX) as (_ & _ & r0 & LX & HE').
+ apply (KB.ERel_push sealed D k w rho0 _ rho _ rho0 x0 rho x
+   (fun K0 => KCallArgs FD.bind_name [] [y0; b0; EVar X] rho0 :: K0) (fun K => KLet a1 (ELet a2 y (ELet a3 b n)) rho :: K)).
+ - intros; reflexivity.
+ - intros; reflexivity.
+ - intros j1 w1 K0 K L1 W1 HK. apply (PL.KRel_ca_let sealed D); [exact HK|]. intros j2 w2 vx0 vx L2 W2 HV2.
+   assert (W12 : K.wext w w2) by (eapply KB.wext_trans; [exact W1|exact W2]).
+   split.
+   + apply Ky; [exact (proj2 W2)| |].
+     * apply (PL.EnvRel_notin sealed D); [exact N1|]. eapply KB.EnvRel_mono; [|exact W12|exact HEnv]. lia.
+     * change ((a1, vx) :: rho) with ([(a1, vx)] ++ rho). apply Inv_tgt_app; [intros y' [<-|[]]; left; reflexivity|].
+       eapply Inv_mono; [|exact W12|exact HI]. lia.
+   + apply (PL.KRel_ca_let sealed D); [eapply KB.KRel_mono; [exact L2|exact W2|exact HK]|]. intros j3 w3 vy0 vy L3 W3 HV3.
+     assert (W13 : K.wext w w3) by (eapply KB.wext_trans; [exact W12|exact W3]).
+     split.
+     * apply Kb; [exact (proj2 W3)| |].
+       -- apply (PL.EnvRel_notin sealed D); [exact N2|]. apply (PL.EnvRel_notin sealed D); [exact N1|].
+          eapply KB.EnvRel_mono; [|exact W13|exact HEnv]. lia.
+       -- change ((a2, vy) :: (a1, vx) :: rho) with ([(a2, vy); (a1, vx)] ++ rho).
+          apply Inv_tgt_app; [intros y' [<-|[<-|[]]]; [left|right; left]; reflexivity|].
+          eapply Inv_mono; [|exact W13|exact HI]. lia.
+     * apply (KRel_ca_lastvar _ _ FD.bind_name [p1; p2; p3; p4] eB [vy0; vx0] X (VFrozen ex0 r0));
+        [exact IB|reflexivity|exact LX|eapply KB.KRel_mono; [|exact W3|eapply KB.KRel_mono; [exact L2|exact W2|exact HK]]; lia|].
+       intros j4 w4 vb0 vb L4 W4 HV4. cbn [rev app combine].
+       assert (W14 : K.wext w w4) by (eapply KB.wext_trans; [exact W13|exact W4]).
+       apply (PL.beq_sound sealed D Dw tk p4 ex0 r0 rho gl j4 w4)
+         with (v1 := v1) (v2 := v2) (fuel := S (FD.dsize eB)) (rn := [(p3, a3); (p2, a2); (p1, a1)]).
+       -- exact HTK.
+       -- intros x' Ix _. destruct (HE' x' Ix) as (u0 & u & E0 & E & U).
+          exists u0, u. split; [exact E0|split; [exact E|eapply KB.VRel_mono; [|exact W14|exact U]; lia]].
+       -- exact P4.
+       -- exact ID.
+       -- exact V12.
+       -- exact Bq.
+       -- split; [apply le_n|]. split; [apply KG.wext_refl; exact (proj2 W4)|]. split; [|split; [|split]].
+          ++ intros x' y' Ix Fr V. cbn [FD.var_ok] in V. unfold FD.free_in in Fr. cbn [existsb fst] in Fr.
+             destruct (text_eqb p3 x') eqn:E3.
+             ** apply text_eqb_eq in E3. apply text_eqb_eq in V. subst x' y'. exists vb0, vb.
+                rewrite (PL.lookup_cons_ne p3 p1), (PL.lookup_cons_ne p3 p2), PL.lookup_cons_eq by congruence.
+                rewrite PL.lookup_cons_eq. split; [reflexivity|split; [reflexivity|exact HV4]].
+             ** destruct (text_eqb a3 y') eqn:F3; [discriminate|]. destruct (text_eqb p2 x') eqn:E2.
+                --- apply text_eqb_eq in E2. apply text_eqb_eq in V. subst x' y'. exists vy0, vy.
+                    rewrite (PL.lookup_cons_ne p2 p1), PL.lookup_cons_eq by congruence.
+                    rewrite (PL.lookup_cons_ne a2 a3) by (apply PL.text_eqb_false in F3; congruence). rewrite PL.lookup_cons_eq.
+                    split; [reflexivity|split; [reflexivity|eapply KB.VRel_mono; [|exact W4|exact HV3]; lia]].
+                --- destruct (text_eqb a2 y') eqn:F2; [discriminate|]. destruct (text_eqb p1 x') eqn:E1.
+                    +++ apply text_eqb_eq in E1. apply text_eqb_eq in V. subst x' y'. exists vx0, vx.
+                        rewrite PL.lookup_cons_eq.
+                        rewrite (PL.lookup_cons_ne a1 a3) by (apply PL.text_eqb_false in F3; congruence).
+                        rewrite (PL.lookup_cons_ne a1 a2) by (apply PL.text_eqb_false in F2; congruence). rewrite PL.lookup_cons_eq.
+                        split; [reflexivity|split; [reflexivity|]].
+                        eapply KB.VRel_mono; [|eapply KB.wext_trans; [exact W3|exact W4]|exact HV2]; lia.
+                    +++ discriminate.
+          ++ intros Ip Fp. rewrite (PL.lookup_cons_ne p4 p1), (PL.lookup_cons_ne p4 p2), (PL.lookup_cons_ne p4 p3) by congruence.
+             rewrite PL.lookup_cons_eq. reflexivity.
+          ++ intros z Iz Hz Nz. unfold FD.hidden in Hz. cbn [existsb snd] in Hz. rewrite orb_false_r in Hz.
+             apply orb_false_iff in Hz as [Z3 Hz]. apply orb_false_iff in Hz as [Z2 Z1].
+             apply PL.text_eqb_false in Z1, Z2, Z3.
+             rewrite (PL.lookup_cons_ne z a3), (PL.lookup_cons_ne z a2), (PL.lookup_cons_ne z a1) by congruence. reflexivity.
+          ++ intros a' b' [E|[E|[E|[]]]]; injection E as <- <-; split; assumption.
+ - intros j1 w1 L1 W1. apply Kx; [exact (proj2 W1)| |].
+   + eapply KB.EnvRel_mono; [|exact W1|exact HEnv]. lia.
+   + eapply Inv_mono; [|exact W1|exact HI]. lia.
+Qed.
 End Rel.
 (* ======================= the checker ======================= *)
 Definition is_thaw_body (d : fundef) : bool := match d with
@@ -1087,11 +1231,29 @@ Definition cc_intro (rec : list kc -> list name -> expr -> expr -> bool) (F : li
      subl (K.fv (ELam p b)) g && rec (KL x p ps i0 (K.fv (ELam p b)) :: drop x F) (rem x g) body0 e
  | _ => false end.
 
+(* bound-now under a known frozen closure: (shen.bind! X0 Y0 B0 X), X a known frozen closure,
+   against bound-now's expansion with the closure's body copied in. JitFrontProlog.bind_rule's
+   checks, with the frozen body E0 and its scope gl from the entry: each copied place is checked
+   against E0 in the scope of its free names in gl, with no entries. *)
+Definition cc_bind (rec : list kc -> list name -> expr -> expr -> bool) (F : list kc) (g : list name) (e0 e : expr) : bool :=
+ match e0, e with
+ | ECall f [x0; y0; b0; EVar X], ELet a1 x (ELet a2 y (ELet a3 b n)) =>
+   text_eqb f FD.bind_name &&
+   match find_kf X F, lookup FD.bind_name D, lookup PL.do_name D with
+   | Some (ex0, gl), Some (FUser [p1; p2; p3; p4] eB), Some (FUser [v1; v2] (EVar v2')) =>
+     negb (text_eqb v1 v2) && text_eqb v2 v2' &&
+     nodupb [p1; p2; p3; p4] && negb (text_eqb p4 id_key) &&
+     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] g &&
+     rec F g x0 x && rec (dropl [a1] F) g y0 y && rec (dropl [a2; a1] F) g b0 b &&
+     PL.beq (S (FD.dsize eB)) (fun e' => rec [] (PL.gfv gl e') ex0 e') p4 [(p3, a3); (p2, a2); (p1, a1)] eB n
+   | _, _, _ => false end
+ | _, _ => false end.
+
 Fixpoint cc (n : nat) (F : list kc) (g : list name) (e0 e : expr) {struct n} : bool :=
  match n with
  | O => false
  | S n => cf_chk D n g e0 e || hook F g e0 e || cc_thaw (cc n) F e0 e || cc_lam (cc n) F g e0 e ||
-          cc_intro (cc n) F g e0 e || cc_same (cc n) F g e0 e end.
+          cc_intro (cc n) F g e0 e || cc_bind (cc n) F g e0 e || cc_same (cc n) F g e0 e end.
 End Checker.
 
 Lemma find_kf_In : forall x F b0 gl, find_kf x F = Some (b0, gl) -> In (KF x b0 gl) F.
@@ -1229,6 +1391,51 @@ Proof.
    + apply Hr. assumption.
 Qed.
 
+Lemma cc_bind_sound : forall (rec : list kc -> list name -> expr -> expr -> bool),
+ (forall F g a b, rec F g a b = true -> KRefF F g a b) ->
+ forall F g e0 e, cc_bind D rec F g e0 e = true -> KRefF F g e0 e.
+Proof.
+ intros rec Hr F g e0 e H. unfold cc_bind in H.
+ destruct e0 as [| | | | | | | | | | | | | | | | |f args]; try discriminate H.
+ destruct args as [|x0 [|y0 [|b0 [|xv [|a5 l5]]]]]; try discriminate H;
+  try (destruct xv; discriminate H).
+ destruct xv as [| | | | |X| | | | | | | | | | | |]; try discriminate H.
+ destruct e as [| | | | | | |a1 x e1| | | | | | | | | |]; try discriminate H.
+ destruct e1 as [| | | | | | |a2 y e2| | | | | | | | | |]; try discriminate H.
+ destruct e2 as [| | | | | | |a3 b n| | | | | | | | | |]; try discriminate H.
+ apply andb_true_iff in H as [Ef H]. apply text_eqb_eq in Ef. subst f.
+ destruct (find_kf X F) as [[ex0 gl]|] eqn:EK; [|discriminate H].
+ destruct (lookup FD.bind_name D) as [[q|ps eB]|] eqn:LB; try discriminate H.
+ destruct ps as [|p1 [|p2 [|p3 [|p4 [|]]]]]; try discriminate H.
+ destruct (lookup PL.do_name D) as [[q|vs ed]|] eqn:LD; try discriminate H.
+ destruct vs as [|v1 [|v2 [|]]]; try discriminate H.
+ destruct ed as [| | | | |v2'| | | | | | | | | | | |]; try discriminate H.
+ repeat (apply andb_true_iff in H as [H ?]).
+ match goal with E : text_eqb v2 v2' = true |- _ => apply text_eqb_eq in E; subst v2' end.
+ match goal with E : negb (text_eqb v1 v2) = true |- _ => apply negb_true_iff, PL.text_eqb_false in E end.
+ match goal with E : negb (text_eqb p4 id_key) = true |- _ => apply negb_true_iff, PL.text_eqb_false in E end.
+ match goal with ND : nodupb [p1; p2; p3; p4] = true |- _ =>
+   cbn [nodupb bound existsb] in ND; rewrite !orb_false_r in ND;
+   repeat (apply andb_true_iff in ND as [? ND]) end.
+ rewrite !negb_orb in *.
+ repeat match goal with Hn : (negb _ && _)%bool = true |- _ => apply andb_true_iff in Hn as [? ?] end.
+ repeat match goal with Hn : negb (text_eqb _ _) = true |- _ => apply negb_true_iff in Hn; apply PL.text_eqb_false in Hn end.
+ match goal with Dj : FD.disjoint [a1; a2; a3] g = true |- _ =>
+   unfold FD.disjoint in Dj; cbn [forallb] in Dj; rewrite andb_true_r in Dj;
+   apply andb_true_iff in Dj as [G1 Dj]; apply andb_true_iff in Dj as [G2 G3];
+   apply negb_true_iff in G1, G2, G3 end.
+ eapply (KRefF_bindsite sealed D F g X ex0 gl x0 y0 b0 a1 x a2 y a3 b n p1 p2 p3 p4 eB v1 v2
+   (fun e' => rec [] (PL.gfv gl e') ex0 e')); try eassumption; try congruence.
+ - apply find_kf_In. exact EK.
+ - intros I. apply PL.bound_iff in I. congruence.
+ - intros I. apply PL.bound_iff in I. congruence.
+ - intros I. apply PL.bound_iff in I. congruence.
+ - apply Hr. assumption.
+ - apply Hr. assumption.
+ - apply Hr. assumption.
+ - intros e' T. apply KRefF_nil. apply Hr. exact T.
+Qed.
+
 Theorem cc_sound_hyp : forall n F g e0 e, cc hook D n F g e0 e = true -> KRefF F g e0 e.
 Proof.
  induction n as [|n IH]; intros F g e0 e H; cbn [cc] in H; [discriminate|].
@@ -1238,6 +1445,7 @@ Proof.
  - eapply cc_thaw_sound; [exact IH|exact H].
  - eapply cc_lam_sound; [exact IH|exact H].
  - eapply cc_intro_sound; [exact IH|exact H].
+ - eapply cc_bind_sound; [exact IH|exact H].
  - eapply cc_same_sound; [exact IH|exact H].
 Qed.
 End CSound.
@@ -1405,4 +1613,39 @@ Proof. intros e H. vm_compute in H. injection H as <-. vm_compute. reflexivity. 
 (* The uncurried witness is rejected. *)
 Example cf_uncurry_rejected : cf_chk [] 10 [ux_f] ux_src ux_tgt = false.
 Proof. vm_compute. reflexivity. Qed.
+(* bound-now under a let-bound freeze: shen.bind! here only thaws its fourth parameter. *)
+Definition t_P (i : string) : name := of_string i.
+Definition t_bind_D : list (name * fundef) :=
+ [(FD.bind_name, FUser [t_P "P1"; t_P "P2"; t_P "P3"; t_P "P4"] (EApp (EVar (t_P "P4")) []));
+  (PL.do_name, FUser [t_P "V1"; t_P "V2"] (EVar (t_P "V2")))].
+Definition t_bind_src (b : expr) : expr :=
+ ELet t_g (EFreeze t_frz_body) (ECall FD.bind_name [fx_one; fx_two; ENil; EVar t_g]).
+Definition t_bind_tgt (a1 : name) (b : expr) : expr :=
+ ELet a1 fx_one (ELet (t_P "Q2") fx_two (ELet (t_P "Q3") ENil b)).
+Example cc_bind_copy : cc no_hook t_bind_D 20 [] [t_a] (t_bind_src t_frz_body) (t_bind_tgt (t_P "Q1") t_frz_body) = true.
+Proof. vm_compute. reflexivity. Qed.
+Example cc_bind_wrong_body : cc no_hook t_bind_D 20 [] [t_a] (t_bind_src t_frz_body) (t_bind_tgt (t_P "Q1") (EVar t_a)) = false.
+Proof. vm_compute. reflexivity. Qed.
+Example cc_bind_shadow : cc no_hook t_bind_D 20 [] [t_a] (t_bind_src t_frz_body) (t_bind_tgt t_a t_frz_body) = false.
+Proof. vm_compute. reflexivity. Qed.
+
+(* ---------- where uncurrying would fire in stage 0 (a TEST harness, not proof) ---------- *)
+(* Run by stage0_to_rocq.py --uncurry over the 955 parsed stage 0 sources: the dynamic
+   applications with two or more arguments (EApp with a head of any shape), the only source shape
+   norm-apply rewrites to a curried chain, and among them those with a trailing argument that is
+   not a literal or a variable (where the evaluation order also changes). For each: (definitions
+   with one, sites). *)
+Definition is_multi_app (e : expr) : bool := match e with EApp _ (_ :: _ :: _) => true | _ => false end.
+Definition is_atomic (e : expr) : bool := match e with
+ | ENum _ | EStr _ | ESym _ | EBool _ | ENil | EVar _ => true | _ => false end.
+Definition is_multi_app_nonatomic (e : expr) : bool := match e with
+ | EApp _ (_ :: rest) => negb (forallb is_atomic rest) && Nat.leb 1 (List.length rest) | _ => false end.
+Definition uncurry_scan (fs : list JitLowerStage0.JitLowerStage0.sx) : list (string * (nat * nat)) :=
+ let bs := PL.src_bodies fs in
+ [("bodies", (List.length bs, List.length fs));
+  ("multi_app", PL.shape_count is_multi_app bs);
+  ("multi_app_nonatomic", PL.shape_count is_multi_app_nonatomic bs)]%string.
+Example uncurry_scan_sees : is_multi_app ux_src = true.
+Proof. reflexivity. Qed.
+
 End JitFrontCopyFold.
