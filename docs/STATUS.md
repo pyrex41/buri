@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Three hundred and fifty-two statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Three hundred and seventy-seven statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models (92 added by emit-spec: the family hooks' map and all lemmas, the hand-written
 nested `Comp_ind'` of `rocq/JitEmitRel.v` and of its non-empty test copy with `suffix`, `comp_embed`, `pmapx_pmap`,
 `frame_prim_pmap`, `trap_has_handler`, `VR_VRh`, `VRh_no_partial`, the old invariant's embedding at any `mu` that relates the
@@ -1251,7 +1251,9 @@ store's cells and globals (`kont_embed`, `sm_embed`, `ms_embed`), sanity lemmas 
 `ms_entered`, `entered_embed`) and the three old-fragment corollaries (`*_old_of_new`: the old conclusions at `mu = []`, from the new
 statements plus a reflection obligation, which r1-emit-spec-merge refutes in Rocq, `old_reflect_false`, so they are vacuous); 34 added by
 r1-emit-spec-merge: `get_time_agree`, the refutation and its parts, `gvals_needed` and the `dv_*` divergence Examples behind each
-narrowing; 27 by kref-ctl, KRef's control compatibility lemmas in `rocq/JitKRefCompatCtl.v`; the back-end statements of `rocq/JitEmitInv.v`
+narrowing; 9 by its fix round 2: the `*_old_of_new'` corollaries from the catch-up reflection `old_reflect'_statement` (stated, NOT
+proved, so they recover nothing yet), `cx_catch_up` and its parts, and `dv_eq_cycle*` (= on a cycle: the source goes wrong, the bytecode is stuck);
+16 by r1-fv-mutants (below); 27 by kref-ctl, KRef's control compatibility lemmas in `rocq/JitKRefCompatCtl.v`; the back-end statements of `rocq/JitEmitInv.v`
 are stated, not proved, and a first version of them was false (counterexamples recorded in `rocq/JitEmitKont.v`'s `frame_prim`
 and in `rocq/JitEmitInv.v`'s `resp_ok`), see [SHEN-JIT](SHEN-JIT.md)). Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
@@ -1282,7 +1284,7 @@ hypothesis, and `compat_trap_of_gen` gives `compat_trap_statement` from `fund_ge
 `ShenJitKRefCondSwap` (compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim`
 (compat_trap_fb and AppExn_fb without `prim_compat`) are rejected. Not `compat_call` or the fundamental property, so
 `OB-JIT-LOWER-FRONT` stays open.
-Sixteen are in `rocq/JitKRefFv.v` (branch `p2/r1-fv-mutants`, not yet merged into `p2/int`): `scoped_fv`
+Sixteen are in `rocq/JitKRefFv.v` (branch `p2/r1-fv-mutants`): `scoped_fv`
 (`scoped g e = true -> forall x, In x (fv e) -> In x g`), by a nested induction on expr (`expr_ind'`); `fv` against
 binders (`fv_lam_iff`, `fv_let_iff`; a defun's body is scoped by its parameters, `scoped_defun_fv`) and the cond and
 application lists (`fv_cond_iff`, `fv_app_iff`, `fv_call_iff`); `fund_below`'s scope condition from `scoped`

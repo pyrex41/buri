@@ -9,6 +9,8 @@
    (vacuous: their hypothesis old_reflect_statement is FALSE, old_reflect_false below);
    get_time_agree (get-time's request, answer and result agree on related arguments);
    old_reflect_false, a counterexample to old_reflect_statement through JitEmitKont's do frames;
+   the three *_old_of_new' corollaries from old_reflect'_statement (the reflection with source
+   catch-up; NOT proved), and cx_catch_up (old_reflect_false's counterexample is not one to it);
    gvals_needed and the dv_* Examples, the divergences behind each narrowing (frame_prim's
    exclusions, the window bound, env_ok, GvalsRel), checked at the primitive level.
 
@@ -61,6 +63,10 @@
                                             MS/Ends/EndsSrc. old_reflect_statement is FALSE
                                             (old_reflect_false: the do frames); the src one is
                                             stated, NOT proved, truth UNKNOWN.
+   old_reflect'_statement                   old_reflect_statement with source catch-up (some c''
+                                            the source reaches silently from c' is MS-related);
+                                            NOT proved, truth UNKNOWN. *_old_of_new' derive the
+                                            old conclusions from it and the new statements.
    The old fragment: no handler, no capture, no do frame, what MS, Com and JitLowerRel.CompFn
    describe; the embedding (ms_embed) holds at any mu StoreRel admits, the corollaries are at mu = []. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
@@ -927,6 +933,75 @@ Proof.
    subst tS; cbn in Mp; subst tT.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
+
+(* ---------- the reflection with source catch-up (a proposal for review) ----------
+   old_reflect_statement asks for MS at the SAME source configuration c' that MS' relates, and
+   old_reflect_false refutes that through the do frame KD'_do2: MS' may relate a source that has
+   not yet made its pending call of do to a machine that has already returned from it. The old
+   conclusions (preservation, call_preservation and call_preservation_src) only ask for SOME source configuration that the
+   source reaches silently, so old_reflect'_statement lets the source catch up: from c', some c''
+   with Sstar c' c'' is MS-related to the same machine m1. The second conjunct (ends) is
+   old_reflect_statement's, unchanged. old_reflect_statement and old_reflect_false are kept as
+   they are.
+   NOT proved; truth UNKNOWN. cx_catch_up (below, closed) shows that old_reflect_false's
+   counterexample is not one to this statement: two silent source steps (the call of do, and do's
+   body Y) reach the let frame, which MS relates to the machine after do's return.
+   Does NOT say: anything about a state outside the old fragment or a run with IO; that MS' and
+   MS relate the same pairs (they do not, cx_ms'1/cx_not_ms1); that the catch-up survives a family
+   rule overlapping the old fragment without that family re-proving it (OB-JIT-LOWER-FRAGMENT). *)
+Definition old_reflect'_statement : Prop := forall s c m (rs : nat -> B.jreq -> B.jres) k tS tT m1,
+ env_ok rs -> MS s c m -> GvalsRel [] s m -> TRun rs k m tT m1 -> map Some tS = tT ->
+ (forall c' mu', Srun c tS c' -> mext [] mu' -> MS' mu' c' m1 -> tS = [] /\ exists c'', Sstar c' c'' /\ MS s c'' m1) /\
+ (Ends' [] c m1 tS -> tS = [] /\ JitLowerThm.Ends E pt sealed s c m1).
+
+(* The old conclusions, verbatim, from the new statements and the catch-up reflection. These are
+   implications between statements: each old conclusion is recovered only once its hypotheses
+   (preservation'/call_preservation'/call_preservation_src' and the reflections) are proved, and
+   none of them is yet. *)
+Theorem preservation_old_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_statement.
+Proof.
+ intros Pr Rf n s c m H G. destruct env_ok_inhabited as [rs Eo].
+ destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G)))
+   as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En & Tr & Mp)].
+ - destruct (proj1 (Rf s c m rs k tS tT m' Eo H G Tr Mp) c' mu' Ss Mx Ms) as [E0 (c'' & S2 & Ms0)].
+   subst tS; cbn in Mp; subst tT.
+   left. exists c'', m', k. repeat split; auto;
+     [eapply Sstar_trans; [apply srun_nil_sstar; exact Ss|exact S2]|eapply trun_nil_tn; exact Tr].
+ - destruct (proj2 (Rf s c m rs k tS tT m1 Eo H G Tr Mp) En) as [E0 En0]. subst tS; cbn in Mp; subst tT.
+   right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
+Qed.
+
+Theorem call_preservation_old_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_statement.
+Proof.
+ intros Cp Rf s m c ps b args n Cm Cf L En G c0. destruct env_ok_inhabited as [rs Eo].
+ pose proof (ms_entered s m c ps b args Cm Cf L En) as H0.
+ destruct (Cp [] s m c ps b args n rs Eo (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+   (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
+   as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
+ - destruct (proj1 (Rf s c0 m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 (c'' & S2 & Ms0)].
+   subst tS; cbn in Mp; subst tT.
+   left. exists c'', m', k. repeat split; auto;
+     [eapply Sstar_trans; [apply srun_nil_sstar; exact Ss|exact S2]|eapply trun_nil_tn; exact Tr].
+ - destruct (proj2 (Rf s c0 m rs k tS tT m1 Eo H0 G Tr Mp) En1) as [E0 En0]. subst tS; cbn in Mp; subst tT.
+   right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
+Qed.
+
+Theorem call_preservation_src_old_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_statement.
+Proof.
+ intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G c0 ce. destruct env_ok_inhabited as [rs Eo].
+ pose proof (ms_entered s m c ps e args Cm Cf L En) as H0.
+ destruct (Cp [] s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+   (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
+   as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
+ - destruct (proj1 (Rf s ce m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 (c'' & S2 & Ms0)].
+   subst tS; cbn in Mp; subst tT.
+   left. exists c'', m', k. repeat split; auto;
+     [eapply Sstar_trans; [apply srun_nil_sstar; exact Ss|exact S2]|eapply trun_nil_tn; exact Tr].
+ - destruct (Rs s m c ps b0 b1 e args rs k tS tT m1 Eo Dw K1 K2 Sh So Cm Cf L En G Tr Mp En1) as [E0 En0].
+   subst tS; cbn in Mp; subst tT.
+   right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
+Qed.
 End Src.
 End Inv.
 
@@ -1123,6 +1198,37 @@ Proof.
 Qed.
 
 
+(* old_reflect_false's counterexample is not one to old_reflect'_statement: from cx_c (the
+   source at the pending call of do, which MS' relates to cx_m1, the machine after do's return),
+   two silent source steps reach the let frame, and MS relates that configuration to cx_m1.
+   Does NOT say: that old_reflect'_statement holds (UNKNOWN). *)
+Definition cx_c2 : config := Cfg (Ret (VNum (NInt 2))) [KLet cx_z (EVar cx_z) []] cx_s.
+Lemma cx_src_catch_up : JitLowerStep.Sstar [] cx_c cx_c2.
+Proof.
+ eapply JitLowerStep.S1; [vm_compute; reflexivity|].
+ eapply JitLowerStep.S1'. vm_compute. reflexivity.
+Qed.
+Lemma cx_ms2 : MS cx_s cx_c2 cx_m1.
+Proof.
+ unfold cx_c2.
+ eapply MS_ret with (o := B.OSlot 0) (v' := B.VFix 2) (w := fun _ => True).
+ - split; [reflexivity|apply cx_funrel; reflexivity].
+ - vm_compute. reflexivity.
+ - constructor.
+ - eapply KD_let with (g := []) (top := 1) (dst := DRet) (r2 := []) (w1 := fun _ => True).
+   + intros x s L; discriminate.
+   + intros x s L; discriminate.
+   + intros x s L; discriminate.
+   + vm_compute; reflexivity.
+   + eapply JitLowerRel.C_ret. eapply JitLowerRel.O_var; [vm_compute; reflexivity|vm_compute; reflexivity].
+   + intros a A; exact A.
+   + intros a A; exact I.
+   + apply KC_ret; [intros a A; cbn; lia|constructor].
+Qed.
+Example cx_catch_up : MS' [] cx_c cx_m1 /\ ~ MS cx_s cx_c cx_m1 /\
+ exists c'', JitLowerStep.Sstar [] cx_c c'' /\ MS cx_s c'' cx_m1.
+Proof. split; [exact cx_ms'1|]. split; [exact cx_not_ms1|]. exists cx_c2. split; [exact cx_src_catch_up|exact cx_ms2]. Qed.
+
 (* ---------- the frame narrowing: primitive-level divergences (closed) ----------
    Each Example below is one hand-argued reason JitEmitKont.frame_prim, the window bound or
    env_ok narrows the statements, checked in Rocq at the primitive (or call) level: the source
@@ -1136,9 +1242,10 @@ Qed.
      source's (dv_open).
    - close, read-byte and write-byte on a closed stream: the source asks the environment, the
      bytecode answers or raises without a request (dv_close, dv_read_closed, dv_write_closed).
-   - = on two NaNs: the bytecode is stuck, the source answers (dv_eq_nan). = on a cycle is NOT
-     checked here: the source may itself answer OWrong there, so whether it is a divergence at
-     all is UNKNOWN.
+   - = on two NaNs: the bytecode is stuck, the source answers (dv_eq_nan). = on two distinct
+     cyclic vectors: the source goes wrong (OWrong) and the bytecode is stuck (RCyclic), so it is
+     not a disagreement on an answer, but a state Out' has no case for (dv_eq_cycle, at the end
+     of this file); on one cyclic vector both answer true (dv_eq_cycle_same).
    - a dynamic call of two arguments on a one-parameter closure, the two closures VRh-related
      (dv_window_rel): the source over-applies, the bytecode raises (dv_window).
    - an IO failure: the bytecode's continuation resumes the machine with no result, the source
@@ -1234,4 +1341,23 @@ Example dv_io_fail :
  | B.MIO q kk => q = B.JTime true /\ kk B.JFailed = B.set_rest dv_mm [] | _ => False end /\
  ~ resp_ok (B.JTime true) B.JFailed.
 Proof. split; [vm_compute; split; reflexivity|]. split; [vm_compute; split; reflexivity|]. cbn. auto. Qed.
+(* = on two distinct cyclic vectors (each one's only cell holds the other), related through
+   mu = [(0, 5); (1, 6)]: the source goes wrong (OWrong equality-undefined, its depth bound
+   exhausted), the bytecode is stuck (RCyclic, its fuel exhausted). Neither side answers, so this
+   is NOT a disagreement on an answer; it is a state Out' has no case for (neither side steps), so
+   a frame admitting = here would need the statements to say what happens when the source goes
+   wrong. On the same cyclic vector both answer true (dv_eq_cycle_same). *)
+Definition cy_s : store := Store [[VVec 1]; [VVec 0]] [] [].
+Definition cy_heap : B.tree B.obj := B.tset 5 (B.OVec [B.VVec 6]) (B.tset 6 (B.OVec [B.VVec 5]) B.Leaf).
+Definition cy_m : B.machine := B.Machine B.Leaf 0 dv_code1 [] [] [] B.VCleared cy_heap 6 B.Leaf B.Leaf B.Leaf false 0.
+Example dv_eq_cycle_rel : VRh [(0%nat, 5%positive); (1%nat, 6%positive)] cy_heap (VVec 0) (B.VVec 5) /\
+ VRh [(0%nat, 5%positive); (1%nat, 6%positive)] cy_heap (VVec 1) (B.VVec 6).
+Proof. split; econstructor; [left; reflexivity|reflexivity|right; left; reflexivity|reflexivity]. Qed.
+Example dv_eq_cycle : (exists w, prim_rule_r (jit_rules []) jit_profile PEqual [VVec 0; VVec 1] cy_s = PDone (OWrong w)) /\
+ B.prim_step dv_E B.Leaf cy_m 0 B.PEq [B.VVec 5; B.VVec 6] = B.MStuck B.RCyclic.
+Proof. split; [eexists; vm_compute; reflexivity|vm_compute; reflexivity]. Qed.
+Example dv_eq_cycle_same : prim_rule_r (jit_rules []) jit_profile PEqual [VVec 0; VVec 0] cy_s = PDone (ORet (VBool true) cy_s) /\
+ exists m', B.prim_step dv_E B.Leaf cy_m 0 B.PEq [B.VVec 5; B.VVec 5] = B.MTau m' /\
+   slotv (B.m_stack m') 0 = Some (B.VBool true).
+Proof. split; [vm_compute; reflexivity|eexists; split; [vm_compute; reflexivity|vm_compute; reflexivity]]. Qed.
 End JitEmitInv.

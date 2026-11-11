@@ -611,7 +611,7 @@ and stage 0 is unchanged: 111 of 955 kernel definitions validated.
   every response. Checking the other frames found more of the same kind. Each is argued by hand
   from `KLSemantics.prim_rule`/`apply_value` and `JitBytecode.prim_step`/`enter`; none is
   mechanized at emit-spec; r1-emit-spec-merge checks each in Rocq as a primitive-level divergence
-  (`dv_*` in `rocq/JitEmitInv.v`, below), except `=` on a cycle, still UNKNOWN:
+  (`dv_*` in `rocq/JitEmitInv.v`, below), `=` on a cycle included (`dv_eq_cycle`):
   - `absvector` of 2^48 allocates in the source, while the bytecode raises.
   - `error-to-string` of a primitive's exception is `"error"` in the source but the message in
     the bytecode.
@@ -720,14 +720,57 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   closure, related to the bytecode's by `dv_window_rel`: the source over-applies, the bytecode raises), `dv_io_fail` (an IO failure: the
   bytecode resumes with no result, the source throws; `resp_ok` excludes the answer).
   `gvals_needed`: MS holds and MS' at no `mu` when the store binds a global the machine does
-  not, so `GvalsRel [] s m` is not implied by the old premises. Not mechanized: `=` on a cycle,
-  where the source may itself answer `OWrong`, so whether it diverges at all is UNKNOWN. At the old fragment `env_ok` is discharged (`env_ok_inhabited`).
-- **Awaiting Reuben** (none approved): `env_ok` on the run statements, the `frame_prim`
-  exclusions, the one-argument window, `GvalsRel` on the `*_old` statements, and how the old
-  conclusions are recovered.
+  not, so `GvalsRel [] s m` is not implied by the old premises. `=` on two distinct cyclic vectors,
+  related through `mu` (`dv_eq_cycle_rel`): the source goes wrong (`OWrong`, its depth bound
+  exhausted) and the bytecode is stuck (`RCyclic`) (`dv_eq_cycle`). Neither side answers, so this
+  is not a disagreement on an answer; it is a state `Out'` has no case for. On one cyclic vector
+  both answer true (`dv_eq_cycle_same`). `env_ok_inhabited` shows only that an `env_ok`
+  environment exists; it does not derive `env_ok` from the pinned environment or the premises.
+  Each `dv_*` Example shows a divergence at the primitive or call level. None shows that a premise
+  is necessary for `sim'_statement` or the run statements; whether that is enough evidence is
+  Reuben's call.
+- **Reflection with source catch-up (fix round 2 of r1-emit-spec-merge; a proposal, not a
+  resolution).** `old_reflect'_statement` is `old_reflect_statement` with its first conjunct
+  weakened on the conclusion side only: from the configuration `c'` that MS' relates, *some* `c''`
+  the source reaches silently (`Sstar c' c''`) is MS-related to the same machine. The old
+  conclusions ask only for some silently reached source configuration, so `*_old_of_new'` (closed)
+  derive `preservation_old_statement`, `call_preservation_old_statement` and
+  `call_preservation_src_old_statement`, each with the **old** conclusion verbatim, from the new
+  statements plus `old_reflect'_statement` (and `old_reflect_src_statement` for the src one). The
+  proofs use neither JitLowerThm's nor JitKRefCompose's theorems. `cx_catch_up` (closed) checks
+  that `old_reflect_false`'s counterexample is not one to the new statement: two silent source
+  steps (the call of `do`, then its body `Y`) reach the `let` frame, which MS relates to the
+  machine after do's return (`cx_src_catch_up`, `cx_ms2`). `old_reflect_statement` and
+  `old_reflect_false` are kept unchanged. **Not proved:** `old_reflect'_statement` (truth UNKNOWN; a
+  proof needs a reflection of every KD'/TK'/KC'/RK' derivation over old-fragment syntax to KD/TK/KC/RK
+  after catch-up, and source-side invariants that keep an old-fragment run IO-free and its store
+  constant). The corollaries are therefore implications between unproved statements: they show the
+  new statements, if proved, give the old conclusions, and they recover nothing yet.
+- **`old_reflect_src_statement`: UNKNOWN, not refuted.** Two cheap refutations were tried and do not
+  work. The old `pmap` admits no IO primitive, so an old-fragment machine cannot make a request. And
+  `EndsSrc'`'s existential final store `s'` is tied to b0's final store by `GStore` (functions
+  equal, globals and w's cells positionally `GVal`-related), so it cannot be chosen apart from `s`
+  without breaking KRef's own end relation. A proof needs the same machine-side invariants as the
+  catch-up reflection (the machine's globals and the cells outside `mu'` unchanged), plus `VRh`
+  injectivity on the first-order values VR relates. Not attempted in this round.
+- **Awaiting Reuben** (none approved; no agent can approve them): `env_ok` on the run statements
+  (evidence: `dv_io_fail`), the `frame_prim` exclusions (`dv_absvector_*`, `dv_ets_*`, `dv_open`,
+  `dv_close`, `dv_read_closed`, `dv_write_closed`, `dv_eq_nan`, `dv_eq_cycle`), the one-argument
+  window (`dv_window`, `dv_window_rel`), `GvalsRel` on the `*_old` statements (`gvals_needed`), the
+  catch-up form of the reflection (`old_reflect'_statement`, `cx_catch_up`), and the six-parameter
+  Rule_X index shape with `c`/`cv` indices. Every `dv_*` Example is primitive-level or call-level
+  evidence, not a proof that the premise is necessary for the stated theorems.
 - **Evidence.** 34 closed statements added to `Audit_Jit` (352 in all after the merge with kref-ctl). Mutants
   `ShenJitEmitGetTimeSwap` (run and unix swapped in `ev_of`; `get_time_agree` must fail) and
-  `ShenJitEmitDo2Opaque` (`KD'_do2` needs `False`; `old_reflect_false` must fail); the pin is 227 (224 before kref-ctl's three).
+  `ShenJitEmitDo2Opaque` (`KD'_do2` needs `False`; `old_reflect_false` must fail); the pin was 227 (224 before kref-ctl's three).
+  Fix round 2 adds 9 closed statements (377 in all, after the merge with r1-fv-mutants' 16) and two
+  mutants: `ShenJitEmitCatchUpNone` (`cx_c2` is `cx_c`, no source step; `cx_ms2` must fail) and
+  `ShenJitEmitEqCycleAcyclic` (the second cell no longer closes the cycle; `dv_eq_cycle` must fail).
+  The pin is 233. Its history: 215 on `p2/emit-spec` was 184 (its base `b818355`) plus its 31 emit
+  mutants; `p2/int` reached 198 independently (kref-prim, kref-ctl, r1-fv-mutants), so the merged
+  count is 198 + 33 (emit-spec's 31 and this branch's two of the first round) + 2 = 233. The pin is
+  `report.py`'s count of `Rejected proof mutation:` lines in `make check`; `make report` was not run
+  on this branch, so 233 is checked against the mutant names, not through `report.py` (UNKNOWN).
   The lane and the emit mutants were run on this branch (task report); `make prove`, `make
   report`, the differential and the Coq 8.18 build were not, so their results are UNKNOWN.
 

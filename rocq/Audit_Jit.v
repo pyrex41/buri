@@ -373,3 +373,12 @@ Print Assumptions JitKRefFv.JitKRefFv.fv_scope_call.
 Print Assumptions JitKRefFv.JitKRefFv.fund_below_S.
 Print Assumptions JitKRefFv.JitKRefFv.fund_below_all.
 Print Assumptions JitKRefFv.JitKRefFv.fund_gen_of_step.
+Print Assumptions JitEmitInv.JitEmitInv.preservation_old_of_new'.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_of_new'.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_new'.
+Print Assumptions JitEmitInv.JitEmitInv.cx_src_catch_up.
+Print Assumptions JitEmitInv.JitEmitInv.cx_ms2.
+Print Assumptions JitEmitInv.JitEmitInv.cx_catch_up.
+Print Assumptions JitEmitInv.JitEmitInv.dv_eq_cycle_rel.
+Print Assumptions JitEmitInv.JitEmitInv.dv_eq_cycle.
+Print Assumptions JitEmitInv.JitEmitInv.dv_eq_cycle_same.

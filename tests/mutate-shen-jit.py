@@ -154,6 +154,10 @@ ShenJitKRefPoutThrowAny: PoutRel relates any two exceptions (OThrow x0, OThrow x
 ShenJitKRefPrimOutAnyIO: PrimOutRel relates two IO requests without q0 = q. The two sides then make
   different requests, and call_rel (JitKRefCompatClo), which must give the same request on both
   sides, must fail. Built as the chain of ShenJitKRefPoutThrowAny.
+ShenJitEmitCatchUpNone: cx_c2, the configuration the source catches up to, is cx_c itself (no source
+  step). MS does not relate cx_c to cx_m1 (cx_not_ms1), so cx_ms2 (behind cx_catch_up) must fail.
+ShenJitEmitEqCycleAcyclic: cy_s's second cell holds VVec 1 instead of VVec 0, so the source's = on
+  VVec 0 and VVec 1 answers true instead of going wrong. dv_eq_cycle must fail.
 """
 import re
 from pathlib import Path
@@ -382,4 +386,10 @@ mutate_chain('ShenJitKRefPoutThrowAny', clochain,
 mutate_chain('ShenJitKRefPrimOutAnyIO', clochain,
        " | PIO q0 c0, PIO q c => q0 = q /\\ forall r, PoutRel k w (c0 r) (c r)\n",
        " | PIO q0 c0, PIO q c => forall r, PoutRel k w (c0 r) (c r)\n")
+mutate('ShenJitEmitCatchUpNone', 'rocq/JitEmitInv.v',
+       "Definition cx_c2 : config := Cfg (Ret (VNum (NInt 2))) [KLet cx_z (EVar cx_z) []] cx_s.",
+       "Definition cx_c2 : config := cx_c.")
+mutate('ShenJitEmitEqCycleAcyclic', 'rocq/JitEmitInv.v',
+       "Definition cy_s : store := Store [[VVec 1]; [VVec 0]] [] [].",
+       "Definition cy_s : store := Store [[VVec 1]; [VVec 1]] [] [].")
 print(' '.join(names))
