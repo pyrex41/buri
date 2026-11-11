@@ -131,11 +131,17 @@ Inputs that overflow the C stack through `=` are not covered (`OB-JIT-ISSUE-3`).
 
 ## Image obligation
 
-The binary's hash covers its heap image, about 765 KB of its 1 MB on arm64, which stage 1 made by
-running the runtime itself. Validating stage 0 doesn't cover that. `OB-JIT-IMAGE` requires decoding
-the image in Rocq and relating it to the KLambda store after initialisation, or proving stage 1 is an
-instance of the main theorem. Separately, the run reads the image from its own file, which the
-process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
+The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (runtime `13afde42...`, image
+`fd8485a5...`), which stage 1 made by loading stage 0 and running initialisation. Validating stage 0 doesn't cover that.
+`OB-JIT-IMAGE` is now partial and split into five sub-obligations ([SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)):
+- `OB-JIT-IMAGE-CODE` (partial): a Rocq decoder, run as a spike measurement and not in the lane, finds that the
+  function-cell code of 955 of 955 stage 0 definitions equals `JitBytecode.build_code` of their `.sbc`.
+- `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, and all data it built.
+- `OB-JIT-IMAGE-SEALING` (open): stage 1 seals 18 files where stage 0 sealed 24, which leaves 65 names redefinable
+  behind 115 sealed call sites.
+- `OB-JIT-IMAGE-READER` (open): the trusted reader and `image_load`.
+- `OB-JIT-IMAGE-FILE` (partial): the run reads the image from `argv[0]` (resolved through `PATH`) unless
+  `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary.
 
 ## What exists
 
@@ -412,10 +418,10 @@ proof mutant `ShenJitLowerEndsDecoupled` (the old form of `E_ok`) is rejected. T
 
 **What the relation admits:** integer, real, string, symbol, boolean and nil literals; variables in slots; `let`,
 including sharing a slot; `if`, `cond`, `and` and `or`, as values and as tests; `type`; the primitives `+ - *`,
-the four comparisons, `cons hd tl cons? number? string?`; `=` when one operand is a constant fixnum, string, boolean, `()` or
-non-NaN real; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
+the four comparisons, `cons hd tl cons? number? string?`; `=` when one operand is a constant fixnum, string, symbol, boolean, `()`
+or non-NaN real; 0.4's one-slot `cons` chain with constant heads; named calls and named tail calls, with
 `lower.shen`'s in-place argument moves. **Not admitted:** closures, captured variables, `trap-error`, `=` on two
-computed values or against a symbol or NaN constant,
+computed values or against a NaN or pair constant,
 dynamic application, `set` and `value`, the other primitives, `do`, `thaw`, `defun` and `eval-kl`, and every
 rewrite listed under the surprises above.
 
@@ -429,8 +435,9 @@ rewrite listed under the surprises above.
   theorem says nothing about when those happen.
 - `/` is left out of the fragment: its agreement with the bytecode wasn't proved this session.
 
-**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **111 of 955 kernel definitions
-validated** at 0.6, 844 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At 0.4 it was 110 of 950.
+**Stage 0.** `scripts/check-shen-jit.sh` decodes all 24 file pairs and runs the checker: **148 of 955 kernel definitions
+accepted** by the source judge at 0.6, 807 rejected, none unreadable (`tests/shen-jit/stage0-accepted.txt`). At the re-pin it was 111 of 955, and admitting `=` against a symbol
+constant (below) took it to 148, losing none. At 0.4 it was 110 of 950.
 Compared by name, the re-pin lost `shen-jit.lower.constant-index` (removed upstream with the dictionary-keyed constant
 pool) and gained `shen-jit.lower.list-key` (new) and `shen-jit.lower.prim-arity` (rewritten as a dictionary lookup);
 the other 109 accepted definitions are accepted at both pins. Net, five definitions more: the lowerer gains
@@ -443,7 +450,8 @@ re-pin to 0.4 it fell to 53: eight definitions accepted at 0.3 were rejected bec
 `shen.create-skeleton`, `shen.macro-@ch`, `shen.macro-@c` and `<!>`. Two are new since 0.3: kernel 43.4's
 `shen.precompiled-function?` and `shen.x.expand-dynamic.expand-initializer`. Of the 169 definitions whose code uses the
 chain, 161 are still rejected for other constructs. Admitting `=` against a safe constant (below) took the count from
-61 to 110 and lost none. Each accepted definition is a
+61 to 110 at 0.4, and none was lost; admitting symbol constants took 0.4 to 145 (branch `pass/eq`,
+906b389) and 0.6 from 111 to 148. Each accepted definition is a
 lowering of its kernel KLambda in the relation's sense; a rejected one is unvalidated, not wrong. A census of the
 forms (`tests/shen-jit/stage0_census.py`, a count, not proof) shows where the rest go:
 
@@ -465,11 +473,12 @@ re-pin figure was 135.) The rewrites under the surprises above (sharing, folding
 causes, not yet confirmed per definition.
 
 At 0.6, `spikes/pass-split/FEATURES.md` and `features.tsv` (`tests/shen-jit/feature_census.py`, a census, not proof)
-assign each of the 955 definitions the emit features its normal form needs and the front families that fired. Its
-prediction for the current `Comp` matches the Rocq src (111), nf (112) and tf (133) verdicts on every definition. It also
-forecasts what each feature, each family and each residual decision (port primitives, eval-kl, identity, NaN `=`)
-would admit, directly and under the callee-closure limit. That limit cuts today's 111 to 46, because 450 definitions
-reach a 181-definition strongly connected component.
+assign each of the 955 definitions the emit features its normal form needs and the front families that fired. Rerun
+after `=` against a symbol constant was admitted (branch `p2/eq-guard-merge`, 10 November 2026), its prediction for the
+current `Comp` matches the Rocq src (148), nf (150) and tf (174) verdicts on every definition (at the re-pin, before that
+change: 111, 112 and 133). It also forecasts what each feature, each family and each residual decision (port
+primitives, eval-kl, identity, NaN `=`) would admit, directly and under the callee-closure limit. That limit cuts the
+current 148 to 63 (111 to 46 before), because 450 definitions reach a 181-definition strongly connected component.
 
 **The one-slot `cons` chain** (`JitLowerRel.C_chain`). `lower.shen` computes `(cons K Tail)`, with K a constant and Tail
 a `cons`, by lowering Tail into D and then emitting `(prim D cons (const K) D)`, which reads D and writes it. The rule
@@ -489,7 +498,7 @@ per construct below.
 **`=` against a safe constant** (`JitLowerRel.pguard`, `JitLowerPrim.p_eq`). `lower.shen` lowers `(= A B)` as a plain
 `(prim D = A B)`, with a literal as `(const K)`. `pmap` now maps `=` to the bytecode's `PEq`, and `C_prim` and the
 primitive frame `KD_prim` (`JitLowerKont.v`) carry one more premise: for `PEq`, some operand is a constant whose
-value is a fixnum, string, boolean, `()` or a real that is not a NaN. The checker decides it on the code's
+value is a fixnum, string, symbol, boolean, `()` or a real that is not a NaN. The checker decides it on the code's
 constant table. The value-level lemma `eq_core` shows that against such an atom the source's `eq_depth_r` and the
 model's `eq_val` give the same answer for every pair of `VR`-related values, so `prim_agree` takes the guard as a
 hypothesis that is trivially true for the other primitives. The frame's premise is about the instruction, not
@@ -515,13 +524,16 @@ C interns by name and agrees with the source, so the defect was the model's, and
 `VR_sym` was ruled out, since it would narrow the related states. The encoding was made injective instead
 (`OB-JIT-SYM-INJECTIVE`, discharged; `sym_of_text_eqb`, above). Before that fix, the guard left symbol constants
 out, which cost the most: of the 447 definitions using `=`, 429 compare only against a literal, but only 140 against
-literals that are not symbols.
+literals that are not symbols. With the fix the guard admits symbol constants. At 0.4 stage 0 went from 110 to 145
+(35 definitions blocked only by `=` against a symbol); at 0.6 it went from 111 to 148, none lost, and the 37
+gained are exactly the definitions `features.tsv` lists with `eq-symbol-const` as their only feature and no
+required family (census, compared by name).
 
 Fuel plays no part. `eq_val` spends fuel only at absvectors, which `VR` never relates, and pairs recurse
 structurally, so on related values the model never stops with `RCyclic`; the source's depth bound likewise matters
 only for vectors. C's process exit on terms past 2^31 steps or 2 GiB of pending pairs (`OB-JIT-EQ-CYCLE`) is not
 modelled, as before. So no case goes through the resource permission. Three proof mutants are rejected
-(`ShenJitLowerEqSym` and `ShenJitLowerEqNaN`, which widen `eq_core`'s guard to symbols or to every real, and
+(`ShenJitLowerEqPair` and `ShenJitLowerEqNaN`, which widen `eq_core`'s guard to pairs, which can hold a NaN, or to every real, and
 `ShenJitLowerCheckEqGuard`, a checker without the guard). Lines, net: 15 in `JitLowerRel.v`, 58 in
 `JitLowerPrim.v` (with the two checked witnesses), 18 in `JitLowerStep.v`, 91 in all, plus one premise in
 `JitLowerKont.v` and three changed lines in `JitLowerCheck.v`.
@@ -549,7 +561,7 @@ was not attempted and is not estimated here.
 
 - The source semantics has no `do`: `do` is an ordinary call of the kernel's definition, and the lowerer compiles
   it inline. Relating them needs the store's `do` to be the kernel's, as `OB-JIT-LOWER-OPTIMIZATIONS` lists.
-- `=` is admitted only against a safe constant: the bytecode model is stuck (`RIdentity`) on two NaNs, where the
+- `=` is admitted only against an atomic constant that is not a NaN: the bytecode model is stuck (`RIdentity`) on two NaNs, where the
   source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
@@ -617,6 +629,8 @@ own lowerer reproduces every stage 0 code object byte for byte. On `p2/int` the 
 (a measurement). `cd witness && sha256sum *.norm | sha256sum` is
 `38a414a295c1aff39360a73a812591d0862fbc6c0bf32bc24314d8140993de20`, and every per-file hash equals that of the set
 used for the earlier run below. The six statements are closed and `rocqchk` replays both modules.
+
+**At 0.6, after `=` against a symbol constant was admitted: 174 of 955 definitions accepted** on the erased witness, 781 rejected, none failing erase, none unreadable, all front end unchecked; the source-body judge accepts 148, none lost on the witness (`NORM_DIR=/tmp/p2-T02-capture/witness JIT_OUT=/tmp/p2-eq-guard-merge-norm scripts/check-shen-jit-norm.sh` in `buri-lps`, branch `p2/eq-guard-merge`, exit 0, log sha256 `94659a70a4376134860069f7be23f9a151a27cf24f6d2f7d035f3c0612287aab`; witness set the same `e45add98...b69dd1`). Before that change:
 
 **At 0.6: 133 of 955 definitions accepted** on the erased witness (`NORM_DIR=/tmp/p2-v06-capture/witness
 JIT_OUT=/tmp/p2-v06-norm scripts/check-shen-jit-norm.sh` in `buri-lps`, witnesses from `capture_passes.sh` on
@@ -717,3 +731,37 @@ again, and the bytecode semantics stays Rocq-only. `#12`, filed from [the findin
 
 **Lane status in the charter.** The packages are `mandatory_for_closed_deployment: false`, and the charter
 target stays closed deployment on both ports. Making this the lead track doesn't change that target.
+
+**Stage 0 residuals and the four decision items** (10 November 2026, `r1-residual-ledger`; regenerated the same day
+after `=` against a symbol constant was admitted, `eq-guard-merge`).
+`tests/shen-jit/stage0-residuals.txt` lists every stage 0 definition the Rocq source judge does not accept: 807, as
+the source judge accepts 148 of 955 (the count `stage0-accepted.txt` pins; no full-pipeline judge exists yet, so the
+full-pipeline validated count is UNKNOWN). `tests/shen-jit/stage0_residuals.py` writes it from `judge_split.sh`'s
+Rocq verdict files, run on branch `p2/eq-guard-merge` (on `p2/int` 335348c) on the pinned stage 0 set (`ec9b3872...`)
+and norm witness (`e45add98...b69dd1`); src, nf and tf come to 148, 150 and 174 (111, 112 and 133 at `p2/int`
+2e45d67, as in `spikes/pass-split/CENSUS.md`, before the change). The file records those hashes, the verdict-file
+hashes and the scripts' hashes; its own sha256 is
+`9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e`. Compared by name with the 844 rows at 2e45d67, 37
+rows are gone (the 37 newly accepted definitions) and none is new. Evidence kinds stay apart in it: the src, nf and tf
+columns are Rocq verdicts; the first blocker is a census label from a syntactic walk of the norm witness (Comp gaps,
+`=` outside `pguard`, calls of `shen-jit.eval-kl`), checked only in that no definition Rocq accepts on nf gets an emit
+label; the ledger, reason and decision columns are bookkeeping. By first label: `OB-JIT-LOWER-FRAGMENT` 368,
+`OB-JIT-LOWER-OPTIMIZATIONS` 343, `OB-JIT-NAN-IDENTITY` 59, `OB-JIT-PORT-PRIMS` 26, `OB-JIT-LOWER-GENERAL` 6,
+`OB-JIT-IDENTITY-MODEL` 5 (at 2e45d67: 463, 306, 43, 24, 3 and 5; the definitions first blocked by `=` against a
+symbol now show their next label).
+
+The four decision items are Reuben's decision. Each has an open ledger entry and, until he decides, defaults to a named
+residual. The counts are definitions any of whose labels touch the item (census):
+
+| item | ledger entry | definitions | options |
+|---|---|---|---|
+| port primitives | `OB-JIT-PORT-PRIMS` | 178 | wire `jit_port_prims_proposed` (adds a hash parameter to the rules), or named exceptions; the operators with no carrier (byte buffers, Prolog variables and the rest of `jit_port_prims_residual`) stay residual either way. `jit_port_prims_proposed` is not wired. |
+| eval-kl | `OB-JIT-LOWER-GENERAL` | 16 | prove it, or exclude it as a named exception |
+| identity primitives | `OB-JIT-IDENTITY-MODEL` | 48 | model identity, or named exceptions (`same?`, `tagged?`, `deref`, `deref=`) |
+| `=` on two possibly-NaN operands | `OB-JIT-NAN-IDENTITY` | 206 | a proved static non-real judgment in Rocq, a NaN identity rule, or a named limit |
+
+For NaN `=`, a Rocq non-real judgment means extending `JitLowerRel.pguard` and redoing the `Comp` simulation, so it is
+not cheap and was not attempted here; `feature_census.py`'s `NONREAL` set is a census and decides nothing. `=` against
+a symbol constant is no longer a residual label: a symbol is never a NaN, and `pguard` now admits symbol constants
+(`OB-JIT-SYM-INJECTIVE`). Of the 152 definitions first blocked by it at 2e45d67, 37 are now accepted by the source
+judge and 115 are filed under their next census label.

@@ -35,7 +35,7 @@ ShenJitEquivComposeLeft: composing two worlds keeps the first and drops the seco
   Since K00 these three statements are in rocq/JitKRef.v and their proofs in JitKRefGround.v and
   JitKRefCompose.v; the runner compiles one file, so each mutant is the chain of files
   (mutate_chain), the first one mutated.
-ShenJitLowerEqSym: = agrees against a symbol constant. eq_core must fail.
+ShenJitLowerEqPair: = agrees against a pair constant, which can hold a NaN. eq_core must fail.
 ShenJitLowerEqNaN: = agrees against any real constant, NaN included. eq_core must fail
   (OB-JIT-NAN-IDENTITY).
 ShenJitLowerCheckEqGuard: the checker admits = without a safe constant operand. chk_sound must fail.
@@ -175,8 +175,8 @@ mutate_chain('ShenJitEquivComposeLeft', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v
        " flat_map (fun p => map (fun q => (fst p, snd q)) (filter (fun q => Nat.eqb (snd p) (fst q)) w2)) w1.",
        " w1.")
 eq_core = "VR a a' -> VR b b' -> existsb eq_safe_val [a'; b'] = true ->\n exists r,"
-mutate('ShenJitLowerEqSym', 'rocq/JitLowerPrim.v', eq_core,
-       "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VSym _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
+mutate('ShenJitLowerEqPair', 'rocq/JitLowerPrim.v', eq_core,
+       "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VPair _ _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
 mutate('ShenJitLowerEqNaN', 'rocq/JitLowerPrim.v', eq_core,
        "VR a a' -> VR b b' -> existsb (fun w => eq_safe_val w || match w with B.VReal _ => true | _ => false end) [a'; b'] = true ->\n exists r,")
 mutate('ShenJitLowerCheckEqGuard', 'rocq/JitLowerCheck.v',
