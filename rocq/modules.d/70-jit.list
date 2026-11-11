@@ -28,3 +28,14 @@ JitNorm
 JitNormStage0
 JitKRefFv
 JitKRefFund
+JitKTerm
+JitKTermGround
+JitKTermBase
+JitKTermCompatClo
+JitKTermPrim
+JitKTermCompatCtl
+JitKTermCompatCall
+JitKTermFv
+JitKTermFund
+JitKRefTerm
+JitKRefTermThm

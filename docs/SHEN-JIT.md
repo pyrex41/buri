@@ -156,7 +156,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 263 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 310 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -323,6 +323,10 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRefCompatClo.v` | KRef compatibility for lambda, freeze and dynamic application: `compat_lambda`, `compat_freeze` (no induction hypothesis), the `_lt` forms from `fund_below`, `app_rel`, and `compat_app_of_fund` from `fund_gen_statement` and `prim_compat_statement` |
 | `rocq/JitKRefFv.v` | `scoped_fv` (an expression scoped in g has its free variables in g), `fv` against binders and the list forms (`fv_lam_iff`, `fv_let_iff`, `scoped_defun_fv`, `fv_cond_iff`, `fv_app_iff`, `fv_call_iff`), `fund_below`'s scope condition carried to subterms and under binders (`fv_scope_*`), and the index induction `fund_below_all` / `fund_gen_of_step` that `fund_gen_statement` will be proved by; not `fund_gen_statement` itself |
 | `rocq/JitKRefFund.v` | KRef's fundamental property outright: `fund_step` (the induction step over every constructor from the compat lemmas and `prim_compat`), `fund_gen`, `fundamental`, `KRef_refl`, `compat_trap`, `compat_app`, `compat_call`, `store_refl`, `adequacy` and `call_preservation_src`, each with no premise beyond its statement's own |
+| `rocq/JitKTerm.v` | `rocq/JitKRef.v` over `jit_rules_nr sealed` (jit_rules with `resource_exn := fun _ => None`), with `srun_nil_Sstar_statement` and Section Compose left out: the relation KTerm reads backwards. No proofs |
+| `rocq/JitKTermGround.v`, `JitKTermBase.v`, `JitKTermCompatCtl.v`, `JitKTermCompatClo.v`, `JitKTermPrim.v`, `JitKTermCompatCall.v`, `JitKTermFv.v`, `JitKTermFund.v` | KRef's proof files over `jit_rules_nr`, renamed; three proofs that built a resource step are restated for an uncatchable `Fail` (`step_from_ret_top`, `fail_obs`, `ObsT_fail`); no KRef statement or file is changed |
+| `rocq/JitKRefTerm.v` | `KTerm` (`OB-JIT-LOWER-TERM`), `step_nr_sub` (a resource-free step is a jit_rules step), `KTerm_omega_refuted` (non-vacuity), `KTerm_compose_statement` and the open `KTerm_checker_statement` |
+| `rocq/JitKRefTermThm.v` | KTerm's fundamental property and every compatibility lemma in its orientation, `KTerm_adequacy`, `KTerm_diverges`, `KTerm_compose`, source reduction (`ERel_red` and `ERel_red_let`, `_if`, `_cond`, `_type`, `_call`, `_app_lam`) and the front rule `KTerm_lambda_app` |
 | `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
@@ -429,6 +433,27 @@ hash of heap and value, so their proof would need that hash invariant under the 
 counterexample checked in Rocq). Mutants
 `ShenJitKRefAbsvectorNoWext` (absvector at the same world) and `ShenJitKRefEqBudgetFree` (the `=` case at the two raw
 budgets, without eq_budget_closed; a true statement whose proof then fails) are rejected.
+
+**Termination of the front passes** (`rocq/JitKRefTerm.v`, `rocq/JitKRefTermThm.v`; `OB-JIT-LOWER-TERM`, precisely
+stated, partially discharged). `KTerm sealed D g e0 e := JitKTerm.KRef sealed D g e e0`: KRef's relation, text for text,
+over `jit_rules_nr sealed` (jit_rules with no catchable resource failure), read with the expressions swapped. Its index then
+counts source steps, and it says that every resource-free run of the source e0 to a terminal state (a value, an exception or
+a wrong state), after any IO trace, is matched by a resource-free run of the target e with the same trace to a terminal
+state of the same kind, with related values and stores; a target with no terminal resource-free run therefore has a source
+with none (`KTerm_diverges`, by contraposition, constructively). The rules must be resource-free: under jit_rules any
+running state may raise `(XUser "out of memory")`, so a looping target would "terminate" by raising.
+`KTerm_omega_refuted` proves that a looping target (omega) does not refine a source raising `(simple-error "out of memory")`,
+which under jit_rules it would; mutant `ShenJitKTermResourceSteps` puts the resource field back and Rocq rejects
+`om_srun`. A resource-free run is a jit_rules run (`step_nr_sub`). Proved, each Closed under the global context (47 audited
+statements): the fundamental property (`KTerm_refl`, `KTerm_fundamental`), every compatibility lemma, per-link adequacy,
+the two-link composition `KTerm_compose` (through the first-order observation and `GStore_trans`, not transitivity), source
+reduction (`ERel_red`: the source is the side whose runs are quantified, so KRef's source anti-reduction becomes source
+reduction, free under the deterministic resource-free machine) with one lemma per KRef anti-reduction, and norm's
+((lambda X B) A) to (let X A B') for an atomic A (`KTerm_lambda_app`; mutant `ShenJitKTermLamAppIdKey` drops its
+id_key premise and is rejected). Open: front-link checkers that establish KTerm (`KTerm_checker_statement`; none exists,
+and the same checkers owe KRef), rewrite lemmas for the other front rules, and the binding to the extended back end's
+invariant (JitEmitInv, not on `p2/int`). Total correctness of a link is KTerm for termination and outcome in the
+resource-free semantics together with KRef for every jit_rules run of the target.
 
 **The theorem.** `preservation` says: for every store, configuration and machine in the simulation relation, and
 every n, either the bytecode takes at least n steps while the source keeps a related configuration, or both end

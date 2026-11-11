@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermPrim JitKTermFund JitKRefTerm JitKRefTermThm.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -263,3 +263,50 @@ Print Assumptions JitKRefFund.JitKRefFund.compat_call.
 Print Assumptions JitKRefFund.JitKRefFund.store_refl.
 Print Assumptions JitKRefFund.JitKRefFund.adequacy.
 Print Assumptions JitKRefFund.JitKRefFund.call_preservation_src.
+Print Assumptions JitKTermGround.JitKTermGround.KRel_top.
+Print Assumptions JitKTermPrim.JitKTermPrim.prim_compat.
+Print Assumptions JitKTermFund.JitKTermFund.fund_gen.
+Print Assumptions JitKTermFund.JitKTermFund.fundamental.
+Print Assumptions JitKTermFund.JitKTermFund.KRef_refl.
+Print Assumptions JitKTermFund.JitKTermFund.store_refl.
+Print Assumptions JitKTermFund.JitKTermFund.adequacy.
+Print Assumptions JitKRefTerm.JitKRefTerm.eq_depth_r_nr.
+Print Assumptions JitKRefTerm.JitKRefTerm.next_r_nr.
+Print Assumptions JitKRefTerm.JitKRefTerm.step_nr_sub.
+Print Assumptions JitKRefTerm.JitKRefTerm.srun_nr_sub.
+Print Assumptions JitKRefTerm.JitKRefTerm.om_step.
+Print Assumptions JitKRefTerm.JitKRefTerm.om_srun.
+Print Assumptions JitKRefTerm.JitKRefTerm.e_oom_runs.
+Print Assumptions JitKRefTerm.JitKRefTerm.KTerm_omega_refuted.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_refl.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_fundamental.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_lit.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_var.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_let.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_if.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_and.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_or.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_cond.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_type.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_trap.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_lambda.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_freeze.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_call.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_app.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compat_defun.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_adequacy.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_diverges.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_compose.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ObsT_red1.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ObsT_red.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_same.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_let.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_if.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_cond.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_type.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_call.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.SRel_with_cell_r.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_app_lam.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.atom_rel.
+Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_lambda_app.

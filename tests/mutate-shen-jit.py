@@ -107,6 +107,17 @@ ShenJitKRefStoreReflNoStoreOk: store_refl_statement without its store_ok s premi
   JitKRef.v + JitKRefGround.v. store_ok is carried beside SRel as a premise because SRel does not give
   it (JitKRefBase.SRel_lok_refuted); without it, store_refl_of_fundamental (and adequacy_of_fundamental,
   which uses it) must fail.
+ShenJitKTermResourceSteps: jit_rules_nr (rocq/JitKTerm.v) with jit_rules' own resource field (heap and
+  stack failures catchable as XUser "out of memory" / "stack overflow"), chained as JitKTerm.v +
+  JitKTermGround.v + JitKRefTerm.v. KTerm then speaks of runs that may raise a resource error at any
+  running state, so a looping target "terminates" by raising, and KTerm_omega_refuted (a looping
+  target does not refine a source raising (simple-error "out of memory")) is false. Rocq must reject
+  om_srun, the lemma that the loop's runs stay inside its invariant, at its resource-step case.
+ShenJitKTermLamAppIdKey: JitKRefTermThm.KTerm_lambda_app with its ~ In id_key g premise replaced by True. The
+  source's body runs under the closure's identity cell (id_key, VVec l), the target's let body does
+  not, so a scope naming id_key relates two different values (the statement is then false: with
+  g = [id_key] and b0 = b = id_key the source returns its fresh cell, the target the environment's
+  value); the proof must fail at the id_key case, where nothing contradicts In id_key g.
 """
 import re
 from pathlib import Path
@@ -310,4 +321,11 @@ mutate('ShenJitKRefFundNoTrapCase', fund,
 mutate_chain('ShenJitKRefStoreReflNoStoreOk', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
        " D_wf -> StoreHas s -> store_ok s -> SRel k (id_world s) s s.\n",
        " D_wf -> StoreHas s -> SRel k (id_world s) s s.\n")
+kterm = ['rocq/JitKTerm.v', 'rocq/JitKTermGround.v', 'rocq/JitKRefTerm.v']
+mutate_chain('ShenJitKTermResourceSteps', kterm,
+       " false\n (fun _ => None)\n (fun _ => None).\n",
+       " false\n (fun r => match r with\n  | Observation.Observation.RHeap => Some (XUser (of_string \"out of memory\"))\n  | Observation.Observation.RStack => Some (XUser (of_string \"stack overflow\")) end)\n (fun _ => None).\n")
+mutate('ShenJitKTermLamAppIdKey', 'rocq/JitKRefTermThm.v',
+       "Theorem KTerm_lambda_app : forall g x a b0 b, atom_in g a = true -> ~ In id_key g ->\n",
+       "Theorem KTerm_lambda_app : forall g x a b0 b, atom_in g a = true -> True ->\n")
 print(' '.join(names))

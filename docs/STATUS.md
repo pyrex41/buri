@@ -1306,6 +1306,17 @@ premise (SRel_lok_refuted rules out deriving it); KRef's treatment of the `=` bu
 `ShenJitKRefStoreReflNoStoreOk` are rejected. `OB-JIT-LOWER-FRONT` stays open: its completion evidence also asks for
 front-link checkers proved to establish KRef, which no file proves yet. Mutation pin 201, audit count 263. Source
 judge: 148 of 955 as recorded on `p2/int` (this change adds no judge rule; the judge was not rerun for it).
+Forty-seven are KTerm's (branch `p2/r1-term`, built on `p2/int` at `5779555`; `OB-JIT-LOWER-TERM`, precisely stated,
+partially discharged): `rocq/JitKRefTerm.v` (`step_nr_sub`, `srun_nr_sub`, `eq_depth_r_nr`, `next_r_nr`, `om_step`,
+`om_srun`, `e_oom_runs`, `KTerm_omega_refuted`), `rocq/JitKRefTermThm.v` (`KTerm_refl`, `KTerm_fundamental`, fourteen
+`KTerm_compat_*` lemmas, `KTerm_adequacy`, `KTerm_diverges`, `KTerm_compose`, `ObsT_red1`, `ObsT_red`, `ERel_red`,
+`ERel_red_same`, `ERel_red_let`, `_if`, `_cond`, `_type`, `_call`, `SRel_with_cell_r`, `ERel_red_app_lam`, `atom_rel`,
+`KTerm_lambda_app`) and seven of the JitKTerm copies (`KRel_top`, `prim_compat`, `fund_gen`, `fundamental`, `KRef_refl`,
+`store_refl`, `adequacy`). `KTerm g e0 e` is `JitKTerm.KRef g e e0`, KRef's relation over the resource-free rules
+`jit_rules_nr`, read backwards: every resource-free terminating run of the source is matched by a resource-free one of the
+target. Mutants `ShenJitKTermResourceSteps` and `ShenJitKTermLamAppIdKey` are rejected. Open: the front-link checkers
+establishing KTerm, the other front rules' rewrite lemmas, and the binding to JitEmitInv. Mutation pin 203, audit count 310.
+Source judge: 148 of 955 as recorded on `p2/int` (no judge rule added; the judge was not rerun).
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
