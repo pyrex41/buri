@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Three hundred and ninety-nine statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Four hundred and twenty-four statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models (92 added by emit-spec: the family hooks' map and all lemmas, the hand-written
 nested `Comp_ind'` of `rocq/JitEmitRel.v` and of its non-empty test copy with `suffix`, `comp_embed`, `pmapx_pmap`,
 `frame_prim_pmap`, `trap_has_handler`, `VR_VRh`, `VRh_no_partial`, the old invariant's embedding at any `mu` that relates the
@@ -1255,8 +1255,14 @@ narrowing; 9 by its fix round 2: the `*_old_of_new'` corollaries from the catch-
 proved, so they recover nothing yet), `cx_catch_up` and its parts, and `dv_eq_cycle*` (= on a cycle: the source goes wrong, the bytecode is stuck);
 15 by its fix round 3: `old_reflect'_silent` (an old-fragment run is IO-free), `old_reflect'_ends` (the reflection's end conjunct,
 proved), `old_reflect'_iff_core` (what remains of `old_reflect'_statement` is exactly `old_reflect_core_statement`, the catch-up
-of MS' to MS; NOT proved, truth UNKNOWN), `old_reflect_src_of_fundamental` (a reduction to the unproved fundamental property,
-not a proof), the `*_old_statement` targets from the old theorems (a sanity check only) and six run-determinism helpers;
+of MS' to MS; NOT proved, truth UNKNOWN), `old_reflect_src_of_fundamental` (a reduction to the fundamental property, which
+r1-kref-fund has since proved), the `*_old_statement` targets from the old theorems (a sanity check only) and six run-determinism helpers;
+11 by its fix round 4: `old_reflect_src` (`old_reflect_src_statement`, proved from
+`JitKRefFund.fundamental`), `call_preservation_src_old_holds`, `call_preservation_src_old_of_new''` (the src corollary with
+`old_reflect_src_statement` discharged; it still waits on `call_preservation_src'_statement` and `old_reflect'_statement`),
+`preservation'_of_noenv`, and `env_ok_needed` with `resp_ok_bound_needed`, `noenv_false_at` and four parts (`gt_sm`, `gt_ms`,
+`gt_next`, `gt_trun_none`): `preservation'_statement` without `env_ok` is false, so the premise is necessary at statement level;
+14 by r1-kref-fund (below);
 7 by r1-compat-call (below);
 16 by r1-fv-mutants (below); 27 by kref-ctl, KRef's control compatibility lemmas in `rocq/JitKRefCompatCtl.v`; the back-end statements of `rocq/JitEmitInv.v`
 are stated, not proved, and a first version of them was false (counterexamples recorded in `rocq/JitEmitKont.v`'s `frame_prim`
@@ -1274,7 +1280,8 @@ the source body, and nothing relates either model to machine code. Three of them
 every text, so distinct KLambda symbols are distinct machine symbols; the `ShenJitSymBase256` mutant, the old base-256
 numeral, is rejected. `p_eq` admits `=` against a safe constant. Thirteen are about the
 refinement relation for the lowerer's front passes, and the composition of two front links with `call_preservation`,
-proved as an implication from the relation's fundamental property, which is not yet proved (`OB-JIT-LOWER-FRONT`).
+proved as an implication from the relation's fundamental property, which is now proved outright in
+`rocq/JitKRefFund.v` (below; `OB-JIT-LOWER-FRONT` stays open for the front-link checkers).
 Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/JitKRefGround.v` and
 `rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
 and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
@@ -1310,6 +1317,20 @@ from `fund_below k` alone (through `JitKRefCompatClo.call_rel` and `app_rel`, wi
 without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`. Not
 `fund_gen_statement` or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 With both merged: mutation pin 199, audit count 249.
+Fourteen are in `rocq/JitKRefFund.v` (branch `p2/r1-kref-fund`, built on `p2/int` at `17379dc`): the fundamental
+property, option A. `fund_step` (`D_wf -> fund_below k -> fund_at k`, structural induction on expr, one case per
+constructor from the compat lemmas: ERel_sval and ERel_throw_both for literals and variables, ERel_let with `body_at`,
+ERel_if, ERel_and, ERel_or, ERel_cond, ERel_type, ERel_trap with AppExn_fb, ERel_defun, compat_lambda_lt,
+compat_freeze_lt, compat_app_lt with prim_compat and compat_call_refl_lt), `fund_gen` (`fund_gen_statement`),
+`fund_at_all`, `EnvRelAll_scope`, `fundamental` (`fundamental_statement`), `KRef_refl`, `compat_trap`, `compat_app`,
+`compat_call`, `store_refl`, `adequacy` and `call_preservation_src` (`call_preservation_src_statement`, unchanged), each
+Closed under the global context with no premise beyond its statement's own. store_ok is carried beside SRel as a
+premise (SRel_lok_refuted rules out deriving it); KRef's treatment of the `=` budget is unchanged. Every
+`*_statement` of `rocq/JitKRef.v` now has a closed proof. Mutants `ShenJitKRefFundNoTrapCase` and
+`ShenJitKRefStoreReflNoStoreOk` are rejected. `OB-JIT-LOWER-FRONT` stays open: its completion evidence also asks for
+front-link checkers proved to establish KRef, which no file proves yet. Mutation pin 201, audit count 263 on `p2/int`
+(238 and 424 after the merge into `p2/r1-emit-spec-merge`). Source
+judge: 148 of 955 as recorded on `p2/int` (this change adds no judge rule; the judge was not rerun for it).
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,

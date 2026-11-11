@@ -167,6 +167,16 @@ ShenJitEmitCoreNoCatchUp: old_reflect_core_statement asks for MS at c' itself in
   the source reaches silently from c'. That is old_reflect_statement's first conjunct, which
   old_reflect_false refutes, so the core would no longer be equivalent to old_reflect'_statement:
   old_reflect'_of_core must fail.
+ShenJitEmitIoFailTranslated: ev_of translates a failed clock request (JTime, JFailed) to a source
+  IO failure event. The environment that answers JFailed then has a translated trace, so it no
+  longer refutes preservation_noenv_statement: env_ok_needed must fail.
+ShenJitKRefFundNoTrapCase: fund_step (JitKRefFund) with its trap case proved as a literal
+  (eapply ERel_lit; reflexivity) instead of by ERel_trap with JitKRefCompatCtl.AppExn_fb. Rocq
+  rejects it at the trap goal: lit_val (ETrap a b) is None, so no compat lemma covers the case.
+ShenJitKRefStoreReflNoStoreOk: store_refl_statement without its store_ok s premise, chained as
+  JitKRef.v + JitKRefGround.v. store_ok is carried beside SRel as a premise because SRel does not give
+  it (JitKRefBase.SRel_lok_refuted); without it, store_refl_of_fundamental (and adequacy_of_fundamental,
+  which uses it) must fail.
 """
 import re
 from pathlib import Path
@@ -427,4 +437,15 @@ mutate_chain_n('ShenJitKRefCallNoTable',
 mutate('ShenJitEmitCoreNoCatchUp', 'rocq/JitEmitInv.v',
        " MS s c m -> GvalsRel [] s m -> JitLowerThm.TN E pt k m m1 -> Sstar c c' -> mext [] mu' -> MS' mu' c' m1 ->\n exists c'', Sstar c' c'' /\\ MS s c'' m1.",
        " MS s c m -> GvalsRel [] s m -> JitLowerThm.TN E pt k m m1 -> Sstar c c' -> mext [] mu' -> MS' mu' c' m1 ->\n MS s c' m1.")
+mutate('ShenJitEmitIoFailTranslated', 'rocq/JitEmitInv.v',
+       " | B.JTime run, B.JTimeIs b =>",
+       " | B.JTime run, B.JFailed => Some (EvIO (QTime (of_string \"run\"%string)) (RFailed (EOther 0)))\n | B.JTime run, B.JTimeIs b =>")
+fund = 'rocq/JitKRefFund.v'
+mutate('ShenJitKRefFundNoTrapCase', fund,
+       "   apply JitKRefCompatCtl.JitKRefCompatCtl.ERel_trap;\n"
+       "    [exact (JitKRefCompatCtl.JitKRefCompatCtl.AppExn_fb sealed D k Fb)|ih IHa Ww HE|ih IHb Ww HE].\n",
+       "   eapply ERel_lit; reflexivity.\n")
+mutate_chain('ShenJitKRefStoreReflNoStoreOk', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
+       " D_wf -> StoreHas s -> store_ok s -> SRel k (id_world s) s s.\n",
+       " D_wf -> StoreHas s -> SRel k (id_world s) s s.\n")
 print(' '.join(names))

@@ -161,7 +161,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 399 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 424 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -327,6 +327,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
 | `rocq/JitKRefCompatClo.v` | KRef compatibility for lambda, freeze and dynamic application: `compat_lambda`, `compat_freeze` (no induction hypothesis), the `_lt` forms from `fund_below`, `app_rel`, and `compat_app_of_fund` from `fund_gen_statement` and `prim_compat_statement` |
 | `rocq/JitKRefFv.v` | `scoped_fv` (an expression scoped in g has its free variables in g), `fv` against binders and the list forms (`fv_lam_iff`, `fv_let_iff`, `scoped_defun_fv`, `fv_cond_iff`, `fv_app_iff`, `fv_call_iff`), `fund_below`'s scope condition carried to subterms and under binders (`fv_scope_*`), and the index induction `fund_below_all` / `fund_gen_of_step` that `fund_gen_statement` will be proved by; not `fund_gen_statement` itself |
+| `rocq/JitKRefFund.v` | KRef's fundamental property outright: `fund_step` (the induction step over every constructor from the compat lemmas and `prim_compat`), `fund_gen`, `fundamental`, `KRef_refl`, `compat_trap`, `compat_app`, `compat_call`, `store_refl`, `adequacy` and `call_preservation_src`, each with no premise beyond its statement's own |
 | `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
@@ -342,7 +343,7 @@ rewrites rely on (sealed, `D_wf`) and a well-formed store; adequacy and store re
 ground relation's lemmas, `KRel_top`, and the premise checks' specifications. The source's final store is related to
 the start by `GStore` under a world fixing the old locations, not equal to it. The `=` budget lemma is proved: `JitEqBudgetCore.eq_budget`
 is `eq_budget_statement` (its induction step in `JitEqBudgetStep.v`, its base case, `walk_bound`, in `JitEqBudgetWalk.v`, the
-assembly in `JitEqBudgetCore.v`). Not proved: the fundamental property, the compatibility lemmas, and any front-link checker. Under Com's
+assembly in `JitEqBudgetCore.v`). The fundamental property, every compatibility lemma, store reflexivity, adequacy and `call_preservation_src` itself are proved outright in `rocq/JitKRefFund.v` (below). Not proved: any front-link checker. Under Com's
 FunRel the callees b0 calls are the lowered bodies, not the kernel's source definitions. A checker must reject norm's
 `(fn F)` rewrites, open-call inlining behind `shen-jit.inlined?` and eval-kl to `shen-jit.eval-kl`, which cannot satisfy
 `KRef` in Búri's KLambda. Proof mutants `ShenJitEquivEndsSameStore`, `ShenJitEquivAdequacyStrict` and
@@ -372,6 +373,20 @@ under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with
 `compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
 (SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
 compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation.
+`rocq/JitKRefFund.v` (14 audited statements) closes the fundamental property (option A). `fund_step` proves
+`D_wf -> fund_below k -> fund_at k` by structural induction on the expression: literals and variables by `ERel_sval`
+(a variable bound on neither side raises `XUnboundVar` on both, `ERel_throw_both`), let by `ERel_let` (the body below k
+from `fund_below k`, at k from the induction hypothesis), if, and, or, cond and type by their ERel lemmas, trap by
+`ERel_trap` with `AppExn_fb`, defun by `ERel_defun`, and lambda, freeze, application and named call by
+`compat_lambda_lt`, `compat_freeze_lt`, `compat_app_lt` (with `prim_compat`, whose `=` case rests on
+`JitEqBudgetCore.eq_budget_closed`) and `compat_call_refl_lt`. `fund_gen` is `fund_gen_statement` by
+`JitKRefFv.fund_gen_of_step`; `fundamental` relates EnvRelAll environments on their names (`EnvRelAll_scope`);
+`KRef_refl`, `compat_trap`, `compat_app`, `compat_call`, `store_refl`, `adequacy` and `call_preservation_src` follow
+with no hypothesis beyond each statement's own premises (for `call_preservation_src`: `D_wf`, the two KRef links,
+`StoreHas`, `store_ok`, `Com`, `CompFn`, the arity and `entered`). `store_ok` is carried beside SRel as a premise,
+since SRel does not give it (`SRel_lok_refuted`). Mutants `ShenJitKRefFundNoTrapCase` (fund_step's trap case proved
+as a literal) and `ShenJitKRefStoreReflNoStoreOk` (`store_refl_statement` without `store_ok s`) are rejected.
+`OB-JIT-LOWER-FRONT` stays open: its completion evidence also needs the front-link checkers.
 `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
@@ -716,7 +731,8 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   syntax. The `*_old_of_new` corollaries take the reflection as a hypothesis, so they recover
   nothing; how the old conclusions are to be recovered is a review decision (for example a
   reflection to *some* MS-related configuration at a later machine, which the old preservation
-  theorem gives, so it would not be independent evidence). `old_reflect_src_statement`: UNKNOWN.
+  theorem gives, so it would not be independent evidence). `old_reflect_src_statement`: proved in
+  fix round 4 (`old_reflect_src`, below).
 - **get-time is modeled as IO on both sides** (`get_time_agree`, closed): on related arguments,
   both ask the clock with requests `ev_of` translates to each other, and for every answer
   `resp_ok` admits the source's result is `VRh`-related to what the bytecode writes; or both
@@ -756,7 +772,8 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   after catch-up, and source-side invariants that keep an old-fragment run IO-free and its store
   constant). The corollaries are therefore implications between unproved statements: they show the
   new statements, if proved, give the old conclusions, and they recover nothing yet.
-- **`old_reflect_src_statement`: UNKNOWN, not refuted.** Two cheap refutations were tried and do not
+- **`old_reflect_src_statement`: UNKNOWN, not refuted** (superseded: proved in fix round 4,
+  `old_reflect_src`). Two cheap refutations were tried and do not
   work. The old `pmap` admits no IO primitive, so an old-fragment machine cannot make a request. And
   `EndsSrc'`'s existential final store `s'` is tied to b0's final store by `GStore` (functions
   equal, globals and w's cells positionally `GVal`-related), and no choice apart from `s` was found
@@ -800,8 +817,8 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   - `old_reflect_src_of_fundamental`: `old_reflect_src_statement` follows from
     `fundamental_statement`. This is a **reduction, not a proof**: its end case comes entirely
     from `JitKRefCompose.call_preservation_src_of_fundamental`, so the src corollary adds nothing
-    beyond that theorem. `old_reflect_src_statement` is neither proved nor refuted until DoD item
-    (1) proves the fundamental property. (The round-2 note that a proof needs machine-side
+    beyond that theorem. (Fix round 4: DoD item (1) now proves the fundamental property,
+    `JitKRefFund.fundamental`, so `old_reflect_src` proves `old_reflect_src_statement`.) (The round-2 note that a proof needs machine-side
     invariants is superseded: with the fundamental property, determinism suffices);
   - `preservation_old_holds`, `call_preservation_old_holds` and
     `call_preservation_src_old_of_fundamental`: the `*_old_statement` targets follow from the old
@@ -821,7 +838,7 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
 
   | Premise or design choice | Rocq evidence | What the evidence shows |
   |---|---|---|
-  | `env_ok` on the run statements | `dv_io_fail`, `env_ok_inhabited` | an IO failure: the bytecode resumes with no result, the source throws (call level); an `env_ok` environment exists. `env_ok` is NOT derived from the pinned environment |
+  | `env_ok` on the run statements | `env_ok_needed`, `resp_ok_bound_needed`, `dv_io_fail`, `env_ok_inhabited` | statement level (fix round 4): `preservation'_statement` without `env_ok` is false, at an environment answering `JFailed` and at one answering a 2^64 clock reading; an `env_ok` environment exists. `env_ok` is an assumption on the environment, NOT derived from the pin; necessity is proved for `preservation'` only, the call statements are analogous but not proved |
   | `frame_prim` excludes absvector | `dv_absvector_src`, `dv_absvector_byt` | at 2^48 the source allocates a vector, the bytecode raises (primitive level) |
   | `frame_prim` excludes error-to-string | `dv_ets_*` | the source answers "error", the bytecode the exception's text (primitive level) |
   | `frame_prim` excludes open, close, read-byte, write-byte | `dv_open`, `dv_close`, `dv_read_closed`, `dv_write_closed` | home-directory prefix and closed-stream state differ (primitive level) |
@@ -832,7 +849,40 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   | six-parameter `Rule_X` hooks with `c`/`cv` indices | `JitEmitNestTest` (nested `Comp_ind'` with a non-empty dummy rule) | the shape compiles and its induction principle works; the uniform-index alternative failed strict positivity (scratchpad evidence only, not committed) |
 
   None of the `dv_*` Examples shows that a premise is necessary for `sim'_statement` or the run
-  statements; each shows a divergence at the primitive or call level.
+  statements; each shows a divergence at the primitive or call level. Fix round 4 adds the one
+  statement-level necessity proof, for `env_ok` (below).
+
+- **Fix round 4 (merged onto `p2/int` `5779555`, r1-kref-fund).** In `rocq/JitEmitInv.v`, all closed:
+  - `old_reflect_src`: `old_reflect_src_statement` is **proved**, as
+    `old_reflect_src_of_fundamental` applied to `JitKRefFund.fundamental`. With
+    `old_reflect_false` (the refutation of `old_reflect_statement`), both reflection obligations of
+    the spec are settled in Rocq: one refuted, one proved.
+  - `call_preservation_src_old_holds`: the target `call_preservation_src_old_statement` holds.
+  - `call_preservation_src_old_of_new''`: `call_preservation_src_old_of_new'` with its
+    `old_reflect_src_statement` hypothesis discharged. The three `*_old_of_new'` corollaries now
+    wait only on the new statements and `old_reflect'_statement`, which is exactly
+    `old_reflect_core_statement` (`old_reflect'_iff_core`): NOT proved, truth UNKNOWN.
+  - `env_ok_needed`: `preservation_noenv_statement` (`preservation'_statement` with `env_ok rs`
+    dropped, nothing else changed; `preservation'_of_noenv`) is **false**. MS' relates the source at
+    `get-time`'s pending frame, `run` evaluated (`KD'_prim`, then `KD'_ret`), to the machine at its
+    `(get-time run)` instruction (`gt_ms`). Its first step asks the clock (`gt_next`). Under an
+    environment that answers `JFailed`, every run of one step or more starts with an untranslated
+    event (`gt_trun_none`), and the machine is not final at step 0, so neither disjunct holds at
+    `n = 1` (`noenv_false_at`). `resp_ok_bound_needed`: the same at an environment answering a
+    clock reading of 2^64, outside `resp_ok`'s 64 bits; neither environment is `env_ok`. So
+    `env_ok` cannot be dropped from `preservation'_statement`. It is an assumption about the
+    environment, not derivable from the pin or the premises. `call_preservation'` and
+    `call_preservation_src'` are analogous; their necessity is NOT proved here.
+  - Mutant `ShenJitEmitIoFailTranslated`: `ev_of` translates `(JTime, JFailed)`, so the `JFailed`
+    environment no longer refutes the statement and `env_ok_needed` must fail.
+
+  11 closed statements added (424 in `Audit_Jit`: 399 + 14 from r1-kref-fund + 11). The pin is 238 =
+  235 + r1-kref-fund's 2 + 1. Still NOT proved, truth UNKNOWN: `sim'_statement`, every
+  `sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'` and
+  `old_reflect_core_statement`. Still at primitive or call level only: the `frame_prim`
+  exclusions and the one-argument window. A statement-level counterexample for those needs a KD'
+  frame that MS' does not have, so it means changing JitEmitKont. Every row of the table above
+  still awaits Reuben.
 
 ### Pass split: the normal form (wave 1b)
 

@@ -16,9 +16,13 @@
    Fix round 3 (closed, from run determinism and the PROVED old theorems): old_reflect'_silent,
    old_reflect'_ends (old_reflect''s end conjunct), old_reflect'_iff_core (old_reflect' is exactly
    old_reflect_core_statement, NOT proved), old_reflect_src_of_fundamental (a reduction to the
-   unproved fundamental property, not a proof), and the *_old_statement targets from the old
+   fundamental property), and the *_old_statement targets from the old
    theorems (preservation_old_holds, call_preservation_old_holds,
    call_preservation_src_old_of_fundamental; a sanity check, nothing about the new statements).
+   Fix round 4 (closed): old_reflect_src (old_reflect_src_statement, PROVED from
+   JitKRefFund.fundamental), call_preservation_src_old_holds, call_preservation_src_old_of_new'';
+   env_ok_needed and resp_ok_bound_needed (preservation'_statement without env_ok is FALSE, so the
+   premise is necessary), with preservation'_of_noenv, noenv_false_at and gt_sm/gt_ms/gt_next/gt_trun_none.
 
    What the old invariant (JitLowerStep.MS, JitLowerThm) fixes, and what this one lets evolve:
    - mu, a partial bijection between KLambda heap locations (nat) and bytecode heap keys
@@ -77,7 +81,7 @@
    describe; the embedding (ms_embed) holds at any mu StoreRel admits, the corollaries are at mu = []. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
 From Buri Require Import Observation JitEmitKont KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile
- JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefCompose
+ JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefCompose JitKRefFund
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel.
 Import ListNotations.
@@ -729,6 +733,17 @@ Definition preservation'_statement : Prop := forall n mu c m (rs : nat -> B.jreq
     mext mu mu' /\ MS' mu' c' m') \/
  (exists m1 k tS tT, Ends' mu c m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
+(* preservation'_statement with its env_ok rs premise dropped, nothing else changed. NOT a
+   statement any task proves: it is the text env_ok_needed (end of this file) refutes, which shows
+   the env_ok premise is necessary for preservation'_statement as stated (preservation'_of_noenv:
+   dropping it only strengthens). *)
+Definition preservation_noenv_statement : Prop := forall n mu c m (rs : nat -> B.jreq -> B.jres), MS' mu c m ->
+ (exists c' m' k tS tT mu', Srun c tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext mu mu' /\ MS' mu' c' m') \/
+ (exists m1 k tS tT, Ends' mu c m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+Lemma preservation'_of_noenv : preservation_noenv_statement -> preservation'_statement.
+Proof. intros P n mu c m rs _ H. exact (P n mu c m rs H). Qed.
+
 (* The machine entering code c with these values in slots 2 up, nothing pending, no handler. *)
 Definition entered' (mu : kmap) (m : B.machine) (c : B.code) (args : list value) : Prop :=
  code m = c /\ B.m_rest m = B.code_ins c /\ cs m = [] /\ hs m = [] /\
@@ -864,7 +879,7 @@ Definition old_reflect_statement : Prop := forall s c m (rs : nat -> B.jreq -> B
  (Ends' [] c m1 tS -> tS = [] /\ JitLowerThm.Ends E pt sealed s c m1).
 
 (* The same for the composed front end's end: EndsSrc' at mu = [] read back as JitKRef.EndsSrc
-   (the emitted body's final store s, the value VR-related). NOT proved; truth UNKNOWN.
+   (the emitted body's final store s, the value VR-related). Proved in fix round 4 (old_reflect_src).
    Does NOT say: anything when the emitted body e is outside the old fragment; anything about b0
    beyond what EndsSrc' gives (KRef's GVal/GStore at a world extending the identity on s). *)
 Definition old_reflect_src_statement : Prop := forall s m c ps b0 b1 e args (rs : nat -> B.jreq -> B.jres) k tS tT m1,
@@ -1023,9 +1038,9 @@ Qed.
      primitives); a family whose rule overlaps the old fragment must re-prove it.
    - old_reflect_src_of_fundamental: old_reflect_src_statement follows from the fundamental
      property. This is a reduction, NOT a proof: its end case comes entirely from
-     call_preservation_src_of_fundamental, so the src corollary adds nothing beyond that theorem,
-     and old_reflect_src_statement is neither proved nor refuted until DoD (1) proves
-     fundamental_statement.
+     call_preservation_src_of_fundamental, so the src corollary adds nothing beyond that theorem.
+     JitKRefFund.fundamental now proves fundamental_statement, so old_reflect_src (fix round 4,
+     below) proves old_reflect_src_statement.
    - preservation_old_holds, call_preservation_old_holds and call_preservation_src_old_of_fundamental:
      the *_old_statement targets follow from the old theorems directly (the src one from
      fundamental). A sanity check that the targets of the *_old_of_new' corollaries are true; it
@@ -1178,6 +1193,26 @@ Proof.
  exact (JitKRefCompose.JitKRefCompose.call_preservation_src_of_fundamental sealed D E pt F
    s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En).
 Qed.
+
+(* ---------- old_reflect_src_statement, proved (closed) ----------
+   JitKRefFund.fundamental proves JitKRef's fundamental property outright (DoD (1)), so the
+   reduction old_reflect_src_of_fundamental and call_preservation_src_old_of_fundamental become
+   proofs. old_reflect_src: the end case of the src reflection holds, with no hypothesis beyond its
+   own premises. call_preservation_src_old_holds: the target of call_preservation_src_old_of_new'
+   holds. call_preservation_src_old_of_new'': call_preservation_src_old_of_new' with its
+   old_reflect_src_statement hypothesis discharged, so the src corollary waits only on
+   call_preservation_src'_statement and old_reflect'_statement (equivalently old_reflect_core).
+   Does NOT say: anything about call_preservation_src'_statement or old_reflect_core_statement
+   (both UNKNOWN). *)
+Theorem old_reflect_src : old_reflect_src_statement.
+Proof. exact (old_reflect_src_of_fundamental (JitKRefFund.JitKRefFund.fundamental sealed D)). Qed.
+
+Theorem call_preservation_src_old_holds : call_preservation_src_old_statement.
+Proof. exact (call_preservation_src_old_of_fundamental (JitKRefFund.JitKRefFund.fundamental sealed D)). Qed.
+
+Theorem call_preservation_src_old_of_new'' : call_preservation_src'_statement -> old_reflect'_statement ->
+ call_preservation_src_old_statement.
+Proof. intros Cp Rf. exact (call_preservation_src_old_of_new' Cp Rf old_reflect_src). Qed.
 End Src.
 End Inv.
 
@@ -1196,7 +1231,7 @@ End Inv.
    do). The three *_old_of_new corollaries take old_reflect_statement as a hypothesis, so they
    hold vacuously and recover nothing. How the old conclusions are to be recovered is open
    (OB-JIT-LOWER-FRAGMENT): see the ledger's review items.
-   Does NOT say: anything about old_reflect_src_statement (UNKNOWN), or that sim'_statement or any
+   Does NOT say: anything about old_reflect_src_statement (proved separately, old_reflect_src), or that sim'_statement or any
    other new statement is false. *)
 Definition cx_x : name := kw "X".
 Definition cx_y : name := kw "Y".
@@ -1517,6 +1552,111 @@ Example dv_io_fail :
  | B.MIO q kk => q = B.JTime true /\ kk B.JFailed = B.set_rest dv_mm [] | _ => False end /\
  ~ resp_ok (B.JTime true) B.JFailed.
 Proof. split; [vm_compute; split; reflexivity|]. split; [vm_compute; split; reflexivity|]. cbn. auto. Qed.
+(* ---------- env_ok is necessary for preservation'_statement (closed) ----------
+   dv_io_fail is primitive-level. env_ok_needed is statement-level: preservation_noenv_statement
+   (preservation'_statement without env_ok rs) is FALSE. MS' relates the source at get-time's frame
+   (run evaluated, the call pending: KD'_prim, then KD'_ret) to the machine at its
+   (get-time run) instruction (gt_ms). The machine's first step asks the clock (gt_next). Under an
+   environment whose first answer ev_of does not translate (JFailed, an IO failure; or a clock
+   reading of 2^64, outside resp_ok's 64 bits), every run of one step or more starts with None
+   (gt_trun_none), which no source trace maps to, and the machine is not final at step 0. So
+   neither disjunct holds at n = 1 (noenv_false_at), and env_ok_needed and resp_ok_bound_needed
+   instantiate it. The call statements (call_preservation', call_preservation_src') are analogous;
+   NOT proved here.
+   Does NOT say: that preservation'_statement (with env_ok) is true (UNKNOWN); anything about
+   which environment the pinned binary's runtime gives (env_ok is an assumption on the
+   environment, not derived from the pin). *)
+Definition gt_name : name := of_string "get-time".
+Definition gt_r : list B.instr := [B.IPrim 0 B.PGetTime [B.OSlot 2]; B.IReturn (B.OSlot 0)].
+Definition gt_f : B.code := B.Code B.VNil 0 None 5 [] gt_r [] B.VNil.
+Definition gt_st : B.tree B.val := B.tset (B.skey 2) (B.VSym (B.sym_of_text (of_string "run"))) B.Leaf.
+Definition gt_m : B.machine := B.Machine gt_st 0 gt_f gt_r [] [] B.VCleared cx_heap 2 B.Leaf cx_gfun B.Leaf false 0.
+Definition gt_k : list frame := [KCallArgs gt_name [] [] []].
+Definition gt_c : config := Cfg (Ret (VSym (of_string "run"))) gt_k cx_s.
+
+Lemma gt_sm : SM [] cx_s gt_k gt_m.
+Proof.
+ split.
+ - constructor.
+   + exact pbij_nil.
+   + intros l p I; destruct I.
+   + split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
+   + apply funrel_embed. apply cx_funrel; reflexivity.
+ - unfold HK. cbn. constructor.
+Qed.
+
+Lemma gt_ms : MS' [] gt_c gt_m.
+Proof.
+ unfold gt_c.
+ eapply MS'_ret with (cv := []) (caps := []) (o := B.OSlot 2) (v' := B.VSym (B.sym_of_text (of_string "run")))
+   (w := fun _ => True).
+ - exact gt_sm.
+ - vm_compute. reflexivity.
+ - constructor.
+ - left; reflexivity.
+ - left; reflexivity.
+ - unfold gt_k.
+   eapply KD'_prim with (p := PGetTime) (g := []) (top := 3) (ops := []) (dops := []) (d := 0)
+     (r1 := [B.IReturn (B.OSlot 0)]) (w1 := fun _ => True).
+   + vm_compute; reflexivity.
+   + reflexivity.
+   + reflexivity.
+   + split; [intros x s L; discriminate|intros i x N; destruct i; discriminate].
+   + intros x s L; discriminate.
+   + intros x s L; discriminate.
+   + apply Os_nil.
+   + vm_compute; reflexivity.
+   + constructor.
+   + constructor.
+   + constructor.
+   + cbn. lia.
+   + intros a A; exact A.
+   + intros a A; exact I.
+   + exact I.
+   + apply KD'_ret; [intros a A; cbn; lia|constructor].
+Qed.
+
+Lemma gt_next : exists kk, B.next cx_E cx_pt gt_m = B.MIO (B.JTime true) kk.
+Proof. eexists. vm_compute. reflexivity. Qed.
+
+Lemma gt_trun_none : forall rs, ev_of (B.JTime true) (rs O (B.JTime true)) = None ->
+ forall k tT m', TRun cx_E cx_pt rs (S k) gt_m tT m' -> exists t, tT = None :: t.
+Proof.
+ intros rs Hn k tT m' Tr. destruct gt_next as [kk Nx]. inversion Tr; subst.
+ - match goal with N : B.next _ _ gt_m = B.MTau _ |- _ => rewrite Nx in N; discriminate end.
+ - match goal with N : B.next _ _ gt_m = B.MIO _ _ |- _ => rewrite Nx in N; injection N as <- _ end.
+   rewrite Hn. eauto.
+Qed.
+
+Theorem noenv_false_at : forall rs, ev_of (B.JTime true) (rs O (B.JTime true)) = None ->
+ ~ preservation_noenv_statement cx_E cx_pt [].
+Proof.
+ intros rs Hn P. destruct (P 1%nat [] gt_c gt_m rs gt_ms)
+   as [(c' & m' & k & tS & tT & mu' & _ & Tr & Le & Mp & _)|(m1 & k & tS & tT & En & Tr & Mp)].
+ - destruct k as [|k]; [lia|]. destruct (gt_trun_none rs Hn k tT m' Tr) as [t ->].
+   destruct tS; discriminate.
+ - destruct k as [|k].
+   + apply TRun_0 in Tr as [_ ->]. apply Ends'_final in En. destruct En as (o & m2 & F).
+     destruct gt_next as [kk Nx]. rewrite Nx in F. discriminate.
+   + destruct (gt_trun_none rs Hn k tT m1 Tr) as [t ->]. destruct tS; discriminate.
+Qed.
+
+Definition rs_failed : nat -> B.jreq -> B.jres := fun _ _ => B.JFailed.
+Definition rs_time64 : nat -> B.jreq -> B.jres := fun _ _ => B.JTimeIs 18446744073709551616.
+
+Theorem env_ok_needed : ~ preservation_noenv_statement cx_E cx_pt [].
+Proof. exact (noenv_false_at rs_failed eq_refl). Qed.
+
+(* resp_ok's 64-bit bound on a clock reading is needed too: the same refutation at an environment
+   answering 2^64, which ev_of does not translate; neither environment is env_ok. *)
+Theorem resp_ok_bound_needed : ~ preservation_noenv_statement cx_E cx_pt [] /\
+ ~ env_ok rs_time64 /\ ~ env_ok rs_failed.
+Proof.
+ split; [exact (noenv_false_at rs_time64 ltac:(vm_compute; reflexivity))|]. split.
+ - intro H. specialize (H O (B.JTime true)). cbn in H. lia.
+ - intro H. specialize (H O (B.JTime true)). exact H.
+Qed.
+
 (* = on two distinct cyclic vectors (each one's only cell holds the other), related through
    mu = [(0, 5); (1, 6)]: the source goes wrong (OWrong equality-undefined, its depth bound
    exhausted), the bytecode is stuck (RCyclic, its fuel exhausted). Neither side answers, so this

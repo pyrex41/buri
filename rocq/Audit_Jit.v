@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
@@ -404,3 +404,28 @@ Print Assumptions JitEmitInv.JitEmitInv.old_reflect_src_of_fundamental.
 Print Assumptions JitEmitInv.JitEmitInv.preservation_old_holds.
 Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_holds.
 Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_fundamental.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect_src.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_holds.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_new''.
+Print Assumptions JitEmitInv.JitEmitInv.preservation'_of_noenv.
+Print Assumptions JitEmitInv.JitEmitInv.gt_sm.
+Print Assumptions JitEmitInv.JitEmitInv.gt_ms.
+Print Assumptions JitEmitInv.JitEmitInv.gt_next.
+Print Assumptions JitEmitInv.JitEmitInv.gt_trun_none.
+Print Assumptions JitEmitInv.JitEmitInv.noenv_false_at.
+Print Assumptions JitEmitInv.JitEmitInv.env_ok_needed.
+Print Assumptions JitEmitInv.JitEmitInv.resp_ok_bound_needed.
+Print Assumptions JitKRefFund.JitKRefFund.ERel_var.
+Print Assumptions JitKRefFund.JitKRefFund.body_at.
+Print Assumptions JitKRefFund.JitKRefFund.fund_step.
+Print Assumptions JitKRefFund.JitKRefFund.fund_gen.
+Print Assumptions JitKRefFund.JitKRefFund.fund_at_all.
+Print Assumptions JitKRefFund.JitKRefFund.EnvRelAll_scope.
+Print Assumptions JitKRefFund.JitKRefFund.fundamental.
+Print Assumptions JitKRefFund.JitKRefFund.KRef_refl.
+Print Assumptions JitKRefFund.JitKRefFund.compat_trap.
+Print Assumptions JitKRefFund.JitKRefFund.compat_app.
+Print Assumptions JitKRefFund.JitKRefFund.compat_call.
+Print Assumptions JitKRefFund.JitKRefFund.store_refl.
+Print Assumptions JitKRefFund.JitKRefFund.adequacy.
+Print Assumptions JitKRefFund.JitKRefFund.call_preservation_src.
