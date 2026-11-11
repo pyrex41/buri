@@ -158,7 +158,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
 | `rocq/JitFrontProlog.v` | norm's Prolog rewrites: the bound-now rule, proved sound (`bind_rule_sound`); D00's `bind_site_sound_statement` refuted (`bind_site_unsound`); the source-shape scan `prolog_scan` |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 526 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 527 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -447,12 +447,14 @@ under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with
 `compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
 (SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
 compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation. That mutant is a
-rejected proof only. `rocq/JitKRefCallNoTableCex.v` (3 audited statements) shows in Rocq that the statement is false:
+rejected proof only. `rocq/JitKRefCallNoTableCex.v` (4 audited statements) shows in Rocq that the statement is false:
 `call_rel_no_table_refuted` refutes call_rel's statement with SRel's table clause replaced by True (`SRel_nt`, over the
 unmutated VRel, KRel and fund_below), at sealed = D = [], j = 2, with every other premise discharged (`fund_gen`,
 `prim_compat`, `KRel_top`, `app_at`): the source table lacks `f`, so the source raises `XUndefinedFun`, and the target's
 `(defun f () 1)` returns 1. `call_rel_nt_of_table` gives the conclusion back once `gfuns s0 = gfuns s` is added. Mutant
-`ShenJitKRefCallNoTableCexTable` (SRel_nt with the clause restored) is rejected at the counterexample's store premise. Not
+`ShenJitKRefCallNoTableCexTable` (SRel_nt with the clause restored) is rejected at the counterexample's store premise, where it
+tries the restored clause by `vm_compute; reflexivity` and Rocq finds the two tables different; `cx_tables_differ` proves
+`gfuns cx_s0 <> gfuns cx_s`, so no proof of that premise exists. Not
 shown: that the mutant's whole chain (its own VRel, KRel, fund_below and GStore) is false.
 `rocq/JitKRefFund.v` (14 audited statements) closes the fundamental property (option A). `fund_step` proves
 `D_wf -> fund_below k -> fund_at k` by structural induction on the expression: literals and variables by `ERel_sval`

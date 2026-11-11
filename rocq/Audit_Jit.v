@@ -526,3 +526,4 @@ Print Assumptions JitFrontProlog.JitFrontProlog.bind_site_unsound.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.SRel_nt_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_nt_of_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_refuted.
+Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.cx_tables_differ.

@@ -1293,7 +1293,7 @@ from `fund_below k` alone (through `JitKRefCompatClo.call_rel` and `app_rel`, wi
 `compat_call_refl_lt` its reflexive scope form, and `compat_call_of_fund` gives `compat_call_statement` from
 `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable` (SRel and GStore
 without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`. That mutant is a rejected proof only;
-`rocq/JitKRefCallNoTableCex.v` (r21-mutation-hygiene, 3 audited statements) refutes in Rocq call_rel's statement with SRel's
+`rocq/JitKRefCallNoTableCex.v` (r21-mutation-hygiene, 4 audited statements) refutes in Rocq call_rel's statement with SRel's
 table clause dropped (`call_rel_no_table_refuted`, unmutated VRel/KRel/fund_below), and mutant
 `ShenJitKRefCallNoTableCexTable` is rejected. Not
 `fund_gen_statement` or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.

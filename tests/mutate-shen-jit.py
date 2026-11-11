@@ -117,7 +117,9 @@ ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) 
 ShenJitKRefCallNoTableCexTable: JitKRefCallNoTableCex.SRel_nt with the table clause restored
   (gfuns s0 = gfuns s for True, and SRel_nt_table's proof supplying it). The counterexample's two
   stores have different tables, so call_rel_no_table_refuted must fail where it establishes SRel_nt
-  for them (exact I against gfuns cx_s0 = gfuns cx_s).
+  for them. The mutant also tries the restored clause by vm_compute; reflexivity (not exact I, whose
+  type mismatch would fail on any goal), so the rejection is Rocq computing the two tables and
+  finding them different; JitKRefCallNoTableCex.cx_tables_differ proves gfuns cx_s0 <> gfuns cx_s.
 ShenJitKRefFundNoTrapCase: fund_step (JitKRefFund) with its trap case proved as a literal
   (eapply ERel_lit; reflexivity) instead of by ERel_trap with JitKRefCompatCtl.AppExn_fb. Rocq
   rejects it at the trap goal: lit_val (ETrap a b) is None, so no compat lemma covers the case.
@@ -491,5 +493,6 @@ cex = 'rocq/JitKRefCallNoTableCex.v'
 mutate_chain_n('ShenJitKRefCallNoTableCexTable', [cex],
        [(" wf_world w /\\ StoreHas s0 /\\ StoreHas s /\\ True /\\\n",
          " wf_world w /\\ StoreHas s0 /\\ StoreHas s /\\ gfuns s0 = gfuns s /\\\n"),
-        ("(conj W (conj H0 (conj H1 (conj I (conj Fv Hh)))))", "(conj W (conj H0 (conj H1 (conj G (conj Fv Hh)))))")])
+        ("(conj W (conj H0 (conj H1 (conj I (conj Fv Hh)))))", "(conj W (conj H0 (conj H1 (conj G (conj Fv Hh)))))"),
+        ("split; [exact I|split; [constructor|intros l0 l []]]", "split; [vm_compute; reflexivity|split; [constructor|intros l0 l []]]")])
 print(' '.join(names))

@@ -19,7 +19,8 @@
      table defines g as (defun g () 1), so the target returns 1 in one step. ObsT 2 requires a
      source run to a value, and the source's only reachable states are that exception. The
      two outcomes differ in kind (a value against an exception), so no GVal choice can relate
-     them.
+     them. cx_tables_differ proves the two tables differ, so SRel (with the clause) does not hold
+   for these stores.
 
    Does NOT show: that the mutant's whole chain is false. The mutant also drops the clause from
    GStore, and its VRel, KRel, ERel and fund_below are built over its own SRel; here they are the
@@ -94,6 +95,11 @@ Proof. vm_compute. reflexivity. Qed.
 
 Example cx_tgt_move : call_named_r (jit_rules []) jit_profile cx_g [] [] cx_s = MTau cx_c.
 Proof. vm_compute. reflexivity. Qed.
+
+(* The two tables differ, so SRel's table clause is false for this pair of stores: with the clause
+   restored, no proof of SRel_nt for them exists (mutant ShenJitKRefCallNoTableCexTable). *)
+Lemma cx_tables_differ : gfuns cx_s0 <> gfuns cx_s.
+Proof. intros E. vm_compute in E. discriminate E. Qed.
 
 Theorem call_rel_no_table_refuted : ~ call_rel_nt_statement [] [].
 Proof.
