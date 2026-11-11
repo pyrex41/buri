@@ -80,6 +80,13 @@ ShenJitKRefTrapNoPrim: compat_trap_fb (trap from fund_below k alone) proved from
   primitive parametricity (a handler may be a partial primitive).
 ShenJitKRefAppExnNoPrim: AppExn_fb proved from AppExn_of without JitKRefPrim.prim_compat; the same
   premise is left open and the proof must fail.
+ShenJitKRefCallNoPrim: compat_call_lt (a named call at index k from fund_below k alone) proved from
+  compat_call_lt_pc without supplying JitKRefPrim.prim_compat. The callee may be a primitive, so the
+  call clause rests on primitive parametricity; the premise is left open and the proof must fail.
+ShenJitKRefCallRename: a copy of compat_call_of_fund whose target calls a different name f' (any f',
+  not only f), with compat_call_of_fund's proof. The proof relates a call of f only to a call of f
+  (the same table entry on both sides under SRel), so it must fail on the copy. A rejected proof,
+  not a Rocq counterexample.
 """
 import re
 from pathlib import Path
@@ -238,4 +245,13 @@ mutate('ShenJitKRefTrapNoPrim', 'rocq/JitKRefCompatCtl.v',
 mutate('ShenJitKRefAppExnNoPrim', 'rocq/JitKRefCompatCtl.v',
        "Proof. intros k Hf. exact (AppExn_of (JitKRefPrim.JitKRefPrim.prim_compat sealed D) k Hf). Qed.",
        "Proof. intros k Hf. apply AppExn_of; [|exact Hf]; assumption. Qed.")
+mutate('ShenJitKRefCallNoPrim', 'rocq/JitKRefCompatCall.v',
+       "Proof. exact (compat_call_lt_pc (JitKRefPrim.JitKRefPrim.prim_compat sealed D)). Qed.",
+       "Proof. intros k. apply compat_call_lt_pc; assumption. Qed.")
+mutate('ShenJitKRefCallRename', 'rocq/JitKRefCompatCall.v',
+       "End Equiv.\nEnd JitKRefCompatCall.",
+       "Theorem compat_call_rename : fund_gen_statement -> forall g f f' as0 as1,\n D_wf -> Forall2 (KRef g) as0 as1 -> KRef g (ECall f as0) (ECall f' as1).\n"
+       "Proof.\n intros FG g f f' as0 as1 Dw Has k w rho0 rho Wf HE.\n"
+       " assert (F : fund_below k) by (apply (fund_below_down (S k)); [lia|apply FG; exact Dw]).\n"
+       " exact (compat_call_lt k F g f as0 as1 Has w rho0 rho Wf HE).\nQed.\nEnd Equiv.\nEnd JitKRefCompatCall.")
 print(' '.join(names))

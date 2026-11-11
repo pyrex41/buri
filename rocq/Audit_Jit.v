@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -226,3 +226,10 @@ Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_of_fund.
 Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.AppExn_fb.
 Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_fb.
 Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_of_gen.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.ERel_call_nil.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.ERel_call_cons.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_core.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_lt_pc.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_lt.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_refl_lt.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_of_fund.
