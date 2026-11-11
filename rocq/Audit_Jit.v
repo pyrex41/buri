@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
@@ -330,3 +330,30 @@ Print Assumptions JitEmitInv.JitEmitInv.dv_io_fail.
 Print Assumptions JitEmitInv.JitEmitInv.dv_window_rel.
 Print Assumptions JitEmitInv.JitEmitInv.dv_write_closed_rel.
 Print Assumptions JitEmitInv.JitEmitInv.dv_write_closed.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ObsT_of_MRel.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_sval.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_throw_both.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_let.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_if.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_and.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_or.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_type.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_cond.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_defun.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.KRel_KApply_exn.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.ERel_trap.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.AppExn_of.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_lit.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_var.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_let.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_if.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_and.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_or.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_cond.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_type.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_defun.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_lt.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_of_fund.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.AppExn_fb.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_fb.
+Print Assumptions JitKRefCompatCtl.JitKRefCompatCtl.compat_trap_of_gen.

@@ -130,6 +130,15 @@ ShenJitEmitGetTimeSwap: ev_of reads the run clock as unix and the unix clock as 
   bytecode's clock request no longer translates to the source's. get_time_agree must fail.
 ShenJitEmitDo2Opaque: KD'_do2 (the source's pending call of do is transparent) needs False, so MS'
   no longer relates the machine that has returned from do. old_reflect_false (cx_ms'1) must fail.
+ShenJitKRefCondSwap: a copy of compat_cond whose target is the clauses in reverse order
+  (ECond (rev cl)), with compat_cond's own proof. cond tries clauses in order, so the copy is false
+  and its proof must fail.
+ShenJitKRefTrapNoPrim: compat_trap_fb (trap from fund_below k alone) proved from compat_trap_lt
+  without supplying JitKRefPrim.prim_compat. compat_trap_lt's prim_compat_statement premise is then
+  an open goal that no hypothesis closes, so the proof must fail: the fund_below-only form rests on
+  primitive parametricity (a handler may be a partial primitive).
+ShenJitKRefAppExnNoPrim: AppExn_fb proved from AppExn_of without JitKRefPrim.prim_compat; the same
+  premise is left open and the proof must fail.
 """
 import re
 from pathlib import Path
@@ -335,4 +344,13 @@ mutate('ShenJitEmitGetTimeSwap', 'rocq/JitEmitInv.v', '(QTime (of_string (if run
        '(QTime (of_string (if run then "unix"%string else "run"%string)))')
 mutate_chain('ShenJitEmitDo2Opaque', ['rocq/JitEmitKont.v', 'rocq/JitEmitInv.v'],
        " | KD'_do2 c cv caps fp st cs hs w o r v rho k1 : DoK -> KD'", " | KD'_do2 c cv caps fp st cs hs w o r v rho k1 : False -> DoK -> KD'")
+mutate('ShenJitKRefCondSwap', 'rocq/JitKRefCompatCtl.v',
+       "Theorem compat_type : compat_type_statement.",
+       "Theorem compat_cond_swap : forall g cl0 cl,\n Forall2 (fun p0 p => KRef g (fst p0) (fst p) /\\ KRef g (snd p0) (snd p)) cl0 cl ->\n KRef g (ECond cl0) (ECond (rev cl)).\nProof.\n intros g cl0 cl F k w rho0 rho Ww HE. apply ERel_cond.\n eapply Forall2_impl; [|exact F]. intros p0 p [H1 H2]. split; [apply H1|apply H2]; assumption.\nQed.\n\nTheorem compat_type : compat_type_statement.")
+mutate('ShenJitKRefTrapNoPrim', 'rocq/JitKRefCompatCtl.v',
+       "Proof. intros k. exact (compat_trap_lt (JitKRefPrim.JitKRefPrim.prim_compat sealed D) k). Qed.",
+       "Proof. intros k. apply compat_trap_lt; assumption. Qed.")
+mutate('ShenJitKRefAppExnNoPrim', 'rocq/JitKRefCompatCtl.v',
+       "Proof. intros k Hf. exact (AppExn_of (JitKRefPrim.JitKRefPrim.prim_compat sealed D) k Hf). Qed.",
+       "Proof. intros k Hf. apply AppExn_of; [|exact Hf]; assumption. Qed.")
 print(' '.join(names))

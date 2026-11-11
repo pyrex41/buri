@@ -6258,7 +6258,8 @@
     "rocq/JitKRefCompose.v",
     "rocq/JitKRefBase.v",
     "rocq/JitKRefCompatClo.v",
-    "rocq/JitKRefPrim.v"
+    "rocq/JitKRefPrim.v",
+    "rocq/JitKRefCompatCtl.v"
    ],
    "history": [
     {
@@ -6290,6 +6291,16 @@
      "source": "rocq/JitKRefPrim.v",
      "recorded": "2026-11-09: open. kref-prim proved and audited (16 statements in rocq/Audit_Jit.v, each Closed under the global context): prim_compat (JitKRef.prim_compat_statement, no hypothesis); per-family lemmas prim_param_arith, prim_param_data, prim_param_vector, prim_param_globals, prim_param_io, prim_param_error, prim_param_eq and prim_param_eval_kl; prim_compat_table; port_compat_of and port_param_jit (port half vacuous for jit_rules); eq_lock, the lockstep walk of = at one budget; kl_eq_rel_from and prim_param_eq_from, the = case from JitEqBudgetCore.eq_budget_closed_statement, instantiated with eq_budget_closed (no lok, not eq_budget_statement); parse_sk, eval-kl's parse step. Mutants ShenJitKRefAbsvectorNoWext and ShenJitKRefEqBudgetFree rejected. Not proved: the compatibility lemmas and the fundamental property.",
      "reconciliation": "kref-prim, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefCompatCtl.v",
+     "recorded": "2026-11-09: open. kref-ctl proved and audited (24 statements in rocq/Audit_Jit.v, each Closed under the global context): the JitKRef statements compat_lit, compat_var, compat_let, compat_if, compat_and, compat_or, compat_cond, compat_type and compat_defun (D_wf its own premise; StoreHas of the new store by storehas_stable), each from an ERel-level lemma (ERel_sval, ERel_let with the body at every j <= k under wext for VRel-related values, ERel_if, ERel_and, ERel_or, ERel_cond, ERel_type, ERel_defun) on ERel_push and the KRel frame lemmas; ERel_trap under AppExn (the handler applied to one exception), and AppExn_of from fund_below k and prim_compat_statement. compat_trap is NOT closed with fund_below alone: a handler may be a partial primitive (VPartial \"+\" [1]) and its application runs prim_rule_r, so compat_trap_lt takes both fund_below k and prim_compat_statement, and compat_trap_of_fund derives compat_trap_statement from prim_compat_statement and fund_gen_statement. Mutant ShenJitKRefCondSwap (a copy of compat_cond whose target has the clauses reversed) is rejected. Not proved: compat_lambda, freeze, app, call, prim_compat_statement, the fundamental property.",
+     "reconciliation": "kref-ctl, Phase 2 KRef track, 9 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefCompatCtl.v",
+     "recorded": "2026-11-10: open. kref-ctl merged onto p2/int after kref-prim; 27 statements in rocq/Audit_Jit.v from JitKRefCompatCtl.v (226 in all), each Closed under the global context. Added AppExn_fb (AppExn k from fund_below k alone, AppExn_of applied to JitKRefPrim.prim_compat), compat_trap_fb (trap at index k from fund_below k alone, the corollary compat_trap_lt prim_compat) and compat_trap_of_gen (compat_trap_statement from fund_gen_statement alone). Mutants ShenJitKRefTrapNoPrim and ShenJitKRefAppExnNoPrim (each proof without prim_compat) are rejected (pin 194). Not proved: compat_call, fund_gen_statement, the fundamental property.",
+     "reconciliation": "r1-kref-ctl-merge, Phase 2 KRef track, 10 November 2026."
     }
    ]
   },

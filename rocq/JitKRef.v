@@ -24,12 +24,14 @@
      monotonicity in index and world, SRel down in the index (SRel up in wext is false:
      SRel_wext_refuted; SRel_wext_cells is the true form), KRef_scope, sealed_stable and
      storehas_stable. fv against scoped is not yet proved there.
-   - JitKRefCompatCtl.v (planned): the control compatibility lemmas, compat_lit, var, let, if,
-     and, or, cond, type and trap, each from fund_below at its index.
+   - JitKRefCompatCtl.v (exists): the control compatibility lemmas compat_lit, var, let, if,
+     and, or, cond, type and defun outright; trap as compat_trap_fb at index k from fund_below k
+     alone (compat_trap_lt with JitKRefPrim.prim_compat), and compat_trap_statement from
+     fund_gen_statement as compat_trap_of_gen.
    - JitKRefCompatClo.v (exists): compat_lambda and compat_freeze outright; app as
      compat_app_lt at index k and compat_app_of_fund (from fund_gen_statement and
-     prim_compat_statement). compat_call and compat_defun are still planned (sealed_stable and
-     storehas_stable are proved in JitKRefBase.v).
+     prim_compat_statement). compat_call is still planned (sealed_stable and storehas_stable
+     are proved in JitKRefBase.v; compat_defun is in JitKRefCompatCtl.v).
    - JitKRefPrim.v (exists): prim_compat_statement as prim_compat, with no hypothesis; the = case
      from JitEqBudgetCore.eq_budget_closed (each side's budget moved to S (length w), then a
      lockstep walk), not from eq_budget_statement.
