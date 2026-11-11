@@ -6269,6 +6269,11 @@
      "source": "rocq/JitFrontShare.v",
      "recorded": "2026-11-11: open. r1-share-ht verifier fixes: HP's necessity is now proved in Rocq (share_needs_hd_tl, each half) and HT, HP and D_wf are shown jointly satisfiable at a model D (share_premises_sat); 328 audited statements. Correction to the entry above: 'reported to the spec owner' meant listed for the lead; no report to Reuben is evidenced. HT for the pinned D remains undischarged (thaw_stable, ht_not_com, ht_not_compiled) and awaits the lead's and Reuben's decision as a named residual.",
      "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. r1-share-ht second verifier pass: HP's store side has HT's provenance, proved in Rocq: hd_tl_fixed (hd and tl are fixed names), hd_tl_defun_refused (defun of either raises XBadDefinition), hd_tl_stable (no srun changes their function), so a D binding them describes the image's initial store (OB-JIT-IMAGE), as thaw_stable does for HT. HT is not proved for the pinned D (no pinned D exists in Rocq; ht_not_com and ht_not_compiled exclude Com and D_compiled on this back end); it stays this named residual. The HT and HP premise decision was sent to the orchestrator (main session) for Reuben on 2026-11-11; no ruling is recorded. 331 audited statements.",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
     }
    ]
   },

@@ -1429,6 +1429,29 @@ Proof.
  induction H as [c|c l c1 t c2 St H IH]; [reflexivity|]. rewrite IH. exact (fixed_step sealed _ _ _ _ St thaw_fixed).
 Qed.
 
+(* HP's store side has the same provenance as HT's: hd and tl are fixed names (prim_table), defun of
+   either raises XBadDefinition, and no run changes their function, so a D binding them describes the
+   image's initial store (OB-JIT-IMAGE), as for thaw (thaw_stable). *)
+Theorem hd_tl_fixed : is_fixed_name hd_name = true /\ is_fixed_name tl_name = true.
+Proof. split; vm_compute; reflexivity. Qed.
+
+Theorem hd_tl_defun_refused : forall sealed rho ps b k s,
+ eval_move_r (jit_rules sealed) jit_profile rho (EDefun hd_name ps b) k s = MTau (Cfg (Throw XBadDefinition) k s) /\
+ eval_move_r (jit_rules sealed) jit_profile rho (EDefun tl_name ps b) k s = MTau (Cfg (Throw XBadDefinition) k s).
+Proof.
+ intros sealed rho ps b k s. destruct hd_tl_fixed as [Fh Ft].
+ split; apply defun_refused; cbn [defun_allowed jit_rules]; [rewrite Fh|rewrite Ft]; reflexivity.
+Qed.
+
+Theorem hd_tl_stable : forall sealed c t c', JitKRef.JitKRef.srun sealed c t c' ->
+ lookup hd_name (gfuns (mem c')) = lookup hd_name (gfuns (mem c)) /\
+ lookup tl_name (gfuns (mem c')) = lookup tl_name (gfuns (mem c)).
+Proof.
+ intros sealed c t c' H. destruct hd_tl_fixed as [Fh Ft]. unfold JitKRef.JitKRef.srun in H.
+ induction H as [c|c l c1 t c2 St H IH]; [split; reflexivity|]. destruct IH as [IH1 IH2].
+ rewrite IH1, IH2. split; [exact (fixed_step sealed _ _ _ _ St Fh)|exact (fixed_step sealed _ _ _ _ St Ft)].
+Qed.
+
 Lemma comp_no_app_slot : forall c g top h l d r r', ~ Comp c g top (EApp h l) (DSlot d) r r'.
 Proof. intros c g top h l d r r' H. inversion H; subst; cbn in *; discriminate. Qed.
 

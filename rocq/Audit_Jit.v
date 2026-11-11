@@ -300,6 +300,9 @@ Print Assumptions JitFrontShare.JitFrontShare.thaw_fixed.
 Print Assumptions JitFrontShare.JitFrontShare.thaw_defun_refused.
 Print Assumptions JitFrontShare.JitFrontShare.fixed_step.
 Print Assumptions JitFrontShare.JitFrontShare.thaw_stable.
+Print Assumptions JitFrontShare.JitFrontShare.hd_tl_fixed.
+Print Assumptions JitFrontShare.JitFrontShare.hd_tl_defun_refused.
+Print Assumptions JitFrontShare.JitFrontShare.hd_tl_stable.
 Print Assumptions JitFrontShare.JitFrontShare.comp_no_app_slot.
 Print Assumptions JitFrontShare.JitFrontShare.comp_no_app.
 Print Assumptions JitFrontShare.JitFrontShare.ht_not_com.
