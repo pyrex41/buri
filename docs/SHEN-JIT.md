@@ -988,6 +988,11 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   frame that MS' does not have, so it means changing JitEmitKont. Every row of the table above
   still awaits Reuben.
 
+  Landed by r21-emit-spec-land (`52f913c`, a `--no-ff` merge of `7bb9bb7` onto `p2/int` `f42d6c4`; the
+  JitEmit files byte-identical): audit 700 (523 + 161 + 16 proved emit lemmas newly printed), pin 266 by
+  arithmetic (229 + 37), and a syntactic non-inversion gate in `scripts/check-shen-jit.sh` (exit 13). The
+  evidence (lane and all 115 mutants on `52f913c`) is in [STATUS](STATUS.md).
+
 ### Pass split: the normal form (wave 1b)
 
 `lower.shen` lowers in passes: `share` (KL to KL), `norm` (KL to the normal form), then emission (normal form to
