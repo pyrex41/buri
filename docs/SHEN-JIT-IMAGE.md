@@ -1,31 +1,72 @@
 # Shen/JIT heap image (OB-JIT-IMAGE)
 
-Status: **scoped, partly measured. Not discharged, and nothing here is lane-checked.** The code objects of the
-955 stage 0 definitions were decoded from the pinned binary's image by a Rocq decoder and compared with Rocq's loader
-model of stage 0. All 955 match. That comparison is a Rocq `vm_compute` **measurement** run from
-[`spikes/image-decode/`](../spikes/image-decode/). It is not in `scripts/check-shen-jit.sh`, `make prove` or `Audit_Jit`.
-The rest of the image is split into sub-obligations, each with what was measured about it.
+Status: **code objects lane-checked; the rest scoped into four sub-obligations with measured feasibility verdicts. Not
+discharged.** Since r21-image-lane, `scripts/check-shen-jit.sh` decodes the pinned binary's image with
+[`rocq/JitImage.v`](../rocq/JitImage.v) and Rocq proves `image_code_ok` by `vm_compute`: every one of the 955 stage 0
+definitions of the 24 files loads (`JitBytecode.build_code`) to exactly the code object its function cell holds in the
+image. `code_check_sound` (in `Audit_Jit`, closed) states what that gives. The lane also proves two one-word image
+mutants caught, and compares the census Rocq computes on the image with `tests/shen-jit/image-facts.txt`. The proof
+mutant `ShenJitImageNoCodeEq` is rejected.
 
 This document relates the image to stage 0's output. It says nothing about which definitions are validated:
-counts of the form "N of 955 kernel definitions validated" come from the full-pipeline judge, not from here.
+counts of the form "N of 955 kernel definitions validated" come from the full-pipeline judge, not from here. The
+image result is "955 of 955 stage 0 code objects equal their image function cells' code objects".
 
-## The verdict
+## The verdict: five sub-obligations
 
-| Part | Verdict | Ledger |
-|---|---|---|
-| Code objects of the 955 stage 0 definitions | **Feasible, and done as a measurement:** 955 of 955 equal `JitBytecode.build_code` of their `.sbc` code. To count as evidence it must move into the lane (below) | `OB-JIT-IMAGE-CODE`, partial |
-| 7 code objects made during initialisation | Not related. They were lowered at stage 1 by the image's own lowerer, not by stage 0 | `OB-JIT-IMAGE-INIT`, open |
-| Global values, the property vector, dictionaries, streams | Not related. Initialisation built them by running kernel code | `OB-JIT-IMAGE-INIT`, open |
-| Sealing: 18 files sealed in the image, 24 at stage 0 | Measured. The code is the same either way. The difference is that 65 names can be redefined in the image | `OB-JIT-IMAGE-SEALING`, open |
-| Reading and loading the image | Trusted reader plus `image_load`, not modelled | `OB-JIT-IMAGE-READER`, open |
-| Which file the run reads | Measured. No premise has been stated yet | `OB-JIT-IMAGE-FILE`, partial |
+`OB-JIT-IMAGE` is partial and depends on the five below; it is discharged only when all five are. Each verdict
+names its measurement; the commands and log hashes are under Evidence.
 
-`OB-JIT-IMAGE` is now partial and depends on these five. It is discharged only when all five are. Of its two
-completion routes, "image bytes decoded in Rocq and related to that store" is reached for the code objects only. Global
-state needs either the stage 1 route, which is proving stage 1 an instance of the main theorem, or a Rocq decoder of the
-data that initialisation built. The stage 1 route needs validated initialisation code. At 0.6 the source judge accepts
-148 of 955 definitions (`tests/shen-jit/stage0-accepted.txt`; 111 at the re-pin, `spikes/pass-split/CENSUS.md`, before `=`
-against a symbol constant was admitted), so that route is far off.
+| Sub-obligation | Ledger | Precise statement | Verdict | Measured by |
+|---|---|---|---|---|
+| `OB-JIT-IMAGE-CODE` | partial (lane evidence; depends on `-READER`) | For each of the 955 `(defun F Code)` of the 24 `.sbc` files, F's function cell holds a capture-free closure whose code object decodes to `build_code prim_tree 64 Code` | **Done in the lane** (`image_code_ok`, instance-validation via `code_check_sound`). Stays partial only because the reader is trusted | lane step `image:`; Img.log |
+| `OB-JIT-IMAGE-INIT` | open | The 7 code objects not reachable from the 955, the 357 closures outside function cells, the 55 bound value cells and the data they reach denote the store initialisation reaches | **Code part feasible, data part infeasible now** (below) | Rocq census in the lane (`image_facts`) and `census.py` |
+| `OB-JIT-IMAGE-SEALING` | open | The top theorem excludes redefinition of the 65 extension names, which the image leaves unsealed behind 115 sealed call sites | **Feasible only as a premise.** The alternative, FunRel surviving redefinition, is false on the binary (test below) | `redef.shen` in the binary; Rocq census `sealed_by_file`; `census.py` |
+| `OB-JIT-IMAGE-READER` | open | The reader's 32-bit halves are the image's words, and `image_load`'s rebasing and raw-field rebuild give the heap JitImage decodes | **Feasible by review plus a Rocq model of `rebase_heap`; not done.** The reader is now a word split (`--image`) and Rocq does the join (`words_of_reader`, which uses Rocq's primitive 63-bit integers) | split hashes (`split.out`) |
+| `OB-JIT-IMAGE-FILE` | partial | The run opens the pinned binary as its image: `SHEN_JIT_IMAGE` unset, `argv[0]` resolves to a file whose last image is `fd8485a5...` | **Feasible only as a stated premise** (a process-model fact, not provable from the image) | split hashes (`split.out`) |
+
+### INIT, precisely
+
+Measured by Rocq on the image (lane, `image_facts`) and by `census.py`:
+- 2371 code objects. 2364 are reachable from the 955 function cells, nested code included. 7 are not: `thread`, made by
+  `shen-jit.initialise` through `eval-kl` of `(defun thread (x) (shen-jit.thread x))`, and 6 `lambda` code objects
+  reached from `*property-vector*`.
+- 1313 closures: 956 in function cells (the 955 and `thread`), 357 elsewhere, 3 of them in value cells. Of the 357,
+  352 run a code object reachable from the 955, so their code is already covered by `image_code_ok`, and 5 run one of
+  the 6 unreached lambdas. None of the 357 has captures.
+- 1557 symbols, 55 with a bound value cell (the rest hold the unbound immediate 26). The list is in `census.out`
+  (`*property-vector*`, `*macros*`, `shen.*special*`, the stream globals, the six port globals stage 1 sets, ...).
+
+Sub-obligation `INIT-CODE` (the 7 code objects): **feasible**, by capturing the forms initialisation passes to
+`eval-kl` and judging them with the full pipeline like any other source. It is not done: no capture of those forms
+exists, and the pipeline accepts too few definitions for it to matter yet.
+Sub-obligation `INIT-DATA` (the 55 values, the property vector, dictionaries, streams, and the 357 closures as
+values): **infeasible now.** Either stage 1 must be proved an instance of the main theorem, which needs the
+initialisation functions validated (the source judge accepts 148 of 955 at 0.6), or Rocq must decode that data and
+relate it to the KLambda store the initialisation calls reach, which needs a source-level run of initialisation that
+no model has. The decoder could print the data; nothing yet says what it should equal.
+
+### The initial-store facts share's HT and HP need
+
+Measured by Rocq in the lane (`name_facts`: sealed bit, function cell, `Match`) and by the binary (`redef.shen`, test):
+
+| Name | Sealed bit in the image | Function cell | Stage 0 code `Match` | `defun` in the binary |
+|---|---|---|---|---|
+| `thaw` | 1 | closure | yes (sys.sbc's thaw) | refused: "defun of a fixed name" |
+| `hd` | 0 | unbound | no stage 0 definition | refused: "defun of a fixed name" |
+| `tl` | 0 | unbound | no stage 0 definition | refused: "defun of a fixed name" |
+
+- **HT (D defines thaw as the kernel does):** the image side holds and is now lane evidence. thaw's cell holds the
+  code stage 0 made from the kernel's `(defun thaw (V) (V))`, and the binary refuses to redefine it, as the model's
+  `thaw_defun_refused` does. The source side is still **infeasible on this back end**: that code is a 0-ary
+  `tail-call-value`, Comp has no rule for it, and `ht_not_com` shows no store meeting HT has `Com`. That stays
+  `OB-JIT-SHARE-THAW` until an emit family relates dynamic apply.
+- **HP (D holds hd and tl as the primitives):** the store side holds in the image. Neither has a function, so calls
+  go to the primitive, and the binary refuses `defun` of either. **HP's sealed side does not hold as stated.** D_wf
+  puts hd and tl in `sealed`, but the image's sealed bit is 0 for both. The image protects them as fixed names, not
+  as sealed ones. The pinned sealed list is the 890 names with the bit set, and it does not contain hd or tl. So the
+  premise must be restated with fixed names (`hd_tl_fixed`, `hd_tl_defun_refused`), or the sealed parameter must be
+  read as "sealed or fixed". That is a decision for share's owner, recorded under `OB-JIT-SHARE-THAW`.
 
 ## Inputs (bound)
 
@@ -89,7 +130,7 @@ The heap walk, which follows `rebase_heap`, ends exactly at word 87059. It finds
 
 ## The decoder and the relation
 
-[`spikes/image-decode/JitImage.v`](../spikes/image-decode/JitImage.v) defines the following, all in Rocq:
+[`rocq/JitImage.v`](../rocq/JitImage.v) (moved from `spikes/image-decode/` by r21-image-lane) defines the following, all in Rocq:
 
 - **`parse_image`** checks the header and trailer and walks the heap. A word with tag 111 starts an object of
   `obj_words` words; any other word starts a pair. The walk must end at the heap size. A pointer is read only into an
@@ -177,6 +218,33 @@ those 65 names.
 
 No `inline` instruction targets an extension name.
 
+**The gap file by file.** The 18 files `toplevel` to `lower` have every definition sealed both at stage 0 and in the
+image (890 names; the lane's `sealed_by_file` proves it per file). The 6 files below were sealed at stage 0 and are
+not sealed in the image. Columns: definitions, sealed in the image (Rocq, lane), stage 0 sealed sites that target the
+file's definitions, and their caller files (`census.py`, `gap` lines).
+
+@@GAPTABLE@@
+
+**Redefinition, tested in the pinned binary** (`spikes/image-decode/redef.shen`, run under qemu: test evidence, not
+proof). `shen.x.launcher.eval-command-h` reaches `shen.x.launcher.execute-all`, one of the 65, through a
+`tail-call-sealed` site.
+
+| Step | Result |
+|---|---|
+| `sealed?` of execute-all; of `shen.x.launcher.main` (sealed file) | false; true |
+| `(shen.x.launcher.eval-command-h [] [])` before | `[success]` |
+| `eval-kl` of `(defun shen.x.launcher.execute-all (X) redefined)` | accepted |
+| open call `(shen.x.launcher.execute-all [])` after | `redefined` |
+| the sealed caller `(shen.x.launcher.eval-command-h [] [])` after | `[success]`: the closure bound at load |
+| `defun` of `shen.x.launcher.main` | refused: "is sealed and cannot be redefined" |
+| `defun` of `thaw`, `hd`, `tl` | refused: "defun of a fixed name" |
+
+This confirms the source reading. After a redefinition, the binary's sealed sites call the old definition and its
+open calls call the new one. In KLambda's late binding, `eval-command-h` would return `redefined`. So the route
+"FunRel survives redefinition" is **false for the binary**, by this test. Only the premise route is feasible. The
+model meets it if the theorem's `sealed` set holds the 65 names, so that `jit_rules` refuses their `defun`. The binary
+does not refuse, so the premise must be stated as an exclusion on programs, never derived from the image.
+
 **What the gap does and does not change.**
 - **The loaded code does not change.** The `.sbc` already carries `call-sealed`, and the relation above matches all
   955, including the 65.
@@ -194,9 +262,10 @@ No `inline` instruction targets an extension name.
   guards. That is where the 11 image-run differences of CENSUS.md come from: features 2, launcher 3, namespaces 3,
   programmable-pattern-matching 3.
 
-`OB-JIT-IMAGE-SEALING` asks for one of two things:
-- the top theorem excludes redefining the 65 names, as a stated premise or exclusion; or
-- Rocq shows FunRel survives the redefinition.
+`OB-JIT-IMAGE-SEALING`, precisely: the top theorem gets a stated exclusion, "the program never `defun`s or installs
+any of the 65 names of the 6 extension files" (or the 65 join the theorem's sealed set, with the program as the
+excluded party). Verdict: **feasible as a premise, not dischargeable from the image**, because the binary accepts
+the redefinition and its 115 sealed sites then disagree with late binding (test above).
 
 ## Reading the image (`OB-JIT-IMAGE-FILE`, `OB-JIT-IMAGE-READER`)
 
@@ -226,22 +295,33 @@ only splits bytes into words, and `image_load`'s rebasing and raw-field reconstr
 decoder reads the stored, unrebased image, and the claim that loading it yields the heap the decoder describes is that
 obligation.
 
-## Path to discharge `OB-JIT-IMAGE-CODE`
+## The lane step (`OB-JIT-IMAGE-CODE`, r21-image-lane)
 
-This is feasible with the existing pieces. The work is wiring, not proof:
+The steps the r1-image scoping listed are done. `scripts/check-shen-jit.sh` now does the following after the stage 0 step:
+1. `JitImage` is in the lane's FILES and in `rocq/modules.d/70-jit.list`. `Audit_Jit` adds `code_eqb_true`,
+   `check_def_sound`, `tally_sound` and `code_check_sound`, so 527 audited statements.
+2. `stage0_to_rocq.py --image BIN Img.v` is the reader. It finds the image from the trailer and writes each word as two
+   32-bit halves, as `Uint63` literals. It reads no `.sbc`: `Img.v` imports the stage 0 step's own `Buri.s0.S0_<file>`
+   modules, so the trees the image is compared with are the trees the stage 0 judge read.
+3. `Img.v` builds `words` once by `vm_compute` of `JitImage.words_of_halves`. `words_of_reader` records that join,
+   and its proof uses Rocq's primitive integers. Then Rocq proves, each by `vm_compute`:
+   - `image_files`: the 24 files are stage 1's, in order;
+   - `image_code_ok : code_check words fs = true`, and Rocq prints that it is closed under the global context;
+   - `image_mutants_caught`: print's code object with its arity word raised by one, and with bit 1 of its first
+     bytecode byte flipped, each no longer `Match`. The word positions are found in Rocq, not given. Also closed.
+4. `image_facts`, the census Rocq computes on the image, is diffed with `tests/shen-jit/image-facts.txt`. It covers the
+   word and definition counts, the code, closure and cell census, the sealing by file, and the thaw, hd and tl facts.
+   A change fails the lane (`IMAGE_FACTS_CHANGED`).
 
-1. Move `JitImage.v` into `rocq/`, list it in `rocq/modules.d/70-jit.list`, and add `check_def_sound` and
-   `code_eqb_true` to `Audit_Jit`.
-2. Add a lane step to `scripts/check-shen-jit.sh` that runs the reader and checks `(955, 0)`. The reader would become
-   an `--image` mode of `tests/shen-jit/stage0_to_rocq.py`, append-only. Add `ImgMut.v`'s two mutants to
-   `tests/mutate-shen-jit.py`.
-3. Cut the 18-minute data compile. One option is to emit fewer, larger literals. Another is to have the lane's existing
-   per-file `S0_*.v` files import one image module, so the `.sbc` trees are not parsed twice.
-4. Record it in the ledger as an `instance-validation`.
+Cost: N literals were the 18-minute part. A file of the 97887 words as N literals had not compiled after 140 s and was
+stopped. The same words as Uint63 halves compiled in 5 s. The whole image step costs @@IMGCOST@@.
 
-Under Coq 8.18 (`make prove`) the spike's files are UNKNOWN: they were compiled only under Rocq 9.3.
+The proof mutant `ShenJitImageNoCodeEq` (`tests/mutate-shen-jit.py`) makes `check_def` give `Match` without
+comparing code, and `check_def_sound` then fails.
 
-## Evidence (this run)
+Under Coq 8.18 (`make prove`), `JitImage.v` is UNKNOWN: no 8.18 toolchain was available here.
+
+## Evidence of the r1-image spike (history, superseded for the code objects by the lane step)
 
 Everything was run in `buri-lps` on 10 November 2026, from worktree `p2/r1-image`, at commit `e08d73e`, which is based
 on `p2/int` `2e45d67`. These are measurements: the Rocq verdicts are computed by Rocq, and the census lines are Python

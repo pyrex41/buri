@@ -233,10 +233,9 @@ def main_image(exe, out):
             nm = 'h%d' % (i // 1000); names.append(nm)
             f.write('Definition %s : list int := [%s].\n' % (nm, ';'.join('%d%%uint63;%d%%uint63' % (w >> 32, w & 0xffffffff) for w in ws[i:i + 1000])))
         f.write('Definition halves : list int := %s.\n' % ' ++ '.join(names))
-        # The halves are joined once, by vm_compute, so the lemmas below mention only N words and
-        # print closed; words_of_reader records the join (it rests on Rocq's primitive integers).
-        f.write('Definition words : list N := Eval vm_compute in I.words_of_halves halves.\n')
-        f.write('Lemma words_of_reader : words = I.words_of_halves halves.\nProof. vm_compute. reflexivity. Qed.\n')
+        # Rocq joins the halves (JitImage.words_of_halves); the join uses Rocq's primitive 63-bit integers,
+        # which Print Assumptions lists. N literals for the words instead took more than 140 s to elaborate.
+        f.write('Definition words : list N := I.words_of_halves halves.\n')
         f.write('Definition sbc_files := [%s].\n' % ';\n '.join('("%s", S0_%s.sbc_%s)' % (fl, i, i) for fl, i in zip(IMAGE_FILES, ids)))
         f.write('Definition fs := I.files_val sbc_files.\n')
         f.write('Definition defs := flat_map snd fs.\n')
