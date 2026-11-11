@@ -144,6 +144,20 @@ ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arg
   source call's. pair_src_lrules_wrong must fail.
 ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
   marker. isites_fbound must fail.
+ShenJitFrontSugarCondTrueAny: chk_cond ends the chain at ANY clause, not only one whose test is
+  the literal true, so (cond (false 1)) checks against 1. chk_cond_sound must fail.
+ShenJitFrontSugarCondIfSwap: chk_cond's if case checks the clause body against the else branch and
+  the rest of the chain against the then branch. chk_cond_sound must fail.
+ShenJitFrontSugarProtectAny: chk_sugar drops (protect X) to X without asking D for the kernel's
+  protect, so a store whose protect is anything else is accepted. chk_sugar_sound must fail.
+ShenJitFrontSugarLamIdKey: chk_sugar's lambda application no longer refuses a scope holding
+  KLPort.id_key, where the source body's closure cell shadows the scoped name (see
+  ShenJitKTermLamAppIdKey). chk_sugar_sound must fail.
+ShenJitFrontSugarThawAny: chk_thaw takes (thaw X) to [apply X] without asking D for the kernel's
+  thaw. chk_thaw_sound must fail.
+ShenJitFrontSugarTrapScope: chk_trap accepts a handler eta whose fresh name is in scope, so the
+  target's handler reads the exception where the source reads the scoped value. chk_trap_sound
+  must fail.
 """
 import re
 from pathlib import Path
@@ -386,4 +400,21 @@ mutate('ShenJitFrontPairReadBack', front,
 mutate('ShenJitFrontIsitesNoLets', front,
        ' | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O',
        ' | (x, NVar _, _) :: anc => if bound ps x then O else O')
+sugar = 'rocq/JitFrontSugar.v'
+mutate('ShenJitFrontSugarCondTrueAny', sugar,
+       '   (is_true_lit c0 && rec g b0 e) ||', '   (true && rec g b0 e) ||')
+mutate('ShenJitFrontSugarCondIfSwap', sugar,
+       '   match e with EIf c b r => rec g c0 c && rec g b0 b && rec g (ECond rest0) r | _ => false end',
+       '   match e with EIf c b r => rec g c0 c && rec g b0 r && rec g (ECond rest0) b | _ => false end')
+mutate('ShenJitFrontSugarProtectAny', sugar,
+       ' | ECall f [a0] => text_eqb f protect_name && has_protect && rec g a0 e',
+       ' | ECall f [a0] => text_eqb f protect_name && true && rec g a0 e')
+mutate('ShenJitFrontSugarLamIdKey', sugar,
+       ' | EApp (ELam x b0) [a0] => negb (bound g id_key) &&', ' | EApp (ELam x b0) [a0] => true &&')
+mutate('ShenJitFrontSugarThawAny', sugar,
+       ' | ECall f [a0], EApp a [] => text_eqb f thaw_name && has_thaw && rec g a0 a',
+       ' | ECall f [a0], EApp a [] => text_eqb f thaw_name && true && rec g a0 a')
+mutate('ShenJitFrontSugarTrapScope', sugar,
+       '   text_eqb x y && negb (bound g x) && negb (bound g id_key) && rec g a0 a && rec g h0 h',
+       '   text_eqb x y && true && negb (bound g id_key) && rec g a0 a && rec g h0 h')
 print(' '.join(names))

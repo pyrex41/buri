@@ -814,4 +814,19 @@ Example trap_lambda_accepted :
  chk_front Dk 10 [nm "X"] (ETrap (EVar (nm "X")) (ELam (nm "E") (EVar (nm "E"))))
    (ETrap (EVar (nm "X")) (ELam (nm "E") (EVar (nm "E")))) = true.
 Proof. vm_compute. reflexivity. Qed.
+
+(* ======================= the real table (a test harness; NOT evidence of anything general) ======================= *)
+(* Each decoded stage 0 row (JitFrontD.decode_row: the source body, the erasure of its .norm
+   witness) checked by chk_front in the row's own D (JitFrontD.D_of), with fuel the two sizes. The
+   source is the definition's form, not share's output, so a definition share rewrote is expected to
+   be rejected here. Run by vm_compute on the decoded table; what the run gives is a test result. *)
+Definition front_row (rows : list JitFrontD.JitFrontD.row) (r : JitFrontD.JitFrontD.row) : bool :=
+ match JitFrontD.JitFrontD.D_of rows (JitFrontD.JitFrontD.r_name r) with
+ | Some D => chk_front D (S (JitFrontD.JitFrontD.dsize (JitFrontD.JitFrontD.r_src r) +
+                            JitFrontD.JitFrontD.dsize (JitFrontD.JitFrontD.r_low r)))
+               (JitFrontD.JitFrontD.r_params r) (JitFrontD.JitFrontD.r_src r) (JitFrontD.JitFrontD.r_low r)
+ | None => false end.
+Definition front_report (rows : list JitFrontD.JitFrontD.row) : nat * nat * list string :=
+ let acc := filter (front_row rows) rows in
+ (List.length rows, List.length acc, map (fun r => JitNormStage0.JitNormStage0.show (JitFrontD.JitFrontD.r_name r)) acc).
 End JitFrontSugar.
