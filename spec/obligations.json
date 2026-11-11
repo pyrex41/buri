@@ -6251,7 +6251,8 @@
     "rocq/JitKRefFv.v",
     "rocq/JitKRefCompatCall.v",
     "rocq/JitKRefFund.v",
-    "rocq/JitFrontD.v"
+    "rocq/JitFrontD.v",
+    "rocq/JitFrontSugar.v"
    ],
    "history": [
     {
@@ -6323,6 +6324,11 @@
      "source": "rocq/JitFrontD.v",
      "recorded": "2026-11-11: open. Merge of p2/r1-d00-merge (3338413) into p2/int after r1-term (cd991df): no statement changed; the union has 475 Audit_Jit statements (463 + the 12 of JitFrontD) and mutation pin 216 (203 + the 13 ShenJitFront mutants; tests/mutate-shen-jit.py has 60 mutate calls).",
      "reconciliation": "merge-r1-d00-merge, Phase 2 integration, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontSugar.v",
+     "recorded": "2026-11-11: open. r1-f-sugar (branch p2/r1-f-sugar on p2/int 7cb676e) adds the norm checkers of four front families, each proved to establish KRef for any recursive checker that does: chk_cond_sound (cond: the literal true ends the chain, cond_true; any other clause is an if, cond_if), chk_sugar_sound (type, sugar_type; protect with the kernel's protect in D, sugar_protect; one-argument lambda application to let in a scope without id_key, sugar_lamapp), chk_thaw_sound ((thaw X) to [apply X] with the kernel's thaw in D, thaw_sugar) and chk_trap_sound (a non-lambda handler applied through a fresh name not in scope, trap_sugar). chk_front, congruence and the four by fuel, is proved sound under Section hypotheses naming the compatibility statements (chk_front_sound_h) and then instantiated (chk_front_sound, premise D_wf only). 40 statements added to rocq/Audit_Jit.v (515 in all), each Closed under the global context. No rule, pinned by Examples: fn sugar, eval-kl to shen-jit.eval-kl, curried dynamic application and multi-argument lambda application (argued unsound under jit_rules, not refuted in Rocq; deferred to the uncurrying family). Mutants ShenJitFrontSugarCondTrueAny, ShenJitFrontSugarCondIfSwap, ShenJitFrontSugarProtectAny, ShenJitFrontSugarLamIdKey, ShenJitFrontSugarThawAny and ShenJitFrontSugarTrapScope are rejected (pin 222). Test, not proof: front_report by vm_compute on the decoded table (norm witness set e45add98...) accepts 418 of 955 norm links (source form against the erased normal form, in each definition's D_of store), including all 390 definitions whose fired families are within cond, sugar, thaw-sugar and trap-sugar. Still open: the share, inline, fold, copy, bind, cut/deref and uncurrying checkers, a full-pipeline judge, and KTerm lemmas for these rules (OB-JIT-LOWER-TERM).",
+     "reconciliation": "r1-f-sugar, Phase 2 front track, 11 November 2026."
     }
    ]
   },

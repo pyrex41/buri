@@ -156,7 +156,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 475 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 515 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -330,6 +330,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
+| `rocq/JitFrontSugar.v` | r1-f-sugar: the norm checkers of the cond, sugar, thaw-sugar and trap-sugar families, each proved to establish KRef, and `chk_front` (congruence plus the four) proved sound from the compatibility lemmas |
 | `rocq/JitFrontD.v` | D00: the front rules' store D (a lowered store), built from decoded stage 0 data; `D_compiled'`; the allowed store facts; the inline relation `inl_site` and `aeq`, with their soundness statements (unproved) |
 
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
@@ -346,6 +347,31 @@ against shen.bind!'s lowered body, with a seeded renaming. Their soundness and `
 (option B) would reach about 725. Two interface items for the KRef track: `fresh_ok` over `D_bodies` fails on lowered
 bodies (the premise the rules use is `fresh_front`), and fold-arith's `(+, FPrim PAdd)` in D needs `+` in `sealed`.
 No count changes: the source judge accepts 148 of 955 stage 0 definitions; the full-pipeline validated count is UNKNOWN.
+
+**Norm checkers: cond and sugar** (`rocq/JitFrontSugar.v`, r1-f-sugar, 11 November 2026; `OB-JIT-LOWER-FRONT`, open). One
+checker per family, each parametric in the recursive checker `rec` and proved to establish KRef for any `rec` that does
+(`chk_cond_sound`, `chk_sugar_sound`, `chk_thaw_sound`, `chk_trap_sound`). A rule is a source anti-reduction to an
+intermediate source term followed by `rec` on it: `(type X T)` to X, `(protect X)` to X (the kernel's protect in D,
+`D_has_kernel_protect`) and a cond clause whose test is the literal true to its body. Four rules take the intermediate's
+congruence step themselves and are proved in that composed form: any other cond clause to an if whose else is the rest of
+the chain (`cond_if`), `(thaw X)` to `[apply X]` (the kernel's thaw in D, `thaw_sugar`), `((lambda X B) A)` to
+`(let X A B)` (`sugar_lamapp`) and `(trap-error X H)` with H not a lambda to `[trap X E [apply H [var E]]]`, E fresh and
+not in scope (`trap_sugar`); `(trap-error X (lambda E H))` erases back to its own shape and is congruence. Interface
+limit: where another family rewrites that intermediate at the same node (copy's let-lambda on the let, copy's frozen-late
+on norm-cond's if chain, copy's frozen-in and inline's thaw-with on thaw's `[apply [var G]]`), this checker rejects and
+that family must take the source form. Rejected, with no rule: `fn` sugar, eval-kl to `shen-jit.eval-kl`, curried dynamic
+application and lambda application with more than one argument (both argued unsound under `jit_rules`, not refuted in
+Rocq; deferred to the uncurrying family). `chk_front` (congruence and the four families, by fuel) is proved sound under
+Section hypotheses naming the thirteen compatibility statements (`chk_front_sound_h`), then instantiated with the
+proved lemmas (`chk_front_sound`, only premise `D_wf`). Six mutants (`ShenJitFrontSugar*`, at least one per family) are
+rejected. Test, not proof (Rocq `front_report`, vm_compute on the decoded table, `.norm` witness set e45add98..., each
+definition's source form against the erasure of its normal form in its `D_of` store): `chk_front` accepts 418 of 955
+norm links, among them all 390 definitions whose fired front families are within cond, sugar, thaw-sugar and
+trap-sugar (194 with none fired); every rejected one has inline, share, copy, bind, eval-kl or fold-arith fired. No
+validated count changes: no full-pipeline judge runs these checkers, and the census's forecast set for this family
+(emit tf-accepted, source-judge rejected, required families within these four) is empty
+(`spikes/pass-split/features.tsv` sha256 6eeef697...). KTerm lemmas for these rules (`OB-JIT-LOWER-TERM`) are not
+written here.
 
 **The front passes** (`rocq/JitKRef.v` with proofs in `JitKRefGround.v` and `JitKRefCompose.v`; old names in `rocq/JitLowerEquiv.v`; `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
 (b1 to e) before it emits code for e. `KRef g e0 e` is a step-indexed Kripke refinement on KLambda expressions under
