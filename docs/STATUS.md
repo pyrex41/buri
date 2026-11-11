@@ -1370,14 +1370,15 @@ ElseN)), and its reuse of a chain variable for a hd/tl the chain took (lower.she
 chain records path facts for its lets of (hd y)/(tl y) (`chain_fact`), and the then branch is checked by `then_chk`
 (rec, a source path against a target variable with the same fact over a scope variable, or the same named call or
 let). `check_share_sound` is closed with three explicit premises: HT (D defines thaw as the kernel does), HP (D holds
-hd and tl as the primitives; `hp_of_com`: any store with Com meets it) and D_wf. HT cannot be dropped:
+hd and tl as the primitives, added by this task, necessity argued not proved; `hp_of_com`: any store with Com meets its
+store side, but D_wf then needs hd and tl in the image's sealed list, not established) and D_wf. HT cannot be dropped:
 `share_needs_thaw_outright` gives a D (hd and tl only) where D_wf, FrontHyps and HP hold and share_rule is not
 rule_sound (the target's `(thaw G)` raises XUndefinedFun where the source returns). HT is not discharged for the
 pinned D, and on this back end cannot be: thaw's function can only be the initial store's (`thaw_stable`,
 `thaw_defun_refused`: defun refuses thaw, the kernel's own defun included), and Comp has no dynamic apply
 (`comp_no_app`), so no store meeting a D with thaw has Com (`ht_not_com`) and D_compiled fails (`ht_not_compiled`):
-the share link cannot yet be composed with call_preservation_src. Named residual `OB-JIT-SHARE-THAW`, reported to
-the spec owner. **Share link at v0.6: 4 of 4 share rewrites validated** (`share_rewrites_validated`, vm_compute, in
+the share link cannot yet be composed with call_preservation_src. Named residual `OB-JIT-SHARE-THAW` (HT, and HP's
+sealed side), reported to the spec owner. **Share link at v0.6: 4 of 4 share rewrites validated** (`share_rewrites_validated`, vm_compute, in
 the lane: `shen.macros`, `shen.process-let`, `shen.lambda-of-defun`, `shen.process-assoc`), and a report-only run of
 check_share on all 955 pairs of the witness set (sha256 `6881eb29...`) accepts 955 of 955 (951 unchanged by share).
 These are share-link counts, not the full-pipeline count. Mutants `ShenJitFrontNoScope`, `ShenJitFrontSameFuel`,

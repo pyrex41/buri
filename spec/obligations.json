@@ -6233,20 +6233,22 @@
    "owner": "E2E-38",
    "packages": [],
    "status": "open",
-   "boundary": "Initial function table to the share link's premise",
+   "boundary": "Initial function table and sealed set to the share link's premises",
    "identity": "rocq/JitFrontShare.v",
-   "statement": "The function table the pinned image starts from binds thaw to the kernel's (defun thaw (V) (V)) (HT, a premise of JitFrontShare.check_share_sound), and that table also meets Com, so that the share link composes with call_preservation_src for the definitions whose share witness uses (thaw ElseN).",
+   "statement": "The share link's premises hold for the pinned build: the function table the image starts from binds thaw to the kernel's (defun thaw (V) (V)) (HT) and hd and tl to their primitives (HP), the pinned sealed list contains thaw, hd and tl (D_wf of a D holding them), and that table also meets Com, so that JitFrontShare.check_share_sound composes with call_preservation_src for the definitions whose share witness uses (thaw ElseN) or reuses a path.",
    "premises": [
     "HT is necessary: share_needs_thaw_outright (Rocq, closed) shows share_rule is not rule_sound at a D_wf D with HP and FrontHyps but no thaw",
     "thaw's entry can come only from the initial store: under jit_rules no step changes a fixed name's function (thaw_stable) and defun of thaw raises XBadDefinition (thaw_defun_refused), the kernel's own defun included, although lower.shen's check-defun lowers the kernel's thaw at stage 0 (measured: sys.sbc line 1 is (code thaw 1 5 () ((move 4 2) (tail-call-value 3 0)) ...))",
-    "on the current back end HT excludes Com: Comp has no rule for a dynamic application (comp_no_app), so no store meeting a D with thaw has Com s m (ht_not_com) and D_compiled is false (ht_not_compiled)"
+    "on the current back end HT excludes Com: Comp has no rule for a dynamic application (comp_no_app), so no store meeting a D with thaw has Com s m (ht_not_com) and D_compiled is false (ht_not_compiled)",
+    "HP is a premise this task added (r1-share-ht) for share's reuse; its necessity is argued, not proved in Rocq: a store binding tl to a user function with an IO effect makes the source, which re-evaluates (tl V), perform the effect twice where the target performs it once. Its store side holds wherever call_preservation_src applies (hp_of_com: Com gives FunRel's fr_name). Its sealed side does not follow: D_wf puts every name of D in sealed, and sealed is the image's; jit_rules (hd :: tl :: sealed) and jit_rules sealed agree on every name (hd and tl are fixed names) but are not equal terms, so enlarging sealed is not free"
    ],
    "depends_on": [
     "OB-JIT-IMAGE-CODE",
-    "OB-JIT-LOWER-FRAGMENT"
+    "OB-JIT-LOWER-FRAGMENT",
+    "OB-JIT-IMAGE-SEALING"
    ],
    "evidence": [],
-   "completion_evidence": "Comp (an emit family) relates thaw's 0-ary dynamic apply, so that ht_not_com no longer holds, and the image's initial function table is shown in Rocq to bind thaw to the kernel's definition (OB-JIT-IMAGE-CODE / OB-JIT-IMAGE-INIT), or the share link is restated so that it needs no thaw in D.",
+   "completion_evidence": "Comp (an emit family) relates thaw's 0-ary dynamic apply, so that ht_not_com no longer holds; the image's initial function table is shown in Rocq to bind thaw to the kernel's definition and hd and tl to their primitives (OB-JIT-IMAGE-CODE / OB-JIT-IMAGE-INIT); and the pinned sealed list contains thaw, hd and tl (OB-JIT-IMAGE-SEALING), or D_wf is widened to admit fixed names, whose function no run changes (fixed_step). Or the share link is restated so that it needs none of these.",
    "sources": [
     "rocq/JitFrontShare.v",
     "docs/SHEN-JIT.md"
@@ -6254,7 +6256,7 @@
    "history": [
     {
      "source": "rocq/JitFrontShare.v",
-     "recorded": "2026-11-11: open. Named residual for the share link's HT premise (r1-share-ht). Not discharged for the pinned D: no stage 0 code can establish it in the model, and with it call_preservation_src's premises cannot all hold until emission admits a dynamic apply. Reported to the spec owner as a necessary premise, with the counterexample share_needs_thaw_outright.",
+     "recorded": "2026-11-11: open. Named residual for the share link's premises HT and HP (r1-share-ht). Not discharged for the pinned D: no stage 0 code can establish HT in the model (thaw's entry is the initial store's), with HT call_preservation_src's premises cannot all hold until emission admits a dynamic apply (ht_not_com), and D_wf of a D holding thaw, hd and tl needs them in the pinned sealed list, which is not established. Reported to the spec owner as necessary premises: HT with the Rocq counterexample share_needs_thaw_outright; HP by argument only.",
      "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
     }
    ]

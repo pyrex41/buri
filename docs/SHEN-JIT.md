@@ -752,7 +752,11 @@ left and no FrontHyps:
 - **HT**: D defines `thaw` as the kernel does, `(defun thaw (V) (V))` (`kernel_thaw_parses`: stage 0's form of thaw
   parses to exactly that);
 - **HP**: D holds `hd` and `tl` as the primitives, so a re-evaluated path gives the value the target's variable holds.
-  It agrees with D_compiled and with Com: any store with `Com s m` holds them (`hp_of_com`, from FunRel's `fr_name`);
+  This task added it; its necessity is argued, not proved in Rocq (a store binding `tl` to a user function with an IO
+  effect makes the source, which re-evaluates `(tl V)`, perform the effect twice and the target once). Its store side
+  holds wherever call_preservation_src applies: any store with `Com s m` holds them (`hp_of_com`, from FunRel's
+  `fr_name`). Its sealed side does not follow: D_wf puts hd and tl in `sealed`, which is the image's, and
+  `jit_rules (hd :: tl :: sealed)` equals `jit_rules sealed` only extensionally. Part of the residual below;
 - **D_wf**, from which `front_hyps` gives FrontHyps and `JitKRefFund` gives `fund_below` for `then_chk`'s call case.
 
 **HT is necessary.** `share_needs_thaw_outright` (closed): at D = [(hd, PHd); (tl, PTl)] with hd and tl sealed, D_wf,
@@ -762,7 +766,9 @@ G)))`; the source returns 1, the target in 9 steps (`cx_tgt_runs`) calls thaw, w
 `XUndefinedFun thaw`, a throw no source run matches (`cx_inv_star`). SRel makes both stores share one function table,
 but nothing else says what that table's thaw does.
 
-**HT for the pinned D: not discharged, a named residual (`OB-JIT-SHARE-THAW`).** Two facts, each proved in Rocq:
+**HT (and HP's sealed side) for the pinned D: not discharged, a named residual (`OB-JIT-SHARE-THAW`).** D_wf of a D
+holding thaw, hd and tl also needs them in the pinned sealed list (OB-JIT-IMAGE-SEALING), not established. For HT,
+two facts, each proved in Rocq:
 - thaw's function can only be the initial store's. `thaw_fixed` (thaw is a fixed name), `thaw_defun_refused` (under
   `jit_rules`, `(defun thaw ...)` raises XBadDefinition, the kernel's own `(defun thaw (V3830) (V3830))` included) and
   `thaw_stable` (no run changes `lookup thaw`). So HT is a fact about the image's starting table (OB-JIT-IMAGE), not
@@ -784,7 +790,10 @@ for the lowerer's names. no_keyword_binders is not used by check_share: both it 
 **Stage 0 at 0.6: 4 of 4 share rewrites validated.** `share_rewrites_validated` (vm_compute, audited, so in the lane)
 accepts the four definitions share rewrites, macros.forms lines 5, 9, 14 and 20 of the pinned stage 0 against the
 same lines of the share witness set (sha256 `6881eb294f9a7c90641351ff1a487297e2a6828389354387519ebfc41e97902d`, the
-CENSUS.md hash): `shen.macros` (three nested frozen elses and an inner one at `shen.@ch`, reused paths at `put`,
+CENSUS.md hash; the two files themselves: `macros.forms` sha256 `2bb8f7a12a5fd33672d03febc9a89e5cd0266416d8a7bbbc636ea77805915a39`,
+`macros.share` sha256 `d16a9b35f64e3f3083f3bb8259e557cb003da28e5215cf58ae009d40db553a59`; the inlined `sx` terms are
+stage0_to_rocq.py's `rocq(parse(tokens(...))[i-1])` of lines 5, 9, 14 and 20, and nothing in the lane rechecks them
+against the files): `shen.macros` (three nested frozen elses and an inner one at `shen.@ch`, reused paths at `put`,
 `get`, `unput` and `@ch`), `shen.process-let`, `shen.lambda-of-defun` and `shen.process-assoc`. Each pair differs, so
 only share_rule accepts it. A report-only run of `tests/shen-jit/stage0_to_rocq.py --share` over all 24 files accepts
 955 of 955 pairs (951 unchanged by share, by equality). These are share-link counts: they say nothing about norm or
@@ -797,9 +806,15 @@ vm_compute decision lemma placed before every proof; `ShenJitFrontSameFuel` at t
 `ShenJitFrontShareChainFactUnchecked` (a chain fact recorded without checking that the target's let binds the same
 expression) at `chain_fact_cases`, whose statement needs that check.
 
-Checked under Rocq 9.3 only (lane on branch `p2/r1-share-ht`, SKIP_DIFF=1: 323 audited statements closed, rocqchk
-passed, stage 0 148 of 955 as recorded). Not run: the differential, the Coq 8.18 compile of the three files and of the
-six mutants (`make prove`, `scripts/proof-mutations`), `make report`, gate_tests.sh: UNKNOWN.
+Checked under Rocq 9.3 only, at commit `eb65acc` (branch `p2/r1-share-ht`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-b
+scripts/check-shen-jit.sh` in buri-lps, rc 0, log sha256 `7a478cae8a15735ce2588014473dddfa3efd61d776bdabdfad9af0d94eaed94e`:
+323 audited statements closed, rocqchk passed, stage 0 148 of 955 as recorded (each of the 36 compiled files equal to
+the commit's). The six front mutants regenerated from that commit (56 names) and compiled against that output: each
+rejected, at the lines named above. The 955-pair share tally against the same output: 955, 0, 0 (counts.txt sha256
+`4557dd0cc9f22fb7526d7e2551290a04e8002591d57fa09aae97aaca940187e2`). Not run: the differential, the Coq 8.18 compile of the
+three files and of the mutants (`make prove`, `scripts/proof-mutations`), `make report` (so the pin 207 = 201 + 6 new
+Shen/JIT mutants, 50 names at `p2/int` and 56 here, is not checked by it), gate_tests.sh, tests/ledger.shen and
+stage0_residuals.py: UNKNOWN.
 
 ## Differential results
 
