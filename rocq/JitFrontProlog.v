@@ -774,4 +774,154 @@ Proof.
 Qed.
 End Bind.
 End Sound.
+
+(* ======================= D00's bind_site_sound_statement is false ======================= *)
+(* The counterexample: shen.bind!'s body only thaws its fourth parameter, and the frozen body reads
+   KLPort's closure-identity key. The source's freeze closure binds id_key to its own fresh cell
+   (tagged_env), so the source returns that cell, (VVec 0); the expansion runs the body in place,
+   where id_key is the caller's (here a number). bind_site accepts the pair (it checks the thawed
+   body's free names against the fresh names and inl_eq's hidden target binders, not against
+   id_key), and every premise of the statement holds, yet the target returns 0 where the source
+   can only return the cell or raise a resource error. *)
+Definition cx_n (t : string) : name := of_string t.
+Definition cx_sealed : list name := [F.bind_name; do_name].
+Definition cx_D : list (name * fundef) :=
+ [(F.bind_name, FUser [cx_n "p1"; cx_n "p2"; cx_n "p3"; cx_n "p4"] (EApp (EVar (cx_n "p4")) []));
+  (do_name, FUser [cx_n "d1"; cx_n "d2"] (EVar (cx_n "d2")))].
+Definition cx_one : expr := ENum (NInt 1).
+Definition cx_args : list expr := [cx_one; cx_one; cx_one; EFreeze (EVar id_key)].
+Definition cx_e : expr :=
+ ELet (cx_n "a1") cx_one (ELet (cx_n "a2") cx_one (ELet (cx_n "a3") cx_one (EVar id_key))).
+Definition cx_rho : lenv := [(id_key, VNum (NInt 0))].
+Definition cx_st : store := Store [] [] cx_D.
+
+Example cx_bind_site : F.bind_site false cx_D cx_args cx_e = true.
+Proof. vm_compute. reflexivity. Qed.
+
+(* bind_rule refuses the same pair: the thawed place reads id_key. *)
+Example bind_rule_rejects_id_key : bind_rule cx_D (fun _ _ _ => true) [id_key] (ECall F.bind_name cx_args) cx_e = false.
+Proof. vm_compute. reflexivity. Qed.
+
+(* A deterministic run, iterated from its end. *)
+Fixpoint iter_tau (sealed : list name) (n : nat) (c : config) : option config := match n with
+ | O => Some c
+ | S n => match iter_tau sealed n c with
+   | Some c' => match next_r (jit_rules sealed) jit_profile c' with MTau c'' => Some c'' | _ => None end
+   | None => None end end.
+
+Lemma runs_snoc : forall sealed n c t c' c'', JitKRef.JitKRef.runs sealed n c t c' ->
+ next_r (jit_rules sealed) jit_profile c' = MTau c'' -> JitKRef.JitKRef.runs sealed (S n) c t c''.
+Proof.
+ intros sealed n c t c' c'' H. induction H as [c|n c l c1 t c2 St Hr IH]; intros E.
+ - change [] with (trace_of Tau ++ []). econstructor; [apply step_r_tau; exact E|constructor].
+ - econstructor; [exact St|apply IH; exact E].
+Qed.
+
+Lemma iter_runs : forall sealed n c c', iter_tau sealed n c = Some c' -> JitKRef.JitKRef.runs sealed n c [] c'.
+Proof.
+ intros sealed n. induction n as [|n IH]; intros c c' H; cbn in H.
+ - injection H as <-. constructor.
+ - destruct (iter_tau sealed n c) as [c1|] eqn:E; [|discriminate].
+   destruct (next_r (jit_rules sealed) jit_profile c1) eqn:N; try discriminate. injection H as <-.
+   eapply runs_snoc; [apply IH; exact E|exact N].
+Qed.
+
+Lemma iter_none : forall sealed n c, iter_tau sealed n c = None -> iter_tau sealed (S n) c = None.
+Proof. intros sealed n c H. cbn. rewrite H. reflexivity. Qed.
+
+Lemma iter_none_ge : forall sealed m c, iter_tau sealed m c = None -> forall i, (m <= i)%nat -> iter_tau sealed i c = None.
+Proof.
+ intros sealed m c H i L. induction L as [|i L IH]; [exact H|]. apply iter_none. exact IH.
+Qed.
+
+Definition no_io (m : move) : bool := match m with MIO _ _ => false | _ => true end.
+
+(* Every configuration a source run reaches, when the deterministic chain never asks for IO and its
+   continuations hold no trap: a configuration of the chain, or an exception unwinding trap-free
+   frames (a resource error raised on the way). *)
+Lemma star_reach : forall sealed c0 m,
+ (forall i c, (i <= m)%nat -> iter_tau sealed i c0 = Some c ->
+   no_io (next_r (jit_rules sealed) jit_profile c) = true /\ forallb JitKRefBase.JitKRefBase.nontrap (kont c) = true) ->
+ iter_tau sealed (S m) c0 = None ->
+ forall t c, JitKRef.JitKRef.srun sealed c0 t c ->
+ (exists i, (i <= m)%nat /\ iter_tau sealed i c0 = Some c) \/
+ (exists x K s, c = Cfg (Throw x) K s /\ forallb JitKRefBase.JitKRefBase.nontrap K = true).
+Proof.
+ intros sealed c0 m Hc Hn t c Hs.
+ assert (Bd : forall i c, iter_tau sealed i c0 = Some c -> (i <= m)%nat).
+ { intros i c1 E. destruct (Nat.le_gt_cases i m) as [L|L]; [exact L|].
+   rewrite (iter_none_ge sealed (S m) c0 Hn i L) in E. discriminate. }
+ assert (G : forall c1, (exists i, (i <= m)%nat /\ iter_tau sealed i c0 = Some c1) \/
+   (exists x K s, c1 = Cfg (Throw x) K s /\ forallb JitKRefBase.JitKRefBase.nontrap K = true) ->
+   forall t c2, JitKRef.JitKRef.srun sealed c1 t c2 ->
+   (exists i, (i <= m)%nat /\ iter_tau sealed i c0 = Some c2) \/
+   (exists x K s, c2 = Cfg (Throw x) K s /\ forallb JitKRefBase.JitKRefBase.nontrap K = true)).
+ { intros c1 Hc1 t1 c2 H2. unfold JitKRef.JitKRef.srun in H2.
+   induction H2 as [c1|c1 l c1' t1 c2 St H2 IH]; [exact Hc1|]. apply IH. clear IH H2.
+   destruct (step_r_cases sealed _ _ _ St) as [[E ->]|[(q & kk & r & E & -> & ->)|(r & x & Rc & Rx & -> & ->)]].
+   - destruct Hc1 as [(i & L & Ei)|(x & K & s & -> & NK)].
+     + left. exists (S i). split; [|cbn; rewrite Ei, E; reflexivity].
+       apply (Bd (S i) c1'). cbn. rewrite Ei, E. reflexivity.
+     + right. destruct K as [|f K]; [discriminate|]. cbn in NK. apply andb_true_iff in NK as [Nf NK].
+       rewrite throw_frame_next in E by exact Nf. injection E as <-. exists x, K, s. split; [reflexivity|exact NK].
+   - exfalso. destruct Hc1 as [(i & L & Ei)|(x & K & s & -> & NK)].
+     + destruct (Hc i c1 L Ei) as [Io _]. rewrite E in Io. discriminate.
+     + destruct K as [|f K]; [discriminate|]. cbn in NK. apply andb_true_iff in NK as [Nf _].
+       rewrite throw_frame_next in E by exact Nf. discriminate.
+   - right. destruct Hc1 as [(i & L & Ei)|(y & K & s & -> & NK)].
+     + exists x, (kont c1), (mem c1). split; [reflexivity|]. exact (proj2 (Hc i c1 L Ei)).
+     + cbn in Rc. discriminate. }
+ apply (G c0 ltac:(left; exists 0%nat; split; [lia|reflexivity]) t c Hs).
+Qed.
+
+Theorem bind_site_unsound : ~ F.bind_site_sound_statement cx_sealed cx_D.
+Proof.
+ intros H.
+ assert (NB : F.bind_name <> do_name) by (apply text_eqb_false; vm_compute; reflexivity).
+ assert (Dw : JitKRef.JitKRef.D_wf cx_sealed cx_D).
+ { split.
+   - constructor; [left; reflexivity|constructor; [right; left; reflexivity|constructor]].
+   - cbn. constructor; [intros [E|[]]; exact (NB (eq_sym E))|constructor; [intros []|constructor]]. }
+ assert (Hdo : F.D_has_kernel_do cx_D).
+ { exists (cx_n "d1"), (cx_n "d2"). split; [apply text_eqb_false; vm_compute; reflexivity|right; left; reflexivity]. }
+ assert (Hargs : Forall2 (JitKRef.JitKRef.KRef cx_sealed cx_D [id_key]) cx_args cx_args).
+ { assert (L1 : JitKRef.JitKRef.KRef cx_sealed cx_D [id_key] cx_one cx_one)
+     by (apply (JitKRefCompatCtl.JitKRefCompatCtl.compat_lit cx_sealed cx_D [id_key] cx_one (VNum (NInt 1))); reflexivity).
+   unfold cx_args. constructor; [exact L1|constructor; [exact L1|constructor; [exact L1|constructor; [|constructor]]]].
+   apply (JitKRefCompatClo.JitKRefCompatClo.compat_freeze cx_sealed cx_D [id_key] (EVar id_key) (EVar id_key)).
+   apply (JitKRefCompatCtl.JitKRefCompatCtl.compat_var cx_sealed cx_D [id_key] id_key). left. reflexivity. }
+ specialize (H false [id_key] cx_args cx_args cx_e Dw (fun E => ltac:(discriminate E)) Hdo cx_bind_site Hargs).
+ assert (HEnv : EnvRel_with (JitKRef.JitKRef.VRel cx_sealed cx_D 20) [] [id_key] cx_rho cx_rho).
+ { intros x [<-|[]]. exists (VNum (NInt 0)), (VNum (NInt 0)). unfold cx_rho. rewrite lookup_cons_eq.
+   split; [reflexivity|split; [reflexivity|]].
+   exact (JitKRefCompatCtl.JitKRefCompatCtl.VRel_lit cx_sealed cx_D 20 [] (ENum (NInt 0)) (VNum (NInt 0)) eq_refl). }
+ assert (Wf : wf_world []) by (split; constructor).
+ specialize (H 20 [] cx_rho cx_rho Wf HEnv).
+ assert (HS : JitKRef.JitKRef.SRel cx_sealed cx_D 20 [] cx_st cx_st).
+ { assert (SH : JitKRef.JitKRef.StoreHas cx_D cx_st).
+   { intros f d [E|[E|[]]]; injection E as <- <-; vm_compute; reflexivity. }
+   split; [exact Wf|split; [exact SH|split; [exact SH|split; [reflexivity|split; [constructor|intros l0 l []]]]]]. }
+ pose proof (proj1 (ERel_iff cx_sealed cx_D 20 [] cx_rho _ cx_rho cx_e) H 20 (le_n 20) [] (wext_refl [] Wf) [] []
+   (JitKRefGround.JitKRefGround.KRel_top cx_sealed cx_D 20 [] Wf) cx_st cx_st HS) as O.
+ assert (Ht : JitKRef.JitKRef.runs cx_sealed 10 (Cfg (Eval cx_rho cx_e) [] cx_st) [] (Cfg (Ret (VNum (NInt 0))) [] cx_st)).
+ { apply iter_runs. vm_compute. reflexivity. }
+ destruct (O 10 [] _ ltac:(lia) Ht) as [Hret _].
+ destruct (Hret (VNum (NInt 0)) cx_st eq_refl) as (v0 & s0 & w' & Hs & _ & HG & _).
+ set (c0 := Cfg (Eval cx_rho (ECall F.bind_name cx_args)) [] cx_st) in Hs.
+ assert (HC : forall i c, (i <= 15)%nat -> iter_tau cx_sealed i c0 = Some c ->
+   no_io (next_r (jit_rules cx_sealed) jit_profile c) = true /\ forallb JitKRefBase.JitKRefBase.nontrap (kont c) = true).
+ { intros i c L Ei. assert (Ck : forallb (fun i => match iter_tau cx_sealed i c0 with
+       | Some c => no_io (next_r (jit_rules cx_sealed) jit_profile c) && forallb JitKRefBase.JitKRefBase.nontrap (kont c)
+       | None => true end) (seq 0 16) = true) by (vm_compute; reflexivity).
+   rewrite forallb_forall in Ck. specialize (Ck i ltac:(apply in_seq; lia)). rewrite Ei in Ck.
+   apply andb_true_iff in Ck. exact Ck. }
+ assert (HN : iter_tau cx_sealed 16 c0 = None) by (vm_compute; reflexivity).
+ destruct (star_reach cx_sealed c0 15 HC HN [] _ Hs) as [(i & L & Ei)|(x & K & s & E & _)].
+ - assert (Ck : forallb (fun i => match iter_tau cx_sealed i c0 with
+       | Some (Cfg (Ret v) [] _) => match v with VVec 0 => true | _ => false end
+       | _ => true end) (seq 0 16) = true) by (vm_compute; reflexivity).
+   rewrite forallb_forall in Ck. specialize (Ck i ltac:(apply in_seq; lia)). rewrite Ei in Ck.
+   destruct v0; try discriminate Ck. cbn in HG. contradiction.
+ - discriminate E.
+Qed.
 End JitFrontProlog.
