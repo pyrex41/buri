@@ -42,6 +42,7 @@ JitKRefTermThm
 JitFrontD
 JitFrontSugar
 JitFrontProlog
+JitImage
 JitEmitRuleEq
 JitEmitRuleStore
 JitEmitRulePrim

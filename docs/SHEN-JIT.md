@@ -134,14 +134,25 @@ Inputs that overflow the C stack through `=` are not covered (`OB-JIT-ISSUE-3`).
 The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (runtime `13afde42...`, image
 `fd8485a5...`), which stage 1 made by loading stage 0 and running initialisation. Validating stage 0 doesn't cover that.
 `OB-JIT-IMAGE` is now partial and split into five sub-obligations ([SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)):
-- `OB-JIT-IMAGE-CODE` (partial): a Rocq decoder, run as a spike measurement and not in the lane, finds that the
-  function-cell code of 955 of 955 stage 0 definitions equals `JitBytecode.build_code` of their `.sbc`.
-- `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, and all data it built.
+- `OB-JIT-IMAGE-CODE` (partial, lane-checked since r21-image-lane): `rocq/JitImage.v` decodes the image in the lane.
+  Rocq proves `image_code_ok`: 955 of 955 stage 0 code objects equal the code objects their image function cells hold
+  (`code_check_sound`, closed). `image_code_ok` is closed under the global context too: the reader copies the
+  image's bytes as `byte` constructors and Rocq joins them. It stays partial because it depends on `-READER`, which
+  is open (the reader is trusted), and the ledger does not discharge over an open dependency.
+- `OB-JIT-IMAGE-INIT` (open): the 7 code objects initialisation made with the image's own lowerer, 357 closures
+  outside function cells (352 of which run code reached from the 955), 55 bound value cells and the data they reach.
+  The code part is feasible by judging initialisation's `eval-kl` forms. The data part is infeasible now.
 - `OB-JIT-IMAGE-SEALING` (open): stage 1 seals 18 files where stage 0 sealed 24, which leaves 65 names redefinable
-  behind 115 sealed call sites.
-- `OB-JIT-IMAGE-READER` (open): the trusted reader and `image_load`.
+  behind 115 sealed call sites. Tested in the binary: after a redefinition, sealed sites keep the old closure while
+  open calls see the new one. So only a stated exclusion of redefining the 65 is feasible.
+- `OB-JIT-IMAGE-READER` (open): the reader (now `stage0_to_rocq.py --image`) and `image_load`.
 - `OB-JIT-IMAGE-FILE` (partial): the run reads the image from `argv[0]` (resolved through `PATH`) unless
-  `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary.
+  `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary. Feasible only as a
+  stated premise.
+
+Share's HT and HP (premises on branch `p2/r1-share-ht`), the image facts (Rocq, lane): thaw is sealed and its cell holds stage 0's code for it. hd and tl
+are not sealed and have no function. The binary refuses `defun` of all three as fixed names. HP's requirement that hd
+and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN-JIT-IMAGE.md).
 
 ## What exists
 
@@ -157,12 +168,13 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
 | `rocq/JitFrontProlog.v` | norm's Prolog rewrites: the bound-now rule, proved sound (`bind_rule_sound`); D00's `bind_site_sound_statement` refuted (`bind_site_unsound`); the source-shape scan `prolog_scan` |
+| `rocq/JitImage.v` | r21-image-lane: the heap image decoder, `check_def` against `build_code`, `code_check_sound` (closed), and the census the lane's image step prints (OB-JIT-IMAGE-CODE) |
 | `rocq/JitEmitRule<X>.v` | Seven emission families (Eq, Store, Prim, DoFold, Clo, App, Trap): each family's three empty rule hooks with their map and all lemmas |
 | `rocq/JitEmitRel.v` | JitLowerRel's relations indexed by code object and capture names, with the family hooks; hand-written nested `Comp_ind'`; `comp_embed` |
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/Audit_Jit.v` | Assumption audit of 700 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 704 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -696,7 +708,9 @@ was not attempted and is not estimated here.
 ### Extended back end: statements (emit-spec)
 
 Branch `p2/emit-spec`. Statements and design for the emission families; no family is simulated yet,
-and stage 0 is unchanged: 111 of 955 kernel definitions validated.
+and the stage 0 judge is unchanged by it. When emit-spec was written the source judge accepted 111 of 955
+definitions; on `p2/int` it now accepts 148 of 955 (`tests/shen-jit/stage0-accepted.txt`). Both are source-judge
+counts, not the full-pipeline count, which is UNKNOWN (no full-pipeline judge has run).
 
 - **Shape.** `rocq/JitEmitRel.v` copies JitLowerRel's six relations and indexes each by the code
   object and its capture names. JitLowerRel has the code as a Section variable instead. The spec asked
@@ -988,10 +1002,13 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   frame that MS' does not have, so it means changing JitEmitKont. Every row of the table above
   still awaits Reuben.
 
-  Landed by r21-emit-spec-land (`52f913c`, a `--no-ff` merge of `7bb9bb7` onto `p2/int` `f42d6c4`; the
-  JitEmit files byte-identical): audit 700 (523 + 161 + 16 proved emit lemmas newly printed), pin 266 by
-  arithmetic (229 + 37), and a syntactic non-inversion gate in `scripts/check-shen-jit.sh` (exit 13). The
-  evidence (lane and all 115 mutants on `52f913c`) is in [STATUS](STATUS.md).
+  r21-emit-spec-land (branch `p2/r21-emit-spec-land`; its merge into `p2/int` is the integrator's and is not
+  recorded here): `52f913c` is a `--no-ff` merge of `7bb9bb7` onto `p2/int` `f42d6c4` with the JitEmit files
+  byte-identical, and a later commit on the branch merges `p2/int` `da4b545` (r21-image-lane) into it, so that the
+  integrator's merge adds no new conflict. On the branch: audit 704 (527 + 161 + 16 proved emit lemmas newly
+  printed), pin 267 by arithmetic (230 + 37), and two non-inversion gates in `scripts/check-shen-jit.sh`, a
+  syntactic one (exit 14) and a term-level one over the printed constants (exit 15). The evidence is in
+  [STATUS](STATUS.md).
 
 ### Pass split: the normal form (wave 1b)
 

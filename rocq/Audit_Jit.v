@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog JitImage
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
@@ -706,3 +706,7 @@ Print Assumptions JitFrontProlog.JitFrontProlog.KRel_ca_let.
 Print Assumptions JitFrontProlog.JitFrontProlog.KRel_ca_last.
 Print Assumptions JitFrontProlog.JitFrontProlog.star_reach.
 Print Assumptions JitFrontProlog.JitFrontProlog.bind_site_unsound.
+Print Assumptions JitImage.JitImage.code_eqb_true.
+Print Assumptions JitImage.JitImage.check_def_sound.
+Print Assumptions JitImage.JitImage.tally_sound.
+Print Assumptions JitImage.JitImage.code_check_sound.

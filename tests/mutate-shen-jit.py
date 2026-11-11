@@ -155,7 +155,8 @@ ShenJitKRefPrimOutAnyIO: PrimOutRel relates two IO requests without q0 = q. The 
   different requests, and call_rel (JitKRefCompatClo), which must give the same request on both
   sides, must fail. Built as the chain of ShenJitKRefPoutThrowAny.
 ShenJitEmitCatchUpNone: cx_c2, the configuration the source catches up to, is cx_c itself (no source
-  step). MS does not relate cx_c to cx_m1 (cx_not_ms1), so cx_ms2 (behind cx_catch_up) must fail.
+  step), and cx_src_catch_up is re-proved for it by SS_refl, so Rocq reaches cx_ms2. MS does not relate
+  cx_c to cx_m1 (cx_not_ms1), so cx_ms2 (behind cx_catch_up) must fail.
 ShenJitEmitEqCycleAcyclic: cy_s's second cell holds VVec 1 instead of VVec 0, so the source's = on
   VVec 0 and VVec 1 answers true instead of going wrong. dv_eq_cycle must fail.
 ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) without the clause
@@ -240,6 +241,8 @@ ShenJitFrontPrologScope: bind_rule checks the fresh names against no scope, so a
   name of g the next argument reads. bind_rule_sound must fail.
 ShenJitFrontPrologDoFirst: bind_rule takes a do returning its FIRST argument. bind_rule_sound must fail.
 ShenJitFrontPrologP4Key: bind_rule checks p3, not p4, against id_key. bind_rule_sound must fail.
+ShenJitImageNoCodeEq: check_def gives Match without comparing the loaded code with the image's
+  decoded code. check_def_sound must fail.
 """
 import re
 from pathlib import Path
@@ -469,8 +472,15 @@ mutate_chain('ShenJitKRefPrimOutAnyIO', clochain,
        " | PIO q0 c0, PIO q c => q0 = q /\\ forall r, PoutRel k w (c0 r) (c r)\n",
        " | PIO q0 c0, PIO q c => forall r, PoutRel k w (c0 r) (c r)\n")
 mutate('ShenJitEmitCatchUpNone', 'rocq/JitEmitInv.v',
-       "Definition cx_c2 : config := Cfg (Ret (VNum (NInt 2))) [KLet cx_z (EVar cx_z) []] cx_s.",
-       "Definition cx_c2 : config := cx_c.")
+       "Definition cx_c2 : config := Cfg (Ret (VNum (NInt 2))) [KLet cx_z (EVar cx_z) []] cx_s.\n"
+       "Lemma cx_src_catch_up : JitLowerStep.Sstar [] cx_c cx_c2.\n"
+       "Proof.\n"
+       " eapply JitLowerStep.S1; [vm_compute; reflexivity|].\n"
+       " eapply JitLowerStep.S1'. vm_compute. reflexivity.\n"
+       "Qed.",
+       "Definition cx_c2 : config := cx_c.\n"
+       "Lemma cx_src_catch_up : JitLowerStep.Sstar [] cx_c cx_c2.\n"
+       "Proof. apply JitLowerStep.SS_refl. Qed.")
 mutate('ShenJitEmitEqCycleAcyclic', 'rocq/JitEmitInv.v',
        "Definition cy_s : store := Store [[VVec 1]; [VVec 0]] [] [].",
        "Definition cy_s : store := Store [[VVec 1]; [VVec 1]] [] [].")
@@ -582,4 +592,8 @@ mutate('ShenJitFrontPrologDoFirst', prolog,
        '     negb (text_eqb v1 v2) && text_eqb v2 v2\' &&', '     negb (text_eqb v1 v2) && text_eqb v1 v2\' &&')
 mutate('ShenJitFrontPrologP4Key', prolog,
        ' && negb (text_eqb p4 id_key) &&', ' && negb (text_eqb p3 id_key) &&')
+image = 'rocq/JitImage.v'
+mutate('ShenJitImageNoCodeEq', image,
+       '     | Some k\' => if code_eqb k k\' then Match g else Differ g end end',
+       '     | Some k\' => if true then Match g else Differ g end end')
 print(' '.join(names))

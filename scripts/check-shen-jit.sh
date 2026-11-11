@@ -21,7 +21,7 @@ python3 "$root/tests/shen-jit/check_tables.py" "$root" "$src" || exit 4
 # Emit families (r21-emit-spec-land): outside its own rocq/JitEmitRule<X>.v no file inverts a Rule_X hook;
 # downstream code uses JitEmitRel.Comp_ind' and the Rule_X_map / Rule_X_all lemmas only. A syntactic gate (it cannot
 # see a destruct of an unnamed Comp hypothesis); Rocq still decides every theorem.
-python3 -I - "$root" <<'EMIT_NOINV' || { echo "EMIT_INVERSION_FOUND"; exit 13; }
+python3 -I - "$root" <<'EMIT_NOINV' || { echo "EMIT_INVERSION_FOUND"; exit 14; }
 import re,sys,pathlib
 root=pathlib.Path(sys.argv[1]); bad=[]
 FAM='(?:Eq|Store|Prim|DoFold|Clo|App|Trap)'
@@ -64,7 +64,7 @@ sys.exit(1 if bad else 0)
 EMIT_NOINV
 eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
 mkdir -p "$out"; cd "$out"
-FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund JitKTerm JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitNorm JitNormStage0 JitFrontD JitFrontSugar JitFrontProlog JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv Audit_Jit"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund JitKTerm JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitNorm JitNormStage0 JitFrontD JitFrontSugar JitFrontProlog JitImage JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv Audit_Jit"
 for f in $FILES; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
   d=$(diff "$root/rocq/$f.v" "$f.v" || true)   # diff exits 1 when the files differ
@@ -79,6 +79,47 @@ closed=$(grep -c '^Closed under the global context$' Audit_Jit.log || true)
 [ "$closed" = "$expected" ] || { cat Audit_Jit.log; echo "AUDIT_MISMATCH $closed of $expected"; exit 7; }
 rocqchk -silent -Q . Buri $(for f in $FILES; do echo "Buri.$f"; done) > chk.log 2>&1 || { tail -5 chk.log; echo "ROCQCHK_FAILED"; exit 8; }
 echo "rocq-9: ${closed} audited statements closed, rocqchk passed"
+# Emit families, term level (r21-emit-spec-land): Rocq prints (Set Printing All) every constant of JitEmitRel and of each
+# compiled module that directly requires a JitEmit module, outside the JitEmitRule<X>.v files; JitEmitRel's own Comp_ind' family and the
+# block's generated schemes are exempt. No printed term may match on Comp, CompT or CompOp (such a match prints
+# their hook constructors [CTO]_<X> as branches; JitLowerRel's Comp has no such constructors), match on a Rule hook, or use a Rule hook's or the Comp block's generated schemes. This
+# sees what the syntactic gate cannot, such as a destruct of an unnamed Comp hypothesis. Test evidence, not proof.
+python3 -I - "$out" "$FILES" <<'EMIT_TERM' || { echo "EMIT_TERM_INVERSION_FOUND"; exit 15; }
+import re,sys,pathlib,subprocess
+out=pathlib.Path(sys.argv[1]); files=sys.argv[2].split()
+FAM='(?:Eq|Store|Prim|DoFold|Clo|App|Trap)'
+KINDS={'def','prf','scheme','rec','corec','proj','inst','meth','coe','thm','lem','fact'}
+BLK=['Comp','CompT','CompOp','CompOps','CompW','CompTA']
+EXEMPT={('JitEmitRel','JitEmitRel',n) for n in [b+"_ind'" for b in BLK]+[f'{b}_{s}' for b in BLK for s in ['ind','sind','rect','rec']]}
+names=[]; mods=[]
+for f in files:
+    if f.startswith('JitEmitRule') or f=='Audit_Jit': continue
+    g=(out/f'{f}.glob').read_text()
+    if f!='JitEmitRel' and not re.search(r'^R\d+:\d+ Buri\.JitEmit\w* ',g,re.M): continue
+    mods.append(f)
+    for m in re.finditer(r'^(\w+) \d+:\d+ (\S+) (\S+)$',g,re.M):
+        k,p,n=m.groups()
+        if k in KINDS and (f,p,n) not in EXEMPT: names.append(f'Buri.{f}.{n}' if p=='<>' else f'Buri.{f}.{p}.{n}')
+names=list(dict.fromkeys(names))
+if 'JitEmitRel' not in mods or not names: print('emit term-level check: nothing to print'); sys.exit(1)
+src='From Buri Require '+' '.join(mods)+'.\nSet Printing All. Set Printing Width 1000000.\n'+''.join(f'Print {q}.\n' for q in names)
+(out/'EmitTermGate.v').write_text(src)
+r=subprocess.run(['rocq','compile','-Q',str(out),'Buri',str(out/'EmitTermGate.v')],cwd=out,capture_output=True,text=True)
+log=r.stdout+r.stderr; (out/'EmitTermGate.log').write_text(log)
+if r.returncode: print(log[-2000:]); print('emit term-level check: printing failed'); sys.exit(1)
+pats=[(r'(?:\||\bwith)\s+(?:[\w\']+\.)*[CTO]_'+FAM+r'\b(?!\')','match on Comp, CompT or CompOp (hook constructor branch)'),
+      (r'\bin\s+\(?\s*@?(?:[\w\']+\.)*Rule[TO]?_'+FAM+r'\b(?!\')','match on a Rule hook'),
+      (r'\bRule[TO]?_'+FAM+r'_(?:ind|rect|rec|sind)\b','generated scheme of a Rule hook'),
+      (r'(?<![\w\'])(?:Comp|CompT|CompOp|CompOps|CompW|CompTA)_(?:ind|rect|rec|sind)\b(?!\')','generated scheme of the nested Comp block')]
+bad=[]
+for b in re.split(r'\n(?=\S)',log):
+    head=b.split()[0] if b.split() else '?'
+    for p,why in pats:
+        for m in re.finditer(p,b): bad.append(f'{head}: {why}: {m.group(0).strip()!r}')
+for x in bad: print('EMIT_TERM_INVERSION',x)
+print(f'emit term-level non-inversion check: {len(bad)} violations, {len(names)} constants printed from {len(mods)} modules')
+sys.exit(1 if bad else 0)
+EMIT_TERM
 # Stage 0 translation validation (E2E-38): each definition's form and code object are decoded in
 # Rocq and JitLowerCheck decides them. The per-file counts must equal tests/shen-jit/stage0-accepted.txt,
 # so a change in either direction fails. Acceptance is per definition; rejection proves nothing.
@@ -96,6 +137,25 @@ if [ -z "${SKIP_STAGE0:-}" ]; then
   diff "$root/tests/shen-jit/stage0-accepted.txt" "$got" > "$s0/diff.txt" || { cat "$s0/diff.txt"; echo "STAGE0_CHANGED"; exit 12; }
   echo "stage0: $(awk '{a+=$2; r+=$3; u+=$4} END {print a " accepted, " r " rejected, " u " unreadable of " a+r+u " definitions"}' "$got"), as recorded"
 else echo "stage0: NOT RUN (SKIP_STAGE0 set)"; fi
+# Heap image code objects (OB-JIT-IMAGE-CODE, docs/SHEN-JIT-IMAGE.md): the binary's image is read as
+# bytes (the trusted reader, OB-JIT-IMAGE-READER, writes each as a Byte.byte constructor; Rocq joins
+# them into words) and Rocq proves image_code_ok, closed: every one of
+# the 24 files' stage 0 definitions, from the stage 0 step's own S0_<file> modules, loads to the code
+# object its function cell holds in the image (JitImage.code_check_sound). image_mutants_caught
+# proves two one-word mutants of print's code are caught. The census Rocq computes on the image is
+# compared with tests/shen-jit/image-facts.txt. Needs the stage 0 step's modules.
+if [ -z "${SKIP_STAGE0:-}" ] && [ -z "${SKIP_IMAGE:-}" ]; then
+  python3 "$root/tests/shen-jit/stage0_to_rocq.py" --image "$bin" "$s0/Img.v" || { echo "IMAGE_READ_FAILED"; exit 13; }
+  sed -i 's/^From Coq Require/From Stdlib Require/' "$s0/Img.v"
+  (cd "$s0" && rocq compile -Q "$out" Buri Img.v > Img.log 2>&1) || { tail -20 "$s0/Img.log"; echo "IMAGE_ROCQ_FAILED"; exit 13; }
+  # image_code_ok and image_mutants_caught must each print "Closed under the global context": no
+  # axiom, parameter or primitive. Anything else before image_facts fails.
+  pre=$(sed -n '1,/^image_facts =/p' "$s0/Img.log" | grep -v '^\[WARNING\]' | grep -v '^image_facts =$')
+  [ "$pre" = "$(printf 'Closed under the global context\nClosed under the global context')" ] || { cat "$s0/Img.log"; echo "IMAGE_ASSUMPTIONS"; exit 13; }
+  sed -n '/^image_facts =/,$p' "$s0/Img.log" | tr '\n' ' ' | tr -s ' ' | sed 's/ $//' > "$s0/image-facts.txt"; echo >> "$s0/image-facts.txt"
+  diff "$root/tests/shen-jit/image-facts.txt" "$s0/image-facts.txt" > "$s0/image-diff.txt" || { cat "$s0/image-diff.txt"; echo "IMAGE_FACTS_CHANGED"; exit 13; }
+  echo "image: image_code_ok proved, closed under the global context (every stage 0 code object of the 24 files equals its image function cell's), 2 image mutants caught, census as recorded"
+else echo "image: NOT RUN (SKIP_STAGE0 or SKIP_IMAGE set)"; fi
 if [ -n "${SKIP_DIFF:-}" ]; then echo "differential: NOT RUN (SKIP_DIFF set)"; exit 0; fi
 d="$out/d"; mkdir -p "$d"; cd "$d"
 cat "$src/tests/kl/ops.kl" "$root/tests/shen-jit/ops-calls.kl" > ops-all.kl

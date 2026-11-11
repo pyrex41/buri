@@ -4609,6 +4609,11 @@
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: open -> partial. Code objects: a Rocq decoder (spikes/image-decode, not in the lane) relates 955 of 955 stage 0 definitions to the code in their function cells; 7 code objects made by initialisation, all data initialisation built, the 18-vs-24 sealing gap and the reader stay open as sub-obligations."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial. CODE lane-checked, instance closed under the global context (partial, behind READER); INIT, SEALING, READER, FILE each carry a measured verdict."
     }
    ]
   },
@@ -4630,19 +4635,31 @@
      "ref": "docs/SHEN-JIT-IMAGE.md",
      "establishes": "artifact-correspondence",
      "note": "measured: the binary e0acd513... (5440856 bytes) is the runtime 13afde42... (4657760 bytes) followed by the image fd8485a5... (783096 bytes), found from the SJHI-END trailer; the run opens argv[0] (resolved through PATH) unless SHEN_JIT_IMAGE is set. No premise about the file system is stated in any theorem yet"
+    },
+    {
+     "kind": "identity-hash",
+     "ref": "spikes/image-decode/meas.sh",
+     "establishes": "artifact-correspondence",
+     "note": "re-measured (bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc; split.out sha256 a2703018141da0842914299260b03247d7cec877e0f23f0799e7c5a855746919): the binary e0acd513... (5440856 bytes) is runtime 13afde42... + image fd8485a5... ending SJHI-END. Verdict: feasible only as a stated premise of the top theorem (SHEN_JIT_IMAGE unset, argv[0] resolves to this file); not derivable from the image"
     }
    ],
    "completion_evidence": "A stated premise, used by the top theorem, that the file the run opens (argv[0] resolved through PATH, SHEN_JIT_IMAGE unset) holds the pinned binary, whose final image is fd8485a5...; or the image embedded in the ELF.",
    "sources": [
+    "docs/SHEN-JIT-IMAGE.md",
     "docs/SHEN-JIT.md",
-    "spikes/riscv-build/RESULTS.md",
-    "docs/SHEN-JIT-IMAGE.md"
+    "spikes/image-decode/meas.sh",
+    "spikes/riscv-build/RESULTS.md"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: open -> partial. Measured the split of the pinned binary into runtime and image and how main.c finds its image (executable_file over argv[0] and PATH, overridden by SHEN_JIT_IMAGE); the premise is still not stated."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial; split re-measured (split.out a2703018...). Verdict: feasible only as a stated premise of the top theorem (SHEN_JIT_IMAGE unset, argv[0] resolves to the pinned binary), not derivable from the image."
     }
    ]
   },
@@ -4663,20 +4680,38 @@
    "evidence": [
     {
      "kind": "review",
-     "ref": "spikes/image-decode/JitImage.v",
+     "ref": "rocq/JitImage.v",
      "establishes": "artifact-correspondence",
-     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context"
+     "note": "Rocq 9.3 vm_compute measurement, not lane-checked and not in Audit_Jit: spikes/image-decode/run.sh at e08d73e, exit 0, IMAGE_DECODE_OK (log 9f24f9ea...); 955 of 955 Match, 0 other verdicts (ImgSum.log 8e332a8a...); two image mutants of print each give Differ; check_def_sound closed under the global context (the spike decoder, since moved to rocq/JitImage.v by r21-image-lane)"
+    },
+    {
+     "kind": "instance-validation",
+     "ref": "JitImage.JitImage.code_check_sound",
+     "establishes": "artifact-correspondence",
+     "note": "lane step of scripts/check-shen-jit.sh (cd /work/p2-r21-image-lane && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-image-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh at 0595b57 in buri-lps, rc 0, 1545 s, log /tmp/p2-r21-image-lane-lane2.log sha256 a120de67401662489f1d23474d48833a5e9842e882464372a212e33d5a57078b, s0/Img.log sha256 b330dd6e547cd6d2339da07de5423a990be68b877644c3c5d6edd3dedc387571): Img.v (stage0_to_rocq.py --image: the image's bytes as Init.Byte constructors, joined in Rocq by JitImage.words_of_bytes) proves image_code_ok, code_check over the pinned image and the 24 files' stage 0 trees (Buri.s0 modules), by vm_compute, and image_mutants_caught (two print code mutants, each required to still parse); both print Closed under the global context and the lane fails otherwise (IMAGE_ASSUMPTIONS). Proof mutant ShenJitImageNoCodeEq rejected (/tmp/p2-r21-image-mut2/ShenJitImageNoCodeEq.log sha256 45eb3afd...2847). Superseded run at 1533b51 (log ea4cd53c...8327) assumed Uint63 int, lsr, land, eqb. Partial only because it depends on OB-JIT-IMAGE-READER, open (no discharge over an open dependency)"
     }
    ],
    "completion_evidence": "JitImage.check_def run over the pinned image in the lane (an instance-validation in Audit_Jit with a lane step and mutants), not only as a spike measurement.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "rocq/JitImage.v",
+    "scripts/check-shen-jit.sh"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial (depends on OB-JIT-IMAGE-READER, open). JitImage.v moved to rocq/, in Audit_Jit (code_eqb_true, check_def_sound, tally_sound, code_check_sound) and the lane: 955 of 955 stage 0 code objects equal their image function cells' code objects, lane-checked."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image instance made closed (task r21-image-lane, verifier fix), 11 November 2026.",
+     "recorded": "2026-11-11: stays partial (depends on OB-JIT-IMAGE-READER, open). image_code_ok and image_mutants_caught now Closed under the global context: the reader writes bytes as Init.Byte constructors instead of Uint63 halves; lane at 0595b57 rc 0, log a120de67...078b."
     }
    ]
   },
@@ -4692,16 +4727,29 @@
    "statement": "Everything stage 1 built by running shen.initialise, shen.x.features.initialise, shen.x.programmable-pattern-matching.initialise, shen.x.namespaces.initialise and shen-jit.initialise denotes the KLambda store those calls reach: the 7 code objects not reachable from the 955 function cells (thread, defined by eval-kl in shen-jit.initialise, and 6 lambda code objects of the lambda-form entries in *property-vector*), every global value, the property vector, dictionaries and streams.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "census, not proof (Rocq image_facts in the lane, tests/shen-jit/image-facts.txt; census.py, bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc): 7 of 2371 code objects unreached from the 955 (thread, 6 lambda); 1313 closures, 956 in function cells, 357 elsewhere (3 in value cells), 352 of them running code reached from the 955, none with captures; 55 bound value cells. Verdict: INIT-CODE (the 7) feasible by capturing initialisation's eval-kl forms and judging them, not done; INIT-DATA (values, property vector, dictionaries, streams) infeasible now (needs validated initialisation code or a source run of initialisation)"
+    }
+   ],
    "completion_evidence": "Stage 1 proved an instance of the main theorem over validated initialisation code, or the initialised store decoded and related in Rocq.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "spikes/image-decode/meas.sh"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; split into INIT-CODE (feasible, not done) and INIT-DATA (infeasible now) with measured counts."
     }
    ]
   },
@@ -4717,16 +4765,29 @@
    "statement": "Stage 0 lowered all 24 files with every definition sealed, but stage 1 seals only the first 18: in the image, 890 of the 955 names carry the sealed bit and the 65 definitions of the 6 extension files do not, while 115 call-sealed sites in 45 definitions are bound to extension closures at load. The claim either excludes redefining those 65 names or shows sealed calls to them still agree with the source's late binding.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "review",
+     "ref": "spikes/image-decode/redef.shen",
+     "establishes": "artifact-correspondence",
+     "note": "test, not proof (pinned binary under qemu, bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc, redef.out sha256 46329b98...cb7): after eval-kl of (defun shen.x.launcher.execute-all (X) redefined) the open call gives redefined while the sealed caller shen.x.launcher.eval-command-h still gives [success]; defun of a sealed name and of thaw, hd, tl is refused. Rocq census in the lane: 890 sealed names, exactly the 18 files; the 6 extension files' 65 definitions unsealed, targeted by 115 sealed sites (file-by-file table in docs/SHEN-JIT-IMAGE.md). Verdict: FunRel surviving redefinition is false for the binary; only the premise route is feasible"
+    }
+   ],
    "completion_evidence": "A stated premise or exclusion in the top theorem for redefinition of the 65 unsealed extension names, or Rocq evidence that FunRel survives it.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "spikes/image-decode/meas.sh"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; redefinition tested in the binary (sealed sites keep the load-time closure), so the completion route is the stated exclusion of redefining the 65 names."
     }
    ]
   },
@@ -4739,19 +4800,37 @@
    "status": "open",
    "boundary": "Reading and loading the image",
    "identity": "",
-   "statement": "The trusted reader (spikes/image-decode/image_to_rocq.py) gives the image's bytes as little-endian 64-bit words, and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
+   "statement": "The trusted reader (tests/shen-jit/stage0_to_rocq.py --image, formerly spikes/image-decode/image_to_rocq.py) gives the image's bytes, in file order, as constructors of Rocq's ordinary inductive byte (joined into little-endian 64-bit words in Rocq by JitImage.words_of_bytes, closed), and image_load (rebasing every pointer, restore_raw, the build and primitive checksum checks, vm_track_code and vm_find_free_consts) yields the heap JitImage decodes.",
    "premises": [],
    "depends_on": [],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "identity-hash",
+     "ref": "docs/SHEN-JIT-IMAGE.md",
+     "establishes": "artifact-correspondence",
+     "note": "measured (bash spikes/image-decode/meas.sh /work/p2-r21-image-lane /tmp/p2-r21-image-meas2 in buri-lps at 2149914, rc 0, log /tmp/p2-r21-image-meas2.log sha256 671c9ff9873b046d88d87cde89ed68506bd4870ed11fb9362bdf7e708053c2bc, split.out sha256 a2703018...6919): binary e0acd513... = runtime 13afde42... (4657760 bytes) + image fd8485a5... (783096 bytes) ending SJHI-END. Verdict: feasible by review of the word split plus a Rocq model of rebase_heap/restore_raw; not done"
+    }
+   ],
    "completion_evidence": "The loader's rebasing and raw-field reconstruction modelled or reviewed against image.c, and the reader reviewed as a word split only.",
    "sources": [
-    "docs/SHEN-JIT-IMAGE.md"
+    "docs/SHEN-JIT-IMAGE.md",
+    "spikes/image-decode/meas.sh"
    ],
    "history": [
     {
      "source": "docs/SHEN-JIT-IMAGE.md",
      "reconciliation": "Image obligation scoped (task r1-image), 10 November 2026.",
      "recorded": "2026-11-10: created when OB-JIT-IMAGE was scoped."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image code objects wired into the lane; sub-obligations given verdicts (task r21-image-lane), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; the reader is now the lane's --image mode (a word split into halves), the join is in Rocq."
+    },
+    {
+     "source": "docs/SHEN-JIT-IMAGE.md",
+     "reconciliation": "Image instance made closed (task r21-image-lane, verifier fix), 11 November 2026.",
+     "recorded": "2026-11-11: stays open; the reader now only copies bytes (Init.Byte constructors), no primitive integers; loader rebasing still unmodelled."
     }
    ]
   },
@@ -5191,7 +5270,8 @@
    "completion_evidence": "Identity added to the model, or a theorem that admitted programs never reach it.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "tests/shen-jit/stage0-residuals.txt"
+    "tests/shen-jit/stage0-residuals.txt",
+    "docs/decisions/p2-decisions.md"
    ],
    "history": [
     {
@@ -5203,6 +5283,11 @@
      "source": "tests/shen-jit/stage0-residuals.txt",
      "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 5 with an identity primitive as first label (unchanged), 48 touching one (unchanged). Supersedes the counts in the entry above.",
      "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 3. Rocq: JitBytecode.same is None on pairs, strings and reals (MStuck RIdentity); JitProfile.pp_samep_ok, pp_taggedp_ok. Affected (census): 48 residual definitions (deref 37, tagged? 12, same? 4), 22 with no other decision item. Recommended default: gated residual plus Q0. Cap impact: 0 with Q0; without Q0, -480 under closure (forecast).",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
     }
    ]
   },
@@ -5339,7 +5424,8 @@
    "sources": [
     "docs/SHEN-JIT.md",
     "rocq/JitProfile.v",
-    "tests/shen-jit/stage0-residuals.txt"
+    "tests/shen-jit/stage0-residuals.txt",
+    "docs/decisions/p2-decisions.md"
    ],
    "history": [
     {
@@ -5356,6 +5442,11 @@
      "source": "tests/shen-jit/stage0-residuals.txt",
      "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 59 with = on two computed operands as first label (was 43; definitions formerly first blocked by = against a symbol now show their next label), 206 touching it (unchanged). The 152 definitions the entry above lists as first blocked by = against a symbol constant: 37 are now accepted by the source judge and the other 115 are filed under their next census label; = against a symbol is no longer a residual label. Supersedes the counts in the entry above.",
      "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 4. Rocq: JitLowerRel.pguard; JitEqBudget.eq_budget_refuted; JitEmitInv.dv_eq_nan (p2/r1-emit-spec-merge 7bb9bb7, Audit_Jit there, not re-run here). Affected (census): 206 definitions with = on two computed operands, 171 with no other decision item, 59 as first blocker. Options (forecast direct/D-src/D-low): NaN identity rule +171/+129/+129; Rocq static non-real judgment +98/+18/+18; residual +0. Recommended default: gated residual plus Q0; NaN identity is the only option reaching all 206. Cap impact: 0 with Q0; without Q0, -648 under closure (forecast).",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
     }
    ]
   },
@@ -6041,7 +6132,8 @@
     "rocq/JitProfile.v",
     "docs/SHEN-JIT.md",
     "rocq/JitKRefPrim.v",
-    "tests/shen-jit/stage0-residuals.txt"
+    "tests/shen-jit/stage0-residuals.txt",
+    "docs/decisions/p2-decisions.md"
    ],
    "history": [
     {
@@ -6058,6 +6150,11 @@
      "source": "tests/shen-jit/stage0-residuals.txt",
      "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 26 with a port primitive as first label (was 24), 178 touching one (unchanged). Supersedes the counts in the entry above.",
      "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 1. Rocq: JitProfile.jit_port_prims_off, jit_port_prims_partition, jit_port_prims_arity, pp_*_ok (Audit_Jit); the source judge rejects every caller. Affected (census, stage0_residuals.py and feature_census.py re-run on stage0 ec9b3872, norm e45add98, byte-identical outputs): 178 residual definitions touch a non-identity port primitive, 140 with no other decision item; 63 use a no-carrier operator, 158 a proposed candidate. Recommended default: gated residual for the 19 no-carrier operators plus the packet's Q0 rule (a callee-link failure whose failing callees are all decision-gated inherits the gate); wiring the 15 non-identity candidates is a separate approval. Cap impact: 0 with Q0; without Q0, -581 under closure (forecast), over the cap of 20.",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
     }
    ]
   },
@@ -6076,9 +6173,16 @@
    "evidence": [],
    "completion_evidence": "A named limit in the claim, or a rule for it.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "docs/decisions/p2-decisions.md"
    ],
-   "history": []
+   "history": [
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 4 (cycle half). Rocq: JitEmitInv.dv_eq_cycle, dv_eq_cycle_rel, dv_eq_cycle_same (p2/r1-emit-spec-merge 7bb9bb7, Audit_Jit there, not re-run here): on two related cyclic vectors the source goes wrong and the bytecode is stuck (RCyclic); Out' has no case for it. Affected: a run-time property, no static census (UNKNOWN). Recommended default: a named limit of the claim. Cap impact: 0 (a limit, not a residual definition).",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    }
+   ]
   },
   {
    "id": "OB-JIT-ROCQ-ONLY",
@@ -6145,7 +6249,8 @@
     "docs/SHEN-JIT.md",
     "rocq/JitEmitRel.v",
     "rocq/JitEmitKont.v",
-    "rocq/JitEmitInv.v"
+    "rocq/JitEmitInv.v",
+    "docs/decisions/p2-decisions.md"
    ],
    "history": [
     {
@@ -6196,6 +6301,11 @@
      "source": "rocq/JitEmitInv.v",
      "recorded": "2026-11-11: open (r1-emit-spec-merge fix round 4, merged onto p2/int 5779555). Closed in Rocq: old_reflect_src proves old_reflect_src_statement from JitKRefFund.fundamental; call_preservation_src_old_holds; call_preservation_src_old_of_new'' (the src corollary with old_reflect_src_statement discharged). env_ok_needed: preservation'_statement with env_ok dropped (preservation_noenv_statement) is FALSE, at the source's pending get-time frame against the machine at its get-time instruction (gt_ms), under an environment answering JFailed; resp_ok_bound_needed: the same at a clock reading of 2^64. So env_ok is necessary for preservation' (for call_preservation' and call_preservation_src' it is analogous, not proved); it is an assumption on the environment, not derivable from the pin. Mutant ShenJitEmitIoFailTranslated. Still NOT proved, truth UNKNOWN: sim'_statement, every sim_X_statement, preservation', call_preservation', call_preservation_src', old_reflect_core_statement. Still primitive- or call-level only: the frame_prim exclusions and the one-argument window. Awaiting Reuben, none approved: env_ok, the frame_prim exclusions, the one-argument window, GvalsRel on the *_old statements, the catch-up reflection, the six-parameter Rule_X index shape. The refutation rests on ev_of leaving JFailed and readings of 2^64 or more untranslated; translating a failure would not save the statement, since the bytecode resumes with no result while the source throws (dv_io_fail). Audit 424 (lane on 95459c7: 424 Closed, 0 Axioms). Pin 238 is a census, NOT report.py evidence: 87 ShenJit mutant names (p2/int 5779555 has 50, so its 201 has 151 non-JIT) plus the Rocq 9.3 rejection of the 40 ShenJitEmit*/kref-fund mutants on 95459c7. make prove and make report were not run (UNKNOWN): buri-lps has only the Rocq 9.3 switch, scripts/prove requires Coq 8.18.0 and scripts/shen, and no other environment has them.",
      "reconciliation": "old_reflect_src proved and env_ok shown necessary (r1-emit-spec-merge fix round 4), 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 7 (emit-spec scoped premises and design choices, p2/r1-emit-spec-merge 7bb9bb7, unmerged; Audit_Jit there, not re-run here). env_ok: env_ok_needed, resp_ok_bound_needed, env_ok_inhabited (statement-level necessity for preservation' only); frame_prim exclusions: dv_absvector_src/_byt, dv_ets_*, dv_open, dv_close, dv_read_closed, dv_write_closed (primitive level); one-argument window: dv_window, dv_window_rel; GvalsRel: gvals_needed; catch-up reflection: old_reflect_false, cx_catch_up, old_reflect'_iff_core; Rule_X index shape: JitEmitNestTest. Affected (census): frame_prim exclusions 35 definitions (absvector 17, read-byte 13, close 4, open 3, error-to-string 3, write-byte 2); window 0 with two or more arguments; env_ok on every run statement, 18 using KL IO. Recommended default: approve env_ok, the window, GvalsRel, catch-up and the index shape; for the frame_prim exclusions decide the source-model questions (absvector bound, error-to-string text, open's home-directory prefix, stream state, unhandled IO failure) rather than keep residuals. Cap impact: 0 for the approved rows; the 35 exclusion definitions are non-gated and over the cap if the exclusions stand.",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
     }
    ]
   },
@@ -6280,7 +6390,8 @@
     "rocq/JitKRefFund.v",
     "rocq/JitFrontD.v",
     "rocq/JitFrontSugar.v",
-    "rocq/JitFrontProlog.v"
+    "rocq/JitFrontProlog.v",
+    "docs/decisions/p2-decisions.md"
    ],
    "history": [
     {
@@ -6367,6 +6478,26 @@
      "source": "rocq/JitFrontProlog.v",
      "recorded": "2026-11-11: open. Merge of p2/r1-f-prolog (675aa35) into p2/int after r1-f-sugar (5a478a7): no statement changed; the union has 523 Audit_Jit statements (515 + the 8 of JitFrontProlog) and a proof-mutation pin of 229 (222 + the 7 ShenJitFrontProlog mutants). No count changes: the source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN.",
      "reconciliation": "merge-r1-f-prolog, Phase 2 integration, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 5 (share premises HT and HP, p2/r1-share-ht 0695f04, unmerged; its own ledger id there is OB-JIT-SHARE-THAW). Rocq (that branch's Audit_Jit, not re-run here): share_needs_thaw_outright, share_needs_hd_tl, share_premises_sat, ht_not_com, hp_of_com, thaw_stable, hd_tl_stable, share_rewrites_validated (4 of 4). Affected (census): share fires in 4 definitions; share, thaw-sugar or copy (all needing thaw in D) in 37. Recommended default: HP met by every Com store (hp_of_com), its D side settled with item 9; HT as a decidable D check, satisfiable once the emit App family admits thaw's 0-ary dynamic apply (ht_not_com then fails). Cap impact: 0 if the App family lands; otherwise up to 37 (census), over the cap.",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 6 (uncurrying, p2/r1-f-copy-fold-apply 6278940, unmerged; its own ledger id there is OB-JIT-FRONT-UNCURRY). Rocq: JitFrontCopyFold.uncurry_not_kref (no premise; that branch's Audit_Jit). uncurry_scan (test): 0 multi-argument dynamic applications in the stage 0 sources; census on the norm witness: 33 dynamic calls, all 1-argument. DoD (2)'s uncurrying checker cannot be met as written. Recommended default: amend DoD (2) to no uncurrying rule, keep uncurry_not_kref. Cap impact: 0 at v0.6.",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 8 (guarded inline and bind statements). Rocq: JitFrontInline.inline_site_unsound, bind_site_unsound (p2/r1-f-inline be367ab, unmerged); JitFrontProlog.bind_site_unsound (p2/int f42d6c4, Audit_Jit). Guarded checkers inl_site_g, bind_site_g: soundness NOT proved. Affected (census): 528 definitions with an inline marker, 7 with bound-now (37 sites); site_report (test): the id_key guard changes 0 verdicts. Recommended default: approve guarded statements in JitFrontD.v (D00's file), keep the old statements and all three refutations. Cap impact: 0 once guarded soundness is proved; until then 528 cannot pass, over the cap.",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 9 (fixed-name primitive entries + and - in D_wf). Rocq: JitFrontCopyFold.fold_arith_needs_store (no premise, p2/r1-f-copy-fold-apply 6278940); JitProfile.jit_defun_fixed_refused (p2/int); the hd_tl_stable pattern (r1-share-ht). Affected (census): 6 definitions (fold-arith family; the same 6 by d00_inline_census.py MODE=5; JitFrontD inline-site test 522 of 528 without fold). Recommended default: D_wf admits (f, FPrim p) for is_fixed_name f with prim_of_name f = Some p, plus a fixed_stable lemma; call_preservation_src_statement stays byte-identical but its D_wf hypothesis admits more D (a stronger theorem, to be re-proved). Cap impact: 0 if approved; otherwise 6 of the 20.",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
     }
    ]
   },
@@ -6697,7 +6828,8 @@
    "completion_evidence": "A universal theorem over a source-linked lowerer model, or a proved checker run on every runtime lowering.",
    "sources": [
     "docs/SHEN-JIT.md",
-    "tests/shen-jit/stage0-residuals.txt"
+    "tests/shen-jit/stage0-residuals.txt",
+    "docs/decisions/p2-decisions.md"
    ],
    "history": [
     {
@@ -6714,6 +6846,11 @@
      "source": "tests/shen-jit/stage0-residuals.txt",
      "recorded": "2026-11-10: open; still a decision item, Reuben's decision, defaulting to a named residual. tests/shen-jit/stage0-residuals.txt regenerated by tests/shen-jit/stage0_residuals.py from the Rocq judge_split.sh verdicts on branch p2/eq-guard-merge (on p2/int 335348c), after = against a symbol constant was admitted; same stage 0 set ec9b3872 and norm witness e45add98; source judge 148 of 955 (was 111), 807 residual (was 844); file sha256 9044ef21fa22c35c7726d69495d400fbf9819839d92823a67c15b63dd993179e. For this item (census): 6 with a call of shen-jit.eval-kl as first label (was 3), 16 touching it (unchanged). Supersedes the counts in the entry above.",
      "reconciliation": "Admitting = against a symbol constant at 0.6 (eq-guard-merge), 10 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 2 (eval-kl). Rocq: JitKRefPrim.prim_param_eval_kl covers eval-kl's primitive step only; the source judge rejects all 16 callers. Affected (census): 16 definitions call shen-jit.eval-kl, 9 with no other decision item, 4 inside the 181-definition component. Recommended default: gated residual, runtime lowering out of Phase 2 scope. Cap impact: 0 with Q0; without Q0, 16 under D-low and 450 under D-src (forecast).",
+     "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
     }
    ]
   }
