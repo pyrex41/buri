@@ -1,7 +1,12 @@
 (* Shen/JIT Phase 2: the termination side of the front passes (OB-JIT-LOWER-TERM), part 1 of 2:
    KRef's relation over the RESOURCE-FREE rules.
 
-   This file is rocq/JitKRef.v at p2/int 5779555 with exactly these changes, and no other:
+   This file is rocq/JitKRef.v at p2/int 5779555 with exactly these changes, and no other (checked
+   by renaming JitKTerm to JitKRef and jit_rules_nr to jit_rules and diffing):
+   - this header replaces JitKRef.v's K00 file-map comment; JitKRef.v's design notes follow it,
+     with JitKRef renamed to JitKTerm and nothing else changed, so where they speak of resource
+     errors (step_r_resource, "out of memory") they describe KRef, not this copy: in this copy
+     neither side can take a resource step;
    - every constant lives in module JitKTerm, not JitKRef;
    - `jit_rules_nr sealed`, defined below, replaces `jit_rules sealed` everywhere: the same port
      rules with field 8, resource_exn, set to (fun _ => None). Under it step_r has no
@@ -11,14 +16,15 @@
      limit, so no Fail arises at all;
    - srun_nil_Sstar_statement and Section Compose (EndsSrc, call_preservation_src_statement) are
      left out: they relate srun to JitLowerThm.Sstar, which is over jit_rules, and the termination
-     side composes through JitKRefTerm.v instead;
-   - the design notes of JitKRef.v below are kept as they were, so where they speak of resource
-     errors (step_r_resource, "out of memory") they describe KRef, not this copy: in this copy
-     neither side can take a resource step.
+     side composes through JitKRefTerm.v instead.
    The proof files JitKTermGround, JitKTermBase, JitKTermCompatCtl, JitKTermCompatClo,
    JitKTermPrim, JitKTermCompatCall, JitKTermFv and JitKTermFund are the KRef proof files with the
-   same renaming; the proofs that built a source resource step (to match a target's) instead
-   discharge that case as impossible.
+   same renaming and only these other changes: JitKTermGround leaves out srun_nil_Sstar and its
+   abbreviation, and step_from_ret_top's proof tolerates the resource case having no goal;
+   JitKTermCompatClo.fail_obs and JitKTermCompatCtl.ObsT_fail are reproved for an uncatchable
+   Fail (both sides terminal, nothing to match), with their statements unchanged; JitKTermFund
+   leaves out call_preservation_src and its JitKTermCompose import. Their statements are KRef's,
+   renamed.
 
    Why a copy and not KRef itself. KTerm (rocq/JitKRefTerm.v) is this relation read backwards:
    KTerm g e0 e := JitKTerm.KRef g e e0. The index then counts SOURCE steps, every resource-free
@@ -30,7 +36,7 @@
    resource-free rules rule out, and mutant ShenJitKTermResourceSteps puts the resources back).
    KRef itself, its statements and its proofs are not changed. *)
 
-(* The design notes of JitKRef.v, as they were (see above for what differs here). *)
+(* The design notes of JitKRef.v, with JitKRef renamed to JitKTerm (see above for what differs here). *)
 (* Shen/JIT Phase 2, the lowerer's front passes (wave 1(c)): statements, reviewed and revised.
    lower.shen (934cfa5, as at d3348ce) lowers a body in three steps: share (b0 to b1, KLambda to KLambda),
    norm (b1 to a normal form n, read back as KLambda e), and emission (e to code c, which

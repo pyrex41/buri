@@ -156,7 +156,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 310 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 463 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -439,13 +439,15 @@ stated, partially discharged). `KTerm sealed D g e0 e := JitKTerm.KRef sealed D 
 over `jit_rules_nr sealed` (jit_rules with no catchable resource failure), read with the expressions swapped. Its index then
 counts source steps, and it says that every resource-free run of the source e0 to a terminal state (a value, an exception or
 a wrong state), after any IO trace, is matched by a resource-free run of the target e with the same trace to a terminal
-state of the same kind, with related values and stores; a target with no terminal resource-free run therefore has a source
-with none (`KTerm_diverges`, by contraposition, constructively). The rules must be resource-free: under jit_rules any
+state of the same kind, with related values and stores. So, from a first-order environment and a well-formed store meeting
+D, a target with no IO-free resource-free run to a value or an exception has a source with no IO-free resource-free run to
+a first-order value or an exception (`KTerm_diverges`, by contraposition, constructively; `KTerm_adequacy` and
+`KTerm_compose` have the same IO-free, first-order scope, as KRef's adequacy does). The rules must be resource-free: under jit_rules any
 running state may raise `(XUser "out of memory")`, so a looping target would "terminate" by raising.
 `KTerm_omega_refuted` proves that a looping target (omega) does not refine a source raising `(simple-error "out of memory")`,
 which under jit_rules it would; mutant `ShenJitKTermResourceSteps` puts the resource field back and Rocq rejects
-`om_srun`. A resource-free run is a jit_rules run (`step_nr_sub`). Proved, each Closed under the global context (47 audited
-statements): the fundamental property (`KTerm_refl`, `KTerm_fundamental`), every compatibility lemma, per-link adequacy,
+`om_srun`. A resource-free run is a jit_rules run (`step_nr_sub`). Proved, each Closed under the global context (200 audited
+statements: 40 in `JitKRefTerm.v` and `JitKRefTermThm.v`, 160 the JitKTerm copies' theorems): the fundamental property (`KTerm_refl`, `KTerm_fundamental`), every compatibility lemma, per-link adequacy,
 the two-link composition `KTerm_compose` (through the first-order observation and `GStore_trans`, not transitivity), source
 reduction (`ERel_red`: the source is the side whose runs are quantified, so KRef's source anti-reduction becomes source
 reduction, free under the deterministic resource-free machine) with one lemma per KRef anti-reduction, and norm's
