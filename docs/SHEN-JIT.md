@@ -174,8 +174,9 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
+| `rocq/JitEmitSim.v` | The generic parts as implications: `preservation'` from `sim'` and `raise_resolve`, `call_preservation'` from `preservation'`, `call_preservation_src'` from `call_preservation'` and `clo_scoped`; the slot-1 gap witnessed (r22-emit-sim) |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 708 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 718 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -1032,6 +1033,64 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   merges instead, because `p2/r1-emit-spec-merge` itself contains five merges of `p2/int`, and the docs and
   ledger cite `52f913c`, `fc0a9fd` and `b02db36` as evidence anchors, which a squash would orphan. The head is
   a fast-forward from `p2/int` `da4b545`. The evidence is in [STATUS](STATUS.md).
+
+### Extended back end: the generic parts (r22-emit-sim)
+
+`rocq/JitEmitSim.v` (branch `p2/r22-emit-sim` off `p2/int` `fe461f4`; its merge is the integrator's). Every
+theorem there is an implication between statements, closed under the global context. Nothing in
+`rocq/JitEmitInv.v` changed.
+
+| Theorem | From | To |
+|---|---|---|
+| `call_preservation'_of_preservation'` | `preservation'_statement` | `call_preservation'_statement` (the entry state is MS'-related: `entered_ms'`) |
+| `preservation'_of_sim'` | `sim'_statement`, `raise_resolve_statement` | `preservation'_statement` (induction on n, inside it on the source measure; IO events through `env_ok` shifted along the environment) |
+| `call_preservation'_of_sim'` | the same two | `call_preservation'_statement` |
+| `call_preservation_src'_of_cp'` | `call_preservation'_statement`, `clo_scoped_statement` | `call_preservation_src'_statement` |
+| `call_preservation_src_old_of_cp'` | `call_preservation'_statement`, `clo_scoped_statement`, `old_reflect'_statement` | `call_preservation_src_old_statement` (JitKRef's `call_preservation_src_statement` at mu = [] with `GvalsRel [] s m` added; not the 4a7346e text verbatim) |
+
+The composition (`call_preservation_src'_of_cp'`) runs the emitted body's run, which
+`call_preservation'` relates to the machine, back through b1 and b0 with `adequacy_tr` (KRef adequacy for
+any IO trace, from environments whose values are VRel-reflexive; `JitKRefGround.adequacy_of_fundamental`
+asks first-order values and silent runs), and composes with `GVal_trans` and `GStore_trans`. The arguments
+are VRel-reflexive by `vrh_refl`: a vector through mu is in the identity world because `HeapRel` puts its
+cell in the store; a closure needs `clo_scoped_statement`, because `VRh_lam` constrains only the captured
+entries of its environment (the rest need not be `vok`, so `vrefl` does not apply) and `KRef_refl` needs the
+body scoped.
+
+Two new premises, each NOT proved:
+- `clo_scoped_statement`: a body `CloOK` accepts is scoped in its parameters and capture names. With the
+  hooks opaque, Comp gives this only through each family's own rule (the Clo hook's capture reads), so it
+  is a per-family lemma through `Comp_ind'`.
+- `raise_resolve_statement`: what `O'_raise` leaves open, resolved to a machine step with a related state,
+  or to a final error on both sides. The no-handler half needs `SMs` stable under the exception's
+  allocation; the handler half meets the slot-1 gap below at `KD'_trap`.
+
+NOT proved: `sim'_statement` from the seven `sim_X_statement` (so the acceptance's
+`call_preservation_src'_of_sims` is not reached). Two gaps in the generic Ret cases, both in
+`rocq/JitEmitKont.v`, which is emit-spec's:
+- **Slot 1.** EvalCtx asks `cv = [] \/ ~ w (fp + 1)` of the w its continuation is at. No frame whose body
+  runs at an inner `w1` (`KD'_let`, `KD'_lett`, `KD'_trap`, `KD'_do1`, `KD'_do1t`, `KD'_hbind`, `TK'_if`,
+  `TK'_cond`, `TK'_and`, `TK'_or`) carries that for `w1`; a body whose destination is slot 1 even needs
+  `w1 (fp + 1)` (`KC'_slot`). `ms'_slot1_frame` (closed) is an MS'_ret state at `cv = [Z]` whose let frame's
+  body goes to slot 1, and `evalctx_slot1_void` (closed) shows that no EvalCtx at a `cv <> []` has a slot-1
+  destination. A generic proof would have to re-relate that state at another cv, which needs Comp at that
+  cv, which the hooks need not give. The frames would need `cv = [] \/ ~ w1 (fp + 1)`, or a destination
+  other than slot 1 with `2 <= top`. This does NOT show `sim'_statement` false: with the hooks empty no code
+  reads a capture, and a concrete state can be re-related at `cv = []`. Truth UNKNOWN.
+- **`KD'_hbind`.** The machine is at Comp of `chain (EVar x) ass`, an `EApp` only the App hook derives,
+  while the source is already at Ret with `KHead` frames over rho (not `(x, v) :: rho`).
+  `sim_App_statement` speaks of Eval states only.
+
+Also NOT done: the instantiation at proved `sim_X` (emit-assembly; the hooks are empty and may not be
+inverted outside their files); `old_reflect_core_statement` (UNKNOWN, not attempted); `env_ok` necessity for
+`call_preservation'` and `call_preservation_src'`, which is not demonstrable while the hooks are empty:
+`C_prim` goes through `pmap`, which has no IO primitive, so nothing a call enters asks for IO (the analogue
+of `env_ok_needed` needs a family rule reaching get-time).
+
+Ten closed statements added (`Audit_Jit` 718). Five mutants, each dropping or weakening one new premise
+or theorem hypothesis: `ShenJitEmitSimCloScoped`, `ShenJitEmitSimVrhDom`, `ShenJitEmitSimAdequacyRefl`,
+`ShenJitEmitSimRaiseStar`, `ShenJitEmitSimSlot1Any`. The `scripts/report.py` pin is 273 (268 + 5), computed;
+`make report` was not run. The evidence is in [STATUS](STATUS.md).
 
 ### Pass split: the normal form (wave 1b)
 

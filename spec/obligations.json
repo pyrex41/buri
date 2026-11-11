@@ -6250,7 +6250,8 @@
     "rocq/JitEmitRel.v",
     "rocq/JitEmitKont.v",
     "rocq/JitEmitInv.v",
-    "docs/decisions/p2-decisions.md"
+    "docs/decisions/p2-decisions.md",
+    "rocq/JitEmitSim.v"
    ],
    "history": [
     {
@@ -6312,6 +6313,11 @@
      "source": "rocq/JitEmitInv.v",
      "recorded": "2026-11-11: open (r21-emit-spec-land, branch p2/r21-emit-spec-land, not yet merged into p2/int; the integrator records that merge). The branch merges p2/r1-emit-spec-merge 7bb9bb7 onto p2/int f42d6c4 (52f913c) and then p2/int da4b545 (fc0a9fd); JitEmit files byte-identical to 7bb9bb7; call_preservation_src_statement byte-identical to 4a7346e. Lane on b02db36 (SKIP_DIFF=1, Rocq 9.3): exit 0, 704 Closed, syntactic and term-level non-inversion gates 0 violations, source judge 148 of 955 as recorded, differential NOT RUN; log sha256 5366da18... All 116 mutants refused (37 ShenJitEmit*). Lane rerun on head 38d321d (proof tree identical to b02db36): exit 0, 704 Closed, log sha256 4417b761...; verifier's independent run on 38d321d: exit 0, log sha256 5383dc4d.... While every Rule_X hook is empty the syntactic gate's constructor check is vacuous (0 hook constructors); the term-level gate is the operative non-inversion check. Back-end statements stay unproved, truth UNKNOWN. make prove, make report, gate_tests, the norm check and the full-pipeline judge: NOT RUN (UNKNOWN).",
      "reconciliation": "r21-emit-spec-land branch evidence, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitEmitSim.v",
+     "recorded": "2026-11-11: open (r22-emit-sim, branch p2/r22-emit-sim off p2/int fe461f4, not merged; the integrator records the merge). Closed in Rocq, as implications between statements (Print Assumptions: closed): call_preservation'_of_preservation'; preservation'_of_sim' (sim'_statement and raise_resolve_statement imply preservation'_statement: induction on n and on the source measure, IO through env_ok shifted); call_preservation'_of_sim'; call_preservation_src'_of_cp' (call_preservation'_statement and clo_scoped_statement imply call_preservation_src'_statement, via adequacy_tr, KRef adequacy for any IO trace and VRel-reflexive environments, and vrh_refl, VRh-related values VRel-reflexive at worlds extending the identity, composed with GVal_trans and GStore_trans); call_preservation_src_old_of_cp' (the old-fragment src statement, JitKRef's call_preservation_src_statement at mu = [] with GvalsRel [] s m added, from call_preservation', clo_scoped and old_reflect'). Two new premises, each stated with a Does NOT say and NOT proved: clo_scoped_statement (a CloOK body is scoped in its parameters and capture names; VRh_lam constrains only the captured entries, so vrefl does not apply; per family through Comp_ind'), raise_resolve_statement (O'_raise resolved to a step or a final error). NOT proved, and why: sim'_statement from the sim_X_statement (the acceptance's call_preservation_src'_of_sims) is blocked in the generic Ret cases by a gap in JitEmitKont's frames: EvalCtx asks (cv = [] or not w (fp+1)) of its continuation's w, and no frame with an inner w1 (KD'_let, KD'_lett, KD'_trap, KD'_do1, KD'_do1t, KD'_hbind, TK'_if, TK'_cond, TK'_and, TK'_or) carries it, so a body whose destination is slot 1 has no EvalCtx at its cv (evalctx_slot1_void, closed) although the MS'_ret state exists (ms'_slot1_frame, closed); and KD'_hbind puts the machine at Comp of an EApp chain only the App hook derives while the source is at Ret (sim_App speaks of Eval states). Neither shows sim'_statement false (with empty hooks a concrete state can be re-related at cv = []); truth UNKNOWN. The handler half of raise_resolve meets the same slot-1 gap at KD'_trap. env_ok necessity for call_preservation' and call_preservation_src' is not demonstrable while the hooks are empty: C_prim goes through pmap, which has no IO primitive, so nothing a call enters asks for IO. old_reflect_core_statement: UNKNOWN, not attempted. The instantiation at proved sim_X is emit-assembly's (the hooks are empty and may not be inverted outside their files). Audit 718 (708 + 10). Five mutants (ShenJitEmitSim*), pin 273 computed (268 + 5), make report not run.",
+     "reconciliation": "r22-emit-sim: generic many-step and composition theorems, the slot-1 gap witnessed, 11 November 2026."
     }
    ]
   },
