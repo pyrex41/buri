@@ -1418,6 +1418,15 @@ Proof. vm_compute. reflexivity. Qed.
 (* E may not read a fresh name bound on the way. *)
 Example site_bind_capture : bind_site false D_bind [v "X"; v "Y"; v "Bs"; EFreeze (v "a2")] (bind_target (v "a2")) = false.
 Proof. vm_compute. reflexivity. Qed.
+(* The fresh names a1 a2 a3 are bound in sequence, so a later let value may not read an earlier
+   one: here the source passes the outer a1 as Y, while the expansion's a2 would read the a1 it has
+   just bound to X. fresh_seq is the only guard that rejects this (ShenJitFrontBindFresh). *)
+Definition bind_target_shadow (e : expr) : expr :=
+ ELet (nm "a1") (v "X") (ELet (nm "a2") (v "a1") (ELet (nm "a3") (v "Bs")
+  (ECall do_name [ECall (nm "shen.bindv") [v "a1"; v "a2"; v "a3"];
+   ELet (nm "a4") e (EIf (ECall (nm "=") [v "a4"; EBool false]) (ECall (nm "shen.unwind") [v "a1"; v "a3"; v "a4"]) (v "a4"))]))).
+Example site_bind_fresh : bind_site false D_bind [v "X"; v "a1"; v "Bs"; EFreeze bind_e] (bind_target_shadow bind_e) = false.
+Proof. vm_compute. reflexivity. Qed.
 
 (* bound-now on real data, transcribed from the T02 capture (witness set e45add98...): stage 0's
    .norm entry for shen.bind! (prolog.norm), and the second bound-now site of shen.l-rules

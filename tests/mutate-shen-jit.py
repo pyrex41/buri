@@ -119,6 +119,9 @@ ShenJitFrontInlHidden: inl_eq thaws a frozen argument in place without checking 
   inside N hides one of its free names. site_frozen_hidden must fail.
 ShenJitFrontBindLetdo: bind_site stops reading e_B's unused let as do, so no real bound-now site
   matches. site_bind (and site_bind_real) must fail.
+ShenJitFrontBindFresh: bind_site drops its fresh_seq guard, so a let value may read a fresh name
+  bound just above it (the source's outer a1 passed as Y is captured by the expansion's a1).
+  site_bind_fresh must fail.
 ShenJitFrontCblkCondTrue: cblk_of walks the clauses after a (true X) clause of cond, which
   C_cond_true never compiles. cblk_of_Comp must fail.
 ShenJitFrontCblkEqAll: cblk_of reports = as a blocker unless EVERY operand is a literal; pguard asks
@@ -349,6 +352,8 @@ mutate('ShenJitFrontInlHidden', front,
 mutate('ShenJitFrontBindLetdo', front,
        '     inl_eq (S (dsize eB)) fold true D [(p4, SFrozen ex)]',
        '     inl_eq (S (dsize eB)) fold false D [(p4, SFrozen ex)]')
+mutate('ShenJitFrontBindFresh', front,
+       "     fresh_seq [] [(a1, x'); (a2, y'); (a3, b')] &&\n", '')
 mutate('ShenJitFrontCblkCondTrue', front,
        '     | (t, a) :: rest => if is_true_lit t then cblk_of c a else cblk_of c t ++ cblk_of c a ++ go rest end) cl',
        '     | (t, a) :: rest => cblk_of c t ++ cblk_of c a ++ go rest end) cl')
