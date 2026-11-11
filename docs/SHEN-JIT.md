@@ -150,7 +150,7 @@ process model doesn't relate to the loaded binary (`OB-JIT-IMAGE-FILE`).
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 183 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 226 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -311,6 +311,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerCheck.v` | The checker and `check_fn_sound`: acceptance is a proof of the relation |
 | `rocq/JitKRef.v` | `KRef`, the front passes' refinement relation, and every statement about it (the interface; no proofs), with the index-local interface and the KRef file map |
 | `rocq/JitKRefGround.v`, `JitKRefCompose.v` | Proofs: premise specifications, ground lemmas, `KRel_top`, adequacy and store reflexivity from the fundamental property; the composition with `call_preservation`, proved from the fundamental property |
+| `rocq/JitKRefCompatCtl.v` | KRef's control compatibility lemmas: compat_lit, var, let, if, and, or, cond, type and defun (JitKRef statements, closed); trap at index k from `fund_below k` alone (`compat_trap_fb`, the corollary `compat_trap_lt prim_compat`; `AppExn_fb`), and `compat_trap_statement` from `fund_gen_statement` alone (`compat_trap_of_gen`) |
 | `rocq/JitKRefBase.v` | KRef's structure: index and world monotonicity, anti-reduction and target-step lemmas, the bind lemma and one KRel lemma per frame, world reachability, `sealed_stable` and `storehas_stable` |
 | `rocq/JitKRefCompatClo.v` | KRef compatibility for lambda, freeze and dynamic application: `compat_lambda`, `compat_freeze` (no induction hypothesis), the `_lt` forms from `fund_below`, `app_rel`, and `compat_app_of_fund` from `fund_gen_statement` and `prim_compat_statement` |
 | `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
@@ -338,7 +339,18 @@ with the statement mutated). `rocq/JitKRefCompatClo.v` (14 audited statements) p
 related continuations (`app_rel`, from `fund_below k` and `prim_compat_statement`), `compat_app_lt`, and
 `compat_app_statement` only as an implication from `fund_gen_statement` and `prim_compat_statement`
 (`compat_app_of_fund`; `prim_compat_statement` is now proved in `rocq/JitKRefPrim.v`, so only `fund_gen_statement` remains,
-not yet combined into an audited statement); mutant `ShenJitKRefLamNoSameId` is rejected. `rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
+not yet combined into an audited statement); mutant `ShenJitKRefLamNoSameId` is rejected.
+`rocq/JitKRefCompatCtl.v` (27 audited statements) proves the JitKRef statements compat_lit, compat_var, compat_let, compat_if,
+compat_and, compat_or, compat_cond, compat_type and compat_defun with no hypotheses beyond their own (compat_defun takes
+`D_wf`, and gets StoreHas of the new store from `storehas_stable`), each from an ERel-level lemma built on `ERel_push`
+and the frame lemmas. Applying a trap's handler to the exception may apply a partial primitive (a handler `(+ 1)` is
+`VPartial "+" [1]`), which runs `prim_rule_r`, so `compat_trap_lt` takes `fund_below k` and `prim_compat_statement`;
+with `JitKRefPrim.prim_compat` that premise is discharged: `AppExn_fb` and `compat_trap_fb` (the corollary
+`compat_trap_lt prim_compat`) take `fund_below k` alone, and `compat_trap_of_gen` gives `compat_trap_statement` from
+`fund_gen_statement` alone (`compat_trap_of_fund` keeps the two-premise form). Mutants `ShenJitKRefCondSwap` (a copy of
+compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim` (compat_trap_fb and
+AppExn_fb without `prim_compat`) are rejected.
+`rocq/JitKRefBase.v` proves the relation's structure (57 audited statements):
 `VRel_down`, `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable` (JitKRef statements); SRel, KRel,
 ERel and EnvRel down in the index and, except SRel, up in wext; ObsT down in the index and antitone in the world.
 SRel up in wext and ObsT up in wext are false and refuted in Rocq (`SRel_wext_refuted`, `ObsT_wext_refuted`; a pair the
