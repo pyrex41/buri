@@ -1241,8 +1241,35 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. Four hundred and seventy-five statements are in the assumption audit
-in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Seven hundred statements are in the assumption audit
+in `rocq/Audit_Jit.v`, all about the models (523 on `p2/int` before r21-emit-spec-land; 177 landed by r21-emit-spec-land, of which 161 come from `p2/r1-emit-spec-merge`: 92 added by emit-spec: the family hooks' map and all lemmas, the hand-written
+nested `Comp_ind'` of `rocq/JitEmitRel.v` and of its non-empty test copy with `suffix`, `comp_embed`, `pmapx_pmap`,
+`frame_prim_pmap`, `trap_has_handler`, `VR_VRh`, `VRh_no_partial`, the old invariant's embedding at any `mu` that relates the
+store's cells and globals (`kont_embed`, `sm_embed`, `ms_embed`), sanity lemmas for each new relation (`HK_length`,
+`do_body_second`, `storerel_nil`, `env_ok_inhabited`, `ev_of_time`, `TRun_0`, `Out'_not_stuck`, `value_bound`, `value_unbound`, the six
+`Sim*_of_sim'`, `Ends'_final`, `EndsSrc'_final`), the old-fragment bridges (`srun_nil_sstar`, `trun_nil_tn`, `tn_tstar`,
+`ms_entered`, `entered_embed`) and the three old-fragment corollaries (`*_old_of_new`: the old conclusions at `mu = []`, from the new
+statements plus a reflection obligation, which r1-emit-spec-merge refutes in Rocq, `old_reflect_false`, so they are vacuous); 34 added by
+r1-emit-spec-merge: `get_time_agree`, the refutation and its parts, `gvals_needed` and the `dv_*` divergence Examples behind each
+narrowing; 9 by its fix round 2: the `*_old_of_new'` corollaries from the catch-up reflection `old_reflect'_statement` (stated, NOT
+proved, so they recover nothing yet), `cx_catch_up` and its parts, and `dv_eq_cycle*` (= on a cycle: the source goes wrong, the bytecode is stuck);
+15 by its fix round 3: `old_reflect'_silent` (an old-fragment run is IO-free), `old_reflect'_ends` (the reflection's end conjunct,
+proved), `old_reflect'_iff_core` (what remains of `old_reflect'_statement` is exactly `old_reflect_core_statement`, the catch-up
+of MS' to MS; NOT proved, truth UNKNOWN), `old_reflect_src_of_fundamental` (a reduction to the fundamental property, which
+r1-kref-fund has since proved), the `*_old_statement` targets from the old theorems (a sanity check only) and six run-determinism helpers;
+11 by its fix round 4: `old_reflect_src` (`old_reflect_src_statement`, proved from
+`JitKRefFund.fundamental`), `call_preservation_src_old_holds`, `call_preservation_src_old_of_new''` (the src corollary with
+`old_reflect_src_statement` discharged; it still waits on `call_preservation_src'_statement` and `old_reflect'_statement`),
+`preservation'_of_noenv`, and `env_ok_needed` with `resp_ok_bound_needed`, `noenv_false_at` and four parts (`gt_sm`, `gt_ms`,
+`gt_next`, `gt_trun_none`): `preservation'_statement` without `env_ok` is false, so the premise is necessary at statement level;
+and 16 added by r21-emit-spec-land itself, the proved emit lemmas the audit had left out (`menv_embed`, `doner_embed`,
+`argsat_embed`, `paramat_embed`, `ce_C`, `ce_T`, `ce_S`, `ce_W`, `ce_A`, `fp_embed`, `funrel_embed`, `notrap_frames`, `pbij_nil`,
+and the nested test's `suf_refl`, `suf_cons`, `suf_app`). Among the 523 of `p2/int`:
+14 by r1-kref-fund (below);
+7 by r1-compat-call (below);
+16 by r1-fv-mutants (below); 27 by kref-ctl, KRef's control compatibility lemmas in `rocq/JitKRefCompatCtl.v`; the back-end statements of `rocq/JitEmitInv.v`
+are stated, not proved, and a first version of them was false (counterexamples recorded in `rocq/JitEmitKont.v`'s `frame_prim`
+and in `rocq/JitEmitInv.v`'s `resp_ok`), see [SHEN-JIT](SHEN-JIT.md)). Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
 `OB-JIT-PORT-PRIMS`). The five added at 0.6 state `shen-jit.write-bytes`, the read-error raise
@@ -1304,7 +1331,8 @@ Closed under the global context with no premise beyond its statement's own. stor
 premise (SRel_lok_refuted rules out deriving it); KRef's treatment of the `=` budget is unchanged. Every
 `*_statement` of `rocq/JitKRef.v` now has a closed proof. Mutants `ShenJitKRefFundNoTrapCase` and
 `ShenJitKRefStoreReflNoStoreOk` are rejected. `OB-JIT-LOWER-FRONT` stays open: its completion evidence also asks for
-front-link checkers proved to establish KRef, which no file proves yet. Mutation pin 201, audit count 263. Source
+front-link checkers proved to establish KRef, which no file proves yet. Mutation pin 201, audit count 263 on `p2/int`
+(238 and 424 after the merge into `p2/r1-emit-spec-merge`). Source
 judge: 148 of 955 as recorded on `p2/int` (this change adds no judge rule; the judge was not rerun for it).
 Two hundred are KTerm's (branch `p2/r1-term`, built on `p2/int` at `5779555`; `OB-JIT-LOWER-TERM`, precisely stated,
 partially discharged): `rocq/JitKRefTerm.v` (`step_nr_sub`, `srun_nr_sub`, `eq_depth_r_nr`, `next_r_nr`, `om_step`,

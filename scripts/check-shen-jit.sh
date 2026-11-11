@@ -18,9 +18,53 @@ want=$(python3 -c "import json;print(json.load(open('$root/toolchain.lock.json')
 got=$(sha256sum "$bin" | cut -d' ' -f1)
 [ "$want" = "$got" ] || { echo "NOT_THE_NAMED_BINARY $got"; exit 3; }
 python3 "$root/tests/shen-jit/check_tables.py" "$root" "$src" || exit 4
+# Emit families (r21-emit-spec-land): outside its own rocq/JitEmitRule<X>.v no file inverts a Rule_X hook;
+# downstream code uses JitEmitRel.Comp_ind' and the Rule_X_map / Rule_X_all lemmas only. A syntactic gate (it cannot
+# see a destruct of an unnamed Comp hypothesis); Rocq still decides every theorem.
+python3 -I - "$root" <<'EMIT_NOINV' || { echo "EMIT_INVERSION_FOUND"; exit 13; }
+import re,sys,pathlib
+root=pathlib.Path(sys.argv[1]); bad=[]
+FAM='(?:Eq|Store|Prim|DoFold|Clo|App|Trap)'
+def strip(s):
+    out=[];d=0;i=0;q=False
+    while i<len(s):
+        c=s[i]
+        if not d and c=='"': q=not q
+        if not q and s.startswith('(*',i): d+=1;i+=2;continue
+        if not q and d and s.startswith('*)',i): d-=1;i+=2;continue
+        out.append(c if not d and not q else (c if c=='\n' else ' ')); i+=1
+    return ''.join(out)
+ctors=set()
+for f in root.glob('rocq/JitEmitRule*.v'):
+    t=strip(f.read_text())
+    for m in re.finditer(r'Inductive\s+(Rule[TO]?_'+FAM+r')\b.*?:=(.*?)\.(?:\s|$)',t,re.S):
+        ctors|=set(re.findall(r'\|\s*([\w\']+)',m.group(2)))
+        b=m.group(2).strip()
+        if b and not b.startswith('|'): ctors.add(re.match(r'[\w\']+',b).group(0))
+for f in sorted(root.glob('rocq/*.v')):
+    if re.match(r'JitEmitRule.*\.v$',f.name): continue
+    t=strip(f.read_text()); imp=re.search(r'Require\s+(?:Import|Export)?[^.]*\bJitEmitRel\b',t) is not None
+    def hit(rule,m): bad.append(f'{f.name}:{t.count(chr(10),0,m.start())+1}: {rule}: {m.group(0)!r}')
+    for m in re.finditer(r'\bRule[TO]?_'+FAM+r'_(?:ind|rect|rec|sind|case)\b',t): hit('generated scheme of a Rule hook',m)
+    for m in re.finditer(r'\bJitEmitRel\.(?:Comp|CompT|CompOp|CompOps|CompW|CompTA)_(?:ind|rect|rec|sind)\b(?!\')',t): hit('generated scheme of the nested Comp block (use Comp_ind\')',m)
+    if f.name.startswith('JitEmit') or imp:
+        for m in re.finditer(r'(?<![\w.])(?:Comp|CompT|CompOp|CompOps|CompW|CompTA)_(?:ind|rect|rec|sind)\b(?!\')',t): hit('generated scheme of the nested Comp block (use Comp_ind\')',m)
+    if f.name!='JitEmitRel.v':
+        for m in re.finditer(r'\b[CTO]_'+FAM+r'\b(?!\')',t): hit('hook constructor of Comp outside JitEmitRel.v',m)
+    for c in ctors:
+        for m in re.finditer(r'\b'+re.escape(c)+r'\b',t): hit('constructor of a Rule hook',m)
+    for pm in re.finditer(r'\bProof\b(.*?)\b(?:Qed|Defined|Admitted|Abort)\s*\.',t,re.S):
+        for m in re.finditer(r'\bRule[TO]?_'+FAM+r'\b(?!_(?:map|all|All)\b)',pm.group(1)):
+            bad.append(f'{f.name}:{t.count(chr(10),0,pm.start(1)+m.start())+1}: Rule hook named in a proof script: {m.group(0)!r}')
+    if f.name.startswith('JitEmit') or imp:
+        for m in re.finditer(r'\bwith\s+end\b',t): hit('empty match outside the hook files',m)
+for b in bad: print('EMIT_INVERSION', b)
+print(f'emit non-inversion check: {len(bad)} violations, {len(ctors)} hook constructors') 
+sys.exit(1 if bad else 0)
+EMIT_NOINV
 eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
 mkdir -p "$out"; cd "$out"
-FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund JitKTerm JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitNorm JitNormStage0 JitFrontD JitFrontSugar JitFrontProlog Audit_Jit"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund JitKTerm JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitNorm JitNormStage0 JitFrontD JitFrontSugar JitFrontProlog JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv Audit_Jit"
 for f in $FILES; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
   d=$(diff "$root/rocq/$f.v" "$f.v" || true)   # diff exits 1 when the files differ

@@ -42,3 +42,14 @@ JitKRefTermThm
 JitFrontD
 JitFrontSugar
 JitFrontProlog
+JitEmitRuleEq
+JitEmitRuleStore
+JitEmitRulePrim
+JitEmitRuleDoFold
+JitEmitRuleClo
+JitEmitRuleApp
+JitEmitRuleTrap
+JitEmitRel
+JitEmitNestTest
+JitEmitKont
+JitEmitInv

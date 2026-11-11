@@ -157,7 +157,12 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
 | `rocq/JitFrontProlog.v` | norm's Prolog rewrites: the bound-now rule, proved sound (`bind_rule_sound`); D00's `bind_site_sound_statement` refuted (`bind_site_unsound`); the source-shape scan `prolog_scan` |
-| `rocq/Audit_Jit.v` | Assumption audit of 523 statements |
+| `rocq/JitEmitRule<X>.v` | Seven emission families (Eq, Store, Prim, DoFold, Clo, App, Trap): each family's three empty rule hooks with their map and all lemmas |
+| `rocq/JitEmitRel.v` | JitLowerRel's relations indexed by code object and capture names, with the family hooks; hand-written nested `Comp_ind'`; `comp_embed` |
+| `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
+| `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
+| `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
+| `rocq/Audit_Jit.v` | Assumption audit of 700 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -687,6 +692,301 @@ was not attempted and is not estimated here.
   source answers (`OB-JIT-NAN-IDENTITY`), and until `OB-JIT-SYM-INJECTIVE` its symbols were not injective on code points.
 - No lowerer bug was found. Nothing was rejected for a reason that looked wrong; rejections weren't reviewed
   one by one.
+
+### Extended back end: statements (emit-spec)
+
+Branch `p2/emit-spec`. Statements and design for the emission families; no family is simulated yet,
+and stage 0 is unchanged: 111 of 955 kernel definitions validated.
+
+- **Shape.** `rocq/JitEmitRel.v` copies JitLowerRel's six relations and indexes each by the code
+  object and its capture names. JitLowerRel has the code as a Section variable instead. The spec asked
+  for the old index shape, but a closure's body is nested code, and stating its derivation inside the
+  same block needs the code as an index. With the code fixed, a second inductive over codes would have to
+  nest through Comp's own parameter, and Rocq 9.3 refuses that ("Non strictly positive
+  occurrence"). The evidence is now in the tree: `JitEmitNestTest.NestShape` reproduces the refused
+  definition under `Fail` (the lane compiles it, and the `ShenJitEmitNestShapeAccepted` mutant,
+  without `Fail`, is refused), and `JitEmitNestTest.NestIdx` is the accepted code-indexed form.
+  The rules take all six relations, not three, for a second reason: family premises nest operand
+  lists (`CompOps`) and windows (`CompW`, `CompTA`). **This deviation from the spec's index shape
+  needs a review decision; it is not signed off.**
+  Each of the seven families has an empty rule for Comp, CompT and CompOp (21 hooks), over relation
+  variables for all six relations. lower.shen needs the CompT and CompOp hooks: its `test` lowers
+  `(do X Y)` as value then test, and its `operand` lowers a folded list as `(const K)`.
+- **Induction.** `Comp_ind'` is written by hand, one Fixpoint per relation, and recurses through each
+  rule's `*_all` lemma. It is closed. A family's `*_all` must stay transparent: the
+  `ShenJitEmitRuleOpaque` mutant, an opaque `*_all`, is refused by the guard checker.
+  `rocq/JitEmitNestTest.v` checks the design on a non-empty rule that nests three derivations at the
+  same code and one at another code. Its `Comp_ind'` proves `suffix`.
+- **Frames.** `rocq/JitEmitKont.v` defines every frame once, generic in the value relation, the
+  closure heap fact, and `DoK` (the store's `do` is the kernel's, asked only by the `do` frames):
+  - the handler (`KD'_trap`, which consumes the handler its trap pushed; `trap_has_handler`);
+  - the dynamic-call window (`KD'_head_*`, `KD'_args_*`, `KD'_hbind`), at most one argument;
+  - `do` (`KD'_do1`, `KD'_do1t` and the transparent `*_do2`);
+  - closure-entry return (`RK'_call`, with the caller's captures);
+  - a primitive's pending argument, for the primitives `frame_prim` admits.
+
+  `KApply` is related nowhere (see the file).
+- **Counterexamples (fix round 1).** An adversarial review found that the first version of
+  `sim'_statement`, and of `preservation'_statement` at n >= 1, was false with every rule empty: a
+  frame admitted `get-time`, whose request `ev_of` did not translate, and `O'_io` quantified over
+  every response. Checking the other frames found more of the same kind. Each is argued by hand
+  from `KLSemantics.prim_rule`/`apply_value` and `JitBytecode.prim_step`/`enter`; none is
+  mechanized at emit-spec; r1-emit-spec-merge checks each in Rocq as a primitive-level divergence
+  (`dv_*` in `rocq/JitEmitInv.v`, below), `=` on a cycle included (`dv_eq_cycle`):
+  - `absvector` of 2^48 allocates in the source, while the bytecode raises.
+  - `error-to-string` of a primitive's exception is `"error"` in the source but the message in
+    the bytecode.
+  - `open` prefixes `*home-directory*` in the bytecode only.
+  - `close`, `read-byte` and `write-byte` on a closed stream, or one with the wrong direction,
+    send a request in the source and none in the bytecode.
+  - `=` without `pguard`: two NaNs, or a cycle, leave the bytecode stuck.
+  - A dynamic call of two arguments over-applies in the source (a `KApply` frame), while the
+    bytecode raises an arity error.
+  - An IO failure with no handler: JitBytecode's continuation resumes the machine where it was,
+    while the source ends in an error.
+
+  The fix narrows what the frames and statements cover. It weakens no proved theorem:
+  - `frame_prim` keeps `pguard` on `=` and admits no frame for the six primitives above.
+  - The window takes at most one argument.
+  - `ev_of` translates the clock (`JTimeIs b` with b < 2^64, which `jit_time` reads back as the
+    same bits).
+  - The run statements quantify over environments `env_ok` admits: responses of the request's kind,
+    and no failure. `env_ok_inhabited` shows the premise is satisfiable.
+
+  A family that needs an excluded frame goes back through emit-spec. These residuals are open in
+  `OB-JIT-LOWER-FRAGMENT`. Whether the new statements are true is UNKNOWN until emit-sim proves
+  them.
+- **Invariant and statements.** `rocq/JitEmitInv.v` defines:
+  - `mu`, a partial bijection between KLambda locations and bytecode keys;
+  - `VRh` (`VR_VRh`; it relates no partial application, `VRh_no_partial`);
+  - `SM`: the globals (`GvalsRel`), the cells `mu` tracks, `FunRel'`, and the handlers against
+    the KTrap frames (`HK`, with labels and quiet flags);
+  - an evolving store, and target runs under every environment `env_ok` admits, with traces
+    compared as equal lists through `ev_of`;
+  - `Out'`, with IO and generic raising cases.
+
+  `sim_X_statement` per family takes the nested IH as `Rule_X_All Comp SimC ...`. The file also states
+  `preservation'`, `call_preservation'` and `call_preservation_src'`, each a `Definition ... : Prop` with a
+  "Does NOT say" note. None of these is proved. `FunRel'` does not mention `VRh`: a source function
+  is not a value, and its code is related at no captures.
+- **Old fragment.** The old invariant embeds at any `mu` that relates the store's cells and
+  globals (`StoreRel`). `kont_embed`, `sm_embed` and `ms_embed` are proved. The kernel's `do` is no
+  longer a premise, because only the `do` frames ask it.
+  - Fix round 2: each `*_old_statement` now has the **old** conclusion verbatim (`Sstar`, `TN`,
+    `MS s` with the store constant, `JitLowerThm.Ends` / `JitKRef.EndsSrc`), at `mu = []` with no
+    handler, and the old premises plus `GvalsRel [] s m`. `*_old_of_new` proves each (closed) from
+    its new statement **and a reflection obligation** (`old_reflect_statement`,
+    `old_reflect_src_statement`), through `ms_embed`/`sm_embed` at `mu = []` and proved bridges
+    (`srun_nil_sstar`, `trun_nil_tn`, `tn_tstar`, `ms_entered`, `entered_embed`). The proofs do
+    not use the old theorems.
+  - The reflection `old_reflect_statement` is **false** (r1-emit-spec-merge, `old_reflect_false`,
+    below), so the three `*_old_of_new` corollaries are vacuous. It was needed: the new conclusions
+    pick some JitEmitRel derivation, some `mu'` and some trace, and nothing keeps an old-fragment
+    run inside the old fragment, so the old conclusion does not follow from the new statements
+    alone. Reflecting JitEmitRel derivations would invert the rules outside their files. A family
+    whose rule overlaps the old fragment (Eq's `=` beside `C_prim` with `pguard`) puts the
+    reflection at risk; whether such a family must re-prove it, beside its map and all lemmas, is
+    a review decision.
+  - `GvalsRel [] s m` is added because MS and Com leave the machine's globals unconstrained, and
+    the new invariant needs them related. The corollaries' proofs use it to build
+    `StoreRel [] s m` for `ms_embed`/`sm_embed` (`ShenJitEmitOldGvalsDropped`, the premise
+    replaced by `True`, is refused there).
+  - The old theorems are unchanged and stay proved on their own.
+- **Pending review (not signed off).** The index shape above; the frame exclusions and the
+  `env_ok` / one-argument-window narrowing (spec item 4 asks for all frames, so the affected
+  families, Store, Prim, Eq, App and IO, go back through emit-spec until the open source-model or
+  bytecode decisions are made: absvector bound, error-to-string text, stream state, the
+  home-directory prefix on open, the raise continuation of an IO failure with no handler); the
+  reflection obligation above. The counterexamples behind the narrowing are hand-argued, and the
+  agreement of the newly admitted primitives (str, intern, pos, tlstr, cn, n->string, string->n,
+  set, value, simple-error, <-address, address->, absvector?, /) is hand-checked: both UNKNOWN.
+- **Evidence.** 92 statements were added to `Audit_Jit` (201 in all), each closed. There are 31
+  emit-spec mutants, at least one per new relation or definition:
+  - `MS'`, `Out'`, `EndsSrc'`, `TRun` and the six `Sim*`;
+  - `HK`, `GvalsRel`, `DoOK`, `FunRel'` and `StoreRel`;
+  - `resp_ok`, `ev_of` and `frame_prim`;
+  - the reflection obligations, the old-fragment premise, the `TRun` bridge, and the refused
+    uniform-code nesting.
+
+  Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 215 (fix 1 recorded 209 for 26 added mutants; the history gives 184 + 31). Lane
+  result: in the task report.
+
+### Emit-spec premises settled in Rocq (r1-emit-spec-merge)
+
+Branch `p2/r1-emit-spec-merge`: `p2/emit-spec` merged onto `p2/int` (`2ab3ffc`), plus the following
+in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statement`,
+`preservation'`, `call_preservation'` and `call_preservation_src'` stay unproved, truth UNKNOWN.
+
+- **The reflection is refuted** (`old_reflect_false`, closed). The store defines the kernel's
+  `do` and every primitive. In `(let Z (do 1 2) Z)` the machine is at `call 0 1 do 2`, with 1 and
+  2 in the window. MS relates the source, at `Ret 2` with do's call pending (`cx_ms0`, through
+  `KD_call`). After two silent steps (the call, and do's `return`) MS' relates the **same**
+  configuration to the machine (`cx_ms'1`): `KD'_do2` makes the pending call of `do`
+  transparent. MS does not (`cx_not_ms1`). So `old_reflect_statement`'s first conjunct fails at
+  `c' = c`, `mu' = []`. It is JitEmitKont's do frames, not a family rule, that overlap the old
+  syntax. The `*_old_of_new` corollaries take the reflection as a hypothesis, so they recover
+  nothing; how the old conclusions are to be recovered is a review decision (for example a
+  reflection to *some* MS-related configuration at a later machine, which the old preservation
+  theorem gives, so it would not be independent evidence). `old_reflect_src_statement`: proved in
+  fix round 4 (`old_reflect_src`, below).
+- **get-time is modeled as IO on both sides** (`get_time_agree`, closed): on related arguments,
+  both ask the clock with requests `ev_of` translates to each other, and for every answer
+  `resp_ok` admits the source's result is `VRh`-related to what the bytecode writes; or both
+  raise. An out-of-memory raise before the request is the source's resource exit, as for other
+  allocating primitives.
+- **The narrowing, checked in Rocq** (closed Examples; divergences at the primitive or call
+  level, not refutations of `sim'_statement`): `dv_absvector_src/_byt` (2^48), `dv_ets_*`
+  (error-to-string), `dv_open` (*home-directory*), `dv_close`, `dv_read_closed`, `dv_write_closed`
+  (closed stream),
+  `dv_eq_nan` (two NaNs: the bytecode is stuck), `dv_window` (two arguments to a one-parameter
+  closure, related to the bytecode's by `dv_window_rel`: the source over-applies, the bytecode raises), `dv_io_fail` (an IO failure: the
+  bytecode resumes with no result, the source throws; `resp_ok` excludes the answer).
+  `gvals_needed`: MS holds and MS' at no `mu` when the store binds a global the machine does
+  not, so `GvalsRel [] s m` is not implied by the old premises. `=` on two distinct cyclic vectors,
+  related through `mu` (`dv_eq_cycle_rel`): the source goes wrong (`OWrong`, its depth bound
+  exhausted) and the bytecode is stuck (`RCyclic`) (`dv_eq_cycle`). Neither side answers, so this
+  is not a disagreement on an answer; it is a state `Out'` has no case for. On one cyclic vector
+  both answer true (`dv_eq_cycle_same`). `env_ok_inhabited` shows only that an `env_ok`
+  environment exists; it does not derive `env_ok` from the pinned environment or the premises.
+  Each `dv_*` Example shows a divergence at the primitive or call level. None shows that a premise
+  is necessary for `sim'_statement` or the run statements; whether that is enough evidence is
+  Reuben's call.
+- **Reflection with source catch-up (fix round 2 of r1-emit-spec-merge; a proposal, not a
+  resolution).** `old_reflect'_statement` is `old_reflect_statement` with its first conjunct
+  weakened on the conclusion side only: from the configuration `c'` that MS' relates, *some* `c''`
+  the source reaches silently (`Sstar c' c''`) is MS-related to the same machine. The old
+  conclusions ask only for some silently reached source configuration, so `*_old_of_new'` (closed)
+  derive `preservation_old_statement`, `call_preservation_old_statement` and
+  `call_preservation_src_old_statement`, each with the **old** conclusion verbatim, from the new
+  statements plus `old_reflect'_statement` (and `old_reflect_src_statement` for the src one). The
+  proofs use neither JitLowerThm's nor JitKRefCompose's theorems. `cx_catch_up` (closed) checks
+  that `old_reflect_false`'s counterexample is not one to the new statement: two silent source
+  steps (the call of `do`, then its body `Y`) reach the `let` frame, which MS relates to the
+  machine after do's return (`cx_src_catch_up`, `cx_ms2`). `old_reflect_statement` and
+  `old_reflect_false` are kept unchanged. **Not proved:** `old_reflect'_statement` (truth UNKNOWN; a
+  proof needs a reflection of every KD'/TK'/KC'/RK' derivation over old-fragment syntax to KD/TK/KC/RK
+  after catch-up, and source-side invariants that keep an old-fragment run IO-free and its store
+  constant). The corollaries are therefore implications between unproved statements: they show the
+  new statements, if proved, give the old conclusions, and they recover nothing yet.
+- **`old_reflect_src_statement`: UNKNOWN, not refuted** (superseded: proved in fix round 4,
+  `old_reflect_src`). Two cheap refutations were tried and do not
+  work. The old `pmap` admits no IO primitive, so an old-fragment machine cannot make a request. And
+  `EndsSrc'`'s existential final store `s'` is tied to b0's final store by `GStore` (functions
+  equal, globals and w's cells positionally `GVal`-related), and no choice apart from `s` was found
+  that keeps KRef's own end relation (a hand argument, not checked in Rocq). A proof needs the same machine-side invariants as the
+  catch-up reflection (the machine's globals and the cells outside `mu'` unchanged), plus `VRh`
+  injectivity on the first-order values VR relates. Not attempted in this round.
+- **Awaiting Reuben** (none approved; no agent can approve them): `env_ok` on the run statements
+  (evidence: `dv_io_fail`), the `frame_prim` exclusions (`dv_absvector_*`, `dv_ets_*`, `dv_open`,
+  `dv_close`, `dv_read_closed`, `dv_write_closed`, `dv_eq_nan`, `dv_eq_cycle`), the one-argument
+  window (`dv_window`, `dv_window_rel`), `GvalsRel` on the `*_old` statements (`gvals_needed`), the
+  catch-up form of the reflection (`old_reflect'_statement`, `cx_catch_up`), and the six-parameter
+  Rule_X index shape with `c`/`cv` indices. Every `dv_*` Example is primitive-level or call-level
+  evidence, not a proof that the premise is necessary for the stated theorems.
+- **Evidence.** 34 closed statements added to `Audit_Jit` (352 in all after the merge with kref-ctl). Mutants
+  `ShenJitEmitGetTimeSwap` (run and unix swapped in `ev_of`; `get_time_agree` must fail) and
+  `ShenJitEmitDo2Opaque` (`KD'_do2` needs `False`; `old_reflect_false` must fail); the pin was 227 (224 before kref-ctl's three).
+  Fix round 2 adds 9 closed statements (377 in all, after the merge with r1-fv-mutants' 16) and two
+  mutants: `ShenJitEmitCatchUpNone` (`cx_c2` is `cx_c`, no source step; `cx_ms2` must fail) and
+  `ShenJitEmitEqCycleAcyclic` (the second cell no longer closes the cycle; `dv_eq_cycle` must fail).
+  The pin is 233. Its history: 215 on `p2/emit-spec` was 184 (its base `b818355`) plus its 31 emit
+  mutants; `p2/int` reached 198 independently (kref-prim, kref-ctl, r1-fv-mutants), so the merged
+  count is 198 + 33 (emit-spec's 31 and this branch's two of the first round) + 2 = 233. The pin is
+  `report.py`'s count of `Rejected proof mutation:` lines in `make check`; `make report` was not run
+  on this branch, so 233 is checked against the mutant names, not through `report.py` (UNKNOWN).
+  The lane and the emit mutants were run on this branch (task report); `make prove`, `make
+  report`, the differential and the Coq 8.18 build were not, so their results are UNKNOWN.
+- **Fix round 3: the reflections narrowed (closed).** `B.next` is a function, so under one
+  environment the machine has one run. With the proved old theorems (`JitLowerThm.preservation`,
+  `call_preservation`) this gives, in `rocq/JitEmitInv.v`:
+  - `old_reflect'_silent`: from a state MS relates, every bytecode run under any environment is
+    IO-free (`tT = []`), so the trace parts of `old_reflect'_statement` and
+    `old_reflect_src_statement` hold;
+  - `old_reflect'_ends`: the second conjunct of `old_reflect'_statement` (an `Ends'` at `mu = []`
+    read back as `JitLowerThm.Ends` with the same store), proved outright;
+  - `old_reflect'_iff_core`: `old_reflect'_statement` is **equivalent** to
+    `old_reflect_core_statement`, the catch-up of MS' to MS along an IO-free run (no trace, no
+    environment). The core is the one part of `old_reflect'` not proved; truth UNKNOWN. With the
+    seven family hooks empty, it is a property of MS' and JitEmitKont's extra frames (do,
+    handlers, closures, the primitives `frame_prim` admits). A family whose rule overlaps the old
+    fragment must re-prove it;
+  - `old_reflect_src_of_fundamental`: `old_reflect_src_statement` follows from
+    `fundamental_statement`. This is a **reduction, not a proof**: its end case comes entirely
+    from `JitKRefCompose.call_preservation_src_of_fundamental`, so the src corollary adds nothing
+    beyond that theorem. (Fix round 4: DoD item (1) now proves the fundamental property,
+    `JitKRefFund.fundamental`, so `old_reflect_src` proves `old_reflect_src_statement`.) (The round-2 note that a proof needs machine-side
+    invariants is superseded: with the fundamental property, determinism suffices);
+  - `preservation_old_holds`, `call_preservation_old_holds` and
+    `call_preservation_src_old_of_fundamental`: the `*_old_statement` targets follow from the old
+    theorems directly (the src one from the fundamental property). This is a sanity check that the
+    targets of the `*_old_of_new'` corollaries are true. It says nothing about the new statements.
+  - Helpers, all closed: `tn_trun`, `sstar_srun`, `trun_tn_prefix`, `tn_next_tau`,
+    `tstar_final_trun`, `tstar_final_eq`.
+
+  15 closed statements added (399 in `Audit_Jit` after the merge with `p2/int` `17379dc`, whose
+  r1-compat-call adds 7). One mutant: `ShenJitEmitCoreNoCatchUp` (the core asks for MS at `c'`
+  itself, which is `old_reflect_statement`'s refuted first conjunct; `old_reflect'_of_core` must
+  fail). The pin is 235 = `p2/int`'s 199 + the 36 `ShenJitEmit*` mutants of this branch (84 JIT
+  mutant names against 48 on `p2/int`). `make report` was not run, so the pin is checked against
+  the mutant names, not through `report.py` (UNKNOWN).
+
+  Still **awaiting Reuben** (no agent can approve them), each with its Rocq evidence:
+
+  | Premise or design choice | Rocq evidence | What the evidence shows |
+  |---|---|---|
+  | `env_ok` on the run statements | `env_ok_needed`, `resp_ok_bound_needed`, `dv_io_fail`, `env_ok_inhabited` | statement level (fix round 4): `preservation'_statement` without `env_ok` is false, at an environment answering `JFailed` and at one answering a 2^64 clock reading; an `env_ok` environment exists. `env_ok` is an assumption on the environment, NOT derived from the pin; necessity is proved for `preservation'` only, the call statements are analogous but not proved |
+  | `frame_prim` excludes absvector | `dv_absvector_src`, `dv_absvector_byt` | at 2^48 the source allocates a vector, the bytecode raises (primitive level) |
+  | `frame_prim` excludes error-to-string | `dv_ets_*` | the source answers "error", the bytecode the exception's text (primitive level) |
+  | `frame_prim` excludes open, close, read-byte, write-byte | `dv_open`, `dv_close`, `dv_read_closed`, `dv_write_closed` | home-directory prefix and closed-stream state differ (primitive level) |
+  | `=` only with `pguard` | `dv_eq_nan`, `dv_eq_cycle`, `dv_eq_cycle_rel`, `dv_eq_cycle_same` | two NaNs: the bytecode is stuck; two cyclic vectors: source goes wrong, bytecode stuck (primitive level) |
+  | dynamic-call window of at most one argument | `dv_window`, `dv_window_rel` | two arguments to a one-parameter closure: the source over-applies, the bytecode raises (call level) |
+  | `GvalsRel [] s m` on the `*_old` statements | `gvals_needed` | MS holds and MS' holds at no `mu` (statement level for the embedding) |
+  | the catch-up form of the reflection | `old_reflect_false`, `cx_catch_up`, `old_reflect'_iff_core` | the same-configuration reflection is false; catch-up handles its counterexample; what remains is exactly `old_reflect_core_statement` |
+  | six-parameter `Rule_X` hooks with `c`/`cv` indices | `JitEmitNestTest` (nested `Comp_ind'` with a non-empty dummy rule) | the shape compiles and its induction principle works; the uniform-index alternative failed strict positivity (scratchpad evidence only, not committed) |
+
+  None of the `dv_*` Examples shows that a premise is necessary for `sim'_statement` or the run
+  statements; each shows a divergence at the primitive or call level. Fix round 4 adds the one
+  statement-level necessity proof, for `env_ok` (below).
+
+- **Fix round 4 (merged onto `p2/int` `5779555`, r1-kref-fund).** In `rocq/JitEmitInv.v`, all closed:
+  - `old_reflect_src`: `old_reflect_src_statement` is **proved**, as
+    `old_reflect_src_of_fundamental` applied to `JitKRefFund.fundamental`. With
+    `old_reflect_false` (the refutation of `old_reflect_statement`), both reflection obligations of
+    the spec are settled in Rocq: one refuted, one proved.
+  - `call_preservation_src_old_holds`: the target `call_preservation_src_old_statement` holds.
+  - `call_preservation_src_old_of_new''`: `call_preservation_src_old_of_new'` with its
+    `old_reflect_src_statement` hypothesis discharged. The three `*_old_of_new'` corollaries now
+    wait only on the new statements and `old_reflect'_statement`, which is exactly
+    `old_reflect_core_statement` (`old_reflect'_iff_core`): NOT proved, truth UNKNOWN.
+  - `env_ok_needed`: `preservation_noenv_statement` (`preservation'_statement` with `env_ok rs`
+    dropped, nothing else changed; `preservation'_of_noenv`) is **false**. MS' relates the source at
+    `get-time`'s pending frame, `run` evaluated (`KD'_prim`, then `KD'_ret`), to the machine at its
+    `(get-time run)` instruction (`gt_ms`). Its first step asks the clock (`gt_next`). Under an
+    environment that answers `JFailed`, every run of one step or more starts with an untranslated
+    event (`gt_trun_none`), and the machine is not final at step 0, so neither disjunct holds at
+    `n = 1` (`noenv_false_at`). `resp_ok_bound_needed`: the same at an environment answering a
+    clock reading of 2^64, outside `resp_ok`'s 64 bits; neither environment is `env_ok`. So
+    `env_ok` cannot be dropped from `preservation'_statement`. The refutation uses that `ev_of`
+    leaves `JFailed` and readings of 2^64 or more untranslated. Translating a failure would not
+    save the statement: the bytecode then resumes with no result while the source throws
+    (`dv_io_fail`). It is an assumption about the
+    environment, not derivable from the pin or the premises. `call_preservation'` and
+    `call_preservation_src'` are analogous; their necessity is NOT proved here.
+  - Mutant `ShenJitEmitIoFailTranslated`: `ev_of` translates `(JTime, JFailed)`, so the `JFailed`
+    environment no longer refutes the statement and `env_ok_needed` must fail.
+
+  11 closed statements added (424 in `Audit_Jit`: 399 + 14 from r1-kref-fund + 11; the lane on
+  `95459c7` printed 424 closed, with 0 Axioms lines). The pin is 238 = 235 + r1-kref-fund's 2 + 1.
+  That is a **census**, not `report.py` evidence. There are 87 ShenJit mutant names; `p2/int`
+  `5779555` has 50, so 151 of its 201 are non-JIT. In addition, the 40 ShenJitEmit* and kref-fund
+  mutants were all rejected under Rocq 9.3 on `95459c7`. `make prove` and `make report` were not
+  run, so their result is UNKNOWN: buri-lps has only the Rocq 9.3 switch, and `scripts/prove`
+  needs Coq 8.18.0 and `scripts/shen`. Still NOT proved, truth UNKNOWN: `sim'_statement`, every
+  `sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'` and
+  `old_reflect_core_statement`. Still at primitive or call level only: the `frame_prim`
+  exclusions and the one-argument window. A statement-level counterexample for those needs a KD'
+  frame that MS' does not have, so it means changing JitEmitKont. Every row of the table above
+  still awaits Reuben.
 
 ### Pass split: the normal form (wave 1b)
 
