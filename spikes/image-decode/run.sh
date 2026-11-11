@@ -16,7 +16,8 @@ python3 "$here/image_to_rocq.py" "$sj/build/shen-jit" "$sj/build/stage0" ImgData
 for f in Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerStage0; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > $f.v
 done
-for f in JitImage ImgRun ImgSum ImgMut; do
+sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/JitImage.v" > JitImage.v   # moved to rocq/ (r21-image-lane)
+for f in ImgRun ImgSum ImgMut; do
   sed 's/^From Coq Require/From Stdlib Require/' "$here/$f.v" > $f.v
 done
 sed -i 's/^From Coq Require/From Stdlib Require/' ImgData.v

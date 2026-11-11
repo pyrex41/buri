@@ -170,6 +170,8 @@ ShenJitFrontPrologScope: bind_rule checks the fresh names against no scope, so a
   name of g the next argument reads. bind_rule_sound must fail.
 ShenJitFrontPrologDoFirst: bind_rule takes a do returning its FIRST argument. bind_rule_sound must fail.
 ShenJitFrontPrologP4Key: bind_rule checks p3, not p4, against id_key. bind_rule_sound must fail.
+ShenJitImageNoCodeEq: check_def gives Match without comparing the loaded code with the image's
+  decoded code. check_def_sound must fail.
 """
 import re
 from pathlib import Path
@@ -444,4 +446,8 @@ mutate('ShenJitFrontPrologDoFirst', prolog,
        '     negb (text_eqb v1 v2) && text_eqb v2 v2\' &&', '     negb (text_eqb v1 v2) && text_eqb v1 v2\' &&')
 mutate('ShenJitFrontPrologP4Key', prolog,
        ' && negb (text_eqb p4 id_key) &&', ' && negb (text_eqb p3 id_key) &&')
+image = 'rocq/JitImage.v'
+mutate('ShenJitImageNoCodeEq', image,
+       '     | Some k\' => if code_eqb k k\' then Match g else Differ g end end',
+       '     | Some k\' => if true then Match g else Differ g end end')
 print(' '.join(names))

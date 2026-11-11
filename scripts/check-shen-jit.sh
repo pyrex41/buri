@@ -20,7 +20,7 @@ got=$(sha256sum "$bin" | cut -d' ' -f1)
 python3 "$root/tests/shen-jit/check_tables.py" "$root" "$src" || exit 4
 eval "$(opam env --switch=lps --set-switch)" 2>/dev/null
 mkdir -p "$out"; cd "$out"
-FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund JitKTerm JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitNorm JitNormStage0 JitFrontD JitFrontSugar JitFrontProlog Audit_Jit"
+FILES="Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile JitLowerRel JitLowerKont JitLowerStable JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefGround JitKRefBase JitKRefCompatClo JitKRefCompose JitLowerEquiv JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefCompatCall JitLowerStage0 JitKRefFv JitKRefFund JitKTerm JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitNorm JitNormStage0 JitFrontD JitFrontSugar JitFrontProlog JitImage Audit_Jit"
 for f in $FILES; do
   sed 's/^From Coq Require/From Stdlib Require/' "$root/rocq/$f.v" > "$f.v"
   d=$(diff "$root/rocq/$f.v" "$f.v" || true)   # diff exits 1 when the files differ
@@ -52,6 +52,21 @@ if [ -z "${SKIP_STAGE0:-}" ]; then
   diff "$root/tests/shen-jit/stage0-accepted.txt" "$got" > "$s0/diff.txt" || { cat "$s0/diff.txt"; echo "STAGE0_CHANGED"; exit 12; }
   echo "stage0: $(awk '{a+=$2; r+=$3; u+=$4} END {print a " accepted, " r " rejected, " u " unreadable of " a+r+u " definitions"}' "$got"), as recorded"
 else echo "stage0: NOT RUN (SKIP_STAGE0 set)"; fi
+# Heap image code objects (OB-JIT-IMAGE-CODE, docs/SHEN-JIT-IMAGE.md): the binary's image is read as
+# 32-bit halves (the trusted reader, OB-JIT-IMAGE-READER) and Rocq proves image_code_ok: every one of
+# the 24 files' stage 0 definitions, from the stage 0 step's own S0_<file> modules, loads to the code
+# object its function cell holds in the image (JitImage.code_check_sound). image_mutants_caught
+# proves two one-word mutants of print's code are caught. The census Rocq computes on the image is
+# compared with tests/shen-jit/image-facts.txt. Needs the stage 0 step's modules.
+if [ -z "${SKIP_STAGE0:-}" ] && [ -z "${SKIP_IMAGE:-}" ]; then
+  python3 "$root/tests/shen-jit/stage0_to_rocq.py" --image "$bin" "$s0/Img.v" || { echo "IMAGE_READ_FAILED"; exit 13; }
+  sed -i 's/^From Coq Require/From Stdlib Require/' "$s0/Img.v"
+  (cd "$s0" && rocq compile -Q "$out" Buri Img.v > Img.log 2>&1) || { tail -20 "$s0/Img.log"; echo "IMAGE_ROCQ_FAILED"; exit 13; }
+  [ "$(grep -c '^Closed under the global context$' "$s0/Img.log")" = 2 ] || { cat "$s0/Img.log"; echo "IMAGE_NOT_CLOSED"; exit 13; }
+  sed -n '/^image_facts =/,$p' "$s0/Img.log" | tr '\n' ' ' | tr -s ' ' | sed 's/ $//' > "$s0/image-facts.txt"; echo >> "$s0/image-facts.txt"
+  diff "$root/tests/shen-jit/image-facts.txt" "$s0/image-facts.txt" > "$s0/image-diff.txt" || { cat "$s0/image-diff.txt"; echo "IMAGE_FACTS_CHANGED"; exit 13; }
+  echo "image: image_code_ok closed (every stage 0 code object of the 24 files equals its image function cell's), 2 image mutants caught, census as recorded"
+else echo "image: NOT RUN (SKIP_STAGE0 or SKIP_IMAGE set)"; fi
 if [ -n "${SKIP_DIFF:-}" ]; then echo "differential: NOT RUN (SKIP_DIFF set)"; exit 0; fi
 d="$out/d"; mkdir -p "$d"; cd "$d"
 cat "$src/tests/kl/ops.kl" "$root/tests/shen-jit/ops-calls.kl" > ops-all.kl
