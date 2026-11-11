@@ -156,7 +156,7 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
 | `rocq/JitEqBudgetStep.v` | Step of `eq_core_statement`: least true pair, surgery, same-budget and shifted simulation |
 | `rocq/JitEqBudgetWalk.v` | Base case of `eq_core_statement`: the walk bound on a closed cell set with no true pairs |
 | `rocq/JitEqBudgetCore.v` | Assembly: `eq_budget_closed` (relativized to a closed cell set), `eq_core`, `eq_budget` (`OB-JIT-EQ-BUDGET-CORE` discharged) |
-| `rocq/Audit_Jit.v` | Assumption audit of 263 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 268 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -326,6 +326,22 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitKRefPrim.v` | `prim_compat`: every table primitive under `jit_rules`, and every port primitive it gives, maps related arguments and stores to related results (primitive parametricity) |
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
+| `rocq/JitFrontD.v` | D00: the front rules' store D (a lowered store), built from decoded stage 0 data; `D_compiled'`; the allowed store facts; the inline relation `inl_site` and `aeq`, with their soundness statements (unproved) |
+
+**The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
+definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes
+a store body the body F's code is CompFn-related to, and that code lowers the inlined normal form, which the src judge
+rejects for all 528 definitions with an inlining marker, so a source store cannot meet `D_compiled` on stage 0's
+machine. `D_compiled'` is the per-callee emit check (proved to imply `D_compiled`). `D_of` builds a definition's D in
+Rocq from the tables `stage0_to_rocq.py --D` tokenizes: the marker closure, `do` when the normal form has a do node
+or the source calls it, `thaw` and `protect` when called, `shen.bind!` in either bound-now shape (a literal frozen last argument, or a let-bound freeze), and the port defuns `shen-jit.deref=` (alone) and `shen-jit.unify=` with `shen-jit.unify=!` (together) when the normal form calls them. `shen.bindv` and `shen.unwind` are ordinary inline callees (`D_has_inline_callee`, named `D_has_port_bindv`/`D_has_port_unwind`): `D_of` adds them through the marker closure, since bound-now's template is normalised and its bindv/unwind calls inlined, and shen.overbind and the unify forms inline bindv directly (bindv is in 10 definitions' D, unwind in 8, `shen.bind!` in the 6 with bound-now sites). Inside a bound-now expansion those regions belong to `bind_site`, which matches them against e_B's own inlined regions and uses no fact about either callee. Test, not proof (Rocq `bind_report` on the decoded table, witness set e45add98...): all 37 bound-now sites, in 6 definitions, are accepted by `bind_site` against their `D_of` store; `inl_site` was not run on real sites (UNKNOWN). `D_compiled'` today (test, single-entry D against the table's code objects): true for `do` and `protect`, false for `thaw`, `shen-jit.deref=`, `shen-jit.unify=`, `shen-jit.unify=!`, `shen.bind!`, `shen.bindv` and `shen.unwind`, so every `D_of` store holding one of those fails `D_compiled'` at this commit. `D_prims_fold` never holds of a D built by `D_of` (+ and - have no stage 0 row), so the folding inline sites wait on interface item 2. `D_of_wf` proves D_wf for any sealed list holding the stage 0 names. A smoke run (a test)
+decoded all 955 rows with distinct names. The inline rule compares the inlined normal body with `e_F` by `inl_site`:
+alpha-equivalence (`aeq`) plus integer substitution, thaw-with and depth cut; `bind_site` does the same for bound-now
+against shen.bind!'s lowered body, with a seeded renaming. Their soundness and `aeq`'s are stated, not proved (F-inline). Census, not proof (`spikes/pass-split/d00_inline_census.py`): of 5430 inline sites, 5360 are alpha-equivalent, 30 integer substitution
+(6 also folding +), 22 thaw-with and 18 depth cut. Under this design T02's end-state forecast is 955; a source store
+(option B) would reach about 725. Two interface items for the KRef track: `fresh_ok` over `D_bodies` fails on lowered
+bodies (the premise the rules use is `fresh_front`), and fold-arith's `(+, FPrim PAdd)` in D needs `+` in `sealed`.
+Progress is unchanged: 111 of 955 stage 0 definitions validated.
 
 **The front passes** (`rocq/JitKRef.v` with proofs in `JitKRefGround.v` and `JitKRefCompose.v`; old names in `rocq/JitLowerEquiv.v`; `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
 (b1 to e) before it emits code for e. `KRef g e0 e` is a step-indexed Kripke refinement on KLambda expressions under

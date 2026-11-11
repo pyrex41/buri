@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitFrontD.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -263,3 +263,8 @@ Print Assumptions JitKRefFund.JitKRefFund.compat_call.
 Print Assumptions JitKRefFund.JitKRefFund.store_refl.
 Print Assumptions JitKRefFund.JitKRefFund.adequacy.
 Print Assumptions JitKRefFund.JitKRefFund.call_preservation_src.
+Print Assumptions JitFrontD.JitFrontD.D_compiled'_spec.
+Print Assumptions JitFrontD.JitFrontD.D_compiled'_D_compiled.
+Print Assumptions JitFrontD.JitFrontD.D_of_nodup.
+Print Assumptions JitFrontD.JitFrontD.D_of_wf.
+Print Assumptions JitFrontD.JitFrontD.D_cons_prim_of_Com.

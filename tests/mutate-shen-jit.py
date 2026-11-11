@@ -107,6 +107,18 @@ ShenJitKRefStoreReflNoStoreOk: store_refl_statement without its store_ok s premi
   JitKRef.v + JitKRefGround.v. store_ok is carried beside SRel as a premise because SRel does not give
   it (JitKRefBase.SRel_lok_refuted); without it, store_refl_of_fundamental (and adequacy_of_fundamental,
   which uses it) must fail.
+ShenJitFrontAlphaCapture: aeq's variable test forgets that a target binder hides a free name, so
+  (lambda x (f x y)) and (lambda y (f y y)) count as alpha-equivalent. aeq_capture must fail.
+ShenJitFrontInlFrozenFree: the inline site checker lets a thawed-in-place argument read a name the
+  expansion binds. site_when_capture must fail.
+ShenJitFrontDCompiled: D_compiled' stops asking check_fn of each callee's code. D_compiled'_spec
+  must fail.
+ShenJitFrontPortUnify: D_of's port_used brings in only the unify form the normal form calls, so
+  D_has_port_unify (which asks both) is unreachable. port_used_unify must fail.
+ShenJitFrontInlHidden: inl_eq thaws a frozen argument in place without checking that no binder
+  inside N hides one of its free names. site_frozen_hidden must fail.
+ShenJitFrontBindLetdo: bind_site stops reading e_B's unused let as do, so no real bound-now site
+  matches. site_bind (and site_bind_real) must fail.
 """
 import re
 from pathlib import Path
@@ -310,4 +322,20 @@ mutate('ShenJitKRefFundNoTrapCase', fund,
 mutate_chain('ShenJitKRefStoreReflNoStoreOk', ['rocq/JitKRef.v', 'rocq/JitKRefGround.v'],
        " D_wf -> StoreHas s -> store_ok s -> SRel k (id_world s) s s.\n",
        " D_wf -> StoreHas s -> SRel k (id_world s) s s.\n")
+front = 'rocq/JitFrontD.v'
+mutate('ShenJitFrontAlphaCapture', front,
+       ' | (a, b) :: rn => if text_eqb a x then text_eqb b y else if text_eqb b y then false else var_ok rn x y end.',
+       ' | (a, b) :: rn => if text_eqb a x then text_eqb b y else var_ok rn x y end.')
+mutate('ShenJitFrontInlFrozenFree', front,
+       ' && frozen_free sg (map fst fr ++ qs) &&', ' &&')
+mutate('ShenJitFrontDCompiled', front,
+       '                  && check_fn c ps b)%bool', '                  && true)%bool')
+mutate('ShenJitFrontPortUnify', front,
+       '  then [unify_name; unify_bang_name] else []).', '  then [unify_bang_name] else []).')
+mutate('ShenJitFrontInlHidden', front,
+       '     | Some (SFrozen x) => expr_eqb x e && forallb (fun y => negb (hidden rn y)) (K.fv x)',
+       '     | Some (SFrozen x) => expr_eqb x e')
+mutate('ShenJitFrontBindLetdo', front,
+       '     inl_eq (S (dsize eB)) fold true D [(p4, SFrozen ex)]',
+       '     inl_eq (S (dsize eB)) fold false D [(p4, SFrozen ex)]')
 print(' '.join(names))
