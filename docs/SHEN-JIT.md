@@ -1007,8 +1007,14 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
   byte-identical, and a later commit on the branch merges `p2/int` `da4b545` (r21-image-lane) into it, so that the
   integrator's merge adds no new conflict. On the branch: audit 704 (527 + 161 + 16 proved emit lemmas newly
   printed), pin 267 by arithmetic (230 + 37), and two non-inversion gates in `scripts/check-shen-jit.sh`, a
-  syntactic one (exit 14) and a term-level one over the printed constants (exit 15). The evidence is in
-  [STATUS](STATUS.md).
+  syntactic one (exit 14) and a term-level one over the printed constants (exit 15). While every Rule_X hook
+  is empty (`Inductive Rule_Eq ... := .` and so on), the syntactic gate's constructor-match check finds
+  "0 hook constructors" and so checks nothing; the term-level gate is the operative non-inversion check at
+  this stage. The constructor check becomes live when a family adds constructors to its hook. The planted
+  destruct and inversion of `Rule_Eq` do fire on the empty hook. The spec asked for a rebase. The branch
+  merges instead, because `p2/r1-emit-spec-merge` itself contains five merges of `p2/int`, and the docs and
+  ledger cite `52f913c`, `fc0a9fd` and `b02db36` as evidence anchors, which a squash would orphan. The head is
+  a fast-forward from `p2/int` `da4b545`. The evidence is in [STATUS](STATUS.md).
 
 ### Pass split: the normal form (wave 1b)
 
