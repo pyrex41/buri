@@ -176,7 +176,7 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
 | `rocq/JitEmitCheck.v` | r22-emit-check: the checker for JitEmitRel's Comp' (JitLowerCheck's functions over callbacks, with a fallback to the family hooks); `check_emit_sound` (base hooks), `check_emit_sound_hooks` (any Hooks record), `judge_emit_sound`, closed |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 716 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 751 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
