@@ -13,6 +13,12 @@
    catch-up; NOT proved), and cx_catch_up (old_reflect_false's counterexample is not one to it);
    gvals_needed and the dv_* Examples, the divergences behind each narrowing (frame_prim's
    exclusions, the window bound, env_ok, GvalsRel), checked at the primitive level.
+   Fix round 3 (closed, from run determinism and the PROVED old theorems): old_reflect'_silent,
+   old_reflect'_ends (old_reflect''s end conjunct), old_reflect'_iff_core (old_reflect' is exactly
+   old_reflect_core_statement, NOT proved), old_reflect_src_of_fundamental (a reduction to the
+   unproved fundamental property, not a proof), and the *_old_statement targets from the old
+   theorems (preservation_old_holds, call_preservation_old_holds,
+   call_preservation_src_old_of_fundamental; a sanity check, nothing about the new statements).
 
    What the old invariant (JitLowerStep.MS, JitLowerThm) fixes, and what this one lets evolve:
    - mu, a partial bijection between KLambda heap locations (nat) and bytecode heap keys
@@ -71,7 +77,7 @@
    describe; the embedding (ms_embed) holds at any mu StoreRel admits, the corollaries are at mu = []. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
 From Buri Require Import Observation JitEmitKont KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile
- JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef
+ JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef JitKRefCompose
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel.
 Import ListNotations.
@@ -1001,6 +1007,176 @@ Proof.
  - destruct (Rs s m c ps b0 b1 e args rs k tS tT m1 Eo Dw K1 K2 Sh So Cm Cf L En G Tr Mp En1) as [E0 En0].
    subst tS; cbn in Mp; subst tT.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
+Qed.
+(* ---------- the reflections narrowed (closed; fix round 3) ----------
+   B.next is a function, so under one environment the machine has one run from m. Together with
+   the PROVED old theorems (JitLowerThm.preservation and call_preservation) and, for the src
+   reflection, JitKRefCompose.call_preservation_src_of_fundamental, this settles:
+   - old_reflect'_silent: from a state MS relates, every run is IO-free (tS = []), so the trace
+     parts of old_reflect'_statement and old_reflect_src_statement hold;
+   - old_reflect'_ends: old_reflect'_statement's second conjunct (Ends' at mu = [] read back as
+     JitLowerThm.Ends with the same store), unconditionally;
+   - old_reflect'_iff_core: old_reflect'_statement is EQUIVALENT to old_reflect_core_statement,
+     the catch-up of MS' to MS along an IO-free run (no trace, no environment). That core is the
+     one part of old_reflect' NOT proved; truth UNKNOWN. With JitEmitRel's family hooks empty it is
+     a property of MS' and JitEmitKont's extra frames (do, handlers, closures, frame_prim's
+     primitives); a family whose rule overlaps the old fragment must re-prove it.
+   - old_reflect_src_of_fundamental: old_reflect_src_statement follows from the fundamental
+     property. This is a reduction, NOT a proof: its end case comes entirely from
+     call_preservation_src_of_fundamental, so the src corollary adds nothing beyond that theorem,
+     and old_reflect_src_statement is neither proved nor refuted until DoD (1) proves
+     fundamental_statement.
+   - preservation_old_holds, call_preservation_old_holds and call_preservation_src_old_of_fundamental:
+     the *_old_statement targets follow from the old theorems directly (the src one from
+     fundamental). A sanity check that the targets of the *_old_of_new' corollaries are true; it
+     says nothing about the new statements (preservation', call_preservation', call_preservation_src').
+   Does NOT say: anything about a run that starts outside the old fragment; that old_reflect_core
+   holds. *)
+
+Lemma tn_trun : forall k m m1, JitLowerThm.TN E pt k m m1 -> forall rs, TRun rs k m [] m1.
+Proof. intros k m m1 H; induction H; intros rs; [constructor|econstructor; [eassumption|auto]]. Qed.
+
+Lemma sstar_srun : forall c c', Sstar c c' -> Srun c [] c'.
+Proof.
+ intros c c' H; induction H; [constructor|].
+ unfold Srun. replace (@nil event) with (trace_of Tau ++ []) by reflexivity. econstructor; eauto.
+Qed.
+
+Lemma trun_tn_prefix : forall j m mj, JitLowerThm.TN E pt j m mj ->
+ forall rs k tT m1, TRun rs k m tT m1 -> (k <= j)%nat -> tT = [].
+Proof.
+ intros j m mj H. induction H as [m|j m ma mj T H IH]; intros rs k tT m1 Tr Le.
+ - assert (k = 0%nat) by lia. subst k. apply TRun_0 in Tr as [-> _]. reflexivity.
+ - destruct k as [|k]; [apply TRun_0 in Tr as [-> _]; reflexivity|].
+   unfold TS in T. inversion Tr; subst.
+   + match goal with N : B.next E pt m = B.MTau _ |- _ => rewrite T in N; injection N as <- end.
+     eapply IH; [eassumption|lia].
+   + match goal with N : B.next E pt m = B.MIO _ _ |- _ => rewrite T in N; discriminate end.
+Qed.
+
+Lemma tn_next_tau : forall j m mj, JitLowerThm.TN E pt j m mj -> forall k m1, JitLowerThm.TN E pt k m m1 -> (k < j)%nat ->
+ exists m', B.next E pt m1 = B.MTau m'.
+Proof.
+ intros j m mj H. induction H as [m|j m ma mj T H IH]; intros k m1 Hk Lt; [lia|].
+ unfold TS in T. inversion Hk; subst; [exists ma; exact T|].
+ match goal with T' : TS E pt m _, Hk' : JitLowerThm.TN E pt _ _ m1 |- _ =>
+   unfold TS in T'; rewrite T in T'; injection T' as <-; apply (IH _ m1 Hk'); lia end.
+Qed.
+
+Lemma tstar_final_trun : forall m mf, TStar m mf -> forall o m2, B.next E pt mf = B.MFinal o m2 ->
+ forall rs k tT m1, TRun rs k m tT m1 -> tT = [].
+Proof.
+ intros m mf H. induction H as [m|m ma mf T H IH]; intros o m2 F rs k tT m1 Tr.
+ - destruct k as [|k]; [apply TRun_0 in Tr as [-> _]; reflexivity|].
+   inversion Tr; subst; match goal with N : B.next E pt m = _ |- _ => rewrite F in N; discriminate end.
+ - destruct k as [|k]; [apply TRun_0 in Tr as [-> _]; reflexivity|].
+   unfold TS in T. inversion Tr; subst.
+   + match goal with N : B.next E pt m = B.MTau _ |- _ => rewrite T in N; injection N as <- end.
+     eapply IH; eauto.
+   + match goal with N : B.next E pt m = B.MIO _ _ |- _ => rewrite T in N; discriminate end.
+Qed.
+
+Lemma tstar_final_eq : forall m a, TStar m a -> forall b, TStar m b -> forall o1 n1 o2 n2,
+ B.next E pt a = B.MFinal o1 n1 -> B.next E pt b = B.MFinal o2 n2 -> a = b.
+Proof.
+ intros m a H. induction H as [m|m ma a T H IH]; intros b Hb o1 n1 o2 n2 Fa Fb.
+ - inversion Hb; subst; [reflexivity|].
+   match goal with T' : TS E pt m _ |- _ => unfold TS in T'; rewrite Fa in T'; discriminate end.
+ - unfold TS in T. inversion Hb; subst; [rewrite T in Fb; discriminate|].
+   match goal with T' : TS E pt m _ |- _ => unfold TS in T'; rewrite T in T'; injection T' as <- end.
+   eapply IH; eauto.
+Qed.
+
+(* From a state MS relates, a run under any environment takes no IO step. *)
+Theorem old_reflect'_silent : forall s c m rs k tT m1, MS s c m -> TRun rs k m tT m1 ->
+ tT = [] /\ JitLowerThm.TN E pt k m m1.
+Proof.
+ intros s c m rs k tT m1 H Tr.
+ assert (E0 : tT = []).
+ { destruct (JitLowerThm.preservation E pt sealed k s c m H) as [(c' & m' & j & Ss & Tn & Le & Ms)|(mf & En & Ts)].
+   - eapply trun_tn_prefix; eauto.
+   - destruct (JitLowerThm.Ends_final E pt sealed s c mf En) as (o & m2 & F). eapply tstar_final_trun; eauto. }
+ subst tT. split; [reflexivity|eapply trun_nil_tn; exact Tr].
+Qed.
+
+(* old_reflect'_statement's second conjunct, proved. *)
+Theorem old_reflect'_ends : forall s c m rs k tS tT m1, MS s c m -> TRun rs k m tT m1 -> map Some tS = tT ->
+ Ends' [] c m1 tS -> tS = [] /\ JitLowerThm.Ends E pt sealed s c m1.
+Proof.
+ intros s c m rs k tS tT m1 H Tr Mp En'. destruct (Ends'_final _ _ _ _ En') as (o & m2 & F).
+ destruct (old_reflect'_silent s c m rs k tT m1 H Tr) as [-> Tn].
+ destruct tS; [|discriminate]. split; [reflexivity|].
+ destruct (JitLowerThm.preservation E pt sealed (S k) s c m H) as [(c' & m' & j & Ss & Tj & Le & Ms)|(mf & En & Ts)].
+ - exfalso. destruct (tn_next_tau j m m' Tj k m1 Tn ltac:(lia)) as [m'' N]. rewrite F in N; discriminate.
+ - destruct (JitLowerThm.Ends_final E pt sealed s c mf En) as (o' & m2' & F').
+   assert (mf = m1) by (eapply tstar_final_eq; [exact Ts|eapply tn_tstar; exact Tn|exact F'|exact F]).
+   subst mf; exact En.
+Qed.
+
+(* The one part of old_reflect'_statement not proved: MS' at mu' extending [], on a state the
+   source reaches silently from an MS-related one after an IO-free bytecode run, catches up with
+   MS. NOT proved; truth UNKNOWN. old_reflect'_iff_core: it is exactly as strong as
+   old_reflect'_statement.
+   Does NOT say: anything outside the old fragment; that MS' and MS relate the same pairs (they do
+   not, cx_ms'1/cx_not_ms1). *)
+Definition old_reflect_core_statement : Prop := forall s c m k m1 c' mu',
+ MS s c m -> GvalsRel [] s m -> JitLowerThm.TN E pt k m m1 -> Sstar c c' -> mext [] mu' -> MS' mu' c' m1 ->
+ exists c'', Sstar c' c'' /\ MS s c'' m1.
+
+Theorem old_reflect'_of_core : old_reflect_core_statement -> old_reflect'_statement.
+Proof.
+ intros Co s c m rs k tS tT m1 Eo H G Tr Mp. split.
+ - intros c' mu' Ss Mx Ms. destruct (old_reflect'_silent s c m rs k tT m1 H Tr) as [-> Tn].
+   destruct tS; [|discriminate]. split; [reflexivity|].
+   eapply Co; [exact H|exact G|exact Tn|apply srun_nil_sstar; exact Ss|exact Mx|exact Ms].
+ - intros En'. eapply old_reflect'_ends; eauto.
+Qed.
+
+Theorem old_reflect_core_of' : old_reflect'_statement -> old_reflect_core_statement.
+Proof.
+ intros Rf s c m k m1 c' mu' H G Tn Ss Mx Ms. destruct env_ok_inhabited as [rs Eo].
+ destruct (proj1 (Rf s c m rs k [] [] m1 Eo H G (tn_trun k m m1 Tn rs) eq_refl) c' mu' (sstar_srun _ _ Ss) Mx Ms)
+   as [_ X]. exact X.
+Qed.
+
+Theorem old_reflect'_iff_core : old_reflect'_statement <-> old_reflect_core_statement.
+Proof. split; [apply old_reflect_core_of'|apply old_reflect'_of_core]. Qed.
+
+(* old_reflect_src_statement from the fundamental property (a reduction; see above). *)
+Theorem old_reflect_src_of_fundamental : JitKRef.JitKRef.fundamental_statement sealed D -> old_reflect_src_statement.
+Proof.
+ intros F s m c ps b0 b1 e args rs k tS tT m1 Eo Dw K1 K2 Sh So Cm Cf L En G Tr Mp Es.
+ pose proof (ms_entered s m c ps e args Cm Cf L En) as H0.
+ destruct (old_reflect'_silent _ _ _ _ _ _ _ H0 Tr) as [-> Tn].
+ destruct tS; [|discriminate]. split; [reflexivity|].
+ destruct (EndsSrc'_final _ _ _ _ _ Es) as (o & m2 & Fn).
+ pose proof (JitKRefCompose.JitKRefCompose.call_preservation_src_of_fundamental sealed D E pt F
+   s m c ps b0 b1 e args (S k) Dw K1 K2 Sh So Cm Cf L En) as CP. cbv zeta in CP.
+ destruct CP as [(c' & m' & j & Ss & Tj & Le & Ms)|(mf & Ef & Ts)].
+ - exfalso. destruct (tn_next_tau j m m' Tj k m1 Tn ltac:(lia)) as [m'' N]. rewrite Fn in N; discriminate.
+ - assert (Fm : exists o' m2', B.next E pt mf = B.MFinal o' m2') by (destruct Ef; eauto).
+   destruct Fm as (o' & m2' & Ff).
+   assert (mf = m1) by (eapply tstar_final_eq; [exact Ts|eapply tn_tstar; exact Tn|exact Ff|exact Fn]).
+   subst mf; exact Ef.
+Qed.
+
+(* Sanity: the *_old_statement targets are true (from the old theorems; the src one from
+   fundamental). Says nothing about the new statements. *)
+Theorem preservation_old_holds : preservation_old_statement.
+Proof. intros n s c m H _. exact (JitLowerThm.preservation E pt sealed n s c m H). Qed.
+
+Theorem call_preservation_old_holds : call_preservation_old_statement.
+Proof.
+ intros s m c ps b args n Cm Cf L En _.
+ exact (JitLowerThm.call_preservation E pt sealed s m c ps b args n Cm Cf L En).
+Qed.
+
+Theorem call_preservation_src_old_of_fundamental : JitKRef.JitKRef.fundamental_statement sealed D ->
+ call_preservation_src_old_statement.
+Proof.
+ intros F s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En _.
+ exact (JitKRefCompose.JitKRefCompose.call_preservation_src_of_fundamental sealed D E pt F
+   s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En).
 Qed.
 End Src.
 End Inv.

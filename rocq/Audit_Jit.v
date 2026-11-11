@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
@@ -382,3 +382,25 @@ Print Assumptions JitEmitInv.JitEmitInv.cx_catch_up.
 Print Assumptions JitEmitInv.JitEmitInv.dv_eq_cycle_rel.
 Print Assumptions JitEmitInv.JitEmitInv.dv_eq_cycle.
 Print Assumptions JitEmitInv.JitEmitInv.dv_eq_cycle_same.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.ERel_call_nil.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.ERel_call_cons.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_core.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_lt_pc.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_lt.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_refl_lt.
+Print Assumptions JitKRefCompatCall.JitKRefCompatCall.compat_call_of_fund.
+Print Assumptions JitEmitInv.JitEmitInv.tn_trun.
+Print Assumptions JitEmitInv.JitEmitInv.sstar_srun.
+Print Assumptions JitEmitInv.JitEmitInv.trun_tn_prefix.
+Print Assumptions JitEmitInv.JitEmitInv.tn_next_tau.
+Print Assumptions JitEmitInv.JitEmitInv.tstar_final_trun.
+Print Assumptions JitEmitInv.JitEmitInv.tstar_final_eq.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect'_silent.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect'_ends.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect'_of_core.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect_core_of'.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect'_iff_core.
+Print Assumptions JitEmitInv.JitEmitInv.old_reflect_src_of_fundamental.
+Print Assumptions JitEmitInv.JitEmitInv.preservation_old_holds.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_holds.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_of_fundamental.

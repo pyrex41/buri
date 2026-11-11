@@ -158,6 +158,15 @@ ShenJitEmitCatchUpNone: cx_c2, the configuration the source catches up to, is cx
   step). MS does not relate cx_c to cx_m1 (cx_not_ms1), so cx_ms2 (behind cx_catch_up) must fail.
 ShenJitEmitEqCycleAcyclic: cy_s's second cell holds VVec 1 instead of VVec 0, so the source's = on
   VVec 0 and VVec 1 answers true instead of going wrong. dv_eq_cycle must fail.
+ShenJitKRefCallNoTable: SRel_with (and GStore, so that SRel_ground still holds) without the clause
+  gfuns s0 = gfuns s, each replaced by True so no destructuring shifts. Built as JitKRef.v +
+  JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v; the first three compile, and Rocq rejects
+  JitKRefCompatClo.call_rel, the named-call move compat_call (JitKRefCompatCall) rests on: with two
+  function tables no longer equal, a call of f may run different definitions on the two sides.
+ShenJitEmitCoreNoCatchUp: old_reflect_core_statement asks for MS at c' itself instead of at some c''
+  the source reaches silently from c'. That is old_reflect_statement's first conjunct, which
+  old_reflect_false refutes, so the core would no longer be equivalent to old_reflect'_statement:
+  old_reflect'_of_core must fail.
 """
 import re
 from pathlib import Path
@@ -392,4 +401,30 @@ mutate('ShenJitEmitCatchUpNone', 'rocq/JitEmitInv.v',
 mutate('ShenJitEmitEqCycleAcyclic', 'rocq/JitEmitInv.v',
        "Definition cy_s : store := Store [[VVec 1]; [VVec 0]] [] [].",
        "Definition cy_s : store := Store [[VVec 1]; [VVec 1]] [] [].")
+def mutate_chain_n(name, paths, edits):
+    """mutate_chain with several (old, new) edits, all in paths[0], each old occurring once."""
+    src = Path(paths[0]).read_text()
+    for old, new in edits:
+        assert src.count(old) == 1, (name, old)
+        src = src.replace(old, new)
+    mods = [Path(p).stem for p in paths]
+    texts = [src] + [Path(p).read_text() for p in paths[1:]]
+    for i in range(1, len(texts)):
+        for m in mods[:i]:
+            req = re.compile(r'^(From Buri Require Import .*) ' + m + r'(?=[ .])', re.M)
+            assert len(req.findall(texts[i])) == 1, (name, m)
+            texts[i] = req.sub(lambda g: g.group(1), texts[i])
+            texts[i] = re.sub(r'(?<![\w.])' + m + r'\.' + m + r'(?!\w)', m, texts[i])
+    (out / (name + '.v')).write_text('\n'.join(texts))
+    names.append(name)
+
+mutate_chain_n('ShenJitKRefCallNoTable',
+       ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v', 'rocq/JitKRefCompatClo.v'],
+       [(" gfuns s0 = gfuns s /\\\n Forall2 (fun p0 p => fst p0 = fst p /\\ GVal w",
+         " True /\\\n Forall2 (fun p0 p => fst p0 = fst p /\\ GVal w"),
+        ("StoreHas s0 /\\ StoreHas s /\\ gfuns s0 = gfuns s /\\",
+         "StoreHas s0 /\\ StoreHas s /\\ True /\\")])
+mutate('ShenJitEmitCoreNoCatchUp', 'rocq/JitEmitInv.v',
+       " MS s c m -> GvalsRel [] s m -> JitLowerThm.TN E pt k m m1 -> Sstar c c' -> mext [] mu' -> MS' mu' c' m1 ->\n exists c'', Sstar c' c'' /\\ MS s c'' m1.",
+       " MS s c m -> GvalsRel [] s m -> JitLowerThm.TN E pt k m m1 -> Sstar c c' -> mext [] mu' -> MS' mu' c' m1 ->\n MS s c' m1.")
 print(' '.join(names))
