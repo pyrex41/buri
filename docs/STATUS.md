@@ -1271,6 +1271,20 @@ hypothesis, and `compat_trap_of_gen` gives `compat_trap_statement` from `fund_ge
 `ShenJitKRefCondSwap` (compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim`
 (compat_trap_fb and AppExn_fb without `prim_compat`) are rejected. Not `compat_call` or the fundamental property, so
 `OB-JIT-LOWER-FRONT` stays open.
+Sixteen are in `rocq/JitKRefFv.v` (branch `p2/r1-fv-mutants`, not yet merged into `p2/int`): `scoped_fv`
+(`scoped g e = true -> forall x, In x (fv e) -> In x g`), by a nested induction on expr (`expr_ind'`); `fv` against
+binders (`fv_lam_iff`, `fv_let_iff`; a defun's body is scoped by its parameters, `scoped_defun_fv`) and the cond and
+application lists (`fv_cond_iff`, `fv_app_iff`, `fv_call_iff`); `fund_below`'s scope condition from `scoped`
+(`fv_scope_of_scoped`), to a lambda's or let's body with the binder bound on both sides (`fv_scope_lam_body`,
+`fv_scope_let_body`) and to subterms (`fv_scope_cond`, `fv_scope_app`, `fv_scope_call`); and the index induction
+(`fund_below_S`, `fund_below_all`, `fund_gen_of_step : (D_wf -> forall k, fund_below k -> fund_at k) -> fund_gen_statement`).
+Not `fund_gen_statement`: its step needs every compatibility lemma (`compat_call` is still open). Four mutants of the
+index-local interface's definitions in `rocq/JitKRef.v` are rejected: `ShenJitKRefFundBelowLe` (`fund_below` over j <= k;
+`fund_below_0` fails), `ShenJitKRefFvLamUnfiltered` (fv of a lambda keeps its binder; `scoped_fv` fails),
+`ShenJitKRefPoutThrowAny` (`PoutRel` relates any two exceptions; `pout_obs` in JitKRefCompatClo fails) and
+`ShenJitKRefPrimOutAnyIO` (`PrimOutRel` without the same IO request; `call_rel` fails). The earlier
+`ShenJitKRefAbsvectorNoWext` and `ShenJitKRefEqBudgetFree` mutate proofs in JitKRefPrim.v, not `PoutRel`'s or
+`PrimOutRel`'s text, so they did not cover those definitions. Mutation pin 198, audit count 242.
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
