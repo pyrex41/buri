@@ -714,3 +714,5 @@ Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.SRel_nt_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_nt_of_table.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_refuted.
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.cx_tables_differ.
+Print Assumptions JitImage.JitImageSealing.ext_names.
+Print Assumptions JitImage.JitImageSealing.sealing_exclusion_statement.

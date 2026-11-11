@@ -143,8 +143,11 @@ The binary's hash covers its heap image: the last 783096 of its 5440856 bytes (r
   outside function cells (352 of which run code reached from the 955), 55 bound value cells and the data they reach.
   The code part is feasible by judging initialisation's `eval-kl` forms. The data part is infeasible now.
 - `OB-JIT-IMAGE-SEALING` (open): stage 1 seals 18 files where stage 0 sealed 24, which leaves 65 names redefinable
-  behind 115 sealed call sites. Tested in the binary: after a redefinition, sealed sites keep the old closure while
-  open calls see the new one. So only a stated exclusion of redefining the 65 is feasible.
+  behind 115 sealed call sites in 45 definitions (Rocq census in the lane since r22-image-verdict, and `sealgap.py`).
+  Tested in the binary: after a redefinition, sealed sites keep the old closure while open calls see the new one. So
+  only a stated exclusion of redefining the 65 is feasible. It is now stated in Rocq as the premise
+  `JitImage.JitImageSealing.sealing_exclusion_statement` (closed definition, in `Audit_Jit`), whose name list the lane
+  checks against the image's unsealed definitions; the top theorem does not take it yet.
 - `OB-JIT-IMAGE-READER` (open): the reader (now `stage0_to_rocq.py --image`) and `image_load`.
 - `OB-JIT-IMAGE-FILE` (partial): the run reads the image from `argv[0]` (resolved through `PATH`) unless
   `SHEN_JIT_IMAGE` is set, and the process model doesn't yet relate that file to the loaded binary. Feasible only as a
@@ -175,7 +178,7 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 708 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 710 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |

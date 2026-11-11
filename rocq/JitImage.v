@@ -28,6 +28,7 @@
    values, the property vector or anything else initialisation built: see docs/SHEN-JIT-IMAGE.md. *)
 From Coq Require Import List ZArith NArith PArith Bool String Ascii.
 From Buri Require Import JitBytecode JitLowerStage0.
+From Buri Require KLSyntax KLSemantics JitLowerStep.
 Import ListNotations.
 Module JitImage.
 Module B := JitBytecode.JitBytecode.
@@ -579,13 +580,110 @@ Definition slot_kind (v : N) : nat := if N.eqb (tag v) 5 then 0%nat else if N.eq
 Definition vname (v : option val) : string := match v with
  | Some (VSym p) => string_of_list_ascii (map ascii_of_N (text_of_sym p)) | _ => "?"%string end.
 
+(* ---------- the sealing gap (OB-JIT-IMAGE-SEALING), census, not proof ---------- *)
+(* The 65 names defined by the 6 extension files that stage 1 loads after its 18 sealed files
+   (main.c, SEALED_FILES = 18), in load order. Transcribed from the stage 0 .forms; the lane checks
+   the transcription: cn_ext_names_ok below is true only when these are, in order, exactly the
+   definitions of the 24 files whose names lack the image's sealed bit, and image_facts pins it. *)
+Definition ext_names_s : list string := Eval compute in (map (fun s => s%string) [
+  "shen.x.features.cond-expand-macro";
+  "shen.x.features.current";
+  "shen.x.features.initialise";
+  "shen.x.features.add";
+  "shen.x.launcher.quiet-load";
+  "shen.x.launcher.version-string";
+  "shen.x.launcher.help-text";
+  "shen.x.launcher.execute-all";
+  "shen.x.launcher.eval-string";
+  "shen.x.launcher.eval-flag-map";
+  "shen.x.launcher.eval-command-h";
+  "shen.x.launcher.eval-command";
+  "shen.x.launcher.script-command";
+  "shen.x.launcher.launch-shen";
+  "shen.x.launcher.default-handle-result";
+  "shen.x.programmable-pattern-matching.apply-pattern-handlers";
+  "shen.x.programmable-pattern-matching.make-stack";
+  "shen.x.programmable-pattern-matching.push";
+  "shen.x.programmable-pattern-matching.pop-all";
+  "shen.x.programmable-pattern-matching.surface-pattern";
+  "shen.x.programmable-pattern-matching.surface-pattern-tail";
+  "shen.x.programmable-pattern-matching.surface-application";
+  "shen.x.programmable-pattern-matching.compile-pattern";
+  "shen.x.programmable-pattern-matching.compile-pattern-h";
+  "shen.x.programmable-pattern-matching.reduce";
+  "shen.x.programmable-pattern-matching.initialise";
+  "shen.x.programmable-pattern-matching.register-handler";
+  "shen.x.programmable-pattern-matching.findpos";
+  "shen.x.programmable-pattern-matching.findpos-h";
+  "shen.x.programmable-pattern-matching.remove-nth";
+  "shen.x.programmable-pattern-matching.unregister-handler";
+  "shen.x.namespaces.initialise";
+  "shen.x.namespaces.expand";
+  "shen.x.namespaces.header";
+  "shen.x.namespaces.add-use";
+  "shen.x.namespaces.body-forms";
+  "shen.x.namespaces.name?";
+  "shen.x.namespaces.external-symbols";
+  "shen.x.namespaces.qualify";
+  "shen.x.namespaces.qualify-list";
+  "shen.x.namespaces.import-name";
+  "shen.x.namespaces.member-after";
+  "shen.x.expand-dynamic.initialise";
+  "shen.x.expand-dynamic.expand-dynamic";
+  "shen.x.expand-dynamic.functions-with-lambdas";
+  "shen.x.expand-dynamic.expand-declare";
+  "shen.x.expand-dynamic.expand-declare/checked";
+  "shen.x.expand-dynamic.literal-signature?";
+  "shen.x.expand-dynamic.expand-lambda-entries";
+  "shen.x.expand-dynamic.expand-lambda-form-entry";
+  "shen.x.expand-dynamic.expand-initializer";
+  "shen.x.expand-dynamic.expand-initializer-h";
+  "shen.x.expand-dynamic.expand-initializer-clause";
+  "shen.x.expand-dynamic.literal-in-scope?";
+  "shen.x.expand-dynamic.split-defuns-h";
+  "shen.x.expand-dynamic.split-defuns";
+  "shen.x.expand-dynamic.wrap-in-defun";
+  "shen.x.expand-dynamic.to-single-expression";
+  "shen.x.type-annotations.annotate-kl";
+  "shen.x.type-annotations.function-type";
+  "shen.x.type-annotations.reify-type";
+  "shen.x.type-annotations.type-table";
+  "shen.x.type-annotations.annotate";
+  "shen.x.type-annotations.annotate-cases";
+  "shen.x.type-annotations.atom-type"]%string).
+
+Definition defnames (xs : list val) : list positive :=
+ flat_map (fun x => match defname x with Some g => [g] | None => [] end) xs.
+Definition unsealed_defs (c : ctx) (xs : list val) : list positive :=
+ filter (fun g => negb (sealed_bit c g)) (defnames xs).
+Definition ext_names_ok (un : list positive) : bool :=
+ list_eqb (list_eqb N.eqb) (map text_of_sym un) (map t ext_names_s).
+
+(* The sealed call targets in a code object and its nested code objects. *)
+Fixpoint sealed_targets (fuel : nat) (k : code) : list positive :=
+ match fuel with O => [] | S fu =>
+ match k with Code _ _ _ _ _ ins cs _ =>
+   flat_map (fun i => match i with ICallSealed _ _ f _ | ITailSealed _ f _ => [f] | _ => [] end) ins
+   ++ flat_map (sealed_targets fu) cs end end.
+(* How many of g's decoded sealed call targets are in un (the unsealed definitions). *)
+Definition ext_sites (c : ctx) (un : list positive) (g : positive) : nat :=
+ match fn_code c g with
+ | Some k => List.length (filter (fun f => existsb (Pos.eqb f) un) (sealed_targets 64 k))
+ | None => 0 end.
+
 Record census := Census {
  cn_symbols : nat; cn_sealed : nat;                 (* symbols; those with the sealed bit *)
  cn_fn_closures : nat; cn_values_bound : nat;       (* function cells holding a closure; value cells not unbound *)
  cn_codes : nat; cn_codes_unreached : nat;          (* code objects; not reached from the 955 *)
  cn_unreached_names : list string;
  cn_closures : nat; cn_clo_in_fn : nat; cn_clo_in_val : nat;
- cn_clo_other : nat; cn_clo_other_reached : nat; cn_clo_other_captures : nat }.
+ cn_clo_other : nat; cn_clo_other_reached : nat; cn_clo_other_captures : nat;
+ (* r22-image-verdict, the sealing gap (OB-JIT-IMAGE-SEALING): *)
+ cn_unsealed_defs : nat;     (* definitions whose name lacks the sealed bit *)
+ cn_ext_names_ok : bool;     (* those names, in load order, are exactly ext_names *)
+ cn_ext_sites : nat;         (* call-sealed/tail-call-sealed operands, in the decoded code of the
+                                definitions' function cells (nested code included), naming one *)
+ cn_ext_callers : nat }.     (* definitions with at least one such site *)
 
 Definition census_of (c : ctx) (xs : list val) : census :=
  let syms := sym_list c in
@@ -595,6 +693,7 @@ Definition census_of (c : ctx) (xs : list val) : census :=
                          if N.eqb (tag v) 5 then [c_hb c + woff v] else []) syms in
  let mem_l a l := existsb (N.eqb a) l in
  let r := reached c xs in
+ let un := unsealed_defs c xs in
  let codes := filter (fun '(_, t) => N.eqb t 8) (c_objs c) in
  let unr := filter (fun '(o, _) => negb (in_tree (c_hb c + o) r)) codes in
  let clos := map (fun '(o, _) => c_hb c + o) (filter (fun '(_, t) => N.eqb t 6) (c_objs c)) in
@@ -607,7 +706,10 @@ Definition census_of (c : ctx) (xs : list val) : census :=
    (List.length clos) (List.length fncl) (List.length valcl) (List.length other)
    (List.length (filter (fun a => match deref (c_mem c) (c_hb c) (c_starts c) (get (c_mem c) (a + 2)) 1 8 with
                                   | Some b => in_tree b r | None => false end) other))
-   (List.length (filter (fun a => negb (N.eqb (hsize (get (c_mem c) a)) 0)) other)).
+   (List.length (filter (fun a => negb (N.eqb (hsize (get (c_mem c) a)) 0)) other))
+   (List.length un) (ext_names_ok un)
+   (fold_left Nat.add (map (ext_sites c un) (defnames xs)) 0%nat)
+   (List.length (filter (fun g => negb (Nat.eqb (ext_sites c un g) 0)) (defnames xs))).
 
 (* The facts share's HT and HP are about, for one name: (sealed bit, what its function cell holds,
    and whether its function cell's code is Match against its stage 0 definition, if it has one). *)
@@ -646,3 +748,34 @@ Definition mut_caught (om : option mem) (n : nat) (xs : list val) (g : positive)
      | Some x => match check_def c x with Match _ => false | _ => true end
      | None => false end end end.
 End JitImage.
+
+(* ---------- OB-JIT-IMAGE-SEALING: the exclusion, a named premise (r22-image-verdict) ----------
+   Stage 0 lowered all 24 files with every one of the 955 names sealed, so 115 call-sealed and
+   tail-call-sealed sites (in 45 definitions) target the 65 names of the 6 extension files. Stage 1
+   seals only the first 18 files, so in the image those 65 names are open: the binary accepts a
+   defun of one of them, after which its sealed sites still call the closure bound at load while
+   open calls (and KLambda's late binding) call the new definition (spikes/image-decode/redef.shen,
+   a test in the pinned binary). "FunRel survives redefinition" is therefore false for the binary,
+   and the only feasible route is to exclude the programs that do it.
+
+   sealing_exclusion_statement sealed c0 is that exclusion, stated over the source run, not the
+   program text: no configuration the source semantics (jit_rules sealed, JitLowerStep.Sstar)
+   reaches from c0 is about to evaluate a defun of one of the 65 names. A defun built at run time
+   (eval-kl, which the source semantics turns into Eval [] e) is covered, because it too reaches
+   such a configuration. It is a premise: nothing here proves it of any program, and the image
+   cannot supply it (the binary does not refuse the defun). Redefinition through shen-jit.install
+   is not covered here: jit_rules gives port primitives no meaning (OB-JIT-PORT-PRIMS, decision-gated),
+   so that route is outside the model already.
+
+   ext_names is JitImage.ext_names_s, whose agreement with the image (exactly the definitions of the
+   24 files whose names lack the sealed bit, in load order) is the census field cn_ext_names_ok,
+   pinned by tests/shen-jit/image-facts.txt in the lane. Census, not proof. *)
+Module JitImageSealing.
+Import KLSyntax.KLSyntax KLSemantics.KLSemantics.
+
+Definition ext_names : list name := map of_string JitImage.ext_names_s.
+
+Definition sealing_exclusion_statement (sealed : list name) (c0 : config) : Prop :=
+ forall rho f ps b k s,
+  JitLowerStep.JitLowerStep.Sstar sealed c0 (Cfg (Eval rho (EDefun f ps b)) k s) -> ~ In f ext_names.
+End JitImageSealing.

@@ -1,7 +1,8 @@
 # Shen/JIT heap image (OB-JIT-IMAGE)
 
-Status: **code objects lane-checked; the rest scoped into four sub-obligations with measured feasibility verdicts. Not
-discharged.** Since r21-image-lane, `scripts/check-shen-jit.sh` decodes the pinned binary's image with
+Status: **code objects lane-checked; the rest scoped into four sub-obligations with measured feasibility verdicts;
+the sealing exclusion stated in Rocq as a named premise. Not discharged.** Since r21-image-lane,
+`scripts/check-shen-jit.sh` decodes the pinned binary's image with
 [`rocq/JitImage.v`](../rocq/JitImage.v) and Rocq proves `image_code_ok` by `vm_compute`: every one of the 955 stage 0
 definitions of the 24 files loads (`JitBytecode.build_code`) to exactly the code object its function cell holds in the
 image. `code_check_sound` (in `Audit_Jit`, closed) states what that gives. `image_code_ok` and `image_mutants_caught`
@@ -9,7 +10,11 @@ are each "Closed under the global context" (since `0595b57`: the reader writes t
 ordinary inductive `byte` and Rocq joins them, so no primitive integer is involved), and the lane fails unless both
 print exactly that. The lane also proves two one-word image
 mutants caught, and compares the census Rocq computes on the image with `tests/shen-jit/image-facts.txt`. The proof
-mutant `ShenJitImageNoCodeEq` is rejected.
+mutant `ShenJitImageNoCodeEq` is rejected. Since r22-image-verdict, `OB-JIT-IMAGE-SEALING`'s exclusion is the Rocq
+definition `JitImage.JitImageSealing.sealing_exclusion_statement` (in `Audit_Jit`, closed as a definition; a premise,
+not proved of any program), and the census Rocq computes on the image also counts the sealing gap (65 unsealed
+definitions, their names, 115 sealed sites in 45 definitions), so the 18-versus-24 numbers are lane-pinned Rocq census,
+not only Python.
 
 This document relates the image to stage 0's output. It says nothing about which definitions are validated:
 counts of the form "N of 955 kernel definitions validated" come from the full-pipeline judge, not from here. The
@@ -20,13 +25,13 @@ image result is "955 of 955 stage 0 code objects equal their image function cell
 `OB-JIT-IMAGE` is partial and depends on the five below; it is discharged only when all five are. Each verdict
 names its measurement; the commands and log hashes are under Evidence.
 
-| Sub-obligation | Ledger | Precise statement | Verdict | Measured by |
+| Sub-obligation | Ledger | Precise statement | Verdict | Measured by (command, log sha256; runs [L], [M], [X] under Evidence (r22-image-verdict)) |
 |---|---|---|---|---|
-| `OB-JIT-IMAGE-CODE` | partial (lane evidence; depends on `-READER`) | For each of the 955 `(defun F Code)` of the 24 `.sbc` files, F's function cell holds a capture-free closure whose code object decodes to `build_code prim_tree 64 Code` | **Done in the lane** (`image_code_ok`, closed under the global context, instance-validation via `code_check_sound`). Stays partial only because it depends on `-READER`, which is open, and the ledger forbids discharging over an open dependency (`tests/ledger.shen`, `discharged-over-open-dependency`) | lane step `image:`; Img.log |
-| `OB-JIT-IMAGE-INIT` | open | The 7 code objects not reachable from the 955, the 357 closures outside function cells, the 55 bound value cells and the data they reach denote the store initialisation reaches | **Code part feasible, data part infeasible now** (below) | Rocq census in the lane (`image_facts`) and `census.py` |
-| `OB-JIT-IMAGE-SEALING` | open | The top theorem excludes redefinition of the 65 extension names, which the image leaves unsealed behind 115 sealed call sites | **Feasible only as a premise.** The alternative, FunRel surviving redefinition, is false on the binary (test below) | `redef.shen` in the binary; Rocq census `sealed_by_file`; `census.py` |
-| `OB-JIT-IMAGE-READER` | open | The reader's bytes are the image's bytes, and `image_load`'s rebasing and raw-field rebuild give the heap JitImage decodes | **Feasible by review plus a Rocq model of `rebase_heap`; not done.** The reader (`--image`) now only copies bytes, each as a `byte` constructor; Rocq joins them into words (`JitImage.words_of_bytes`, closed) | split hashes (`split.out`) |
-| `OB-JIT-IMAGE-FILE` | partial | The run opens the pinned binary as its image: `SHEN_JIT_IMAGE` unset, `argv[0]` resolves to a file whose last image is `fd8485a5...` | **Feasible only as a stated premise** (a process-model fact, not provable from the image) | split hashes (`split.out`) |
+| `OB-JIT-IMAGE-CODE` | partial (lane evidence; depends on `-READER`) | For each of the 955 `(defun F Code)` of the 24 `.sbc` files, F's function cell holds a capture-free closure whose code object decodes to `build_code prim_tree 64 Code` | **Done in the lane** (`image_code_ok`, closed under the global context, instance-validation via `code_check_sound`). Stays partial only because it depends on `-READER`, which is open, and the ledger forbids discharging over an open dependency (`tests/ledger.shen`, `discharged-over-open-dependency`) | [L] lane step `image:`: lane log `80e439169544b626f15d69f048907beacab49cd30271d6aec50455ecf74508fd`, `s0/Img.log` `2de4a6f06d5e65efbb2cd32f1ed681ea7bb03c6a6afc90fc0a10e1b2a39bbe4e` (two "Closed under the global context", then `image_facts`) |
+| `OB-JIT-IMAGE-INIT` | open | The 7 code objects not reachable from the 955, the 357 closures outside function cells, the 55 bound value cells and the data they reach denote the store initialisation reaches | **Code part (`INIT-CODE`, the 7) feasible, not done; data part (`INIT-DATA`) infeasible now** (below) | [L] Rocq census `image_facts` (`cn_codes_unreached` 7, `cn_clo_other` 357, `cn_clo_other_reached` 352, `cn_values_bound` 55), `s0/image-facts.txt` `04fd3ee3775b9c04ebcf5e67c26107f85d304af76e277edfd95f590137431db8` equal to the pin; [M] `census.out` `36f1fd87...6dcc` |
+| `OB-JIT-IMAGE-SEALING` | open (premise stated, not yet a hypothesis of the top theorem) | The top theorem excludes redefinition of the 65 extension names, which the image leaves unsealed behind 115 sealed call sites: `JitImageSealing.sealing_exclusion_statement sealed c0`, no configuration the source run reaches from `c0` evaluates a `defun` of one of `JitImageSealing.ext_names` | **Feasible only as a premise; the premise is now stated** (Rocq definition, closed). The alternative, FunRel surviving redefinition, is false on the binary (test below) | [L] `Audit_Jit.log` `2d61479f7c55b04993647d04e84200deed500458606184067db4cefe0cc6800d` (710 closed, the last two the premise and its name list); Rocq census `sealed_by_file`, `cn_unsealed_defs` 65, `cn_ext_names_ok` true, `cn_ext_sites` 115, `cn_ext_callers` 45 in `s0/image-facts.txt` `04fd3ee3775b9c04ebcf5e67c26107f85d304af76e277edfd95f590137431db8`; [X] census mutant rejected, log `ffff4756...a03`; [M] `sealgap.out` `0e509ac1...77cb`, `redef.out` `46329b98...cb7` |
+| `OB-JIT-IMAGE-READER` | open | The reader's bytes are the image's bytes, and `image_load`'s rebasing and raw-field rebuild give the heap JitImage decodes | **Feasible by review plus a Rocq model of `rebase_heap`; not done.** The reader (`--image`) now only copies bytes, each as a `byte` constructor; Rocq joins them into words (`JitImage.words_of_bytes`, closed) | [M] `split.out` `a2703018...6919` (image part `fd8485a5...` equals `build/shen-jit.img`); [L] the reader's output `s0/Img.v` `323383bbcceb100b8df23342dcb7a861d024173ac4bf3f2c885eabc3ad254fdd` parses (`image_code_ok` needs `image_of` to succeed) |
+| `OB-JIT-IMAGE-FILE` | partial | The run opens the pinned binary as its image: `SHEN_JIT_IMAGE` unset, `argv[0]` resolves to a file whose last image is `fd8485a5...` | **Feasible only as a stated premise** (a process-model fact, not provable from the image); not yet stated in Rocq | [M] `split.out` `a2703018...6919`, `bin.sha` `e0acd513...` |
 
 ### INIT, precisely
 
@@ -82,7 +87,7 @@ Measured by Rocq in the lane (`name_facts`: sealed bit, function cell, `Match`) 
 | Runtime part | bytes 0 to 4657759, sha256 `13afde42c3f42de360c3aa7a8ad62ddafed5f281457fd8a34dbd994b3a3f71c4`, equal to `build/runtime` |
 | Image part | the last 783096 bytes, sha256 `fd8485a556e7461352dc61860253c4013073c7adb0004b4e3cefc52c3f0bc18f`, equal to `build/shen-jit.img` |
 | Stage 0 | `LC_ALL=C sha256sum *.forms *.sbc | sha256sum` = `ec9b387204471bfce36162019601b89493eb29abc4e42e8b8424d0ab903ab736` (the pin) |
-| Rocq | 9.3.0, opam switch `lps`, in `buri-lps`. The rocq/ dependencies are at this branch's base, `p2/int` `2e45d67`. The lane's `Coq` to `Stdlib` rename is applied |
+| Rocq | 9.3.0, opam switch `lps`, in `buri-lps`. r22-image-verdict runs: the tree `aa1a7e5` on `p2/r22-image-verdict`, based on `p2/int` `fe461f4` (r1-image ran on `2e45d67`, r21-image-lane on `f42d6c4`). The lane's `Coq` to `Stdlib` rename is applied |
 
 docs/SHEN-JIT.md says the image is "about 765 KB of its 1 MB on arm64". At 0.6 it is 783096 of the 5440856 bytes of
 a riscv64 binary. The 4.6 MB runtime carries debug information.
@@ -211,8 +216,15 @@ Measured in the image, from `SYM_CELL` bit 58 (`objects.c`: `SEALED_BIT = 58`):
 - the 65 definitions of the 6 extension files are not sealed;
 - no other symbol is sealed.
 
-Measured in stage 0, with `sealgap.py`, a census: 115 `call-sealed`/`tail-call-sealed` sites in 45 definitions target
-those 65 names.
+Measured twice, both census, not proof:
+- by Rocq on the image, in the lane since r22-image-verdict (`image_facts`, pinned in `tests/shen-jit/image-facts.txt`):
+  `cn_unsealed_defs` 65 definitions lack the sealed bit; `cn_ext_names_ok` true, so their names, in load order, are
+  exactly `JitImage.ext_names_s`, the list the premise below names; `cn_ext_sites` 115 `ICallSealed`/`ITailSealed`
+  operands in the decoded code of the 955 function cells (nested code included) name one of them; `cn_ext_callers` 45
+  definitions hold at least one. Since `image_code_ok` equates each decoded code with stage 0's, these are stage 0's
+  sites too;
+- by `sealgap.py` on stage 0 (per caller file, below): 115 `call-sealed`/`tail-call-sealed` sites in 45 definitions
+  target those 65 names.
 
 | Caller file | Sites |
 |---|---:|
@@ -282,10 +294,46 @@ does not refuse, so the premise must be stated as an exclusion on programs, neve
   guards. That is where the 11 image-run differences of CENSUS.md come from: features 2, launcher 3, namespaces 3,
   programmable-pattern-matching 3.
 
-`OB-JIT-IMAGE-SEALING`, precisely: the top theorem gets a stated exclusion, "the program never `defun`s or installs
-any of the 65 names of the 6 extension files" (or the 65 join the theorem's sealed set, with the program as the
-excluded party). Verdict: **feasible as a premise, not dischargeable from the image**, because the binary accepts
-the redefinition and its 115 sealed sites then disagree with late binding (test above).
+`OB-JIT-IMAGE-SEALING`, precisely (r22-image-verdict). The exclusion is a Rocq definition at the end of
+[`rocq/JitImage.v`](../rocq/JitImage.v):
+
+```coq
+Module JitImageSealing.
+Definition ext_names : list name := map of_string JitImage.ext_names_s.   (* the 65 *)
+Definition sealing_exclusion_statement (sealed : list name) (c0 : config) : Prop :=
+ forall rho f ps b k s,
+  JitLowerStep.JitLowerStep.Sstar sealed c0 (Cfg (Eval rho (EDefun f ps b)) k s) -> ~ In f ext_names.
+End JitImageSealing.
+```
+
+It says no configuration the source run (`jit_rules sealed`, the `Sstar` of the top theorems) reaches from `c0` is about
+to evaluate a `defun` of one of the 65 names. It is stated over the run, not the program text, so a `defun` built at
+run time and passed to `eval-kl` (which the source semantics turns into `Eval [] e`) is excluded too. Both definitions
+are in `Audit_Jit` and print "Closed under the global context" (they are definitions, so that says only that they
+mention no axiom). Nothing proves the premise of any program, and the image cannot supply it: the binary accepts the
+redefinition. `call_preservation_src_statement` is unchanged and does not yet take this premise; adding it as a
+hypothesis of the top theorem is what remains for `OB-JIT-IMAGE-SEALING` (ledger: open). Redefinition through
+`shen-jit.install` is not covered by this statement: `jit_rules` gives port primitives no meaning (`OB-JIT-PORT-PRIMS`,
+decision-gated), so a run calling it is outside the model already.
+
+The name list is transcribed (from the 6 extension `.forms`, by a Python one-liner: orchestration). Rocq checks the
+transcription on every lane run: `cn_ext_names_ok` is true only when the list equals, in order, the names of the 955
+definitions that lack the image's sealed bit, and the lane fails with `IMAGE_FACTS_CHANGED` otherwise. Run [X] below drops
+one name and the census gives `cn_ext_names_ok := false`, so the lane's diff rejects it.
+
+Verdict: **feasible as a premise, now stated; not dischargeable from the image**, because the binary accepts the
+redefinition and its 115 sealed sites then disagree with late binding (test above).
+
+### 18 versus 24, reconciled
+
+| Count | Value | Kind and source |
+|---|---:|---|
+| files stage 0 lowers, all names sealed (`stage0.shen` seals every defun name before lowering) | 24 files, 955 names | `image_files` (Rocq, lane: the 24 files are stage 1's, in order); stage 0 census |
+| files stage 1 seals (`main.c`, `SEALED_FILES = 18`) | 18 files, 890 names | Rocq census `sealed_by_file` and `cn_sealed` 890 (lane) |
+| the gap | 6 files, 65 names, all unsealed in the image | Rocq census `sealed_by_file` (6 rows `n, 0`) and `cn_unsealed_defs` 65 (lane) |
+| sealed sites into the gap | 115 sites in 45 definitions (2 of them in `shen.x.launcher.main`, file `shen-jit`) | Rocq census `cn_ext_sites`, `cn_ext_callers` (lane); `sealgap.py` (per file) |
+| code of the 65 | equal to stage 0's | `image_code_ok` (Rocq proof, lane) covers all 955, the 65 included |
+| what the gap changes | redefinition of the 65 only | binary test `redef.shen`; excluded by `sealing_exclusion_statement` (premise) |
 
 ## Reading the image (`OB-JIT-IMAGE-FILE`, `OB-JIT-IMAGE-READER`)
 
@@ -356,6 +404,34 @@ The proof mutant `ShenJitImageNoCodeEq` (`tests/mutate-shen-jit.py`) makes `chec
 comparing code, and `check_def_sound` then fails.
 
 Under Coq 8.18 (`make prove`), `JitImage.v` is UNKNOWN: no 8.18 toolchain was available here.
+
+## Evidence (r22-image-verdict)
+
+All runs were in `buri-lps` on 11 November 2026, under Rocq 9.3 (opam switch `lps`), on commit `aa1a7e5` of
+`p2/r22-image-verdict` (based on `p2/int` `fe461f4`), copied with `git archive` to `/work/p2-r22-image-verdict`. The
+commit after it changes only docs and the ledger. Kinds are kept apart: Rocq proofs (lane), Rocq census
+(`image_facts`), Python census, and a binary test. The binary is `e0acd513...` and stage 0 is `ec9b3872...`, both as
+pinned (`bin.sha`, `stage0.sha` of [M]).
+
+| Run | Command | Exit | Log sha256 |
+|---|---|---|---|
+| [L] Lane with image step | `cd /work/p2-r22-image-verdict && SKIP_DIFF=1 JIT_OUT=/tmp/p2-r22-image-verdict-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh`, 21:19:36Z to 22:06:39Z | LANE_RC=0 | `/tmp/p2-r22-image-verdict-lane.log` `80e439169544b626f15d69f048907beacab49cd30271d6aec50455ecf74508fd` |
+| [L] its image step's Rocq log (`image_code_ok`, `image_mutants_caught`: each "Closed under the global context"; then `image_facts`) | inside [L] | 0 | `s0/Img.log` `2de4a6f06d5e65efbb2cd32f1ed681ea7bb03c6a6afc90fc0a10e1b2a39bbe4e`; `s0/Img.v` `323383bbcceb100b8df23342dcb7a861d024173ac4bf3f2c885eabc3ad254fdd` (the reader's output, byte-identical to r21-image-lane's); `s0/image-facts.txt` `04fd3ee3775b9c04ebcf5e67c26107f85d304af76e277edfd95f590137431db8`, byte-equal to `tests/shen-jit/image-facts.txt` |
+| [L] its audit | inside [L] | 0 | `Audit_Jit.log` `2d61479f7c55b04993647d04e84200deed500458606184067db4cefe0cc6800d`: 710 lines "Closed under the global context" and nothing else; the last two are `JitImageSealing.ext_names` and `JitImageSealing.sealing_exclusion_statement` |
+| [P] Pre-measurement of the new census (to write the pin) | `rocq compile` of this branch's `JitImage.v` and of `s0/Img.v` in `/tmp/p2-r22-image-verdict-pre`, a copy of the r22-int-land lane build of `fe461f4`, under rocq-slot | 0, 0 | `Img.log` `2de4a6f06d5e65efbb2cd32f1ed681ea7bb03c6a6afc90fc0a10e1b2a39bbe4e`, the same bytes as [L]'s |
+| [X] Census mutant: `ext_names_s` without its last name | `bash /tmp/p2-r22-image-verdict-mut.sh` (recompiles the mutated `JitImage.v` and `Img.v` in the [P] copy, extracts `image_facts` as the lane does, diffs with the pin) | diff 1: `cn_ext_names_ok := false`, "IMAGE_FACTS_CHANGED (mutant rejected by the lane's diff)" | `/tmp/p2-r22-image-verdict-mut.log` `ffff475658b3898a44358af684e822c3323faeeca8172d72e2eb5d2bdbd8ea03` |
+| [M] Measurements (Python census, binary split, redefinition test) | `/lps/bin/rocq-slot bash spikes/image-decode/meas.sh /work/p2-r22-image-verdict /tmp/p2-r22-image-verdict-meas` | 0 (each step 0) | `/tmp/p2-r22-image-verdict-meas.log` `01ac4f10e259857d7568c4e0eac73667eab8716db95114bb51b8f4428af2a2d6` |
+
+[M]'s outputs are byte-identical to r21-image-lane's: `split.out` `a2703018...6919`, `census.out` `36f1fd87...6dcc`,
+`sealgap.out` `0e509ac1...77cb`, `fncells.out` `ae8e9264...3364`, `redef.shen` `acc9512f...686d`, `redef.out`
+`46329b98...cb7`, `redef.err` empty. The facts were therefore re-measured at the pin, and nothing moved: the
+census Rocq computes and `sealgap.py` agree on 65 names, 115 sites and 45 callers.
+
+**Ledger:** `./scripts/check-shen tests/ledger.shen` on the host passed: BURI_SUITE_OK ledger 62.
+
+**Not run, UNKNOWN for this branch:** `make prove` (Coq 8.18; no 8.18 toolchain in `buri-lps`), the differential
+(SKIP_DIFF), `gate_tests.sh`, the full mutation suite and `make report`. No proof mutant was added: the two new Rocq
+items are definitions, and the census link's mutant is [X].
 
 ## Evidence (r21-image-lane)
 
