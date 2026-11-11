@@ -1261,7 +1261,7 @@ Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/Jit
 `rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
 and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
 will be proved through (`fv`, `fund_below`, `fund_gen_statement`, `PrimOutRel`, `prim_compat_statement`).
-Twenty-seven are in `rocq/JitKRefCompatCtl.v` (branch `p2/kref-ctl`, merged onto `p2/int` as `p2/r1-kref-ctl-merge`): the
+Twenty-seven are in `rocq/JitKRefCompatCtl.v` (branch `p2/kref-ctl`, rebased onto `p2/int` in branch `p2/r1-kref-ctl-merge`): the
 JitKRef statements `compat_lit`, `compat_var`, `compat_let`, `compat_if`, `compat_and`, `compat_or`, `compat_cond`, `compat_type` and
 `compat_defun`, closed, with their ERel-level lemmas. Trap: `compat_trap_lt` takes `fund_below k` and `prim_compat_statement`
 (a handler may be a partial primitive), and `compat_trap_of_fund` derives `compat_trap_statement` from `prim_compat_statement`
