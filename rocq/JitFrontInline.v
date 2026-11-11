@@ -35,7 +35,7 @@
    id_key free, i.e. add `negb (bound (K.fv x) KLPort.id_key)` to inl_eq's SFrozen case (or to
    frozen_free) and to bind_site. inl_site_g and bind_site_g below are inl_site and bind_site
    with that guard on the arguments, as decidable checks; the soundness of the guarded checkers
-   is NOT proved here (ledger OB-JIT-FRONT-INLINE).
+   is NOT proved here (open under OB-JIT-LOWER-FRONT, spec/obligations.json).
 
    No axiom, no Admitted. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.

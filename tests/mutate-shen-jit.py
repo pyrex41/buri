@@ -155,6 +155,8 @@ ShenJitFrontInlGuard: inl_site_g drops its id_key guard on frozen arguments, so 
   inline counterexample. inl_site_g_cx must fail.
 ShenJitFrontBindGuard: bind_site_g drops its id_key guard, so it accepts the bound-now
   counterexample. bind_site_g_cx must fail.
+ShenJitFrontChainNoThrow: chain_ok stops checking that the configurations before the last are not
+  raises, so a chain could pass through the raise no_reach_iter excludes. chain_at must fail.
 """
 import re
 from pathlib import Path
@@ -410,4 +412,7 @@ mutate('ShenJitFrontInlGuard', 'rocq/JitFrontInline.v',
 mutate('ShenJitFrontBindGuard', 'rocq/JitFrontInline.v',
        ' forallb (fun n => negb (reads_id n)) nargs && F.bind_site fold D nargs e.',
        ' F.bind_site fold D nargs e.')
+mutate('ShenJitFrontChainNoThrow', 'rocq/JitFrontInline.v',
+       ' forallb (fun i => is_tau (next_r R P (iter i c0)) && no_trap (kont (iter i c0)) && not_throw (iter i c0)) (seq 0 N)',
+       ' forallb (fun i => is_tau (next_r R P (iter i c0)) && no_trap (kont (iter i c0))) (seq 0 N)')
 print(' '.join(names))
