@@ -260,6 +260,79 @@ Theorem call_preservation'_of_sim' : sim'_statement E pt sealed -> raise_resolve
 Proof. intros Sim Rr. exact (call_preservation'_of_preservation' (preservation'_of_sim' Sim Rr)). Qed.
 End Gen.
 
+(* ---------- the slot-1 gap (closed witnesses) ----------
+   EvalCtx (and TestCtx, OpCtx) ask (cv = [] \/ ~ w (fp + 1)) of the w their continuation is at:
+   a code that captures never writes its closure's slot. JitEmitKont's frames whose body runs at
+   an inner w1 (KD'_let, KD'_lett, KD'_trap, KD'_do1, KD'_do1t, KD'_hbind, TK'_if, TK'_cond,
+   TK'_and, TK'_or) relate w1 to the outer w by Sub w w1 and Above fp top w1 only, so nothing keeps
+   fp + 1 out of w1; a body whose destination is slot 1 (KC'_slot) even needs it in. Then MS'
+   relates the source at Ret to a machine whose next source state (the frame's body) no EvalCtx at
+   that code and cv relates (ms'_slot1_frame, evalctx_slot1_void). A generic proof of sim'_statement
+   from the sim_X_statement must re-relate that state; at another cv it would need Comp at that cv,
+   which the family hooks need not give. So the Ret cases of sim'_of_sims are not provable
+   generically on these frames. What a frame would need is (cv = [] \/ ~ w1 (fp + 1)), or a
+   destination other than slot 1 with 2 <= top (a change to JitEmitKont, emit-spec's to make).
+   Does NOT say: that sim'_statement is false. With the hooks empty no code reads a capture, and a
+   concrete state can be re-related at cv = []; whether some family rule makes it false is UNKNOWN. *)
+Lemma lookup_cons_eq0 : forall {A} x (a : A) (rho : list (name * A)), lookup x ((x, a) :: rho) = Some a.
+Proof. intros A x a rho. cbn. rewrite text_eqb_refl. reflexivity. Qed.
+
+Lemma evalctx_slot1_void : forall mu cv caps g top r2 rho k s w m, cv <> [] ->
+ ~ EvalCtx mu cv caps g top (DSlot 1) r2 rho k s w m.
+Proof.
+ intros mu cv caps g top r2 rho k s w m Ncv (_ & _ & _ & _ & _ & Wf & Kc).
+ destruct Wf as [Ecv|Nw]; [exact (Ncv Ecv)|]. inversion Kc; subst. contradiction.
+Qed.
+
+Definition sl_z : name := JitEmitInv.cx_z.
+Definition sl_x : name := JitEmitInv.cx_x.
+Definition sl_r2 : list B.instr := [B.IReturn (B.OSlot 1)].
+Definition sl_r : list B.instr := B.IMove 1 3 :: sl_r2.
+Definition sl_st : B.tree B.val :=
+ B.tset (B.skey 1) (B.VClo 1) (B.tset (B.skey 2) (B.VFix 5) (B.tset (B.skey 3) (B.VFix 0) B.Leaf)).
+Definition sl_m : B.machine :=
+ B.Machine sl_st 0 JitEmitInv.cx_do sl_r [] [] B.VCleared JitEmitInv.cx_heap 2 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.
+Definition sl_rho : lenv := [(sl_z, VNum (NInt 0))].
+Definition sl_k : list frame := [KLet sl_x (EVar sl_z) sl_rho].
+Definition sl_c : config := Cfg (Ret (VNum (NInt 5))) sl_k JitEmitInv.cx_s.
+
+(* MS' relates the source at Ret with a let frame whose body (Z, in slot 3) goes to slot 1, in a
+   code that captures Z (cv = [Z], its closure in slot 1), to the machine at that body. *)
+Lemma ms'_slot1_frame : MS' [] sl_c sl_m.
+Proof.
+ unfold sl_c, sl_k.
+ eapply MS'_ret with (cv := [sl_z]) (caps := []) (o := B.OSlot 2) (v' := B.VFix 5) (w := fun a => (4 <= a)%N).
+ - split.
+   + constructor.
+     * exact pbij_nil.
+     * intros l p I; destruct I.
+     * split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
+     * apply funrel_embed. apply JitEmitInv.cx_funrel; reflexivity.
+   + unfold HK. cbn. constructor.
+ - vm_compute. reflexivity.
+ - constructor.
+ - right. exists 1%positive. split; [vm_compute; reflexivity|vm_compute; reflexivity].
+ - right. cbn. lia.
+ - eapply KD'_let with (g := [(sl_z, 3)]) (top := 4) (dst := DSlot 1) (r2 := sl_r2) (w1 := fun a => (1 <= a)%N).
+   + split.
+     * intros x s0 L. assert (L' : (if text_eqb x sl_z then Some 3%N else None) = Some s0) by exact L.
+       destruct (text_eqb x sl_z) eqn:T; [|discriminate]. inversion L'; subst.
+       apply text_eqb_eq in T; subst x. exists (VNum (NInt 0)), (B.VFix 0).
+       split; [unfold sl_rho; apply lookup_cons_eq0|split; [vm_compute; reflexivity|constructor]].
+     * intros i x Ni Lx. destruct i as [|[|i]]; cbn in Ni; try discriminate. inversion Ni; subst.
+       assert (Lx' : (if text_eqb sl_z sl_z then Some 3%N else None) = None) by exact Lx.
+       rewrite text_eqb_refl in Lx'. discriminate.
+   + intros x s0 L. assert (L' : (if text_eqb x sl_z then Some 3%N else None) = Some s0) by exact L.
+     destruct (text_eqb x sl_z); [inversion L'; subst; cbn; lia|discriminate].
+   + intros x s0 L. assert (L' : (if text_eqb x sl_z then Some 3%N else None) = Some s0) by exact L.
+     destruct (text_eqb x sl_z); [inversion L'; subst; lia|discriminate].
+   + lia.
+   + eapply C_move; [vm_compute; reflexivity|lia].
+   + intros a A; cbn in A |- *; lia.
+   + intros a A; lia.
+   + apply KC'_slot; [cbn; lia|]. apply KD'_ret; [intros a A; cbn in *; lia|constructor].
+Qed.
+
 (* ---------- the front end composed ---------- *)
 (* The one fact about closure bodies the composition needs beyond JitEmitInv's statements: a body
    CloOK accepts reads no variable outside its parameters and its capture names. Then a closure
