@@ -1377,15 +1377,22 @@ callee's erased stage 0 normal form, because Com's FunRel makes a store body the
 Rocq from decoded stage 0 data is well formed), and `D_cons_prim_of_Com`. Stated, not proved: `aeq_sound_statement`,
 `inline_site_sound_statement` (the inline rule's fact: alpha-equivalence, integer substitution, thaw-with, depth cut)
 and `bind_site_sound_statement`. Proved by r1-d00-merge: `Comp_sfx`, `ops_safe_lit`, `prim_gate_ok`, `cblk_of_Comp` (a JitLowerRel.Comp derivation has no blocker: no special form, primitive outside `pmap`, `=` without a literal operand, or named call missing from the code), `cblk_CompFn`, `cblk_reject` and `D_why_spec`, so why `D_compiled'` fails is Rocq-derived: `thaw` needs apply (emit family App); `shen-jit.deref=`, `shen-jit.unify=`, `shen-jit.unify=!`, `shen.bind!`, `shen.bindv` and `shen.unwind` call port primitives with no approved source meaning (`OB-JIT-PORT-PRIMS`; identity, `OB-JIT-IDENTITY-MODEL`, for the port forms), a decision-gated named residual, besides Store/DoFold/App/Eq features. Test, not proof: `bind_site` accepts all 37 stage 0 bound-now sites (6 definitions) against their `D_of` store with X, Y and B from the source call; `inl_site` accepts all 5430 real inline sites (5360 alpha, 24 integer, 22 thaw-with, 18 depth cut, 6 only with fold), matching the Python census; `shen.bindv` and `shen.unwind` enter D as inline callees. Mutants `ShenJitFrontAlphaCapture`, `ShenJitFrontInlFrozenFree`, `ShenJitFrontDCompiled`, `ShenJitFrontPortUnify`, `ShenJitFrontInlHidden`, `ShenJitFrontBindLetdo` and, from r1-d00-merge, `ShenJitFrontCblkCondTrue`, `ShenJitFrontCblkEqAll`, `ShenJitFrontWhyOther`, `ShenJitFrontSiteNargsNoInfer`, `ShenJitFrontPairReadBack`, `ShenJitFrontIsitesNoLets` and `ShenJitFrontBindFresh` (bind_site without its `fresh_seq` guard; Example `site_bind_fresh` passes the outer `a1` as Y, which the expansion's own `a1` would capture) are rejected (each compiled in Rocq 9.3 against the lane build). Mutation pin 214 on the branch; merged onto `p2/int` after KTerm (`cd991df`), the union has 475 audited statements (463 + JitFrontD's 12) and mutation pin 216 (203 + the 13 Front mutants).
-Seven are in `rocq/JitFrontCopyFold.v` (r1-f-copy-fold-apply, branch `p2/r1-f-copy-fold-apply` off `p2/int` 7cb676e): the
-checker `cf_chk` (congruence plus fold-arith) and `cf_chk_sound`, proved under Section hypotheses naming the `compat_*`
-statements (`cf_chk_sound_hyp`) and then instantiated, `D_wf` its only premise; `cfold_run`, `ERel_src_ret` and
-`fold_arith_kref` (+ and - of integer literals against the folded literal, with `+`/`-` bound to the primitive in D and
-every intermediate in range); `fold_cons_erase` (fold-cons is the identity at KLambda); and `uncurry_not_kref`, a
-counterexample: dynamic-application uncurrying is not in KRef (a partial-application head returns in the source and
-raises XArity in the curried witness), recorded as decision item `OB-JIT-FRONT-UNCURRY`. Freeze and lambda copying are
-not proved. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds` and
-`ShenJitFrontCfVarScope`. On the branch: 482 audited statements, mutation pin 220. No definition count changes (source
+Twenty-four are in `rocq/JitFrontCopyFold.v` (r1-f-copy-fold-apply, branch `p2/r1-f-copy-fold-apply` off `p2/int`
+7cb676e): the checker `cf_chk` (congruence plus fold-arith) and `cf_chk_sound`, proved under Section hypotheses naming the
+`compat_*` statements (`cf_chk_sound_hyp`) and then instantiated, `D_wf` its only premise; `cfold_run`, `ERel_src_ret`
+and `fold_arith_kref` (+ and - of integer literals against the folded literal, with `+`/`-` bound to the primitive in D
+and every intermediate in range); `fold_arith_needs_store`, a counterexample showing that store fact is necessary (a
+store SRel allows binds `+` to a user function); `fold_cons_erase` (fold-cons is the identity at KLambda);
+`uncurry_not_kref`, a counterexample: dynamic-application uncurrying is not in KRef (a partial-application head returns
+in the source and raises XArity in the curried witness), recorded as decision item `OB-JIT-FRONT-UNCURRY`; and freeze
+and lambda copying through the known-closure relation `KRefF` (`KRefF_nil`, `KRefF_let`, `KRefF_lam`, `KRefF_letfrz`,
+`KRefF_letlam`, `ERel_thaw_site`, `KRefF_thaw`, `KRefF_thaw_call`, `apply_chain`, `lam_krel`, `ERel_lam_site`,
+`KRefF_lamsite`, `cc_same_sound`, `cc_sound_hyp`, `cc_sound`, `copy_chk_sound`: the copy checker `cc` sound with `D_wf`
+its only premise when given no extra site rule). Not proved: the bind site under a known frozen closure (every
+let-frozen copy has one), frozen-late hoist, and inline-frozen's site rule (F-inline's); `cc` has not been run on stage 0
+data. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds`, `ShenJitFrontCfVarScope`,
+`ShenJitFrontCopyLetScope`, `ShenJitFrontCopyNoDrop`, `ShenJitFrontLamArgScope`, `ShenJitFrontKcInvIdKey` and
+`ShenJitFrontThawNoD`. On the branch: 499 audited statements, mutation pin 225. No definition count changes (source
 judge 148 of 955); the full-pipeline validated count is UNKNOWN (no full-pipeline judge exists).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 

@@ -151,6 +151,17 @@ ShenJitFrontFoldNoPrim: cfold folds + without asking that D binds + to the primi
 ShenJitFrontFoldMinusAdds: cfold's - case computes x + y. cfold_run must fail.
 ShenJitFrontCfVarScope: cf_same accepts a variable without asking that it is in scope, where the two
   environments may bind it to unrelated values. cf_same_sound must fail.
+ShenJitFrontCopyLetScope: the let-frozen intro rule checks the body with X still in scope, so a target
+  X (an outer binding) would be compared with the source's closure. cc_intro_sound must fail.
+ShenJitFrontCopyNoDrop: cc_same keeps every known-closure entry under a lambda binder, though the binder
+  may rebind the closure's name or a free name of its body. cc_same_sound must fail.
+ShenJitFrontLamArgScope: the known-lambda site checks the arguments in the full scope, though the target
+  evaluates the later ones under the earlier parameters' lets. cc_lam_sound must fail.
+ShenJitFrontKcInvIdKey: the frozen entry's invariant forgets that its free names exclude the closure-
+  identity key, which tagged environments bind on one side only. Rocq rejects it at kc_inv_mono, the
+  first proof that destructures the invariant (Inv_tag also needs the dropped conjunct).
+ShenJitFrontThawNoD: the (thaw X) site is accepted without the kernel's thaw body in D, so the store's
+  thaw may be any function. cc_thaw_sound must fail.
 """
 import re
 from pathlib import Path
@@ -406,4 +417,19 @@ mutate('ShenJitFrontFoldMinusAdds', cf,
 mutate('ShenJitFrontCfVarScope', cf,
        " | EVar x, EVar y => text_eqb x y && bound g x\n",
        " | EVar x, EVar y => text_eqb x y\n")
+mutate('ShenJitFrontCopyLetScope', cf,
+       "     rec (KF x b0 (K.fv b0) :: drop x F) (rem x g) body0 e",
+       "     rec (KF x b0 (K.fv b0) :: drop x F) g body0 e")
+mutate('ShenJitFrontCopyNoDrop', cf,
+       " | ELam x b0, ELam y b => text_eqb x y && rec (drop x F) (x :: g) b0 b",
+       " | ELam x b0, ELam y b => text_eqb x y && rec F (x :: g) b0 b")
+mutate('ShenJitFrontLamArgScope', cf,
+       "forall2b (rec (dropl (p :: ps) F) (reml (p :: ps) g)) (a1 :: as0) as1",
+       "forall2b (rec (dropl (p :: ps) F) g) (a1 :: as0) as1")
+mutate('ShenJitFrontKcInvIdKey', cf,
+       " | KF x e0 gl => x <> id_key /\\ ~ In id_key gl /\\",
+       " | KF x e0 gl => x <> id_key /\\")
+mutate('ShenJitFrontThawNoD', cf,
+       " | ECall f [EVar x] => text_eqb f FD.thaw_name && d_has D FD.thaw_name is_thaw_body &&",
+       " | ECall f [EVar x] => text_eqb f FD.thaw_name &&")
 print(' '.join(names))

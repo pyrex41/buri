@@ -331,7 +331,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerEquiv.v` | Old qualified names (`JitLowerEquiv.JitLowerEquiv.*`) as abbreviations of the moved constants; no constants of its own |
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 | `rocq/JitFrontD.v` | D00: the front rules' store D (a lowered store), built from decoded stage 0 data; `D_compiled'`; the allowed store facts; the inline relation `inl_site` and `aeq`, with their soundness statements (unproved) |
-| `rocq/JitFrontCopyFold.v` | r1-f-copy-fold-apply: the checker `cf_chk` (congruence plus fold-arith), `cf_chk_sound` from the compat lemmas; fold-cons as the identity at KLambda (`fold_cons_erase`); `uncurry_not_kref`, the counterexample to dynamic-application uncurrying |
+| `rocq/JitFrontCopyFold.v` | r1-f-copy-fold-apply: the checker `cf_chk` (congruence plus fold-arith), `cf_chk_sound` from the compat lemmas; fold-cons as the identity at KLambda (`fold_cons_erase`); `uncurry_not_kref`, the counterexample to dynamic-application uncurrying; `fold_arith_needs_store`; the known-closure relation `KRefF` and the copy checker `cc` (freeze and lambda copying), `cc_sound`, `copy_chk_sound` |
 
 **Constant folding, uncurrying and copying** (`rocq/JitFrontCopyFold.v`, r1-f-copy-fold-apply, 11 November 2026).
 `cf_chk D fuel g e0 e` accepts equal literals, a variable in scope, the same head constructor with its parts accepted,
@@ -340,13 +340,35 @@ primitive and every intermediate is in jit_rules' fixnum range. `cf_chk_sound_hy
 hypotheses naming the `compat_*` statements; `cf_chk_sound` instantiates them, with `D_wf` the only premise. The fold
 case is source anti-reduction to a returned value (`cfold_run`, `ERel_src_ret`). fold-cons needs no rule: the erasure of
 a folded pair is the cons chain (`fold_cons_erase`), so the witness equals the source at KLambda. fold-arith accepts
-nothing on a D built by `D_of` (D00 interface item 2: `+` and `-` are not sealed). Dynamic-application uncurrying is not
-a KRef refinement: `uncurry_not_kref` (no premise) binds F to a partial application of a 2-ary g, where `(F 1 2)`
-returns and `((F 1) 2)` raises XArity under jit_rules' arity errors; `cf_chk` rejects the curried witness, and the way
-forward is a decision (`OB-JIT-FRONT-UNCURRY`). Freeze copying (let-frozen copy, frozen-late hoist, inline-frozen) and
-lambda copying (let-lambda) are not proved: the use-site step needs a source-only fact that a name is bound to a known
-closure, which KRef's environment relation does not carry and an intermediate source term cannot express. Mutants
-`ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds` and `ShenJitFrontCfVarScope`.
+nothing on a D built by `D_of` (D00 interface item 2: `+` and `-` are not sealed), and the store fact is necessary:
+`fold_arith_needs_store` (no premise) refutes `KRef sealed [] [] (+ 1 2) 3` with a store, allowed by SRel, whose `+` is
+a user function. Dynamic-application uncurrying is not a KRef refinement: `uncurry_not_kref` (no premise) binds F to a
+partial application of a 2-ary g, where `(F 1 2)` returns and `((F 1) 2)` raises XArity under jit_rules' arity errors;
+neither checker accepts the curried witness, and the way forward is a decision (`OB-JIT-FRONT-UNCURRY`).
+
+Freeze and lambda copying are proved for the shapes lower.shen's `frozen-in` and `apply-in` produce, through a
+known-closure relation `KRefF F g e0 e`: KRef's statement with one more premise on the environments, that each entry of F
+(a let-bound frozen closure `KF X E0 gl`, or a curried lambda `KL X P Ps I0 gl`) is what the source binds X to, with the
+closure's captured environment related on its free names gl to the target's current one. `KRefF [] g` is `KRef g`
+(`KRefF_nil`). KRef's environment relation cannot carry this (the target has no X), so KRefF's congruence is proved from
+the ERel-level lemmas KRef's compat statements are proved from, under Section hypotheses naming `fund_gen_statement` and
+`prim_compat_statement`, then instantiated. Rules: the let that the target dropped (`KRefF_letfrz`, `KRefF_letlam`: the
+body is checked with X out of scope); a thaw, `(X)` or `(thaw X)` with the kernel's thaw body in D, against the copied
+body (`KRefF_thaw`, `KRefF_thaw_call`); a known lambda applied to all its parameters against nested lets of the
+parameters (`KRefF_lamsite`: the source evaluates every argument, then applies the curried closure, `apply_chain`; the
+target binds each in turn, `lam_krel`; arguments are checked without the parameters in scope); and congruence, where a
+binder drops the entries it would shadow. The checker `cc` (with an optional hook for further site rules) is sound:
+`cc_sound` (D_wf and the hook's soundness), `copy_chk_sound` (no hook, D_wf alone). Examples test it on a let-frozen
+copy, the `(thaw X)` form with and without thaw in D, capture by an intermediate binder (rejected), an escaping use
+(rejected), a two-parameter let-lambda, a partial use (rejected) and an argument naming a parameter (rejected).
+Not covered: let-frozen copy always comes with a `shen.bind!` use (lower.shen's `frozen-binds?`), whose bound-now
+expansion under a known frozen closure needs a bind rule (the hook; not written); inline-frozen is F-inline's site rule,
+which can use `ERel_thaw_site`/`KRefF_thaw`; frozen-late hoist (evaluates a simple test twice, and simple tests may use
+the port primitive `shen-jit.pvar?`, `OB-JIT-PORT-PRIMS`) is not proved. `cc` has not been run over the stage 0 tables, so
+the number of the 955 definitions it accepts is UNKNOWN; the source judge stays at 148 of 955 and the full-pipeline
+validated count is UNKNOWN. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds`,
+`ShenJitFrontCfVarScope`, `ShenJitFrontCopyLetScope`, `ShenJitFrontCopyNoDrop`, `ShenJitFrontLamArgScope`,
+`ShenJitFrontKcInvIdKey` and `ShenJitFrontThawNoD`.
 
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
 definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes
