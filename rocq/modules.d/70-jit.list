@@ -40,4 +40,6 @@ JitKTermFund
 JitKRefTerm
 JitKRefTermThm
 JitFrontD
+JitFrontSugar
+JitFrontProlog
 JitFrontInline
