@@ -81,9 +81,9 @@ ShenJitKRefTrapNoPrim: compat_trap_fb (trap from fund_below k alone) proved from
 ShenJitKRefAppExnNoPrim: AppExn_fb proved from AppExn_of without JitKRefPrim.prim_compat; the same
   premise is left open and the proof must fail.
 ShenJitKRefFundBelowLe: fund_below k quantifies over j <= k instead of j < k, so it claims the index
-  k itself. A stronger hypothesis, not a false statement: the induction that will prove
-  fund_gen_statement cannot start. Built as JitKRef.v + JitKRefFv.v; fund_below_0 (JitKRefFv) must
-  fail (fund_below 0 now asks for ERel 0 of every expression), and does first.
+  k itself. A stronger hypothesis, not a false statement. Built as JitKRef.v + JitKRefFv.v; the proof
+  of fund_below_0 (JitKRefFv; lia on j < 0) fails first. fund_below_S's step, from fund_below k and
+  the index k, cannot supply the index S k the mutant also asks for.
 ShenJitKRefFvLamUnfiltered: fv of (ELam x b) does not filter the binder x out of fv b. scoped_fv is
   then false (ELam x (EVar x) is scoped in [] but x is free), so scoped_fv (JitKRefFv) must fail. Built
   as JitKRef.v + JitKRefFv.v.
