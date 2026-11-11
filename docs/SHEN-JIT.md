@@ -749,8 +749,8 @@ in `rocq/JitEmitInv.v`. Nothing here proves a back-end statement; `sim'_statemen
 - **`old_reflect_src_statement`: UNKNOWN, not refuted.** Two cheap refutations were tried and do not
   work. The old `pmap` admits no IO primitive, so an old-fragment machine cannot make a request. And
   `EndsSrc'`'s existential final store `s'` is tied to b0's final store by `GStore` (functions
-  equal, globals and w's cells positionally `GVal`-related), so it cannot be chosen apart from `s`
-  without breaking KRef's own end relation. A proof needs the same machine-side invariants as the
+  equal, globals and w's cells positionally `GVal`-related), and no choice apart from `s` was found
+  that keeps KRef's own end relation (a hand argument, not checked in Rocq). A proof needs the same machine-side invariants as the
   catch-up reflection (the machine's globals and the cells outside `mu'` unchanged), plus `VRh`
   injectivity on the first-order values VR relates. Not attempted in this round.
 - **Awaiting Reuben** (none approved; no agent can approve them): `env_ok` on the run statements
