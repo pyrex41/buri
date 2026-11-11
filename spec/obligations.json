@@ -6384,17 +6384,94 @@
    "scope": "universal",
    "owner": "E2E-38",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "KLambda to KLambda (lower.shen's share and norm)",
-   "identity": "rocq/JitLowerEquiv.v",
-   "statement": "The front passes preserve termination: a source run that reaches a terminal state other than a resource error is matched by a target run that reaches one, so a target diverges only when the source does.",
-   "premises": [],
+   "identity": "rocq/JitKRefTerm.v",
+   "statement": "The front passes preserve termination, stated as KTerm (rocq/JitKRefTerm.v): KTerm sealed D g e0 e := JitKTerm.KRef sealed D g e e0, KRef's step-indexed Kripke relation read with the expressions swapped, over jit_rules_nr sealed (jit_rules with no catchable resource failure; rocq/JitKTerm.v). From environments related on g, related stores meeting D and related continuations, every resource-free run of the source e0 to a terminal state (a value, an exception or a wrong state), after any IO trace, is matched by a resource-free run of the target e with the same trace to a terminal state of the same kind, with a related value and store, the same exception and a related store, or a wrong state; so a target with no terminal resource-free run has a source with none. A resource-free run is a jit_rules run (step_nr_sub). Precisely stated, partially discharged: the relation's fundamental property, every compatibility lemma, per-link adequacy, its divergence contrapositive, two-link composition, source reduction and one front rule are proved; front-link checkers establishing KTerm (KTerm_checker_statement) and the binding to the extended back end's invariant are open.",
+   "premises": [
+    "resource-free semantics only: a run that uses step_r_resource (a catchable out-of-memory or stack-overflow raise) is not one KTerm speaks of, and a source run that catches such a raise and then returns is not matched",
+    "the composed observation (KTerm_adequacy, KTerm_diverges, KTerm_compose) is for IO-free runs (empty trace) from a first-order environment and a well-formed store meeting D, to a first-order value or an exception, with GStore-related final stores, as KRef's adequacy is",
+    "D_wf for the fundamental property, trap, call and application, as for KRef",
+    "KTerm_lambda_app needs an atomic argument and id_key out of scope"
+   ],
    "depends_on": [
     "OB-JIT-LOWER-FRONT"
    ],
-   "evidence": [],
-   "completion_evidence": "A termination relation with its own compatibility lemmas, proved with no axioms, and the front-link checkers proved to establish it.",
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_refl",
+     "establishes": "model-proof",
+     "note": "KTerm's fundamental property, scoped form (JitKTermFund.KRef_refl read backwards)"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_fundamental",
+     "establishes": "model-proof",
+     "note": "fundamental property, EnvRelAll form"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_compat_app",
+     "establishes": "model-proof",
+     "note": "compatibility for application; with KTerm_compat_lit, var, let, if, and, or, cond, type, trap, lambda, freeze, call and defun, every constructor"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_adequacy",
+     "establishes": "model-proof",
+     "note": "one link: a resource-free source run to a first-order value or an exception is matched by a resource-free target run"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_diverges",
+     "establishes": "model-proof",
+     "note": "contrapositive of adequacy: a target with no terminal resource-free run has a source with none, constructively"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_compose",
+     "establishes": "model-proof",
+     "note": "KTerm_compose_statement: share then norm, through the first-order observation and GStore_trans, no transitivity of KTerm"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.ERel_red",
+     "establishes": "model-proof",
+     "note": "source reduction, the KTerm counterpart of KRef's source anti-reduction (ERel_red_let, _if, _cond, _type, _call, _app_lam)"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTermThm.JitKRefTermThm.KTerm_lambda_app",
+     "establishes": "model-proof",
+     "note": "norm's ((lambda X B) A) to (let X A B') for atomic A, as a compatibility rule"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTerm.JitKRefTerm.step_nr_sub",
+     "establishes": "model-proof",
+     "note": "a resource-free step is a jit_rules step"
+    },
+    {
+     "kind": "universal-theorem",
+     "ref": "JitKRefTerm.JitKRefTerm.KTerm_omega_refuted",
+     "establishes": "model-proof",
+     "note": "non-vacuity: a looping target does not refine a source raising (simple-error \"out of memory\"); false under jit_rules, mutant ShenJitKTermResourceSteps"
+    }
+   ],
+   "completion_evidence": "A termination relation with its own compatibility lemmas, proved with no axioms (done: KTerm), the front-link checkers proved to establish it (KTerm_checker_statement, open), and its binding to the extended back end's invariant JitEmitInv (open; JitEmitInv is not on p2/int).",
    "sources": [
+    "rocq/JitKRefTerm.v",
+    "rocq/JitKRefTermThm.v",
+    "rocq/JitKTerm.v",
+    "rocq/JitKTermGround.v",
+    "rocq/JitKTermBase.v",
+    "rocq/JitKTermCompatClo.v",
+    "rocq/JitKTermPrim.v",
+    "rocq/JitKTermCompatCtl.v",
+    "rocq/JitKTermCompatCall.v",
+    "rocq/JitKTermFv.v",
+    "rocq/JitKTermFund.v",
     "rocq/JitLowerEquiv.v"
    ],
    "history": [
@@ -6402,6 +6479,11 @@
      "source": "rocq/JitLowerEquiv.v",
      "recorded": "2026-11-08: open. Kept separate from KRef, which is partial correctness: a divergence clause inside a step-indexed relation needs excluded middle to prove its congruences, while this direction gives divergence by contraposition, constructively, and its proofs do not reopen KRef's.",
      "reconciliation": "Front-pass equivalence statements, 8 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefTerm.v",
+     "recorded": "2026-11-11: precisely stated, partially discharged (r1-term, branch p2/r1-term on p2/int 5779555). KTerm is stated and its theory proved: rocq/JitKTerm.v and the eight JitKTerm proof files are JitKRef.v and its proof files with jit_rules replaced by jit_rules_nr (resource_exn := fun _ => None), srun_nil_Sstar and Section Compose left out, and three proofs that built a resource step (step_from_ret_top in JitKTermGround, fail_obs in JitKTermCompatClo, ObsT_fail in JitKTermCompatCtl) restated for an uncatchable Fail; no statement of KRef or its files is changed. 200 statements are added to rocq/Audit_Jit.v (463 in all: 40 from JitKRefTerm.v and JitKRefTermThm.v, 160 from the JitKTerm copies), each Closed under the global context. Mutants ShenJitKTermResourceSteps (resource field put back; om_srun must fail) and ShenJitKTermLamAppIdKey (KTerm_lambda_app without its id_key premise) are rejected (pin 203). Open: KTerm_checker_statement for the share and norm checkers (none exists yet; they also owe KRef, OB-JIT-LOWER-FRONT), per-rewrite lemmas for the front rules other than lambda-app (inline with non-atomic arguments, share's freeze Else, cond and sugar, folds, bind!/is!, cut-fail, deref=, uncurrying), and the binding to the extended back end's invariant JitEmitInv (on p2/emit-spec, not on p2/int; no *_statement is written for it on this branch). Status partial, never discharged, until those land.",
+     "reconciliation": "r1-term, Phase 2 term track, 11 November 2026."
     }
    ]
   },
