@@ -118,6 +118,32 @@ ShenJitKTermLamAppIdKey: JitKRefTermThm.KTerm_lambda_app with its ~ In id_key g 
   not, so a scope naming id_key relates two different values (the statement is then false: with
   g = [id_key] and b0 = b = id_key the source returns its fresh cell, the target the environment's
   value); the proof must fail at the id_key case, where nothing contradicts In id_key g.
+ShenJitFrontAlphaCapture: aeq's variable test forgets that a target binder hides a free name, so
+  (lambda x (f x y)) and (lambda y (f y y)) count as alpha-equivalent. aeq_capture must fail.
+ShenJitFrontInlFrozenFree: the inline site checker lets a thawed-in-place argument read a name the
+  expansion binds. site_when_capture must fail.
+ShenJitFrontDCompiled: D_compiled' stops asking check_fn of each callee's code. D_compiled'_spec
+  must fail.
+ShenJitFrontPortUnify: D_of's port_used brings in only the unify form the normal form calls, so
+  D_has_port_unify (which asks both) is unreachable. port_used_unify must fail.
+ShenJitFrontInlHidden: inl_eq thaws a frozen argument in place without checking that no binder
+  inside N hides one of its free names. site_frozen_hidden must fail.
+ShenJitFrontBindLetdo: bind_site stops reading e_B's unused let as do, so no real bound-now site
+  matches. site_bind (and site_bind_real) must fail.
+ShenJitFrontBindFresh: bind_site drops its fresh_seq guard, so a let value may read a fresh name
+  bound just above it (the source's outer a1 passed as Y is captured by the expansion's a1).
+  site_bind_fresh must fail.
+ShenJitFrontCblkCondTrue: cblk_of walks the clauses after a (true X) clause of cond, which
+  C_cond_true never compiles. cblk_of_Comp must fail.
+ShenJitFrontCblkEqAll: cblk_of reports = as a blocker unless EVERY operand is a literal; pguard asks
+  for one. prim_gate_ok (and so cblk_of_Comp) must fail.
+ShenJitFrontWhyOther: D_why drops an entry check_fn rejects with no blocker. D_why_spec must fail.
+ShenJitFrontSiteNargsNoInfer: site_nargs cannot read back an integer argument, so integer sites
+  are unread. class_hds must fail.
+ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arguments, not the
+  source call's. pair_src_lrules_wrong must fail.
+ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
+  marker. isites_fbound must fail.
 """
 import re
 from pathlib import Path
@@ -328,4 +354,36 @@ mutate_chain('ShenJitKTermResourceSteps', kterm,
 mutate('ShenJitKTermLamAppIdKey', 'rocq/JitKRefTermThm.v',
        "Theorem KTerm_lambda_app : forall g x a b0 b, atom_in g a = true -> ~ In id_key g ->\n",
        "Theorem KTerm_lambda_app : forall g x a b0 b, atom_in g a = true -> True ->\n")
+front = 'rocq/JitFrontD.v'
+mutate('ShenJitFrontAlphaCapture', front,
+       ' | (a, b) :: rn => if text_eqb a x then text_eqb b y else if text_eqb b y then false else var_ok rn x y end.',
+       ' | (a, b) :: rn => if text_eqb a x then text_eqb b y else var_ok rn x y end.')
+mutate('ShenJitFrontInlFrozenFree', front,
+       ' && frozen_free sg (map fst fr ++ qs) &&', ' &&')
+mutate('ShenJitFrontDCompiled', front,
+       '                  && check_fn c ps b)%bool', '                  && true)%bool')
+mutate('ShenJitFrontPortUnify', front,
+       '  then [unify_name; unify_bang_name] else []).', '  then [unify_bang_name] else []).')
+mutate('ShenJitFrontInlHidden', front,
+       '     | Some (SFrozen x) => expr_eqb x e && forallb (fun y => negb (hidden rn y)) (K.fv x)',
+       '     | Some (SFrozen x) => expr_eqb x e')
+mutate('ShenJitFrontBindLetdo', front,
+       '     inl_eq (S (dsize eB)) fold true D [(p4, SFrozen ex)]',
+       '     inl_eq (S (dsize eB)) fold false D [(p4, SFrozen ex)]')
+mutate('ShenJitFrontBindFresh', front,
+       "     fresh_seq [] [(a1, x'); (a2, y'); (a3, b')] &&\n", '')
+mutate('ShenJitFrontCblkCondTrue', front,
+       '     | (t, a) :: rest => if is_true_lit t then cblk_of c a else cblk_of c t ++ cblk_of c a ++ go rest end) cl',
+       '     | (t, a) :: rest => cblk_of c t ++ cblk_of c a ++ go rest end) cl')
+mutate('ShenJitFrontCblkEqAll', front,
+       '(if existsb is_lit args then [] else [KEq])', '(if forallb is_lit args then [] else [KEq])')
+mutate('ShenJitFrontWhyOther', front,
+       '         | [] => if check_fn c ps b then [] else [(fst p, DOther)]', '         | [] => []')
+mutate('ShenJitFrontSiteNargsNoInfer', front,
+       '           | Some (SInt z) => Some (ENum (NInt z) :: l)', '           | Some (SInt z) => None')
+mutate('ShenJitFrontPairReadBack', front,
+       '[x; y; b; _] => bind_site false D [x; y; b; ex] s', '[x; y; b; _] => bind_site false D rb s')
+mutate('ShenJitFrontIsitesNoLets', front,
+       ' | (x, NVar _, _) :: anc => if bound ps x then S (trailing ps anc) else O',
+       ' | (x, NVar _, _) :: anc => if bound ps x then O else O')
 print(' '.join(names))

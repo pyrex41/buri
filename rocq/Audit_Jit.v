@@ -1,5 +1,5 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
-From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm.
+From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -463,3 +463,15 @@ Print Assumptions JitKRefTermThm.JitKRefTermThm.SRel_with_cell_r.
 Print Assumptions JitKRefTermThm.JitKRefTermThm.ERel_red_app_lam.
 Print Assumptions JitKRefTermThm.JitKRefTermThm.atom_rel.
 Print Assumptions JitKRefTermThm.JitKRefTermThm.KTerm_lambda_app.
+Print Assumptions JitFrontD.JitFrontD.D_compiled'_spec.
+Print Assumptions JitFrontD.JitFrontD.D_compiled'_D_compiled.
+Print Assumptions JitFrontD.JitFrontD.D_of_nodup.
+Print Assumptions JitFrontD.JitFrontD.D_of_wf.
+Print Assumptions JitFrontD.JitFrontD.D_cons_prim_of_Com.
+Print Assumptions JitFrontD.JitFrontD.Comp_sfx.
+Print Assumptions JitFrontD.JitFrontD.ops_safe_lit.
+Print Assumptions JitFrontD.JitFrontD.prim_gate_ok.
+Print Assumptions JitFrontD.JitFrontD.cblk_of_Comp.
+Print Assumptions JitFrontD.JitFrontD.cblk_CompFn.
+Print Assumptions JitFrontD.JitFrontD.cblk_reject.
+Print Assumptions JitFrontD.JitFrontD.D_why_spec.
