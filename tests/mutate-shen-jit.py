@@ -158,6 +158,18 @@ ShenJitFrontSugarThawAny: chk_thaw takes (thaw X) to [apply X] without asking D 
 ShenJitFrontSugarTrapScope: chk_trap accepts a handler eta whose fresh name is in scope, so the
   target's handler reads the exception where the source reads the scoped value. chk_trap_sound
   must fail.
+ShenJitFrontPrologIdKey: beq's thawed-place guard tests p4 instead of id_key, so a frozen body that
+  reads the closure-identity key is run in place (D00's bind_site gap). beq_sound and
+  bind_rule_rejects_id_key must fail.
+ShenJitFrontPrologHidden: beq's thawed-place guard reads hidden against no binders, so the thawed
+  body may read an expansion binder. beq_sound must fail.
+ShenJitFrontPrologFreeVar: beq compares a variable unbound in rn by name, so e_B's free names read
+  unrelated environments. beq_sound must fail.
+ShenJitFrontPrologLetdo: beq reads (let X A B) as (do A' B') even when B uses X. beq_sound must fail.
+ShenJitFrontPrologScope: bind_rule checks the fresh names against no scope, so a let may shadow a
+  name of g the next argument reads. bind_rule_sound must fail.
+ShenJitFrontPrologDoFirst: bind_rule takes a do returning its FIRST argument. bind_rule_sound must fail.
+ShenJitFrontPrologP4Key: bind_rule checks p3, not p4, against id_key. bind_rule_sound must fail.
 """
 import re
 from pathlib import Path
@@ -417,4 +429,19 @@ mutate('ShenJitFrontSugarThawAny', sugar,
 mutate('ShenJitFrontSugarTrapScope', sugar,
        '   text_eqb x y && negb (bound g x) && negb (bound g id_key) && rec g a0 a && rec g h0 h',
        '   text_eqb x y && true && negb (bound g id_key) && rec g a0 a && rec g h0 h')
+prolog = 'rocq/JitFrontProlog.v'
+mutate('ShenJitFrontPrologIdKey', prolog,
+       ' && negb (bound (fv e) id_key) && tk e', ' && negb (bound (fv e) p4) && tk e')
+mutate('ShenJitFrontPrologHidden', prolog,
+       ' text_eqb p p4 && forallb (fun y => negb (F.hidden rn y)) (fv e)', ' text_eqb p p4 && forallb (fun y => negb (F.hidden [] y)) (fv e)')
+mutate('ShenJitFrontPrologFreeVar', prolog,
+       ' | EVar x, EVar y => negb (F.free_in rn x) && F.var_ok rn x y', ' | EVar x, EVar y => F.var_ok rn x y')
+mutate('ShenJitFrontPrologLetdo', prolog,
+       ' => text_eqb d do_name && negb (bound (fv b0) x) && go rn a0 a && go rn b0 b', ' => text_eqb d do_name && true && go rn a0 a && go rn b0 b')
+mutate('ShenJitFrontPrologScope', prolog,
+       ' && F.disjoint [a1; a2; a3] g &&', ' && F.disjoint [a1; a2; a3] [] &&')
+mutate('ShenJitFrontPrologDoFirst', prolog,
+       '     negb (text_eqb v1 v2) && text_eqb v2 v2\' &&', '     negb (text_eqb v1 v2) && text_eqb v1 v2\' &&')
+mutate('ShenJitFrontPrologP4Key', prolog,
+       ' && negb (text_eqb p4 id_key) &&', ' && negb (text_eqb p3 id_key) &&')
 print(' '.join(names))

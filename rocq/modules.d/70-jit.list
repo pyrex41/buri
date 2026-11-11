@@ -41,3 +41,4 @@ JitKRefTerm
 JitKRefTermThm
 JitFrontD
 JitFrontSugar
+JitFrontProlog
