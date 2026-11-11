@@ -91,6 +91,173 @@ Proof.
  intros Pr mu s m c ps b args n rs Eo Sm Cf L En c0.
  exact (Pr n mu c0 m rs Eo (entered_ms' mu s m c ps b args Sm Cf L En)).
 Qed.
+
+(* ---------- many steps from one ---------- *)
+Notation Sstar := (Sstar sealed).
+Notation TStar := (TStar E pt).
+Notation TPlus := (TPlus E pt).
+Notation Srun := (Srun sealed).
+Notation TRun := (TRun E pt).
+Notation Ends' := (Ends' E pt sealed).
+Notation Out' := (Out' E pt sealed).
+
+(* What O'_raise leaves open, resolved: from the raise (the machine m1 raising from m2, the source
+   at Throw x with the continuation k that SM and one of the three frame relations relate to m2),
+   either the machine steps (to the handler) and the source reaches a related state silently, or
+   neither side has a handler: the machine finishes with the exception and the source throws to the
+   top, the stores related.
+   NOT proved here: the no-handler half needs SMs stable under the exception's allocation; the
+   handler half needs the slot-1 protection at the handler (EvalCtx's (cv = [] \/ ~ w (fp + 1)))
+   that KD'_trap does not carry for its inner w1 (the slot-1 gap, below).
+   Does NOT say: anything about a raise whose frames are not related (O'_raise relates them). *)
+Definition raise_resolve_statement : Prop := forall mu x k s m1 m2 msg tv cv caps w,
+ B.next E pt m1 = B.raise m2 msg tv -> exn_ok x msg -> SM mu s k m2 ->
+ CCtx (HeapClo (B.m_heap m2)) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2) ->
+ ((exists o r, KD' (VRh mu (B.m_heap m2)) (HeapClo (B.m_heap m2)) (DoOK s) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2)
+     (B.m_conts m2) (B.m_handlers m2) w o r k) \/
+  (exists l r, TK' (VRh mu (B.m_heap m2)) (HeapClo (B.m_heap m2)) (DoOK s) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2)
+     (B.m_conts m2) (B.m_handlers m2) w true l r k) \/
+  (exists dst r, KC' (VRh mu (B.m_heap m2)) (HeapClo (B.m_heap m2)) (DoOK s) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2)
+     (B.m_conts m2) (B.m_handlers m2) w dst r k)) ->
+ (exists c' m' mu', Sstar (Cfg (Throw x) k s) c' /\ TPlus m1 m' /\ mext mu mu' /\ MS' mu' c' m') \/
+ (exists l msg' tv' s' m3 mu', Sstar (Cfg (Throw x) k s) (Cfg (Throw x) [] s') /\
+    B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m3 /\ B.tget l (B.m_heap m3) = Some (B.OExn msg' tv') /\
+    exn_ok x msg' /\ mext mu mu' /\ SMs mu' s' m3).
+
+(* preservation'_statement's conclusion, as a predicate. *)
+Definition PresC (n : nat) (mu : kmap) (c : config) (m : B.machine) (rs : nat -> B.jreq -> B.jres) : Prop :=
+ (exists c' m' k tS tT mu', Srun c tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext mu mu' /\ MS' mu' c' m') \/
+ (exists m1 k tS tT, Ends' mu c m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+
+Ltac split6 := refine (conj _ (conj _ (conj _ (conj _ (conj _ _))))).
+
+Lemma mext_refl : forall mu, pbij mu -> mext mu mu.
+Proof. intros mu P. split; [intros a A; exact A|exact P]. Qed.
+
+Lemma mext_trans : forall a b c, mext a b -> mext b c -> mext a c.
+Proof. intros a b c [I1 _] [I2 P2]. split; [intros x X; apply I2, I1, X|exact P2]. Qed.
+
+Lemma ms'_pbij : forall mu c m, MS' mu c m -> pbij mu.
+Proof.
+ intros mu c m H. destruct H as [cv caps g top e dst r2 rho k s w m _ X|cv caps g top e l r2 rho k s w m _ X
+   |cv caps g top e o top2 r2 rho k s w m _ X|cv caps v v' o k s w m X _ _ _ _ _].
+ - exact (sm_bij _ _ _ (proj1 (proj1 X))).
+ - exact (sm_bij _ _ _ (proj1 (proj1 X))).
+ - exact (sm_bij _ _ _ (proj1 (proj1 X))).
+ - exact (sm_bij _ _ _ (proj1 X)).
+Qed.
+
+Lemma trun_app_silent : forall rs j m m1, TRun rs j m [] m1 -> forall k t m2, TRun rs k m1 t m2 -> TRun rs (j + k) m t m2.
+Proof.
+ intros rs j m m1 H. remember (@nil (option event)) as t0 eqn:Et.
+ induction H as [rs m|rs n m ma t0 m2 N H IH|rs n m q kk t0 m2 N H IH]; intros k t m3 K; [exact K| |discriminate].
+ cbn. eapply TR_tau; [exact N|]. apply IH; auto.
+Qed.
+
+Lemma tstar_trun : forall m m1, TStar m m1 -> forall rs, exists j, TRun rs j m [] m1.
+Proof.
+ intros m m1 H. induction H as [m|m ma m2 T H IH]; intros rs; [exists 0%nat; constructor|].
+ destruct (IH rs) as [j J]. exists (S j). eapply TR_tau; [exact T|exact J].
+Qed.
+
+Lemma tplus_trun : forall m m1, TPlus m m1 -> forall rs, exists j, (1 <= j)%nat /\ TRun rs j m [] m1.
+Proof.
+ intros m m1 [ma [T H]] rs. destruct (tstar_trun ma m1 H rs) as [j J]. exists (S j). split; [lia|].
+ eapply TR_tau; [exact T|exact J].
+Qed.
+
+Lemma srun_app : forall a t b u c, Srun a t b -> Srun b u c -> Srun a (t ++ u) c.
+Proof. intros a t b u c H K. unfold JitEmitInv.Srun in *. eapply star_trans; eauto. Qed.
+
+Lemma sstar_srun' : forall a b t c, Sstar a b -> Srun b t c -> Srun a t c.
+Proof. intros a b t c H K. change t with ([] ++ t). eapply srun_app; [apply sstar_srun; exact H|exact K]. Qed.
+
+Lemma ends'_pre : forall mu mu' a c m1 t tS, Srun a t c -> mext mu mu' -> Ends' mu' c m1 tS -> Ends' mu a m1 (t ++ tS).
+Proof.
+ intros mu mu' a c m1 t tS Sr Mx H. destruct H as [v v' s' m2 mu'' S1 Nf M2 Vr Ss|x l msg tv s' m2 mu'' S1 Nf Lh Xo M2 Ss].
+ - eapply E'_ok; [eapply srun_app; eauto|exact Nf|eapply mext_trans; eauto|exact Vr|exact Ss].
+ - eapply E'_err; [eapply srun_app; eauto|exact Nf|exact Lh|exact Xo|eapply mext_trans; eauto|exact Ss].
+Qed.
+
+(* A silent source prefix and a nonempty silent machine prefix, before PresC n: PresC (S n). *)
+Lemma presc_step : forall n mu mu' c c' m m' rs, Sstar c c' -> TPlus m m' -> mext mu mu' -> PresC n mu' c' m' rs ->
+ PresC (S n) mu c m rs.
+Proof.
+ intros n mu mu' c c' m m' rs Ss Tp Mx P. destruct (tplus_trun m m' Tp rs) as (j & Lj & J).
+ destruct P as [(c2 & m2 & k & tS & tT & mu2 & S2 & T2 & Le & Mp & M2 & Ms)|(m1 & k & tS & tT & En & T2 & Mp)].
+ - left. exists c2, m2, (j + k)%nat, tS, tT, mu2. split6.
+   + eapply sstar_srun'; eauto.
+   + eapply trun_app_silent; eauto.
+   + lia.
+   + exact Mp.
+   + eapply mext_trans; eauto.
+   + exact Ms.
+ - right. exists m1, (j + k)%nat, tS, tT. split; [|split; [eapply trun_app_silent; eauto|exact Mp]].
+   change tS with ([] ++ tS). eapply ends'_pre; [apply sstar_srun; exact Ss|exact Mx|exact En].
+Qed.
+
+(* A silent source prefix, before PresC n at the same machine. *)
+Lemma presc_src : forall n mu mu' c c' m rs, Sstar c c' -> mext mu mu' -> PresC n mu' c' m rs -> PresC n mu c m rs.
+Proof.
+ intros n mu mu' c c' m rs Ss Mx P.
+ destruct P as [(c2 & m2 & k & tS & tT & mu2 & S2 & T2 & Le & Mp & M2 & Ms)|(m1 & k & tS & tT & En & T2 & Mp)].
+ - left. exists c2, m2, k, tS, tT, mu2. split6; auto; [eapply sstar_srun'; eauto|eapply mext_trans; eauto].
+ - right. exists m1, k, tS, tT. split; [|split; auto].
+   change tS with ([] ++ tS). eapply ends'_pre; [apply sstar_srun; exact Ss|exact Mx|exact En].
+Qed.
+
+Lemma env_ok_shift : forall rs, env_ok rs -> env_ok (fun i => rs (S i)).
+Proof. intros rs H i q. exact (H (S i) q). Qed.
+
+(* preservation' from sim' and the raise resolution. *)
+Theorem preservation'_of_sim' : sim'_statement E pt sealed -> raise_resolve_statement -> preservation'_statement E pt sealed.
+Proof.
+ intros Sim Rr n. induction n as [|n IHn]; intros mu c m rs Eo H.
+ - left. exists c, m, 0%nat, [], [], mu. split6; [constructor|constructor|lia|reflexivity|exact (mext_refl _ (ms'_pbij _ _ _ H))|exact H].
+ - revert mu m rs Eo H. induction c as [c IHc] using (well_founded_induction (Wf_nat.well_founded_ltof _ msr)).
+   intros mu m rs Eo H. fold (PresC (S n) mu c m rs).
+   destruct (Sim mu c m H) as [c' m' mu' Ss [Tp|(-> & Lt)] Mx Ms|m1 q kk Ts Nx Hr
+     |v v' s' m1 m2 mu' Ss Ts Nf Mx Vr Sms|x l msg tv s' m1 m2 mu' Ss Ts Nf Lh Xo Mx Sms
+     |x k s' m1 m2 msg tv mu' cv caps w Ss Ts Nr Xo Mx Sm Cc Fr].
+   + eapply presc_step; [exact Ss|exact Tp|exact Mx|]. exact (IHn mu' c' m' rs Eo Ms).
+   + eapply presc_src; [exact Ss|exact Mx|]. exact (IHc c' Lt mu' m rs Eo Ms).
+   + destruct (Hr (rs O q) (Eo O q)) as (c' & e & mu' & Ev & Sr & Mx & Ms).
+     destruct (tstar_trun m m1 Ts rs) as [j J].
+     destruct (IHn mu' c' (kk (rs O q)) (fun i => rs (S i)) (env_ok_shift rs Eo) Ms)
+       as [(c2 & m2 & k & tS & tT & mu2 & S2 & T2 & Le & Mp & M2 & Ms2)|(mf & k & tS & tT & En & T2 & Mp)].
+     * left. exists c2, m2, (j + S k)%nat, (e :: tS), (Some e :: tT), mu2. split6.
+       -- change (e :: tS) with ([e] ++ tS). eapply srun_app; eauto.
+       -- eapply trun_app_silent; [exact J|]. rewrite <- Ev. eapply TR_io; [exact Nx|exact T2].
+       -- lia.
+       -- cbn. rewrite Mp. reflexivity.
+       -- eapply mext_trans; eauto.
+       -- exact Ms2.
+     * right. exists mf, (j + S k)%nat, (e :: tS), (Some e :: tT). split; [|split].
+       -- change (e :: tS) with ([e] ++ tS). eapply ends'_pre; eauto.
+       -- eapply trun_app_silent; [exact J|]. rewrite <- Ev. eapply TR_io; [exact Nx|exact T2].
+       -- cbn. rewrite Mp. reflexivity.
+   + right. destruct (tstar_trun m m1 Ts rs) as [j J]. exists m1, j, [], [].
+     split; [|split; [exact J|reflexivity]]. eapply E'_ok; [apply sstar_srun; exact Ss|exact Nf|exact Mx|exact Vr|exact Sms].
+   + right. destruct (tstar_trun m m1 Ts rs) as [j J]. exists m1, j, [], [].
+     split; [|split; [exact J|reflexivity]].
+     eapply E'_err; [apply sstar_srun; exact Ss|exact Nf|exact Lh|exact Xo|exact Mx|exact Sms].
+   + destruct (Rr mu' x k s' m1 m2 msg tv cv caps w Nr Xo Sm Cc Fr)
+       as [(c2 & m3 & mu2 & S2 & Tp & M2 & Ms2)|(l & msg' & tv' & s2 & m3 & mu2 & S2 & Nf & Lh & Xo' & M2 & Sms)].
+     * eapply presc_step; [eapply Sstar_trans; [exact Ss|exact S2]| |eapply mext_trans; [exact Mx|exact M2]|].
+       -- destruct Tp as (ma & T1 & T2). destruct Ts as [|m0 mb m1' T0 T3].
+          ++ exists ma. split; [exact T1|exact T2].
+          ++ exists mb. split; [exact T0|]. eapply TStar_trans; [exact T3|]. econstructor; [exact T1|exact T2].
+       -- exact (IHn mu2 c2 m3 rs Eo Ms2).
+     * right. destruct (tstar_trun m m1 Ts rs) as [j J]. exists m1, j, [], [].
+       split; [|split; [exact J|reflexivity]].
+       eapply E'_err; [apply sstar_srun; eapply Sstar_trans; [exact Ss|exact S2]|exact Nf|exact Lh|exact Xo'
+         |eapply mext_trans; [exact Mx|exact M2]|exact Sms].
+Qed.
+
+(* The call statement, from sim' and the raise resolution. *)
+Theorem call_preservation'_of_sim' : sim'_statement E pt sealed -> raise_resolve_statement -> call_preservation'_statement E pt sealed.
+Proof. intros Sim Rr. exact (call_preservation'_of_preservation' (preservation'_of_sim' Sim Rr)). Qed.
 End Gen.
 
 (* ---------- the front end composed ---------- *)
