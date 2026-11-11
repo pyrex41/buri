@@ -64,10 +64,10 @@
    The old fragment: no handler, no capture, no do frame, what MS, Com and JitLowerRel.CompFn
    describe; the embedding (ms_embed) holds at any mu StoreRel admits, the corollaries are at mu = []. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
-From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile
+From Buri Require Import Observation JitEmitKont KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile
  JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
- JitEmitRel JitEmitKont.
+ JitEmitRel.
 Import ListNotations.
 Module JitEmitInv.
 Import Observation.Observation KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLSemantics KLPort.KLPort

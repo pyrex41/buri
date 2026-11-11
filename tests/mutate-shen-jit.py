@@ -126,6 +126,10 @@ ShenJitEmitTRunIOSilent: TRun's IO step records no event, so an IO-free trace no
   silent run. trun_nil_tn must fail.
 ShenJitEmitNestShapeAccepted: the uniform-code nesting of JitEmitNestTest.NestShape is asserted
   accepted (Fail removed). Rocq refuses it (non strictly positive), so the file must fail.
+ShenJitEmitGetTimeSwap: ev_of reads the run clock as unix and the unix clock as run, so the
+  bytecode's clock request no longer translates to the source's. get_time_agree must fail.
+ShenJitEmitDo2Opaque: KD'_do2 (the source's pending call of do is transparent) needs False, so MS'
+  no longer relates the machine that has returned from do. old_reflect_false (cx_ms'1) must fail.
 """
 import re
 from pathlib import Path
@@ -327,4 +331,8 @@ mutate('ShenJitEmitReflectSrcTrace', 'rocq/JitEmitInv.v', " tS = [] /\\ JitKRef.
 mutate('ShenJitEmitOldGvalsDropped', 'rocq/JitEmitInv.v', "forall n s c m, MS s c m -> GvalsRel [] s m ->", "forall n s c m, MS s c m -> True ->")
 mutate('ShenJitEmitTRunIOSilent', 'rocq/JitEmitInv.v', " TRun rs (S n) m (ev_of q (rs O q) :: t) m2", " TRun rs (S n) m t m2")
 mutate('ShenJitEmitNestShapeAccepted', 'rocq/JitEmitNestTest.v', "Fail Inductive Tree", "Inductive Tree")
+mutate('ShenJitEmitGetTimeSwap', 'rocq/JitEmitInv.v', '(QTime (of_string (if run then "run"%string else "unix"%string)))',
+       '(QTime (of_string (if run then "unix"%string else "run"%string)))')
+mutate_chain('ShenJitEmitDo2Opaque', ['rocq/JitEmitKont.v', 'rocq/JitEmitInv.v'],
+       " | KD'_do2 c cv caps fp st cs hs w o r v rho k1 : DoK -> KD'", " | KD'_do2 c cv caps fp st cs hs w o r v rho k1 : False -> DoK -> KD'")
 print(' '.join(names))
