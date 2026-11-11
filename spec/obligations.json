@@ -6301,6 +6301,11 @@
      "source": "rocq/JitKRefCompatCtl.v",
      "recorded": "2026-11-10: open. kref-ctl merged onto p2/int after kref-prim; 27 statements in rocq/Audit_Jit.v from JitKRefCompatCtl.v (226 in all), each Closed under the global context. Added AppExn_fb (AppExn k from fund_below k alone, AppExn_of applied to JitKRefPrim.prim_compat), compat_trap_fb (trap at index k from fund_below k alone, the corollary compat_trap_lt prim_compat) and compat_trap_of_gen (compat_trap_statement from fund_gen_statement alone). Mutants ShenJitKRefTrapNoPrim and ShenJitKRefAppExnNoPrim (each proof without prim_compat) are rejected (pin 194). Not proved: compat_call, fund_gen_statement, the fundamental property.",
      "reconciliation": "r1-kref-ctl-merge, Phase 2 KRef track, 10 November 2026."
+    },
+    {
+     "source": "rocq/JitKRefFv.v",
+     "recorded": "2026-11-10: open. r1-fv-mutants proved and audited (16 statements in rocq/Audit_Jit.v, 242 in all, each Closed under the global context): scoped_fv (scoped g e = true -> forall x, In x (fv e) -> In x g) by a nested induction on expr; fv against binders (fv_lam_iff, fv_let_iff, scoped_defun_fv) and the cond and application lists (fv_cond_iff, fv_app_iff, fv_call_iff); fund_below's scope condition from scoped (fv_scope_of_scoped), under a lambda or let binder (fv_scope_lam_body, fv_scope_let_body) and to subterms (fv_scope_cond, fv_scope_app, fv_scope_call); and the index induction fund_below_S, fund_below_all and fund_gen_of_step (fund_gen_statement from the step at every index). Mutants of JitKRef.v's index-local definitions, each rejected (pin 198): ShenJitKRefFundBelowLe (fund_below over j <= k; fund_below_0 fails), ShenJitKRefFvLamUnfiltered (lambda binder not filtered; scoped_fv fails), ShenJitKRefPoutThrowAny (PoutRel relates any two exceptions; pout_obs fails) and ShenJitKRefPrimOutAnyIO (PrimOutRel without q0 = q; call_rel fails). ShenJitKRefAbsvectorNoWext and ShenJitKRefEqBudgetFree mutate proofs, not PoutRel or PrimOutRel, so they did not cover them. Not proved: fund_gen_statement, compat_call, the fundamental property.",
+     "reconciliation": "r1-fv-mutants, Phase 2 KRef track, 10 November 2026."
     }
    ]
   },

@@ -139,6 +139,21 @@ ShenJitKRefTrapNoPrim: compat_trap_fb (trap from fund_below k alone) proved from
   primitive parametricity (a handler may be a partial primitive).
 ShenJitKRefAppExnNoPrim: AppExn_fb proved from AppExn_of without JitKRefPrim.prim_compat; the same
   premise is left open and the proof must fail.
+ShenJitKRefFundBelowLe: fund_below k quantifies over j <= k instead of j < k, so it claims the index
+  k itself. A stronger hypothesis, not a false statement. Built as JitKRef.v + JitKRefFv.v; the proof
+  of fund_below_0 (JitKRefFv; lia on j < 0) fails first. fund_below_S's step, from fund_below k and
+  the index k, cannot supply the index S k the mutant also asks for.
+ShenJitKRefFvLamUnfiltered: fv of (ELam x b) does not filter the binder x out of fv b. scoped_fv is
+  then false (ELam x (EVar x) is scoped in [] but x is free), so scoped_fv (JitKRefFv) must fail. Built
+  as JitKRef.v + JitKRefFv.v.
+ShenJitKRefPoutThrowAny: PoutRel relates any two exceptions (OThrow x0, OThrow x => True). The handler
+  continuations are related for the same exception only, so pout_obs (JitKRefCompatClo) must fail.
+  Built as JitKRef.v + JitKRefGround.v + JitKRefBase.v + JitKRefCompatClo.v. ShenJitKRefAbsvectorNoWext
+  and ShenJitKRefEqBudgetFree mutate proofs in JitKRefPrim.v, not PoutRel's or PrimOutRel's text, so
+  they do not test these definitions; this mutant and the next do.
+ShenJitKRefPrimOutAnyIO: PrimOutRel relates two IO requests without q0 = q. The two sides then make
+  different requests, and call_rel (JitKRefCompatClo), which must give the same request on both
+  sides, must fail. Built as the chain of ShenJitKRefPoutThrowAny.
 """
 import re
 from pathlib import Path
@@ -353,4 +368,18 @@ mutate('ShenJitKRefTrapNoPrim', 'rocq/JitKRefCompatCtl.v',
 mutate('ShenJitKRefAppExnNoPrim', 'rocq/JitKRefCompatCtl.v',
        "Proof. intros k Hf. exact (AppExn_of (JitKRefPrim.JitKRefPrim.prim_compat sealed D) k Hf). Qed.",
        "Proof. intros k Hf. apply AppExn_of; [|exact Hf]; assumption. Qed.")
+fvchain = ['rocq/JitKRef.v', 'rocq/JitKRefFv.v']
+mutate_chain('ShenJitKRefFundBelowLe', fvchain,
+       "Definition fund_below (k : nat) : Prop :=\n forall j, (j < k)%nat ->",
+       "Definition fund_below (k : nat) : Prop :=\n forall j, (j <= k)%nat ->")
+mutate_chain('ShenJitKRefFvLamUnfiltered', fvchain,
+       " | ELam x b => filter (fun y => negb (text_eqb y x)) (fv b)\n",
+       " | ELam x b => fv b\n")
+clochain = ['rocq/JitKRef.v', 'rocq/JitKRefGround.v', 'rocq/JitKRefBase.v', 'rocq/JitKRefCompatClo.v']
+mutate_chain('ShenJitKRefPoutThrowAny', clochain,
+       " | OThrow x0, OThrow x => x0 = x\n",
+       " | OThrow x0, OThrow x => True\n")
+mutate_chain('ShenJitKRefPrimOutAnyIO', clochain,
+       " | PIO q0 c0, PIO q c => q0 = q /\\ forall r, PoutRel k w (c0 r) (c r)\n",
+       " | PIO q0 c0, PIO q c => forall r, PoutRel k w (c0 r) (c r)\n")
 print(' '.join(names))
