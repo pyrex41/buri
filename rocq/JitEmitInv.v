@@ -5,7 +5,12 @@
    old invariant at any mu that relates the store's cells and globals (kont_embed, sm_embed,
    ms_embed), env_ok_inhabited, TRun_0, Out'_not_stuck, value_bound/value_unbound,
    SimC/T/O/S/W/A_of_sim', Ends'_final, EndsSrc'_final, the old-fragment bridges (srun_nil_sstar,
-   trun_nil_tn, tn_tstar, ms_entered, entered_embed) and the three *_old_of_new corollaries.
+   trun_nil_tn, tn_tstar, ms_entered, entered_embed) and the three *_old_of_new corollaries
+   (vacuous: their hypothesis old_reflect_statement is FALSE, old_reflect_false below);
+   get_time_agree (get-time's request, answer and result agree on related arguments);
+   old_reflect_false, a counterexample to old_reflect_statement through JitEmitKont's do frames;
+   gvals_needed and the dv_* Examples, the divergences behind each narrowing (frame_prim's
+   exclusions, the window bound, env_ok, GvalsRel), checked at the primitive level.
 
    What the old invariant (JitLowerStep.MS, JitLowerThm) fixes, and what this one lets evolve:
    - mu, a partial bijection between KLambda heap locations (nat) and bytecode heap keys
@@ -53,11 +58,13 @@
                                             statement for the src one.)
    old_reflect_statement,                 no old counterpart: the missing piece, MS'/Ends' at
    old_reflect_src_statement                mu = [] on an IO-free old-fragment run read back as
-                                            MS/Ends/EndsSrc. Stated, NOT proved; truth UNKNOWN.
+                                            MS/Ends/EndsSrc. old_reflect_statement is FALSE
+                                            (old_reflect_false: the do frames); the src one is
+                                            stated, NOT proved, truth UNKNOWN.
    The old fragment: no handler, no capture, no do frame, what MS, Com and JitLowerRel.CompFn
    describe; the embedding (ms_embed) holds at any mu StoreRel admits, the corollaries are at mu = []. *)
 From Coq Require Import List ZArith NArith PArith Bool String Lia.
-From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitProfile
+From Buri Require Import Observation KLSyntax KLValue KLSemantics KLPort JitFloat JitBytecode JitMeta JitProfile
  JitLowerRel JitLowerKont JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitKRef
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel JitEmitKont.
@@ -400,6 +407,54 @@ Proof.
    | B.JTime _ => B.JTimeIs 0 | B.JReadFile _ => B.JFile [] | B.JWrites _ _ => B.JDone end).
  intros i q. destruct q; cbn; auto. reflexivity.
 Qed.
+Lemma S_run_text : B.S_run = B.sym_of_text (of_string "run"). Proof. vm_compute. reflexivity. Qed.
+Lemma S_unix_text : B.S_unix = B.sym_of_text (of_string "unix"). Proof. vm_compute. reflexivity. Qed.
+
+(* get-time, the one IO primitive frame_prim admits: on related arguments, the source and the
+   bytecode both ask the clock, with the request ev_of translates to the source's, and for every
+   answer resp_ok admits the source's result is related to what the bytecode writes; or both
+   raise. *)
+Theorem get_time_agree : forall mu h m d v v' s, VRh mu h v v' ->
+ (exists run q f kk, prim_rule_r (jit_rules sealed) jit_profile PGetTime [v] s = PIO q f /\
+   B.prim_step E pt m d B.PGetTime [v'] = B.MIO (B.JTime run) kk /\
+   forall r, resp_ok (B.JTime run) r -> exists b, r = B.JTimeIs b /\
+     ev_of (B.JTime run) r = Some (EvIO q (RTime (Z.of_N b))) /\
+     f (RTime (Z.of_N b)) = ORet (VNum (NFloat b)) s /\
+     B.MTau (kk r) = B.ret_to m d (B.VReal b) /\ VRh mu (B.m_heap m) (VNum (NFloat b)) (B.VReal b)) \/
+ (exists x msg tv, prim_rule_r (jit_rules sealed) jit_profile PGetTime [v] s = PDone (OThrow x) /\
+   B.prim_step E pt m d B.PGetTime [v'] = B.raise m msg tv /\ exn_ok x msg).
+Proof.
+ intros mu h m d v v' s Hv.
+ destruct Hv; try (right; eexists _, _, _; split; [reflexivity|split; [reflexivity|exact I]]).
+ (* a symbol *)
+ idtac.
+ cbn [B.prim_step].
+ destruct (Pos.eqb (B.sym_of_text s0) B.S_run) eqn:Er; [|destruct (Pos.eqb (B.sym_of_text s0) B.S_unix) eqn:Eu].
+ - rewrite S_run_text, B.sym_of_text_eqb in Er. apply text_eqb_eq in Er. subst s0. left.
+   eexists true, _, _, _. split; [reflexivity|]. split; [reflexivity|].
+   intros r Hr. destruct r; cbn in Hr; try contradiction. exists bits. split; [reflexivity|].
+   assert (Hb : (bits <? 18446744073709551616)%N = true) by (apply N.ltb_lt; exact Hr).
+   cbn [ev_of]. rewrite Hb. split; [reflexivity|].
+   split; [|split; [reflexivity|constructor]].
+   cbn. unfold jit_time. replace ((0 <=? Z.of_N bits)%Z && (Z.of_N bits <? 18446744073709551616)%Z)%bool with true.
+   + rewrite N2Z.id. reflexivity.
+   + symmetry. apply andb_true_intro. split; [apply Z.leb_le; lia|apply Z.ltb_lt; apply N.ltb_lt in Hb; lia].
+ - rewrite S_unix_text, B.sym_of_text_eqb in Eu. apply text_eqb_eq in Eu. subst s0. left.
+   eexists false, _, _, _. split; [reflexivity|]. split; [reflexivity|].
+   intros r Hr. destruct r; cbn in Hr; try contradiction. exists bits. split; [reflexivity|].
+   assert (Hb : (bits <? 18446744073709551616)%N = true) by (apply N.ltb_lt; exact Hr).
+   cbn [ev_of]. rewrite Hb. split; [reflexivity|].
+   split; [|split; [reflexivity|constructor]].
+   cbn. unfold jit_time. replace ((0 <=? Z.of_N bits)%Z && (Z.of_N bits <? 18446744073709551616)%Z)%bool with true.
+   + rewrite N2Z.id. reflexivity.
+   + symmetry. apply andb_true_intro. split; [apply Z.leb_le; lia|apply Z.ltb_lt; apply N.ltb_lt in Hb; lia].
+ - right. rewrite S_run_text, B.sym_of_text_eqb in Er. rewrite S_unix_text, B.sym_of_text_eqb in Eu.
+   exists (XPrim PGetTime); eexists _, _. split; [|split; [reflexivity|exact I]].
+   assert (Er' : text_eqb s0 (of_string "run") = false) by exact Er.
+   assert (Eu' : text_eqb s0 (of_string "unix") = false) by exact Eu.
+   unfold prim_rule_r, rule_get_time_r. cbn [time_kind_ok jit_rules]. rewrite Er', Eu'. reflexivity.
+Qed.
+
 
 (* Exactly n bytecode steps, the environment answering the i-th IO request q with rs i q: the run
    is the machine's only one under that environment. Quantifying over rs covers every
@@ -732,7 +787,10 @@ Definition call_preservation_src'_statement : Prop := forall mu s m c ps b0 b1 e
    picks SOME JitEmitRel derivation, SOME mu' extending [] and SOME trace, and nothing in the new
    statements keeps a run that starts in the old fragment inside it (the conclusion's derivation
    may come from a family rule, values may be related through mu'). So the old conclusion does not
-   follow from the new statements alone, and the reflection is stated, not proved. Reflecting
+   follow from the new statements alone. The reflection as stated is FALSE (old_reflect_false at
+   the end of this file): JitEmitKont's do frames let MS' relate a source configuration to a
+   machine that has already returned from do, which MS does not, so the corollaries below are
+   vacuous and recover nothing. Reflecting
    JitEmitRel derivations would invert the Rule_X outside their own files, which the design
    forbids; a family whose rule overlaps the old fragment (Eq's = beside C_prim with pguard) is
    where the reflection is at risk, and whether such a family must re-prove it, beside its map and
@@ -778,7 +836,9 @@ Proof.
  intros mu s m c args [Hh _] (Hc & Hr & Hk & Aa). repeat split; auto. apply argsat_embed; exact Aa.
 Qed.
 
-(* The reflection obligation (NOT proved; its truth is UNKNOWN). From a state MS relates, with
+(* The reflection obligation. FALSE: old_reflect_false (end of this file) refutes its first
+   conjunct through the do frame KD'_do2. Kept as stated, so the refutation is about this text.
+   From a state MS relates, with
    globals VR relates, an IO-free bytecode run under an environment env_ok admits: a related
    state the new invariant reaches is MS-related with the same store and after no source IO, and
    an end the new invariant reaches is JitLowerThm.Ends with the same store.
@@ -869,4 +929,287 @@ Proof.
 Qed.
 End Src.
 End Inv.
+
+(* ---------- old_reflect_statement is false (closed) ----------
+   A counterexample, at E with no allocation or stack failure, the empty primitive table and no
+   sealed names. The store defines the kernel's do, (defun do (X Y) Y), and every primitive. The
+   machine is at the call of do in (let Z (do 1 2) Z) (call 0 1 do 2, then return slot 0), with
+   1 and 2 in the window: MS relates the source, at Ret 2 with the pending call of do and the let
+   frame, to it (cx_ms0, through KD_call). After two silent steps (the call, and do's return)
+   the machine has returned 2 to slot 0. MS' relates the SAME source configuration to that
+   machine (cx_ms'1): KD'_do2 makes the source's pending call of do transparent. MS does not
+   (cx_not_ms1): its frames for a pending named call need the call instruction ahead. So the
+   first conjunct of old_reflect_statement fails at c' = c, mu' = [] (old_reflect_false).
+   What this says: MS' relates pairs MS does not even when the run starts in the old fragment,
+   because JitEmitKont's do frames, not a family rule, overlap the old syntax (a named call of
+   do). The three *_old_of_new corollaries take old_reflect_statement as a hypothesis, so they
+   hold vacuously and recover nothing. How the old conclusions are to be recovered is open
+   (OB-JIT-LOWER-FRAGMENT): see the ledger's review items.
+   Does NOT say: anything about old_reflect_src_statement (UNKNOWN), or that sim'_statement or any
+   other new statement is false. *)
+Definition cx_x : name := kw "X".
+Definition cx_y : name := kw "Y".
+Definition cx_z : name := kw "Z".
+Definition prim_tab : list (name * fundef) := map (fun p => (of_string (prim_name p), FPrim p)) all_prims.
+Lemma lookup_prim_tab_gen : forall f l, lookup f (map (fun p => (of_string (prim_name p), FPrim p)) l) =
+  option_map FPrim (find (fun p => text_eqb f (of_string (prim_name p))) l).
+Proof. intros f l; induction l as [|p l IH]; cbn; [reflexivity|]. destruct (text_eqb f _); auto. Qed.
+Lemma lookup_prim_tab : forall f, lookup f prim_tab = option_map FPrim (prim_of_name f).
+Proof. intro f. apply lookup_prim_tab_gen. Qed.
+Definition cx_sg (gv : list (name * value)) : store := Store [] gv ((do_name, FUser [cx_x; cx_y] (EVar cx_y)) :: prim_tab).
+Definition cx_s : store := cx_sg [].
+Lemma do_not_prim : prim_of_name do_name = None.
+Proof. vm_compute. reflexivity. Qed.
+Lemma cx_lookup : forall gv f, lookup f (gfuns (cx_sg gv)) =
+ if text_eqb f do_name then Some (FUser [cx_x; cx_y] (EVar cx_y)) else option_map FPrim (prim_of_name f).
+Proof. intros gv f. unfold cx_sg. cbn [gfuns lookup]. destruct (text_eqb f do_name); [reflexivity|apply lookup_prim_tab]. Qed.
+
+Definition cx_do : B.code := B.Code B.VNil 2 None 4 [] [B.IReturn (B.OSlot 3)] [] B.VNil.
+Definition cx_r : list B.instr := [B.ICall 0 1 (B.sym_of_text do_name) 2; B.IReturn (B.OSlot 0)].
+Definition cx_f : B.code := B.Code B.VNil 0 None 5 [] cx_r [] B.VNil.
+Definition cx_gfun : B.tree B.val := B.tset (B.sym_of_text do_name) (B.VClo 1) B.Leaf.
+Definition cx_heap : B.tree B.obj := B.tset 1 (B.OClo cx_do []) B.Leaf.
+Definition cx_m : B.machine := B.Machine (B.tset (B.skey 3) (B.VFix 1) (B.tset (B.skey 4) (B.VFix 2) B.Leaf)) 0 cx_f cx_r
+ [] [] B.VCleared cx_heap 2 B.Leaf cx_gfun B.Leaf false 0.
+Definition cx_E : B.env := B.Env (fun _ => false) (fun _ => false) (fun _ => 0%Z).
+Definition cx_pt : B.tree (B.prim * nat) := B.Leaf.
+Definition mstep (m : B.machine) : B.machine := match B.next cx_E cx_pt m with B.MTau m' => m' | _ => m end.
+Definition cx_st0 : B.tree B.val := B.tset (B.skey 3) (B.VFix 1) (B.tset (B.skey 4) (B.VFix 2) B.Leaf).
+Definition cx_m1 : B.machine := B.Machine (B.tset (B.skey 0) (B.VFix 2) (B.tset (B.skey 2) (B.VClo 1) cx_st0)) 0 cx_f
+ [B.IReturn (B.OSlot 0)] [] [] B.VCleared cx_heap 2 B.Leaf cx_gfun B.Leaf false 0.
+Lemma cx_step1 : B.next cx_E cx_pt cx_m = B.MTau (mstep cx_m). Proof. vm_compute. reflexivity. Qed.
+Lemma cx_step2 : B.next cx_E cx_pt (mstep cx_m) = B.MTau cx_m1. Proof. vm_compute. reflexivity. Qed.
+
+Definition cx_k : list frame := [KCallArgs do_name [VNum (NInt 1)] [] []; KLet cx_z (EVar cx_z) []].
+Definition cx_c : config := Cfg (Ret (VNum (NInt 2))) cx_k cx_s.
+
+Lemma cx_comp_do : CompFn cx_do [cx_x; cx_y] (EVar cx_y).
+Proof.
+ exists []. eapply JitLowerRel.C_ret. eapply JitLowerRel.O_var; [vm_compute; reflexivity|vm_compute; reflexivity].
+Qed.
+
+Lemma cx_funrel : forall gv m, B.m_gfun m = cx_gfun -> B.m_heap m = cx_heap -> FunRel (cx_sg gv) m.
+Proof.
+ intros gv m G H. constructor.
+ - intros f ps b L. rewrite cx_lookup in L. destruct (text_eqb f do_name) eqn:E.
+   + apply text_eqb_eq in E; subst f. inversion L; subst. exists 1%positive, cx_do, []. rewrite G, H.
+     split; [apply JitMeta.JitMeta.tget_tset_same|]. split; [apply JitMeta.JitMeta.tget_tset_same|].
+     split; [reflexivity|]. split; [reflexivity|]. exact cx_comp_do.
+   + destruct (prim_of_name f); discriminate.
+ - intros f L l. rewrite G. rewrite cx_lookup in L. destruct (text_eqb f do_name) eqn:E; [discriminate|].
+   unfold cx_gfun. destruct (Pos.eq_dec (B.sym_of_text f) (B.sym_of_text do_name)) as [P|P].
+   + apply B.sym_of_text_inj in P. subst f. rewrite text_eqb_refl in E. discriminate.
+   + rewrite JitMeta.JitMeta.tget_tset_other by exact P. rewrite JitMeta.JitMeta.tget_leaf. discriminate.
+ - intros f p L. rewrite cx_lookup in L. destruct (text_eqb f do_name); [discriminate|].
+   destruct (prim_of_name f); inversion L; reflexivity.
+ - intros f p L. rewrite cx_lookup. destruct (text_eqb f do_name) eqn:E.
+   + apply text_eqb_eq in E; subst f. rewrite do_not_prim in L. discriminate.
+   + rewrite L. reflexivity.
+Qed.
+
+(* MS relates the source at the pending call of do to the machine at its call instruction. *)
+Lemma cx_ms0g : forall gv, MS (cx_sg gv) (Cfg (Ret (VNum (NInt 2))) cx_k (cx_sg gv)) cx_m.
+Proof.
+ intro gv. unfold cx_k.
+ eapply MS_ret with (o := B.OSlot 4) (v' := B.VFix 2) (w := fun x => 4 <= x).
+ - split; [reflexivity|apply cx_funrel; reflexivity].
+ - vm_compute. reflexivity.
+ - constructor.
+ - eapply KD_call with (g := []) (a := 1) (d := 0) (n := 2) (i := B.ICall 0 1 (B.sym_of_text do_name) 2)
+     (r1 := [B.IReturn (B.OSlot 0)]) (w1 := fun _ => True).
+   + exact do_not_prim.
+   + reflexivity.
+   + reflexivity.
+   + intros x s L; discriminate.
+   + intros x s L; discriminate.
+   + intros x s L; discriminate.
+   + apply JitLowerRel.W_nil.
+   + left; reflexivity.
+   + cbn. econstructor; [vm_compute; reflexivity|constructor|constructor].
+   + intros a A; exact A.
+   + intros a A; exact I.
+   + intros a A; exact I.
+   + exact I.
+   + eapply KD_let with (g := []) (top := 1) (dst := DRet) (r2 := []) (w1 := fun _ => True).
+     * intros x s L; discriminate.
+     * intros x s L; discriminate.
+     * intros x s L; discriminate.
+     * vm_compute; reflexivity.
+     * eapply JitLowerRel.C_ret. eapply JitLowerRel.O_var; [vm_compute; reflexivity|vm_compute; reflexivity].
+     * intros a A; exact A.
+     * intros a A; exact I.
+     * apply KC_ret; [intros a A; cbn; lia|constructor].
+Qed.
+Lemma cx_ms0 : MS cx_s cx_c cx_m.
+Proof. exact (cx_ms0g []). Qed.
+
+
+Lemma cx_sm1 : SM [] cx_s cx_k cx_m1.
+Proof.
+ split.
+ - constructor.
+   + exact pbij_nil.
+   + intros l p I; destruct I.
+   + split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
+   + apply funrel_embed. apply cx_funrel; reflexivity.
+ - unfold HK. cbn. constructor.
+Qed.
+
+(* MS' relates the same source configuration to the machine after do has returned: the source's
+   pending call of do is transparent (KD'_do2). *)
+Lemma cx_ms'1 : MS' [] cx_c cx_m1.
+Proof.
+ unfold cx_c.
+ eapply MS'_ret with (cv := []) (caps := []) (o := B.OSlot 0) (v' := B.VFix 2) (w := fun _ => True).
+ - exact cx_sm1.
+ - vm_compute. reflexivity.
+ - constructor.
+ - left; reflexivity.
+ - left; reflexivity.
+ - unfold cx_k. apply KD'_do2.
+   + exists cx_x, cx_y. split; [vm_compute; discriminate|reflexivity].
+   + eapply KD'_let with (g := []) (top := 1) (dst := DRet) (r2 := []) (w1 := fun _ => True).
+     * split; [intros x s L; discriminate|intros i x N; destruct i; discriminate].
+     * intros x s L; discriminate.
+     * intros x s L; discriminate.
+     * vm_compute; reflexivity.
+     * eapply C_ret. eapply O_var; [vm_compute; reflexivity|vm_compute; reflexivity].
+     * intros a A; exact A.
+     * intros a A; exact I.
+     * apply KC'_ret; [intros a A; cbn; lia|constructor].
+Qed.
+
+(* MS does not: its only frame for a pending named call is KD_call (or KD_tail), which needs the
+   call instruction still ahead, and the machine has already returned. *)
+Lemma cx_not_ms1 : ~ MS cx_s cx_c cx_m1.
+Proof.
+ intro H. inversion H as [| | |v v' o k w m Cm Ro Vr Kd E1 E2]; subst. cbn in Kd. unfold cx_k in Kd.
+ inversion Kd; subst.
+ - (* KD_ret *) match goal with Hr : RK _ _ _ _ |- _ => inversion Hr end.
+ - (* KD_prim *) match goal with P : prim_of_name do_name = Some _ |- _ => rewrite do_not_prim in P; discriminate end.
+ - (* KD_call *) match goal with W : JitLowerRel.CompW _ _ _ [] _ _ |- _ => inversion W; subst end.
+   match goal with C : call_instr _ _ _ _ _ |- _ => destruct C; discriminate end.
+ - (* KD_tail *) match goal with W : JitLowerRel.CompTA _ _ _ _ [] _ _ _ |- _ => inversion W; subst end.
+   match goal with Hm : map _ ?ms ++ _ = _ |- _ => destruct ms; cbn in Hm; inversion Hm; subst end.
+   match goal with C : tail_instr _ _ _ _ |- _ => destruct C; discriminate end.
+Qed.
+
+Lemma cx_trun : forall rs, TRun cx_E cx_pt rs 2 cx_m [] cx_m1.
+Proof.
+ intro rs. econstructor; [exact cx_step1|]. econstructor; [exact cx_step2|]. constructor.
+Qed.
+
+Theorem old_reflect_false : ~ old_reflect_statement cx_E cx_pt [].
+Proof.
+ intro R. destruct env_ok_inhabited as [rs Eo].
+ assert (G : GvalsRel [] cx_s cx_m).
+ { split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate]. }
+ destruct (R cx_s cx_c cx_m rs 2%nat [] [] cx_m1 Eo cx_ms0 G (cx_trun rs) eq_refl) as [R1 _].
+ destruct (R1 cx_c [] (star_refl _ _ _) (conj (incl_refl _) pbij_nil) cx_ms'1) as [_ M].
+ exact (cx_not_ms1 M).
+Qed.
+(* GvalsRel is not implied by the old theorems' premises: MS holds, and MS' at no mu, when the
+   store binds a global the machine does not. *)
+Example gvals_needed : let s := cx_sg [(kw "g", VNum (NInt 0))] in
+ MS s (Cfg (Ret (VNum (NInt 2))) cx_k s) cx_m /\ forall mu, ~ MS' mu (Cfg (Ret (VNum (NInt 2))) cx_k s) cx_m.
+Proof.
+ cbv zeta. split; [apply cx_ms0g|].
+ intros mu H. inversion H; subst.
+ match goal with Sm : SM _ _ _ _ |- _ => destruct Sm as [[_ _ [G1 _] _] _] end.
+ assert (L : lookup (kw "g") (gvals (cx_sg [(kw "g", VNum (NInt 0))])) = Some (VNum (NInt 0)))
+   by (unfold cx_sg; cbn [gvals lookup]; rewrite text_eqb_refl; reflexivity).
+ destruct (G1 _ _ L) as (v1 & T & _).
+ cbn in T. rewrite JitMeta.JitMeta.tget_leaf in T. discriminate.
+Qed.
+
+
+(* ---------- the frame narrowing: primitive-level divergences (closed) ----------
+   Each Example below is one hand-argued reason JitEmitKont.frame_prim, the window bound or
+   env_ok narrows the statements, checked in Rocq at the primitive (or call) level: the source
+   rule (KLPort.prim_rule_r under jit_rules, or apply_value_r) against the bytecode's
+   (JitBytecode.prim_step, enter, or an IO continuation) on related arguments. They are
+   divergences, NOT refutations of sim'_statement: each says that a frame (or response) admitting
+   the case would need a different statement or a source/bytecode decision.
+   - absvector 2^48: the source allocates, the bytecode raises (dv_absvector_src/_byt).
+   - error-to-string: the source answers "error", the bytecode the exception's text (dv_ets_rel, dv_ets_src, dv_ets_byt).
+   - open: the bytecode's request prefixes *home-directory*; no translated event equals the
+     source's (dv_open).
+   - close and read-byte on a closed stream: the source asks the environment, the bytecode
+     answers without a request (dv_close, dv_read_closed).
+   - = on two NaNs: the bytecode is stuck, the source answers (dv_eq_nan). = on a cycle is NOT
+     checked here (UNKNOWN).
+   - a dynamic call of two arguments on a one-parameter closure: the source over-applies, the
+     bytecode raises (dv_window).
+   - an IO failure: the bytecode's continuation resumes the machine with no result, the source
+     throws; resp_ok excludes the answer (dv_io_fail). This is what env_ok is for.
+   - GvalsRel in the *_old statements: MS holds at a store with a bound global the machine does
+     not have, and no MS' does, at any mu (gvals_needed). It is not implied by the old premises.
+   get-time is not excluded: get_time_agree proves its request, answer and result agree. *)
+Definition dv_E : B.env := B.Env (fun _ => false) (fun _ => false) (fun _ => 0%Z).
+Definition dv_s : store := Store [] [] [].
+Definition dv_code1 : B.code := B.Code B.VNil 1 None 3 [] [B.IReturn (B.OSlot 2)] [] B.VNil.
+Definition dv_heap : B.tree B.obj :=
+ B.tset 1 (B.OExn (B.t "hd: 1 is not a pair") (B.VFix 1)) (B.tset 2 (B.OStream 5 B.SIn false) (B.tset 3 (B.OClo dv_code1 []) B.Leaf)).
+Definition dv_m (gval : B.tree B.val) : B.machine :=
+ B.Machine B.Leaf 0 dv_code1 [] [] [] B.VCleared dv_heap 4 gval B.Leaf B.Leaf false 0.
+Definition dv_mm := dv_m B.Leaf.
+Definition src (p : prim) (args : list value) : presult := prim_rule_r (jit_rules []) jit_profile p args dv_s.
+Definition byt (m : B.machine) (q : B.prim) (args : list B.val) : B.move := B.prim_step dv_E B.Leaf m 0 q args.
+
+(* absvector of 2^48 *)
+Example dv_absvector_src : exists s', src PAbsvector [VNum (NInt 281474976710656)] = PDone (ORet (VVec 0) s').
+Proof. eexists. unfold src, prim_rule_r, prim_rule, rule_absvector. cbn [heap dv_s]. reflexivity. Qed.
+Example dv_absvector_byt : exists l m', byt dv_mm B.PAbsvector [B.VFix 281474976710656] = B.MFinal (B.FError (B.VExn l)) m'.
+Proof. vm_compute. eauto. Qed.
+
+(* error-to-string on an exception the bytecode raised: the source answers sys_message's text. *)
+Example dv_ets_rel : VRh [] dv_heap (VExn (XPrim PHd)) (B.VExn 1).
+Proof. econstructor; [reflexivity|exact I]. Qed.
+Example dv_ets_src : src PErrorToString [VExn (XPrim PHd)] = PDone (ORet (VStr (of_string "error")) dv_s).
+Proof. vm_compute. reflexivity. Qed.
+Example dv_ets_byt : exists t, byt dv_mm B.PErrorToString [B.VExn 1] = B.ret_to (B.set_rest dv_mm []) 0 (B.VStr t) /\ t <> of_string "error".
+Proof. vm_compute. eexists; split; [reflexivity|discriminate]. Qed.
+
+(* open: the bytecode prefixes *home-directory*. *)
+Definition dv_home : B.tree B.val := B.tset B.S__home_directory_ (B.VStr (B.t "/h/")) B.Leaf.
+Example dv_open : exists f kk, src POpen [VStr (of_string "a"); VSym (of_string "in")] = PIO (QOpen (of_string "a") DIn) f /\
+ byt (dv_m dv_home) B.POpen [B.VStr (B.t "a"); B.VSym B.S_in] = B.MIO (B.JOpen (B.t "/h/a") B.SIn) kk /\
+ forall r e, ev_of (B.JOpen (B.t "/h/a") B.SIn) r = Some e -> forall r', e <> EvIO (QOpen (of_string "a") DIn) r'.
+Proof.
+ do 2 eexists. split; [vm_compute; reflexivity|]. split; [vm_compute; reflexivity|].
+ intros r e E r' H; subst e. destruct r; cbn in E; inversion E; vm_compute in *; congruence.
+Qed.
+
+(* close on a closed stream: the source asks the environment, the bytecode does not. *)
+Example dv_close_rel : VRh [] dv_heap (VStream 5) (B.VStream 2).
+Proof. econstructor; reflexivity. Qed.
+Example dv_close : (exists f, src PClose [VStream 5] = PIO (QClose 5) f) /\
+ byt dv_mm B.PClose [B.VStream 2] = B.ret_to (B.set_rest dv_mm []) 0 B.VNil.
+Proof. split; [eexists; vm_compute; reflexivity|vm_compute; reflexivity]. Qed.
+Example dv_read_closed : (exists f, src PReadByte [VStream 5] = PIO (QRead 5 1) f) /\
+ exists l m', byt dv_mm B.PReadByte [B.VStream 2] = B.MFinal (B.FError (B.VExn l)) m'.
+Proof. split; [eexists; vm_compute; reflexivity|vm_compute; eauto]. Qed.
+
+(* = on two NaNs: the bytecode is stuck, the source answers. *)
+Definition dv_nan : N := 9221120237041090560.
+Example dv_eq_nan : (exists b, src PEqual [VNum (NFloat dv_nan); VNum (NFloat dv_nan)] = PDone (ORet (VBool b) dv_s)) /\
+ byt dv_mm B.PEq [B.VReal dv_nan; B.VReal dv_nan] = B.MStuck B.RIdentity.
+Proof. split; [eexists; vm_compute; reflexivity|vm_compute; reflexivity]. Qed.
+
+(* A dynamic call of a one-parameter closure with two arguments: the source over-applies, the
+   bytecode's call raises. *)
+Example dv_window : apply_value_r (jit_rules []) jit_profile (VLam (kw "X") (EVar (kw "X")) []) [VNum (NInt 1); VNum (NInt 2)] [] dv_s =
+ MTau (Cfg (Eval [(kw "X", VNum (NInt 1))] (EVar (kw "X"))) [KApply [VNum (NInt 2)]] dv_s) /\
+ exists l m', B.enter dv_E dv_mm (B.VClo 3) 2 B.Leaf 0 [] = B.MFinal (B.FError (B.VExn l)) m'.
+Proof. split; [reflexivity|vm_compute; eauto]. Qed.
+
+(* An IO failure with no handler: the bytecode's continuation resumes the machine without a
+   result, while the source throws. *)
+Example dv_io_fail :
+ match src PGetTime [VSym (of_string "run")] with
+ | PIO q f => q = QTime (of_string "run") /\ f (RFailed (EOther 0)) = OThrow (XIO (EOther 0)) | _ => False end /\
+ match byt dv_mm B.PGetTime [B.VSym B.S_run] with
+ | B.MIO q kk => q = B.JTime true /\ kk B.JFailed = B.set_rest dv_mm [] | _ => False end /\
+ ~ resp_ok (B.JTime true) B.JFailed.
+Proof. split; [vm_compute; split; reflexivity|]. split; [vm_compute; split; reflexivity|]. cbn. auto. Qed.
 End JitEmitInv.
