@@ -91,13 +91,14 @@
      witness set e45add98..., r1-d00-merge): 37 bound-now sites, in 6 definitions
      (shen.system-S-h 18, shen.primitive 3, shen.l-rules 1, shen.myassume 6, shen.p-hyps 6,
      shen.variancy-signature 3; the 37 match the (const shen.bindv) markers there). With X, Y and
-     B taken from the SOURCE call (pair_src: each site paired with a distinct one of the 49 source
+     B taken from the SOURCE call (pair_src: each site paired with a distinct one of the 48 source
      candidates, 23+8+1+6+6+4, such that the site's three let values are expr_eqb to the call's
      arguments and bind_site accepts), all 37 are accepted. With all four arguments read back from
      the expansion, as D00 ran it, also 37. E is still read back: its normal form is norm's, and no
      Rocq normaliser exists (F-* scope), so what is checked independently of the expansion is X, Y,
-     B (against the source) and e_B (against the table). The 12 candidates no site takes are
-     let-frozen binds whose G is also thawed beside the bind (stage 0 leaves those as calls).
+     B (against the source) and e_B (against the table). The 11 candidates no site takes are
+     binds stage 0 leaves as calls (as inspected in shen.primitive: a let-frozen G that is also
+     thawed beside the bind is not frozen in).
      Examples site_bind_real and pair_src_lrules pin the l-rules site; pair_src_lrules_wrong shows
      a site is not paired with a source call whose first argument differs.
    - D_has_port_deref_eq, D_has_port_unify : shen-jit.deref=, shen-jit.unify=, shen-jit.unify=! (port
@@ -1239,7 +1240,7 @@ Definition inl_report (rows : list row) : list nat * nat * nat * nat * list (str
 (* The source's candidate bound-now calls, in preorder: (shen.bind! X Y B (freeze E)), and
    (shen.bind! X Y B G) under (let G (freeze E) ...) (let-frozen). The candidates over-approximate
    the sites: lower.shen freezes G in only under a size and use-count condition, which is not
-   replicated here (on stage 0, 37 sites against 49 candidates). X, Y and B are the source's own
+   replicated here (on stage 0, 37 sites against 48 candidates). X, Y and B are the source's own
    terms; nothing here normalises them, so a site whose arguments norm rewrote matches no
    candidate (and is counted, not hidden). *)
 Fixpoint src_binds (fz : list (name * expr)) (e : expr) : list (list expr) :=
