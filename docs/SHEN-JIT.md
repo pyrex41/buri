@@ -371,7 +371,7 @@ target calls port forms over `shen-jit.same?`, `shen-jit.deref`, `shen-jit.pvar?
 primitives, decision-gated), `OB-JIT-FRONT-PROLOG-DEREFEQ` (deref=: `shen-jit.same?` on one cell against = on two copies,
 the NaN case; decision-gated; vacuous for stage 0) and `OB-JIT-FRONT-PROLOG-CUTFAIL` (no rule; vacuous for stage 0). Every D
 holding shen.bind! still fails `D_compiled'` (`shen-jit.pvar-offset`, `OB-JIT-PORT-PRIMS`), so the 6 bound-now definitions
-stay residual in the full pipeline. bind_rule on the real sites against their `D_of` stores: UNKNOWN (not run). No count
+stay residual in the full pipeline. bind_rule on the real sites (test, not proof: Rocq `bind_rule_report` via `stage0_to_rocq.py --prolog-D` over the decoded table, witness set e45add98..., recursive checker accepting everything, empty scope, so the structural part `beq` is what is tested): all 37 bound-now sites in the 6 definitions accepted (shen.system-S-h 18, shen.primitive 3, shen.l-rules 1, shen.myassume 6, shen.p-hyps 6, shen.variancy-signature 3). No count
 changes: the full-pipeline validated count is UNKNOWN.
 
 **The front passes** (`rocq/JitKRef.v` with proofs in `JitKRefGround.v` and `JitKRefCompose.v`; old names in `rocq/JitLowerEquiv.v`; `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes

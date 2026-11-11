@@ -33,6 +33,9 @@
      definitions (0 sites), deref='s 0 (0), shen.cut with a frozen fourth argument 8 (16),
      bound-now's direct shape 6 (25), the let-frozen shape 5 (23 lets), unified-now's 4 (7). So
      the absence of a cut-fail or deref= rule changes no stage 0 verdict; see the residuals below.
+   - bind_rule_report (a test, not proof; stage0_to_rocq.py --prolog-D over the decoded table,
+     witness set e45add98...): bind_rule, with a recursive checker accepting everything, accepts all
+     37 bound-now sites of stage 0 (6 definitions) against their D_of stores.
 
    Residuals (named, each with a ledger entry in spec/obligations.json):
    - OB-JIT-FRONT-PROLOG-UNIFY (decision-gated: identity primitives and port primitives without an
@@ -987,4 +990,23 @@ Proof.
  intros D rec g e. destruct e as [| | | | | | |a1 x e1| | | | | | | | | |]; try reflexivity;
   destruct e1 as [| | | | | | |a2 y e2| | | | | | | | | |]; try reflexivity; destruct e2; reflexivity.
 Qed.
+
+(* ---------- bind_rule on real bound-now sites (a TEST harness, not proof) ---------- *)
+(* Run by stage0_to_rocq.py --prolog-D over the decoded table. Each bound-now site of a lowered body,
+   read back as JitFrontD.bind_report reads it (X, Y, B and the thawed body taken from the expansion
+   itself), is put to bind_rule against its definition's D_of store, with a recursive checker that
+   accepts everything and the empty scope: what is tested is the structural part, beq on shen.bind!'s
+   lowered body against the expansion's body (renaming, thaw, the do reading, the guards). For each
+   definition with a site: its name, how many sites, how many bind_rule accepts. *)
+Definition bind_rule_report (rows : list F.row) : list (string * nat * nat) :=
+ flat_map (fun r =>
+   let cs := flat_map (fun s => match F.bind_args s with Some a => [(a, s)] | None => [] end) (F.subterms (F.r_low r)) in
+   match cs with [] => [] | _ =>
+     [(JitNormStage0.JitNormStage0.show (F.r_name r), List.length cs,
+       match F.D_of rows (F.r_name r) with
+       | Some D => List.length (filter (fun p => bind_rule D (fun _ _ _ => true) [] (ECall F.bind_name (fst p)) (snd p)) cs)
+       | None => O end)] end) rows.
+
+Definition bind_rule_run (fs ns ss : list sx) : list (string * nat * nat) :=
+ match F.rows_of fs ns ss with Some rows => bind_rule_report rows | None => [] end.
 End JitFrontProlog.
