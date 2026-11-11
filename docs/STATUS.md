@@ -1241,7 +1241,7 @@ the load and for the configuration premises. E2E-20 is not complete.
 
 [SHEN-JIT](SHEN-JIT.md) adds a Rocq profile and an executable bytecode semantics for one RV64 build, pinned at
 release 0.6 (`934cfa5`, re-pinned from 0.4 on 9 November 2026), and `rocq/KLPort.v` adds per-port options to the KLambda semantics, with a proof that the agreed options
-are exactly `KLSemantics.next`, so the existing lanes are unchanged. One hundred and ninety-nine statements are in the assumption audit
+are exactly `KLSemantics.next`, so the existing lanes are unchanged. Two hundred and twenty-six statements are in the assumption audit
 in `rocq/Audit_Jit.v`, all about the models. Eighteen are the port-primitive option (`port_prim`, a ninth field of
 `port_rules`, off in both `agreed_rules` and `jit_rules`) and a proposed meaning for 18 of the 35 port primitives the
 v0.6 normal form calls (`jit_port_prims_proposed`, with a sanity lemma for each; not wired in, pending a decision,
@@ -1261,6 +1261,16 @@ Since K00 their statements are in `rocq/JitKRef.v` and their proofs in `rocq/Jit
 `rocq/JitKRefCompose.v`; `rocq/JitLowerEquiv.v` keeps the old qualified names as abbreviations, so the audit names
 and counts are unchanged. `JitKRef.v` also states, without proof, the index-local interface the fundamental property
 will be proved through (`fv`, `fund_below`, `fund_gen_statement`, `PrimOutRel`, `prim_compat_statement`).
+Twenty-seven are in `rocq/JitKRefCompatCtl.v` (branch `p2/kref-ctl`, rebased onto `p2/int` in branch `p2/r1-kref-ctl-merge`): the
+JitKRef statements `compat_lit`, `compat_var`, `compat_let`, `compat_if`, `compat_and`, `compat_or`, `compat_cond`, `compat_type` and
+`compat_defun`, closed, with their ERel-level lemmas. Trap: `compat_trap_lt` takes `fund_below k` and `prim_compat_statement`
+(a handler may be a partial primitive), and `compat_trap_of_fund` derives `compat_trap_statement` from `prim_compat_statement`
+and `fund_gen_statement`. With `JitKRefPrim.prim_compat` on the integration branch, `AppExn_fb` (applying a handler to an
+exception) and `compat_trap_fb` (trap at index k, the corollary `compat_trap_lt prim_compat`) take `fund_below k` as their only
+hypothesis, and `compat_trap_of_gen` gives `compat_trap_statement` from `fund_gen_statement` alone. Mutants
+`ShenJitKRefCondSwap` (compat_cond with the target's clauses reversed), `ShenJitKRefTrapNoPrim` and `ShenJitKRefAppExnNoPrim`
+(compat_trap_fb and AppExn_fb without `prim_compat`) are rejected. Not `compat_call` or the fundamental property, so
+`OB-JIT-LOWER-FRONT` stays open.
 Fifty-seven are in `rocq/JitKRefBase.v` (branch `p2/kref-base`), KRef's structure: the JitKRef statements `VRel_down`,
 `VRel_wext`, `ERel_down`, `KRef_scope`, `sealed_stable` and `storehas_stable`; monotonicity of SRel, KRel, ERel, EnvRel
 and ObsT (two listed directions, SRel and ObsT up in wext, are false and refuted in Rocq: `SRel_wext_refuted`,
@@ -1291,8 +1301,8 @@ strings and symbols; vectors, where absvector extends the world; globals; IO; er
 moves each side's budget to `S (length w)` over the world's side of the heap, then walks both sides in lockstep
 (`eq_lock`); it uses neither `eq_budget_statement` nor any lok. Mutants `ShenJitKRefAbsvectorNoWext` and
 `ShenJitKRefEqBudgetFree` are rejected. With `prim_compat` proved, `compat_app_of_fund` needs only `fund_gen_statement`
-(not combined into a new audited statement); `compat_call`, `compat_defun`, the control compatibility lemmas and the
-fundamental property are still unproved.
+(not combined into a new audited statement); `compat_call` and the fundamental property are still unproved (the control
+compatibility lemmas and `compat_defun` are in `JitKRefCompatCtl.v`, above).
 Five are in `rocq/JitEqBudget.v`: the old `=` budget statement refuted, `=` on jit numbers a partial equivalence, and
 the budget lemma reduced to one cell step, whose core is proved in `JitEqBudgetCore.v` (below).
 Thirteen are in `rocq/JitEqBudgetStep.v`: the step of the core's induction on a closed set of cells, under S-relativized
