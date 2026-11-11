@@ -9,7 +9,7 @@ Three kinds of data, kept apart in the output:
                 full-pipeline "validated" count (no full-pipeline judge exists at this commit). nf and tf
                 are verdicts on the untrusted erased witness: emit-side evidence only.
   census        labels from a syntactic walk of the norm witness: the constructs JitLowerRel.Comp has
-                no rule for, in pass_census.blockers order, plus `=` operands outside JitLowerRel.pguard
+                no rule for, in pass_census.blockers order, plus `=` operands outside JitLowerRel.pguard (a symbol constant is inside it)
                 and calls to shen-jit.eval-kl. Untrusted: a label for the residual, not a reason Rocq
                 gave. The script checks the walk against Rocq: every definition the judge accepts on
                 nf must get no emit label.
@@ -56,7 +56,6 @@ DECISIONS = {
     'port-prims': 'OB-JIT-PORT-PRIMS',
 }
 EQ_COMPUTED = '= on two computed operands (no safe constant: pguard)'
-EQ_SYMBOL = '= against a symbol constant only (pguard)'
 EVALKL = 'call shen-jit.eval-kl'
 FRONT = 'none on the norm witness; nf accepted (front-side gap)'
 
@@ -103,8 +102,6 @@ def labels(n, out):
             k, _ = eq_kind(l[2][1])
             if k == 'eq-two-computed':
                 out.append(EQ_COMPUTED)
-            elif k == 'eq-symbol-const':
-                out.append(EQ_SYMBOL)
         elif op not in ADMITTED:
             out.append('prim ' + op)
         each(l[2][1])
