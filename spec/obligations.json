@@ -6251,7 +6251,8 @@
     "rocq/JitKRefFv.v",
     "rocq/JitKRefCompatCall.v",
     "rocq/JitKRefFund.v",
-    "rocq/JitFrontD.v"
+    "rocq/JitFrontD.v",
+    "rocq/JitFrontInline.v"
    ],
    "history": [
     {
@@ -6323,6 +6324,11 @@
      "source": "rocq/JitFrontD.v",
      "recorded": "2026-11-11: open. Merge of p2/r1-d00-merge (3338413) into p2/int after r1-term (cd991df): no statement changed; the union has 475 Audit_Jit statements (463 + the 12 of JitFrontD) and mutation pin 216 (203 + the 13 ShenJitFront mutants; tests/mutate-shen-jit.py has 60 mutate calls).",
      "reconciliation": "merge-r1-d00-merge, Phase 2 integration, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontInline.v",
+     "recorded": "2026-11-11: open. r1-f-inline: aeq_sound proved (JitFrontD.aeq_sound_statement, every sealed and D; first from Section hypotheses fund_below and prim_compat_statement, then instantiated), 9 statements audited (484 in all, each Closed under the global context). inline_site_sound_statement and bind_site_sound_statement are FALSE as stated: inline_site_unsound and bind_site_unsound are Rocq-checked counterexamples (a frozen argument (freeze id_key) thawed in place reads the closure's own identity cell on the source side and the caller's id_key on the target side; neither frozen_free, hidden nor bind_site's disjointness guard excludes KLPort.id_key). Proposed fix, not applied (JitFrontD.v is D00's): reject a frozen argument with id_key free (inl_site_g, bind_site_g); the soundness of the guarded inline and bind checkers remains open (integer substitution, thaw-with, depth cut, fold, bound-now). Test, not proof (Rocq vm_compute of site_report on the decoded stage 0 table, stage0 ec9b3872..., witness set e45add98...): 5430 inline sites, 5424 accepted fold off and 5430 fold on, unchanged by the guard; 0 frozen arguments reading id_key; 37 bound-now sites, 37 accepted, unchanged by the guard. Mutants ShenJitFrontAeqLamNoRn, ShenJitFrontAeqLetIdKey, ShenJitFrontInlGuard, ShenJitFrontBindGuard rejected (pin 220).",
+     "reconciliation": "r1-f-inline, Phase 2 front track, 11 November 2026; built on p2/int at 7cb676e."
     }
    ]
   },
