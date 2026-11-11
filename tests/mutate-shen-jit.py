@@ -145,18 +145,24 @@ ShenJitFrontPairReadBack: pair_src checks the site against its own read-back arg
 ShenJitFrontIsitesNoLets: isites counts no parameter lets above a marker, so a site starts at the
   marker. isites_fbound must fail.
 ShenJitFrontAeqLamNoRn: aeq compares a lambda's bodies without pairing the two binders, so
-  (lambda x x) is alpha-equivalent to (lambda y x). Built as JitFrontD.v + JitFrontInline.v
-  (mutate_chain); JitFrontD's Example aeq_shadow fails first (aeq_sound's lambda case comes later
-  in the chain).
+  ((lambda x x) 1) is alpha-equivalent to ((lambda y x) 1), a pair JitFrontInline's
+  aeq_lam_cx_not_KRef proves is not a refinement. Built as JitFrontD.v + JitFrontInline.v
+  (mutate_chain); JitFrontD's Example aeq_shadow fails first (the mutant also rejects an equivalent
+  pair); JitFrontInline's aeq_lam_cx pins the unsound direction.
 ShenJitFrontAeqLetIdKey: aeq's let case drops binder_ok, so a let may bind the closure-identity key,
-  which a freeze then rebinds on one side only. Built as JitFrontD.v + JitFrontInline.v; aeq_sound
-  must fail (REnv_tag's RnOk premise is no longer met).
+  which a freeze then rebinds on one side only. Built as JitFrontD.v + JitFrontInline.v; the
+  Example aeq_let_cx must fail: the mutant accepts the pair aeq_let_cx_not_KRef proves is not a
+  refinement.
 ShenJitFrontInlGuard: inl_site_g drops its id_key guard on frozen arguments, so it accepts the
-  inline counterexample. inl_site_g_cx must fail.
+  inline counterexample. inl_site_g_cx must fail: the mutant accepts the site cx_not_KRef proves
+  is not a refinement. (Test evidence about the guard: the guarded checker's soundness is open.)
 ShenJitFrontBindGuard: bind_site_g drops its id_key guard, so it accepts the bound-now
-  counterexample. bind_site_g_cx must fail.
-ShenJitFrontChainNoThrow: chain_ok stops checking that the configurations before the last are not
-  raises, so a chain could pass through the raise no_reach_iter excludes. chain_at must fail.
+  counterexample. bind_site_g_cx must fail: the mutant accepts the site bx_not_KRef proves is not a
+  refinement. (Test evidence about the guard, as above.)
+ShenJitFrontChainFinalThrow: chain_ok stops checking that its last configuration is not a raise, so
+  a chain may end in the (XUnboundVar y) raise no_reach_iter excludes (no_reach_iter is then
+  false). The Lemma chain_final_raise must fail. (Dropping the check on the configurations before
+  the last instead is an equivalent mutant: with no trap frame, a raise there reaches the last.)
 """
 import re
 from pathlib import Path
@@ -412,7 +418,7 @@ mutate('ShenJitFrontInlGuard', 'rocq/JitFrontInline.v',
 mutate('ShenJitFrontBindGuard', 'rocq/JitFrontInline.v',
        ' forallb (fun n => negb (reads_id n)) nargs && F.bind_site fold D nargs e.',
        ' F.bind_site fold D nargs e.')
-mutate('ShenJitFrontChainNoThrow', 'rocq/JitFrontInline.v',
-       ' forallb (fun i => is_tau (next_r R P (iter i c0)) && no_trap (kont (iter i c0)) && not_throw (iter i c0)) (seq 0 N)',
-       ' forallb (fun i => is_tau (next_r R P (iter i c0)) && no_trap (kont (iter i c0))) (seq 0 N)')
+mutate('ShenJitFrontChainFinalThrow', 'rocq/JitFrontInline.v',
+       ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)) && not_throw (iter N c0).',
+       ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)).')
 print(' '.join(names))

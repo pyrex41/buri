@@ -19,6 +19,14 @@
    REFUTED HERE (the statements are FALSE as written; Rocq-checked counterexamples):
    - inline_site_unsound : ~ JitFrontD.inline_site_sound_statement sealed_cx D_cx.
    - bind_site_unsound   : ~ JitFrontD.bind_site_sound_statement sealed_bx D_bx.
+   Each goes through the accepted site itself not being a KRef pair (cx_not_KRef, bx_not_KRef).
+
+   ALSO PROVED (what makes the lane's mutants of this file semantic kills, not script-shape ones):
+   - aeq_lam_cx_not_KRef, aeq_let_cx_not_KRef: the pairs aeq_lam_cx and aeq_let_cx pin as rejected
+     are not KRef pairs, so aeq's binder pairing (lambda) and binder_ok (let) are needed.
+   - reach_ret (a source return from a chain's start is the chain's end), KRef_ret and
+     KRef_throw_any (KRef_throw for a value and for any final target store).
+   - chain_final_raise (a Lemma): chain_ok rejects a chain that ends in a raise.
    The hole. A frozen argument (EFreeze x) that lower.shen thaws in place (inline-frozen, SFrozen x)
    runs, on the source side, inside the frozen closure, whose environment is tagged: KLPort's
    tagged_env binds the closure identity key id_key to the closure's own new cell. On the target
@@ -46,6 +54,27 @@ Module JitFrontInline.
 Import Observation.Observation KLSyntax.KLSyntax KLValue.KLValue KLSemantics.KLSemantics KLPort.KLPort
  JitProfile.JitProfile JitLowerRel.JitLowerRel JitKRef.JitKRef.
 Module F := JitFrontD.JitFrontD.
+
+(* Pins of aeq's binder checks, on the unsound direction. Each witness pair is refuted as a KRef
+   pair below (aeq_lam_cx_not_KRef, aeq_let_cx_not_KRef), so a checker that accepts it accepts a
+   pair Rocq proves is not a refinement. They sit here, before any proof that destructures aeq, so
+   that a mutant of aeq's lambda case (the binders not paired) or let case (binder_ok dropped) fails
+   on them first, not on a proof script's shape.
+   - lam_cx0/lam_cx: ((lambda x x) 1) against ((lambda y x) 1). Unpaired binders make the bodies x
+     and x equal; the target reads x unbound.
+   - let_cx0/let_cx: (let id_key 1 (thaw (freeze id_key))) against (let y 1 (thaw (freeze y))).
+     Without binder_ok, id_key pairs with y; the source's freeze rebinds id_key to its own cell (a
+     vector), the target's y is still 1. *)
+Definition xv : name := kw "x".
+Definition yv : name := kw "y".
+Definition lam_cx0 : expr := EApp (ELam xv (EVar xv)) [ENum (NInt 1)].
+Definition lam_cx : expr := EApp (ELam yv (EVar xv)) [ENum (NInt 1)].
+Example aeq_lam_cx : F.aeq [] lam_cx0 lam_cx = false.
+Proof. vm_compute. reflexivity. Qed.
+Definition let_cx0 : expr := ELet id_key (ENum (NInt 1)) (EApp (EFreeze (EVar id_key)) []).
+Definition let_cx : expr := ELet yv (ENum (NInt 1)) (EApp (EFreeze (EVar yv)) []).
+Example aeq_let_cx : F.aeq [] let_cx0 let_cx = false.
+Proof. vm_compute. reflexivity. Qed.
 
 Lemma text_eqb_sym : forall a b, text_eqb a b = text_eqb b a.
 Proof.
@@ -294,6 +323,14 @@ Definition chain_ok (N : nat) (c0 : config) : bool :=
  forallb (fun i => is_tau (next_r R P (iter i c0)) && no_trap (kont (iter i c0)) && not_throw (iter i c0)) (seq 0 N)
  && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)) && not_throw (iter N c0).
 
+(* The last configuration's not_throw is what excludes a chain that ends in a raise: here one step
+   reaches (XUnboundVar y) with an empty continuation, which no_reach_iter must not allow. (The check
+   on the configurations before the last is implied by the rest: with no trap frame on the way, a
+   raise there propagates to the last configuration, which is then a raise. Dropping it is an
+   equivalent mutant, so it is not one of the lane's.) *)
+Lemma chain_final_raise : forall y s, chain_ok 1 (Cfg (Eval [] (EVar y)) [] s) = false.
+Proof. intros y s. reflexivity. Qed.
+
 Lemma chain_at : forall N c0 i, chain_ok N c0 = true -> (i <= N)%nat ->
  no_trap (kont (iter i c0)) = true /\ not_throw (iter i c0) = true /\
  ((i < N)%nat -> is_tau (next_r R P (iter i c0)) = true) /\ (i = N -> is_final (next_r R P (iter i c0)) = true).
@@ -339,18 +376,37 @@ Proof.
    + cbn in Run. discriminate.
 Qed.
 
+(* Every configuration a source run reaches from a chain's start is on the chain or a resource
+   raise with no trap frame. *)
+Lemma reach_inv : forall N c0 t c, chain_ok N c0 = true -> srun sealed c0 t c -> Inv N c0 c.
+Proof.
+ intros N c0 t c Ok Run.
+ assert (G : forall c t c', star (step_r R P) c t c' -> Inv N c0 c -> Inv N c0 c').
+ { intros c1 t' c' St. induction St as [c1|c1 l c2 t' c3 St1 St IH]; intros I; [exact I|].
+   apply IH. eapply Inv_step; [exact Ok|exact I|exact St1]. }
+ exact (G _ _ _ Run (or_introl (ex_intro _ 0 (conj (Nat.le_0_l N) eq_refl)))).
+Qed.
+
 (* No source run from a chain's start raises (XUnboundVar y) to the top. *)
 Theorem no_reach_iter : forall N c0 t s y, chain_ok N c0 = true ->
  srun sealed c0 t (Cfg (Throw (XUnboundVar y)) [] s) -> False.
 Proof.
  intros N c0 t s y Ok Run.
- assert (G : forall c t c', star (step_r R P) c t c' -> Inv N c0 c -> Inv N c0 c').
- { intros c t' c' St. induction St as [c|c l c1 t' c2 St1 St IH]; intros I; [exact I|].
-   apply IH. eapply Inv_step; [exact Ok|exact I|exact St1]. }
- destruct (G _ _ _ Run (or_introl (ex_intro _ 0 (conj (Nat.le_0_l N) eq_refl))))
-   as [(i & L & E)|(x & k & s' & E & (m & Ex) & _)].
+ destruct (reach_inv N c0 t _ Ok Run) as [(i & L & E)|(x & k & s' & E & (m & Ex) & _)].
  - destruct (chain_at N c0 i Ok L) as (_ & Nth & _). rewrite <- E in Nth. discriminate.
  - injection E as E1 _ _. rewrite Ex in E1. discriminate.
+Qed.
+
+(* A source run from a chain's start that returns to the top ends at the chain's last configuration. *)
+Theorem reach_ret : forall N c0 t v s, chain_ok N c0 = true ->
+ srun sealed c0 t (Cfg (Ret v) [] s) -> Cfg (Ret v) [] s = iter N c0.
+Proof.
+ intros N c0 t v s Ok Run.
+ destruct (reach_inv N c0 t _ Ok Run) as [(i & L & E)|(x & k & s' & E & _)].
+ - destruct (Nat.eq_dec i N) as [->|Ne]; [exact E|].
+   destruct (chain_at N c0 i Ok L) as (_ & _ & Tau & _). specialize (Tau ltac:(lia)).
+   rewrite <- E in Tau. discriminate Tau.
+ - discriminate E.
 Qed.
 
 (* Forward iteration, for the target's run. *)
@@ -404,6 +460,79 @@ Proof.
  destruct (Ot (XUnboundVar y) s It) as (s0 & w' & Run & _). exists [], s0. exact Run.
 Qed.
 
+(* As KRef_throw, with any final target store (the target may allocate on the way). *)
+Lemma KRef_throw_any : forall sealed D e0 e s n y s', D_wf sealed D -> StoreHas D s -> store_ok s -> heap s = [] ->
+ KRef sealed D [] e0 e -> tau_all sealed n (Cfg (Eval [] e) [] s) = true ->
+ iterf sealed n (Cfg (Eval [] e) [] s) = Cfg (Throw (XUnboundVar y)) [] s' ->
+ exists t s0, srun sealed (Cfg (Eval [] e0) [] s) t (Cfg (Throw (XUnboundVar y)) [] s0).
+Proof.
+ intros sealed D e0 e s n y s' Dw SH SO Hp H Ta It.
+ assert (Er := H (S n) [] [] [] wf_nil (fun x I => match I with end)).
+ rewrite JitKRefBase.JitKRefBase.ERel_iff in Er.
+ assert (HS := JitKRefFund.JitKRefFund.store_refl sealed D (S n) s Dw SH SO).
+ assert (Ew : id_world s = []) by (unfold id_world; rewrite Hp; reflexivity). rewrite Ew in HS.
+ assert (O := Er (S n) (le_n _) [] (conj (incl_refl _) wf_nil) [] []
+   (JitKRefGround.JitKRefGround.KRel_top sealed D (S n) [] wf_nil) s s HS).
+ destruct (O n [] (iterf sealed n (Cfg (Eval [] e) [] s)) ltac:(lia) (runs_iterf sealed n _ Ta)) as (_ & Ot & _).
+ destruct (Ot (XUnboundVar y) s' It) as (s0 & w' & Run & _). exists [], s0. exact Run.
+Qed.
+
+(* The value form: a target return to the top gives a source return of a GVal-related value. *)
+Lemma KRef_ret : forall sealed D e0 e s n v s', D_wf sealed D -> StoreHas D s -> store_ok s -> heap s = [] ->
+ KRef sealed D [] e0 e -> tau_all sealed n (Cfg (Eval [] e) [] s) = true ->
+ iterf sealed n (Cfg (Eval [] e) [] s) = Cfg (Ret v) [] s' ->
+ exists t v0 s0 w', srun sealed (Cfg (Eval [] e0) [] s) t (Cfg (Ret v0) [] s0) /\ GVal w' v0 v.
+Proof.
+ intros sealed D e0 e s n v s' Dw SH SO Hp H Ta It.
+ assert (Er := H (S n) [] [] [] wf_nil (fun x I => match I with end)).
+ rewrite JitKRefBase.JitKRefBase.ERel_iff in Er.
+ assert (HS := JitKRefFund.JitKRefFund.store_refl sealed D (S n) s Dw SH SO).
+ assert (Ew : id_world s = []) by (unfold id_world; rewrite Hp; reflexivity). rewrite Ew in HS.
+ assert (O := Er (S n) (le_n _) [] (conj (incl_refl _) wf_nil) [] []
+   (JitKRefGround.JitKRefGround.KRel_top sealed D (S n) [] wf_nil) s s HS).
+ destruct (O n [] (iterf sealed n (Cfg (Eval [] e) [] s)) ltac:(lia) (runs_iterf sealed n _ Ta)) as (Or & _ & _).
+ destruct (Or v s' It) as (v0 & s0 & w' & Run & _ & G & _). exists [], v0, s0, w'. split; [exact Run|exact G].
+Qed.
+
+(* ---------- aeq's binder checks: the pinned witnesses are not KRef pairs ---------- *)
+Definition s_nil : store := Store [] [] [].
+Lemma D_nil_wf : D_wf [] [].
+Proof. split; constructor. Qed.
+Lemma s_nil_has : StoreHas [] s_nil.
+Proof. intros f d []. Qed.
+Lemma s_nil_ok : store_ok s_nil.
+Proof. split; constructor. Qed.
+
+Lemma chain_lam : chain_ok [] 6 (Cfg (Eval [] lam_cx0) [] s_nil) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+(* ((lambda y x) 1) does not refine ((lambda x x) 1): the target raises (XUnboundVar x), which no
+   source run does. aeq rejects the pair (aeq_lam_cx). *)
+Theorem aeq_lam_cx_not_KRef : ~ KRef [] [] [] lam_cx0 lam_cx.
+Proof.
+ intros K.
+ destruct (KRef_throw_any [] [] _ _ s_nil 6 xv _ D_nil_wf s_nil_has s_nil_ok eq_refl K
+   ltac:(vm_compute; reflexivity) ltac:(vm_compute; reflexivity)) as (t & s0 & Run).
+ exact (no_reach_iter [] 6 _ t s0 xv chain_lam Run).
+Qed.
+
+Lemma chain_let : chain_ok [] 7 (Cfg (Eval [] let_cx0) [] s_nil) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+(* (let y 1 (thaw (freeze y))) does not refine (let id_key 1 (thaw (freeze id_key))): the target
+   returns 1, every source return is the frozen closure's identity vector. aeq rejects the pair
+   (aeq_let_cx), by binder_ok. *)
+Theorem aeq_let_cx_not_KRef : ~ KRef [] [] [] let_cx0 let_cx.
+Proof.
+ intros K.
+ destruct (KRef_ret [] [] _ _ s_nil 7 (VNum (NInt 1)) _ D_nil_wf s_nil_has s_nil_ok eq_refl K
+   ltac:(vm_compute; reflexivity) ltac:(vm_compute; reflexivity)) as (t & v0 & s0 & w' & Run & G).
+ pose proof (reach_ret [] 7 _ t v0 s0 chain_let Run) as E.
+ assert (Ev : match iter [] 7 (Cfg (Eval [] let_cx0) [] s_nil) with Cfg (Ret (VVec _)) _ _ => True | _ => False end)
+   by (vm_compute; exact I).
+ rewrite <- E in Ev. destruct v0; cbn in Ev, G; contradiction.
+Qed.
+
 (* ---------- inline site ---------- *)
 Definition f_cx : name := kw "f".
 Definition p_cx : name := kw "p".
@@ -428,15 +557,21 @@ Proof. vm_compute. reflexivity. Qed.
 Lemma chain_cx : chain_ok sealed_cx 7 (Cfg (Eval [] (ECall f_cx [xfz])) [] s_cx) = true.
 Proof. vm_compute. reflexivity. Qed.
 
-Theorem inline_site_unsound : ~ F.inline_site_sound_statement sealed_cx D_cx.
+(* The accepted site is not a KRef pair. *)
+Theorem cx_not_KRef : ~ KRef sealed_cx D_cx [] (ECall f_cx [xfz]) (EVar id_key).
 Proof.
- intros H.
- assert (K := H false false [] f_cx [xfz] [xfz] (EVar id_key) D_cx_wf
-   (fun E => ltac:(discriminate E)) (fun E => ltac:(discriminate E)) inl_site_cx
-   (Forall2_cons _ _ (KRef_xfz sealed_cx D_cx) (Forall2_nil _))).
+ intros K.
  destruct (KRef_throw sealed_cx D_cx _ _ s_cx 1 id_key D_cx_wf s_cx_has s_cx_ok eq_refl K
    ltac:(vm_compute; reflexivity) ltac:(vm_compute; reflexivity)) as (t & s0 & Run).
  exact (no_reach_iter sealed_cx 7 _ t s0 id_key chain_cx Run).
+Qed.
+
+Theorem inline_site_unsound : ~ F.inline_site_sound_statement sealed_cx D_cx.
+Proof.
+ intros H. apply cx_not_KRef.
+ exact (H false false [] f_cx [xfz] [xfz] (EVar id_key) D_cx_wf
+   (fun E => ltac:(discriminate E)) (fun E => ltac:(discriminate E)) inl_site_cx
+   (Forall2_cons _ _ (KRef_xfz sealed_cx D_cx) (Forall2_nil _))).
 Qed.
 
 (* ---------- bound-now site ---------- *)
@@ -479,17 +614,23 @@ Proof. vm_compute. reflexivity. Qed.
 Lemma chain_bx : chain_ok sealed_bx 13 (Cfg (Eval [] (ECall F.bind_name nargs_bx)) [] s_bx) = true.
 Proof. vm_compute. reflexivity. Qed.
 
+(* The accepted site is not a KRef pair. *)
+Theorem bx_not_KRef : ~ KRef sealed_bx D_bx [] (ECall F.bind_name nargs_bx) e_bx.
+Proof.
+ intros K.
+ destruct (KRef_throw sealed_bx D_bx _ _ s_bx 10 id_key D_bx_wf s_bx_has s_bx_ok eq_refl K
+   ltac:(vm_compute; reflexivity) ltac:(vm_compute; reflexivity)) as (t & s0 & Run).
+ exact (no_reach_iter sealed_bx 13 _ t s0 id_key chain_bx Run).
+Qed.
+
 Theorem bind_site_unsound : ~ F.bind_site_sound_statement sealed_bx D_bx.
 Proof.
- intros H.
- assert (K := H false [] nargs_bx nargs_bx e_bx D_bx_wf (fun E => ltac:(discriminate E)) D_bx_do bind_site_cx
+ intros H. apply bx_not_KRef.
+ exact (H false [] nargs_bx nargs_bx e_bx D_bx_wf (fun E => ltac:(discriminate E)) D_bx_do bind_site_cx
    (Forall2_cons _ _ (JitKRefCompatCtl.JitKRefCompatCtl.compat_lit sealed_bx D_bx [] (ENum (NInt 1)) (VNum (NInt 1)) eq_refl)
    (Forall2_cons _ _ (JitKRefCompatCtl.JitKRefCompatCtl.compat_lit sealed_bx D_bx [] (ENum (NInt 2)) (VNum (NInt 2)) eq_refl)
    (Forall2_cons _ _ (JitKRefCompatCtl.JitKRefCompatCtl.compat_lit sealed_bx D_bx [] (ENum (NInt 3)) (VNum (NInt 3)) eq_refl)
    (Forall2_cons _ _ (KRef_xfz sealed_bx D_bx) (Forall2_nil _)))))).
- destruct (KRef_throw sealed_bx D_bx _ _ s_bx 10 id_key D_bx_wf s_bx_has s_bx_ok eq_refl K
-   ltac:(vm_compute; reflexivity) ltac:(vm_compute; reflexivity)) as (t & s0 & Run).
- exact (no_reach_iter sealed_bx 13 _ t s0 id_key chain_bx Run).
 Qed.
 End Cx.
 
@@ -513,7 +654,11 @@ Proof.
  repeat match goal with Hb : (_ && _) = true |- _ => apply andb_prop in Hb as [_ Hb] end. assumption.
 Qed.
 
-(* The guard rejects both counterexamples (tests: they pin what the guard is for). *)
+(* The guard rejects both counterexamples. These are the refutations' own witnesses: F.inl_site
+   accepts (inl_site_cx) and F.bind_site accepts (bind_site_cx) a site that cx_not_KRef and
+   bx_not_KRef prove is not a refinement. So a mutant that drops the guard accepts a site Rocq
+   proves unsound. That is checker-behavior (test) evidence about the guard; the guarded
+   checkers' soundness is NOT proved (see the header). *)
 Example inl_site_g_cx : inl_site_g false false D_cx f_cx [xfz] (EVar id_key) = false.
 Proof. vm_compute. reflexivity. Qed.
 Example bind_site_g_cx : bind_site_g false D_bx nargs_bx e_bx = false.

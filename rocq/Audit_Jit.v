@@ -484,3 +484,10 @@ Print Assumptions JitFrontInline.JitFrontInline.no_reach_iter.
 Print Assumptions JitFrontInline.JitFrontInline.KRef_throw.
 Print Assumptions JitFrontInline.JitFrontInline.inl_site_g_inl_site.
 Print Assumptions JitFrontInline.JitFrontInline.bind_site_g_bind_site.
+Print Assumptions JitFrontInline.JitFrontInline.cx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.bx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_lam_cx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_let_cx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.reach_ret.
+Print Assumptions JitFrontInline.JitFrontInline.KRef_ret.
+Print Assumptions JitFrontInline.JitFrontInline.KRef_throw_any.
