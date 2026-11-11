@@ -1296,8 +1296,11 @@ without the function-table equality) is rejected at `JitKRefCompatClo.call_rel`.
 `rocq/JitKRefCallNoTableCex.v` (r21-mutation-hygiene, 4 audited statements) refutes in Rocq call_rel's statement with SRel's
 table clause dropped (`call_rel_no_table_refuted`, unmutated VRel/KRel/fund_below), `cx_tables_differ` proves the
 counterexample's two tables differ, and mutant `ShenJitKRefCallNoTableCexTable` is rejected (by computation: it tries the
-restored clause with `vm_compute; reflexivity`). r21's mutation pin 230 is computed (229 + 1), not measured: `make report`
-at `dae16a0` exits 2 because `make prove` fails on `rocq/JitEqBudgetStep.v` under Coq 8.18 before the mutation suite runs. Not
+restored clause with `vm_compute; reflexivity`). r21's mutation pin 230 is computed (229 + 1), not measured: `make report` cannot
+run under the build rule (buri-lps is aarch64 with Rocq 9.3 only; the bundled Coq 8.18.0 that `scripts/prove` requires is an
+amd64 binary with no loader there), and a diagnostic run outside buri-lps at `dae16a0` exits 2 because `make prove` fails on
+`rocq/JitEqBudgetStep.v` (a p2/int file r21 does not change) under Coq 8.18 before the mutation suite runs. The full
+`scripts/proof-mutations` suite is therefore unrun; only its Shen/JIT part (tests/mutate-shen-jit.py) was run, under Rocq 9.3. Not
 `fund_gen_statement` or the fundamental property, so `OB-JIT-LOWER-FRONT` stays open.
 With both merged: mutation pin 199, audit count 249.
 Fourteen are in `rocq/JitKRefFund.v` (branch `p2/r1-kref-fund`, built on `p2/int` at `17379dc`): the fundamental

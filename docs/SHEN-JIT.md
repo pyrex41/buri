@@ -447,7 +447,9 @@ under SRel; `JitKRefCompatCtl.ObsT_of_MRel` pays the target's step); a call with
 `compat_call_of_fund` gives `compat_call_statement` from `fund_gen_statement` alone. Mutant `ShenJitKRefCallNoTable`
 (SRel and GStore without `gfuns s0 = gfuns s`) is rejected at `JitKRefCompatClo.call_rel`, the named-call move
 compat_call rests on, after `JitKRef.v`, `JitKRefGround.v` and `JitKRefBase.v` compile under the mutation. That mutant is a
-rejected proof only. `rocq/JitKRefCallNoTableCex.v` (4 audited statements) shows in Rocq that the statement is false:
+rejected proof only. `rocq/JitKRefCallNoTableCex.v` (4 audited statements) refutes in Rocq a separate statement,
+`call_rel_nt_statement` (call_rel's statement over the unmutated VRel, KRel and fund_below, with only SRel's table clause
+replaced by True), not the mutant's own call_rel:
 `call_rel_no_table_refuted` refutes call_rel's statement with SRel's table clause replaced by True (`SRel_nt`, over the
 unmutated VRel, KRel and fund_below), at sealed = D = [], j = 2, with every other premise discharged (`fund_gen`,
 `prim_compat`, `KRel_top`, `app_at`): the source table lacks `f`, so the source raises `XUndefinedFun`, and the target's
