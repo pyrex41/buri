@@ -53,8 +53,8 @@ if [ -z "${SKIP_STAGE0:-}" ]; then
   echo "stage0: $(awk '{a+=$2; r+=$3; u+=$4} END {print a " accepted, " r " rejected, " u " unreadable of " a+r+u " definitions"}' "$got"), as recorded"
 else echo "stage0: NOT RUN (SKIP_STAGE0 set)"; fi
 # Heap image code objects (OB-JIT-IMAGE-CODE, docs/SHEN-JIT-IMAGE.md): the binary's image is read as
-# 32-bit halves (the trusted reader, OB-JIT-IMAGE-READER; Rocq joins them with primitive integers) and
-# Rocq proves image_code_ok: every one of
+# bytes (the trusted reader, OB-JIT-IMAGE-READER, writes each as a Byte.byte constructor; Rocq joins
+# them into words) and Rocq proves image_code_ok, closed: every one of
 # the 24 files' stage 0 definitions, from the stage 0 step's own S0_<file> modules, loads to the code
 # object its function cell holds in the image (JitImage.code_check_sound). image_mutants_caught
 # proves two one-word mutants of print's code are caught. The census Rocq computes on the image is
@@ -63,13 +63,13 @@ if [ -z "${SKIP_STAGE0:-}" ] && [ -z "${SKIP_IMAGE:-}" ]; then
   python3 "$root/tests/shen-jit/stage0_to_rocq.py" --image "$bin" "$s0/Img.v" || { echo "IMAGE_READ_FAILED"; exit 13; }
   sed -i 's/^From Coq Require/From Stdlib Require/' "$s0/Img.v"
   (cd "$s0" && rocq compile -Q "$out" Buri Img.v > Img.log 2>&1) || { tail -20 "$s0/Img.log"; echo "IMAGE_ROCQ_FAILED"; exit 13; }
-  # image_code_ok and image_mutants_caught may assume only the four primitive 63-bit integer operations
-  # the reader's halves are joined with (Uint63: int, lsr, land, eqb); any other assumption fails.
-  ax=$(sed -n '1,/^image_facts =/p' "$s0/Img.log" | grep -E "^[A-Za-z_][A-Za-z0-9_.']* :" | cut -d' ' -f1 | LC_ALL=C sort -u | tr '\n' ' ')
-  [ "$(grep -c '^Axioms:$' "$s0/Img.log")" = 2 ] && [ "$ax" = "eqb int land lsr " ] || { cat "$s0/Img.log"; echo "IMAGE_ASSUMPTIONS $ax"; exit 13; }
+  # image_code_ok and image_mutants_caught must each print "Closed under the global context": no
+  # axiom, parameter or primitive. Anything else before image_facts fails.
+  pre=$(sed -n '1,/^image_facts =/p' "$s0/Img.log" | grep -v '^\[WARNING\]' | grep -v '^image_facts =$')
+  [ "$pre" = "$(printf 'Closed under the global context\nClosed under the global context')" ] || { cat "$s0/Img.log"; echo "IMAGE_ASSUMPTIONS"; exit 13; }
   sed -n '/^image_facts =/,$p' "$s0/Img.log" | tr '\n' ' ' | tr -s ' ' | sed 's/ $//' > "$s0/image-facts.txt"; echo >> "$s0/image-facts.txt"
   diff "$root/tests/shen-jit/image-facts.txt" "$s0/image-facts.txt" > "$s0/image-diff.txt" || { cat "$s0/image-diff.txt"; echo "IMAGE_FACTS_CHANGED"; exit 13; }
-  echo "image: image_code_ok proved, assuming only Uint63 int, lsr, land, eqb (every stage 0 code object of the 24 files equals its image function cell's), 2 image mutants caught, census as recorded"
+  echo "image: image_code_ok proved, closed under the global context (every stage 0 code object of the 24 files equals its image function cell's), 2 image mutants caught, census as recorded"
 else echo "image: NOT RUN (SKIP_STAGE0 or SKIP_IMAGE set)"; fi
 if [ -n "${SKIP_DIFF:-}" ]; then echo "differential: NOT RUN (SKIP_DIFF set)"; exit 0; fi
 d="$out/d"; mkdir -p "$d"; cd "$d"

@@ -7,8 +7,9 @@
    collection with every pointer stored as its byte offset from the heap base and raw native fields
    stored as 0, the global cell array, the constant array, and a trailer of 2 words. Here the image
    is a map from word index (0 = the header's first word) to the little-endian 64-bit word there.
-   The only trusted step is reading the file's bytes as 32-bit halves of those words
-   (stage0_to_rocq.py --image, OB-JIT-IMAGE-READER); joining the halves and everything below is Rocq.
+   The only trusted step is reading the file's image bytes, in file order, as constructors of the
+   ordinary inductive `byte` (stage0_to_rocq.py --image, OB-JIT-IMAGE-READER); joining each 8 into
+   a word and everything below is Rocq, with no primitive type, so the lane instance is closed.
 
    `parse_image` checks the header and trailer and walks the heap object by object as
    rebase_heap does (a header word starts an object of obj_words words; any other word starts a
@@ -26,7 +27,6 @@
    of F's function cell. `check_def_sound` states what that gives. It says nothing about global
    values, the property vector or anything else initialisation built: see docs/SHEN-JIT-IMAGE.md. *)
 From Coq Require Import List ZArith NArith PArith Bool String Ascii.
-From Coq Require Uint63.
 From Buri Require Import JitBytecode JitLowerStage0.
 Import ListNotations.
 Module JitImage.
@@ -476,11 +476,19 @@ Qed.
 (* ---------- the lane's instance (OB-JIT-IMAGE-CODE) ---------- *)
 Module S0 := JitLowerStage0.JitLowerStage0.
 
-(* The reader gives each 64-bit word as two 32-bit halves, high first, as primitive integers
-   (cheap to elaborate; N literals of the 97887 words took more than 140 s before they were stopped). *)
-Definition w32 (x : Uint63.int) : N := Z.to_N (Uint63.to_Z x).
-Fixpoint words_of_halves (l : list Uint63.int) : list N := match l with
- | hi :: lo :: r => (N.shiftl (w32 hi) 32 + w32 lo) :: words_of_halves r
+(* The reader gives the image's bytes in file order as constructors of Init.Byte's `byte` (an
+   ordinary 256-constructor inductive: no primitive, nothing assumed). N literals of the 97887 words
+   took more than 140 s before they were stopped; the bytes elaborate quickly. A byte's value is read
+   from its bits (to_bits gives the least significant bit first), and each 8 bytes make one
+   little-endian word; a trailing partial word is dropped (parse_header checks the length). *)
+Definition bit (b : bool) : N := if b then 1 else 0.
+Definition byte_n (x : Byte.byte) : N :=
+ let '(a0, (a1, (a2, (a3, (a4, (a5, (a6, a7))))))) := Byte.to_bits x in
+ bit a0 + 2 * (bit a1 + 2 * (bit a2 + 2 * (bit a3 + 2 * (bit a4 + 2 * (bit a5 + 2 * (bit a6 + 2 * bit a7)))))).
+Fixpoint words_of_bytes (l : list Byte.byte) : list N := match l with
+ | b0 :: b1 :: b2 :: b3 :: b4 :: b5 :: b6 :: b7 :: r =>
+   (byte_n b0 + 256 * (byte_n b1 + 256 * (byte_n b2 + 256 * (byte_n b3 + 256 * (byte_n b4
+     + 256 * (byte_n b5 + 256 * (byte_n b6 + 256 * byte_n b7))))))) :: words_of_bytes r
  | _ => [] end.
 
 (* The image whose words are ws; its length is taken from ws itself, and parse_header checks it
@@ -626,12 +634,14 @@ Definition mut_byte (ws : list N) (g : positive) : option mem :=
      | Some b => Some (tset (key (b + 1)) (N.lxor (get (c_mem c) (b + 1)) 2) (c_mem c)) | None => None end
    | None => None end
  | None => None end.
-(* g's verdict in a mutated image: Differ, Undecoded or Unbuilt means the mutant is caught. *)
+(* g's verdict in a mutated image: Differ, Undecoded or Unbuilt means the mutant is caught. The
+   mutated image must still parse: a mutant that breaks parsing is not counted as caught, so a
+   caught mutant has gone through check_def. *)
 Definition mut_caught (om : option mem) (n : nat) (xs : list val) (g : positive) : bool :=
  match om with
  | None => false
  | Some m => match parse_image m (N.of_nat n) with
-   | None => true
+   | None => false
    | Some (_, c) => match find (fun x => match defname x with Some h => Pos.eqb h g | None => false end) xs with
      | Some x => match check_def c x with Match _ => false | _ => true end
      | None => false end end end.
