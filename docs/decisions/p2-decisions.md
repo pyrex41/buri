@@ -13,6 +13,37 @@ Where things stand on `p2/int` `f42d6c4`:
 
 The denominator is 955, the v0.6 stage 0 set. "lower.shen proved" is not claimed anywhere.
 
+## Decision record
+
+Recorded by task `r21-decision-intake` on 2026-11-11, on branch `p2/r21-decision-intake` off `p2/int`
+`91718d4`. An answer below counts only if it is quoted verbatim from Reuben's own message, with that
+message's date. No agent, script or computed task text can supply one.
+
+**Messages from Reuben received for this intake.** As of 2026-11-11 there is one: the workflow resume
+request, relayed by the harness, which reads in full "we are back early -- resume the workflow". It
+answers none of the items below. **No item has an answer, so Q0 and items 1 to 10 are all OPEN.**
+
+While an item is OPEN its default stands. That default is the status quo, or a named residual. It is
+**not** the packet's recommendation. Where the packet recommends approving or amending something, that
+recommendation is not adopted.
+
+| # | item | answer | what stands while OPEN |
+|---|---|---|---|
+| Q0 | do callee-link failures inherit a decision gate? | OPEN (no answer received) | The literal reading of the definition of done holds: a callee-link failure is a non-gated residual and counts against the cap of 20. The packet's forecast says this puts hundreds of definitions against the cap if any of items 1, 3 or 4 stays a residual. **Under this status quo, Phase 2 cannot be done.** |
+| 1 | port primitives with no approved source meaning | OPEN (no answer received) | Named residual. No port primitive is wired into `jit_rules`. |
+| 2 | eval-kl | OPEN (no answer received) | Named residual. Runtime lowering stays outside the claim. |
+| 3 | identity primitives | OPEN (no answer received) | Named residual. No model change. |
+| 4 | `=` on two possibly-NaN computed operands | OPEN (no answer received) | Named residual. `pguard` stays as it is, and the cycle half has no case in `Out'`. |
+| 5 | share premises HT and HP | OPEN (no answer received) | HT and HP stay Section hypotheses of `check_share_sound`, as on p2/r1-share-ht. Neither is replaced by a D check or recorded as met. |
+| 6 | uncurrying DoD amendment | OPEN (no answer received) | DoD (2) is **not** amended. Its uncurrying line stays unmet, and `uncurry_not_kref` shows that no KRef-sound rule exists for it. |
+| 7 | emit-spec premises and design choices | OPEN (no answer received) | None of the five shape and scope rows is approved. The five `frame_prim` exclusions stand, and their 35 definitions (census at `f42d6c4`) are non-gated residuals. |
+| 8 | guarded inline and bind statements | OPEN (no answer received) | The refuted statements `inline_site_sound_statement` and `bind_site_sound_statement` stand, refuted. No guarded replacement is approved. |
+| 9 | fixed-name `FPrim` entries in D_wf | OPEN (no answer received) | D_wf is unchanged. `fold_arith_needs_store` stands, and the 6 definitions (census) are non-gated residuals. |
+| 10 | corrected SMs / `m_next` statements (r21-sms-fresh-fix) | OPEN (no answer received; the corrected statements were not found) | `preservation'_statement`, `call_preservation'_statement` and `call_preservation_src'_statement` stay as written in `rocq/JitEmitInv.v`, refuted on an unmerged branch. No corrected statement is approved. See item 10. |
+
+The counts in this packet were computed at `f42d6c4`. They were **not re-run** on `91718d4`. The
+full-pipeline validated count stays UNKNOWN.
+
 ## How to read the counts
 
 | label | what it is |
@@ -95,6 +126,7 @@ count of 20 non-gated residuals.
 | 7 | emit-spec premises and design choices (p2/r1-emit-spec-merge) | `env_ok_needed`, `resp_ok_bound_needed`, `env_ok_inhabited`, `dv_*`, `gvals_needed`, `old_reflect_false`, `old_reflect'_iff_core`, `cx_catch_up`, `JitEmitNestTest` | `frame_prim` exclusions: 35 (census). `=` with `pguard`: 206 (item 4). One-argument window: 0 (census). `env_ok`: on every run statement; 18 use KL IO (census). Shapes: 0 | approve `env_ok`, the window, `GvalsRel`, catch-up and the index shape. For the `frame_prim` exclusions, decide the five source-model questions so that the families can admit them | 0 if the model questions are decided and the families land. Otherwise 35 (census): over the cap |
 | 8 | guarded inline and bind statements | `JitFrontInline.inline_site_unsound`, `bind_site_unsound` (r1-f-inline); `JitFrontProlog.bind_site_unsound` (p2/int) | 528 with an inline marker, 7 with bound-now (37 sites) (census). The guard changes 0 verdicts (`site_report`, test) | approve: guarded statements, refutations kept | 0 once guarded soundness is proved. Until then the 528 cannot pass: over the cap |
 | 9 | fixed-name primitive entries (`+`, `-`) in D_wf | `JitFrontCopyFold.fold_arith_needs_store` (no premise); `JitProfile.jit_defun_fixed_refused`; the `hd_tl_stable` pattern | 6 (census; the same 6 by `d00_inline_census.py` MODE=5 and by Rocq's inline-site test, 522 of 528 without fold) | approve: D_wf admits fixed-name `FPrim` entries, with a `fixed_stable` lemma. This also settles HP on the real D (item 5) | 0 if approved. Otherwise 6 of the 20 |
+| 10 | corrected SMs / `m_next` statements (added by r21-decision-intake) | `JitEmitSim.preservation'_false`, `call_preservation'_false`, `call_preservation_src'_false`, `raise_resolve_false`, `fx_next`, `fx_no_funrel` (p2/r22-emit-sim `82679ef`, unmerged) | every run statement (statement shape) | none: the corrected statements were not found on any branch | DoD (1)'s `call_preservation_src'` cannot be proved as stated |
 
 Across items 1 to 4, 391 of the 807 residual definitions touch at least one gated item (census, from
 the `decisions` column of `stage0-residuals.txt`). The other 416 touch none. They wait on emit and
@@ -406,6 +438,49 @@ test).
 **Cap:** 0 if approved. Under (c), 6 non-gated residuals out of the 20. Their counterexample is
 `fold_arith_needs_store`. Their `vm_compute` rejection traces do not exist yet.
 
+### 10. Corrected SMs / `m_next` statements (r21-sms-fresh-fix)
+
+Added by `r21-decision-intake` on 2026-11-11. **OPEN.**
+
+**What is asked.** The task text names "the corrected SMs/m_next statements from r21-sms-fresh-fix" for
+Reuben's decision. Replacing the statements would change the statement of DoD (1)'s
+`call_preservation_src'`. That is Reuben's call, not an agent's.
+
+**What was found.** On 2026-11-11 no `r21-sms-fresh-fix` branch or worktree existed. These searches
+found nothing by that name:
+
+- `git branch -a`;
+- `git worktree list`;
+- `git log --all -i --grep=fresh --grep=SMs`.
+
+No corrected statement text exists for Reuben to approve. This packet does not propose any.
+
+**Evidence that the current statements are false.** All of it is in Rocq, on p2/r22-emit-sim `82679ef`.
+That branch is unmerged: `82679ef` is not an ancestor of `91718d4`, and `rocq/JitEmitSim.v` does not
+exist on `p2/int`. Its Audit_Jit lists the following, and its lane evidence commit `43349ba` reports
+them closed. They were not re-run here (UNKNOWN on this tree).
+
+- `preservation'_false`, `call_preservation'_false` and `call_preservation_src'_false` refute the three
+  statements at `cx_E`, `cx_pt`, sealed `[]`. `raise_resolve_false` refutes that branch's own premise.
+- The cause is that SMs says nothing about the machine's allocation pointer `m_next`, and
+  `JitBytecode.alloc` writes at `m_next` without looking.
+- The witness `fx_m` is SM-related with `m_next` pointing at do's closure. On
+  `(defun f (X) (hd X))` with 1, its first step raises with no handler. The exception overwrites do's
+  closure (`fx_next`). `FunRel'` then fails for every store (`fx_no_funrel`).
+- `sim'_statement` is **not** refuted.
+- The fix that branch names belongs to emit-spec: SMs keeps `m_next` fresh, meaning every key at or
+  above it is unused. The mutant `ShenJitEmitSimFreshNext` gives the witness a fresh pointer, and the
+  lane rejects it.
+
+**What stands while OPEN.** The three statements stay as they are in `rocq/JitEmitInv.v`, and the
+refutations stay as the record. DoD (1) asks for `call_preservation_src'` to be proved, and as stated it
+cannot be. Two things are needed before Reuben can decide:
+
+- a branch that states the corrected SMs and the corrected statements;
+- that branch's Rocq evidence.
+
+**Ledger:** OB-JIT-LOWER-FRAGMENT, which owns the emit-spec statements.
+
 ## Ledger
 
 Each item has a dated `history` entry in `spec/obligations.json` saying "awaiting Reuben's decision,
@@ -419,6 +494,12 @@ docs/decisions/p2-decisions.md". No status changed. All stay `open`, and nothing
 | 4 | OB-JIT-NAN-IDENTITY and OB-JIT-EQ-CYCLE |
 | 5, 6, 8, 9 | OB-JIT-LOWER-FRONT |
 | 7 | OB-JIT-LOWER-FRAGMENT |
+| 10 | OB-JIT-LOWER-FRAGMENT |
+| Q0 | OB-JIT-STAGE0 |
+
+Task `r21-decision-intake` added one more dated `history` entry for Q0 and for each of items 1 to 10.
+Each one records the item as OPEN, with no answer from Reuben, and states the default that stands. No
+`status` changed.
 
 The front items have their own ids on unmerged branches: OB-JIT-SHARE-THAW on r1-share-ht and
 OB-JIT-FRONT-UNCURRY on r1-f-copy-fold-apply. This branch does not create them, to avoid duplicate ids

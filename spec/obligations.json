@@ -5002,6 +5002,11 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-10: partial, 148 of 955 definitions accepted at 0.6 (was 111). pguard admits symbol constants now that sym_of_text is injective (OB-JIT-SYM-INJECTIVE), ported from pass/eq 906b389 (145 of 950 at 0.4); 37 definitions were blocked only by = against a symbol, exactly the features.tsv eq-symbol-const-only rows; none is lost.",
      "reconciliation": "Admitting = against a symbol constant at 0.6, 10 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Q0 (do callee-link failures inherit a decision gate?). Standing default: the literal DoD reading; a callee-link failure is a non-gated residual against the cap of 20, so with any of items 1, 3 or 4 a residual Phase 2 cannot be done (forecast in the packet, computed at f42d6c4, not re-run on 91718d4).",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -5304,6 +5309,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 3. Rocq: JitBytecode.same is None on pairs, strings and reals (MStuck RIdentity); JitProfile.pp_samep_ok, pp_taggedp_ok. Affected (census): 48 residual definitions (deref 37, tagged? 12, same? 4), 22 with no other decision item. Recommended default: gated residual plus Q0. Cap impact: 0 with Q0; without Q0, -480 under closure (forecast).",
      "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 3 (identity primitives). Standing default: named residual; no model change.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -5463,6 +5473,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 4. Rocq: JitLowerRel.pguard; JitEqBudget.eq_budget_refuted; JitEmitInv.dv_eq_nan (p2/r1-emit-spec-merge 7bb9bb7, Audit_Jit there, not re-run here). Affected (census): 206 definitions with = on two computed operands, 171 with no other decision item, 59 as first blocker. Options (forecast direct/D-src/D-low): NaN identity rule +171/+129/+129; Rocq static non-real judgment +98/+18/+18; residual +0. Recommended default: gated residual plus Q0; NaN identity is the only option reaching all 206. Cap impact: 0 with Q0; without Q0, -648 under closure (forecast).",
      "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 4 (= on two possibly-NaN computed operands). Standing default: named residual; pguard unchanged.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -6171,6 +6186,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 1. Rocq: JitProfile.jit_port_prims_off, jit_port_prims_partition, jit_port_prims_arity, pp_*_ok (Audit_Jit); the source judge rejects every caller. Affected (census, stage0_residuals.py and feature_census.py re-run on stage0 ec9b3872, norm e45add98, byte-identical outputs): 178 residual definitions touch a non-identity port primitive, 140 with no other decision item; 63 use a no-carrier operator, 158 a proposed candidate. Recommended default: gated residual for the 19 no-carrier operators plus the packet's Q0 rule (a callee-link failure whose failing callees are all decision-gated inherits the gate); wiring the 15 non-identity candidates is a separate approval. Cap impact: 0 with Q0; without Q0, -581 under closure (forecast), over the cap of 20.",
      "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 1 (port primitives with no approved source meaning). Standing default: named residual; no port primitive wired into jit_rules.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -6197,6 +6217,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 4 (cycle half). Rocq: JitEmitInv.dv_eq_cycle, dv_eq_cycle_rel, dv_eq_cycle_same (p2/r1-emit-spec-merge 7bb9bb7, Audit_Jit there, not re-run here): on two related cyclic vectors the source goes wrong and the bytecode is stuck (RCyclic); Out' has no case for it. Affected: a run-time property, no static census (UNKNOWN). Recommended default: a named limit of the claim. Cap impact: 0 (a limit, not a residual definition).",
      "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 4, cycle half. Standing default: a named limit; Out' has no case for it.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -6328,6 +6353,16 @@
      "source": "rocq/JitEmitInv.v",
      "recorded": "2026-11-11: open (r21-emit-spec-land, branch p2/r21-emit-spec-land, not yet merged into p2/int; the integrator records that merge). The branch merges p2/r1-emit-spec-merge 7bb9bb7 onto p2/int f42d6c4 (52f913c) and then p2/int da4b545 (fc0a9fd); JitEmit files byte-identical to 7bb9bb7; call_preservation_src_statement byte-identical to 4a7346e. Lane on b02db36 (SKIP_DIFF=1, Rocq 9.3): exit 0, 704 Closed, syntactic and term-level non-inversion gates 0 violations, source judge 148 of 955 as recorded, differential NOT RUN; log sha256 5366da18... All 116 mutants refused (37 ShenJitEmit*). Lane rerun on head 38d321d (proof tree identical to b02db36): exit 0, 704 Closed, log sha256 4417b761...; verifier's independent run on 38d321d: exit 0, log sha256 5383dc4d.... While every Rule_X hook is empty the syntactic gate's constructor check is vacuous (0 hook constructors); the term-level gate is the operative non-inversion check. Back-end statements stay unproved, truth UNKNOWN. make prove, make report, gate_tests, the norm check and the full-pipeline judge: NOT RUN (UNKNOWN).",
      "reconciliation": "r21-emit-spec-land branch evidence, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 7 (emit-spec premises and design choices). Standing default: none of env_ok, the one-argument window, GvalsRel, the catch-up form or the Rule_X index shape is approved; the five frame_prim exclusions stand and their 35 definitions (census at f42d6c4) are non-gated residuals.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 10 (corrected SMs/m_next statements, r21-sms-fresh-fix), added by this intake. No r21-sms-fresh-fix branch or worktree existed on 2026-11-11, so no corrected statement text exists to approve and none is proposed. The current preservation'_statement, call_preservation'_statement and call_preservation_src'_statement are refuted in Rocq on p2/r22-emit-sim 82679ef (unmerged; preservation'_false, call_preservation'_false, call_preservation_src'_false, raise_resolve_false; not re-run here, UNKNOWN on this tree): SMs does not keep m_next fresh. Standing default: the statements stay as written in rocq/JitEmitInv.v, refuted; DoD (1)'s call_preservation_src' cannot be proved as stated.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -6526,6 +6561,26 @@
      "source": "rocq/JitKRefCallNoTableCex.v",
      "recorded": "2026-11-11: open. r21-mutation-hygiene, mutation hygiene only, no statement of rocq/JitKRef.v changed. Proved and audited (4 statements in rocq/Audit_Jit.v, 527 in all, each Closed under the global context): SRel_nt_table (SRel is SRel_nt plus gfuns s0 = gfuns s), call_rel_nt_of_table (call_rel's conclusion from SRel_nt and the table clause), cx_tables_differ (gfuns cx_s0 <> gfuns cx_s) and call_rel_no_table_refuted (~ call_rel_nt_statement [] []: call_rel's statement with SRel's table clause replaced by True, over the unmutated VRel, KRel and fund_below, is false at j = 2 for a source table lacking f and a target table with (defun f () 1); every other premise discharged by fund_gen, prim_compat, KRel_top and app_at). So ShenJitKRefCallNoTable remains a rejected proof, and the separate Rocq counterexample shows the table clause is needed; not shown: that the mutant's whole chain (its own VRel, KRel, fund_below, GStore) is false. Mutants ShenJitKRefTrapNoPrim and ShenJitKRefAppExnNoPrim rewritten under the same names, since their old forms failed with 'No such assumption': TrapNoPrim restricts AppExn to handlers that are not partial table primitives and is rejected at KRel_KApply_exn; AppExnNoPrim weakens AppExn_of's premise to equal-argument primitive outcomes and is rejected in AppExn_of's primitive case. Both are rejected proofs of true statements. New mutant ShenJitKRefCallNoTableCexTable (SRel_nt with the clause restored, the restored clause tried by vm_compute; reflexivity) rejected: Rocq computes the two tables and they differ (Unable to unify), and cx_tables_differ proves the premise false. Mutation pin 230 (229 + 1) is computed, not measured. make report cannot run under the build rule: buri-lps is aarch64 with Rocq 9.3 only, and scripts/prove requires the bundled Coq 8.18.0, an amd64 binary (probe in buri-lps: 'Dynamic loader not found: /lib64/ld-linux-x86-64.so.2', rc 255). Diagnostic only, not in buri-lps and not evidence for the pin: make report at dae16a0 in an amd64 container from the Nov 6 gate image: exit 2, log sha256 b966f052fe60cbfd20ca7b4ca1d0d78dc69665c4483f4fee146ab0ece26eeeda, _build/check.log sha256 34e7c7d199eccd0b14bbf37ca24c6cec5082377fc6c5f8a5a91e2763c3009cf5. The 27 suites and gate tests passed, then make prove failed compiling rocq/JitEqBudgetStep.v (not an r21 file) at line 413 under Coq 8.18 (Unable to unify Forall2 on cons with Forall2 on nil), so scripts/proof-mutations never ran and no Rejected proof mutation line was counted. Every pin since the 0.6 re-pin (178 onward, including 229) is likewise unmeasured by make report; its 8.18 failure is a separate open issue. JitKRefCallNoTableCex.v imports JitKRefPrim, which imports JitEqBudgetStep, so its status under Coq 8.18 is UNKNOWN. The full scripts/proof-mutations suite is unrun; its Shen/JIT part (tests/mutate-shen-jit.py, the loop scripts/proof-mutations runs with the same rejection test) was run under Rocq 9.3. Re-measured in buri-lps under Rocq 9.3 at 2dcca90 (code identical to dae16a0; docs only changed): lane SKIP_DIFF=1 exit 0, 527 closed, rocqchk passed, stage0 148 accepted of 955 (source judge), differential NOT RUN, log sha256 4f2c99914fa5086acc9338a8e2a5c51965de0521cf7a4583f0d8cabd8d68a652; 79 of 79 Shen/JIT mutants rejected, log sha256 801a0c23186f89b1aa6c9e30a431052179e39b2b49e060078473dfd0f0eca047. Non-vacuity, same run (dev log sha256 2a6764d7390ae4e50b9ee77f18f30b59b5ed55b2b43eb9f3ecd35f2e01ef43b5): the unmutated JitKRefCompatCtl.v and JitKRefCallNoTableCex.v compile (controls rc 0, empty logs); ShenJitKRefTrapNoPrim fails at line 274, inside KRel_KApply_exn (congruence on the residual primitive-handler goal; log sha256 0245a8c300d2b131eacecd743a3fd2eb1fde216fd7cafe618d4e8f226155daa3), while a probe with the same restricted AppExn_of and no primitive premise compiles (rc 0), so the rejection is the trap handler step, not AppExn_of; ShenJitKRefAppExnNoPrim fails at line 388, AppExn_of's primitive case (pout_obs on the equal-argument outcome; log sha256 439b963fa73e541028510af112fd5730261c44c8fcc5cdf54ccd7707757d056c); ShenJitKRefCallNoTableCexTable fails at line 116, the HS store premise of call_rel_no_table_refuted (vm_compute; reflexivity on the restored table clause; log sha256 05417eac42bd36b425f9314a83e94b35d26431a857e89278c00f870dad67b68a). After merge with p2/int at da4b545 (image lane, 527 statements, pin 230) the computed totals are 531 audited statements and pin 231; neither is measured. Measured under Rocq 9.3 at dae16a0: lane exit 0 (527 closed, rocqchk passed, lane log sha256 4f2c99914fa5086acc9338a8e2a5c51965de0521cf7a4583f0d8cabd8d68a652), 79 of 79 Shen/JIT mutants rejected (log sha256 801a0c23186f89b1aa6c9e30a431052179e39b2b49e060078473dfd0f0eca047).",
      "reconciliation": "r21-mutation-hygiene, Phase 2 KRef track, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 5 (share premises HT and HP). Standing default: HT and HP stay Section hypotheses of check_share_sound (p2/r1-share-ht); not replaced by a D check, not recorded as met.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 6 (uncurrying DoD amendment). Standing default: DoD (2) not amended; its uncurrying line stays unmet (uncurry_not_kref).",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 8 (guarded inline and bind statements). Standing default: inline_site_sound_statement and bind_site_sound_statement stand, refuted; no guarded replacement approved.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 9 (fixed-name FPrim entries in D_wf). Standing default: D_wf unchanged; fold_arith_needs_store stands and its 6 definitions (census) are non-gated residuals.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   },
@@ -6879,6 +6934,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: open; awaiting Reuben's decision (no agent can approve it; nothing discharged). Decision packet docs/decisions/p2-decisions.md (branch p2/r21-decisions off p2/int f42d6c4), item 2 (eval-kl). Rocq: JitKRefPrim.prim_param_eval_kl covers eval-kl's primitive step only; the source judge rejects all 16 callers. Affected (census): 16 definitions call shen-jit.eval-kl, 9 with no other decision item, 4 inside the 181-definition component. Recommended default: gated residual, runtime lowering out of Phase 2 scope. Cap impact: 0 with Q0; without Q0, 16 under D-low and 450 under D-src (forecast).",
      "reconciliation": "r21-decisions, Phase 2 decision packet for Reuben, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 2 (eval-kl). Standing default: named residual; runtime lowering outside the claim.",
+     "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
     }
    ]
   }
