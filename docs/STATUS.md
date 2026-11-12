@@ -1586,3 +1586,90 @@ r22-sms-land (branch `p2/r22-sms-land` off `p2/int` `52898d1`): item 10 (correct
 - Mutants: none run. `ShenJitEmitInvFreshDropped` belongs to the approved alternative of this task (corrected SMs landed) and does not apply, since nothing was landed; the 149 names were not rerun on this tree (UNKNOWN here). NOT RUN, UNKNOWN: `make prove`, `make report`, the differential, the full-pipeline judge, `check-shen-jit-norm.sh`, `gate_tests.sh`. Full-pipeline validated count: UNKNOWN.
 
 r22-sms-land into p2/int (integration): `--no-ff` merge of `p2/r22-sms-land` `406bbe99b43144b9d4482d4db5c3b01fa388733c` (docs and ledger only, branched from `52898d1`) into `p2/int` `3220e79` (which has r22-decide, r22-sim-land, r22-front-cutderef and r22-front-inline-guard). Item 10 is still OPEN on p2/int `3220e79` (decision table row 10), so the branch's "not approved, nothing landed" path still holds on the merged tree. The one conflict was this file's entry list, resolved by keeping both sides. `docs/decisions/p2-decisions.md` and `spec/obligations.json` auto-merged; the ledger is a superset of both parents (one added `history` entry under `OB-JIT-LOWER-FRAGMENT`, status unchanged, open). The merge changes no file under `rocq`, `scripts` or `tests` and not README, so the counts are p2/int's, re-read from the merged tree: `rocq/Audit_Jit.v` 886 `Print Assumptions` lines, `rocq/audit.d/Audit_Jit.count` 886, `scripts/report.py` pin 304 (arithmetic, not measured), `stage0-accepted.txt` unchanged. The branch entry above quotes 879, 149 names and pin 300: those are its base `52898d1`'s, not p2/int's. Its lane evidence was taken on the 879-statement trees `68ce931` and `556bdbf`, not on p2/int; evidence on the merged tree is recorded in a follow-up docs commit.
+
+#### From `p2/r21-sms-fresh-fix`, merged into `p2/int` by the main session on 2026-11-12
+
+The branch's own status text, kept verbatim. Counts in it are the branch's; after the merge the Shen/JIT audit module is 915 statements and the pin 306.
+
+r21-sms-fresh-fix (branch `p2/r21-sms-fresh-fix` off `p2/int` `61f59e5`, with `p2/r22-emit-sim` `45dc6dc` merged in by `fca6c3f`. Its merge into `p2/int` is the integrator's).
+
+**What changed.**
+- `SMs` keeps `m_next` fresh: `JitEmitInv.Fresh` and the new field `sm_fresh`.
+- `preservation'_statement`, `call_preservation'_statement`, `call_preservation_src'_statement` and `raise_resolve_statement` are corrected. Their text is unchanged, and the relation they range over now keeps `m_next` fresh.
+- The pre-repair text is kept as `*_v1`. r22-emit-sim's four `*_false` theorems now refute the `*_v1` text, and are still closed.
+- New closed lemmas: `sms_alloc`, `sms_raise_final`, `fx_not_sm` and `fresh_needed`.
+- The implications are re-proved against the corrected statements. The old-fragment corollary `call_preservation_src_old_of_cp'` now targets `call_preservation_src_old_fresh_statement`: the old statement with `GvalsRel [] s m` and `Fresh m` added.
+
+**NOT reached:** a corollary to the byte-identical `JitKRef.call_preservation_src_statement` (4a7346e).
+- `fresh_needed` (closed) shows why: the old premises hold at `fx_m`, yet no `SM` relates it.
+- Adding `Fresh m` is decision item 10: OPEN, no sign-off from Reuben.
+
+**Evidence** on commit `04ffd08`. This docs-only commit changes nothing under `rocq`, `scripts` or `tests`.
+- lane: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-sms-fresh-fix-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh` on a `git archive` of `04ffd08` in buri-lps, Rocq 9.3, 08:10:41Z to 08:54:29Z. Result:
+  - LANE_RC=0;
+  - emit syntactic gate: 0 violations;
+  - 741 of 741 Closed under the global context (`Audit_Jit.log` sha256 `ca3ee1382c490074a5484e0d440965cd40a9958a37d0ba737d7630d21c2b6129`);
+  - rocqchk passed;
+  - emit term-level gate: 0 violations over 388 constants of 5 modules;
+  - stage 0: 148 accepted, 807 rejected, 0 unreadable of 955, as recorded (source judge);
+  - image step as recorded;
+  - differential NOT RUN.
+  
+  Log sha256 `61a227d416e40b028ca556a50cdd7dabbb2bea8281572d30ae2b65b1399b4b86`.
+- mutants: the 45 `ShenJitEmit*` mutants that `tests/mutate-shen-jit.py` generates on `04ffd08` were compiled with Rocq 9.3 under rocq-slot (-P2) against the same sources. All 45 were rejected, 0 accepted. They include:
+  - `ShenJitEmitInvFreshDropped`: `sms_alloc` fails;
+  - `ShenJitEmitInvFreshOneKey`: `fresh_used_lt` fails;
+  - `ShenJitEmitSimFreshNext`: `fx_next` fails.
+  
+  sha256 of the concatenated logs `7c2941ffdbb80454d8fcbb62ddd0352d7b0103c97273b9c54a9c1b09091489b2`. The other 80 mutants were not rerun, so their status is UNKNOWN on this tree.
+- Counts: 741 audited statements. Mutation pin 276 (274 + 2), computed.
+- NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The count of kernel definitions validated out of 955 is therefore UNKNOWN; the source judge accepts 148 of 955.
+
+r21-sms-fresh-fix fix round 1 (Rocq commit `df4175f` on `bf727e0`).
+
+**What changed.**
+- The base (`fca6c3f`) statements of `preservation_old_of_new`, `call_preservation_old_of_new`, `call_preservation_src_old_of_new`, their primed versions, `call_preservation_src_old_of_new''` and `JitEmitSim.call_preservation_src_old_of_cp'` are restored verbatim. Each is proved from its target (`preservation_old_holds`, `call_preservation_old_holds`, `call_preservation_src_old_holds`) and does not use its hypotheses. They are NOT evidence that the corrected statements recover the old ones.
+- The Fresh-premise routes through the corrected statements keep their proofs under new names: `*_old_fresh_of_new`, `*_old_fresh_of_new'`, `call_preservation_src_old_fresh_of_new''` and `JitEmitSim.call_preservation_src_old_fresh_of_cp'`.
+- `sm_embed` and `ms_embed` keep `Fresh m`, because their base text is false over the repaired `SM`/`MS'`. The refutations are `JitEmitSim.sm_embed_text_false` and `ms_embed_text_false` (closed, at `fx_m`, through `ms'_sm`). The base text over the relation it spoke of is kept as `sm_embed_v1` and `ms_embed_v1`.
+- 13 new audited statements, 754 in all. The pin stays 276 (no new mutants). The descriptions of `ShenJitEmitReflectTrace`, `ShenJitEmitReflectSrcTrace` and `ShenJitEmitOldGvalsDropped` now name the theorem that actually fails.
+
+**Still NOT reached:** a corollary from the corrected `call_preservation_src'_statement` to the byte-identical `JitKRef.call_preservation_src_statement` (4a7346e) that uses its hypothesis.
+- The Rocq counterexamples to instantiation are `JitEmitSim.fresh_needed` and, from the base, `JitEmitInv.gvals_needed`. Both are closed. In each, the old premises hold at a machine that the new invariant relates at no mu.
+- Decision item 10 was sent to main, because r21-decision-intake was not addressable. It is OPEN, with no sign-off from Reuben. The options are:
+  - (a) accept `Fresh m` and `GvalsRel [] s m` as the extra premises of the recovery target;
+  - (b) fund a normalization lemma (GvalsRel may still block it);
+  - (c) change the relation or the requirement.
+
+**Evidence** on commit `df4175f`. The following docs-only commit changes nothing under `rocq`, `scripts` or `tests`.
+- lane: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-sms-fresh-fix-r1-lane /lps/bin/rocq-slot bash scripts/check-shen-jit.sh`, run on a `git archive` of `df4175f` in buri-lps under Rocq 9.3. Results:
+  - LANE_RC=0;
+  - 754 audited statements Closed under the global context (`Audit_Jit.log` sha256 `b5f568a5d68604fbfa73d355440df77d89e24f761575d998fa38208f4946b3eb`);
+  - rocqchk passed;
+  - emit term-level gate: 0 violations over 401 constants;
+  - stage 0: 148 accepted, 807 rejected, 0 unreadable of 955 (source judge);
+  - differential NOT RUN.
+
+  Log sha256 `d4894a8ab46aeb536b60681299116f1c8fceb1b6bc5e28708233d534553b4549`.
+- mutants: all 45 `ShenJitEmit*` mutants generated on `df4175f` were rejected (Rocq 9.3, rocq-slot). They include:
+  - `ShenJitEmitInvFreshDropped` (`sms_alloc` fails);
+  - `ShenJitEmitInvFreshOneKey`;
+  - `ShenJitEmitOldGvalsDropped` (`preservation_old_fresh_of_old` fails);
+  - `ShenJitEmitReflectTrace` (`preservation_old_fresh_of_new` fails);
+  - `ShenJitEmitReflectSrcTrace` (`call_preservation_src_old_fresh_of_new` fails).
+
+  sha256 of the concatenated logs `dfbb9c9118f9759533849d44a58b9c9f74718a31ea3ca1e9f4b92fafc3920711`. The other mutants were not rerun: UNKNOWN on this tree.
+- NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The number of kernel definitions validated out of 955 is UNKNOWN.
+
+r21-sms-fresh-fix fix round 2 (commit `4ff09d1` on `b102be7`; comments and the decision record only, no statement or proof changed).
+
+**What changed.**
+- Framing corrected in `rocq/JitEmitSim.v`. `fresh_needed` and `gvals_needed` refute direct instantiation of the corrected statement at the old premises. They are NOT counterexamples to recovering the old statement: `JitKRef.call_preservation_src_statement` is proved outright (`JitKRefFund.call_preservation_src`), so "corrected implies old" holds trivially, which is why the base-named `*_old_of_new` corollaries typecheck with their hypotheses unused. Those corollaries are kept for name preservation only and are not evidence.
+- A non-vacuous route (normalize the machine, apply the corrected statement, transfer the run back) is named with its obstacles and NOT built: the old fragment's raise allocates at `m_next`; the transfer needs `B.next` agreement on machines differing in `m_next` and `m_gval`, carried along the run; store globals with no `VRh` image may leave no normalized machine.
+- Decision item 10 in `docs/decisions/p2-decisions.md` now names the corrected statements, the `Fresh m` premise of `sm_embed`/`ms_embed`, the `*_v1` copies and the `_text_false` refutations. `r21-decision-intake` is not an addressable agent, so the entry is written on this branch for the integrator. Status OPEN, no sign-off from Reuben.
+
+**Still NOT reached (acceptance not met):** a Closed corollary from the corrected `call_preservation_src'_statement` to the byte-identical 4a7346e `JitKRef.call_preservation_src_statement` that uses its hypothesis.
+
+**Evidence** on commit `4ff09d1`.
+- lane: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-sms-fresh-fix-r2-lane /lps/bin/rocq-slot bash scripts/check-shen-jit.sh` on a `git archive` of `4ff09d1` in buri-lps, Rocq 9.3: LANE_RC=0; 754 of 754 audited statements Closed under the global context (`Audit_Jit.log` sha256 `b5f568a5d68604fbfa73d355440df77d89e24f761575d998fa38208f4946b3eb`); rocqchk passed; emit term-level gate 0 violations over 401 constants; stage 0: 148 accepted, 807 rejected, 0 unreadable of 955 (source judge); differential NOT RUN. Log sha256 `d4894a8ab46aeb536b60681299116f1c8fceb1b6bc5e28708233d534553b4549` (identical to the `df4175f` log; only comments changed).
+- mutant: `ShenJitEmitInvFreshDropped` (`sm_fresh : True`) applied to `JitEmitInv.v` of `4ff09d1` and compiled with Rocq 9.3 under rocq-slot: rejected (RC 1, `sms_alloc` fails at line 377). Log sha256 `c5970c55fbb98fefc1c38e0689fef3ca238129aae906e7fdfb843f09ecbadf58`. The other mutants were not rerun on `4ff09d1`: UNKNOWN on this tree.
+- NOT run, so UNKNOWN: `make prove`, `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The number of kernel definitions validated out of 955 is UNKNOWN.

@@ -176,14 +176,14 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitRel.v` | JitLowerRel's relations indexed by code object and capture names, with the family hooks; hand-written nested `Comp_ind'`; `comp_embed` |
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
-| `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
-| `rocq/JitEmitSim.v` | The generic parts as implications: `preservation'` from `sim'` and `raise_resolve`, `call_preservation'` from `preservation'`, `call_preservation_src'` from `call_preservation'` and `clo_scoped`; the slot-1 gap witnessed; `preservation'`, `call_preservation'`, `call_preservation_src'` refuted (stale `m_next`) (r22-emit-sim) |
+| `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved; SMs keeps `m_next` fresh (`Fresh`, `sm_fresh`, `sms_alloc`, r21-sms-fresh-fix), the pre-repair relation and statements kept as `*_v1` |
+| `rocq/JitEmitSim.v` | The generic parts as implications: `preservation'` from `sim'` and `raise_resolve`, `call_preservation'` from `preservation'`, `call_preservation_src'` from `call_preservation'` and `clo_scoped`; the slot-1 gap witnessed; the pre-repair `preservation'`, `call_preservation'`, `call_preservation_src'` and `raise_resolve` (now `*_v1`) refuted (stale `m_next`) (r22-emit-sim); `fx_not_sm` and `fresh_needed` after the repair (r21-sms-fresh-fix) |
 | `rocq/JitEmitCheck.v` | r22-emit-check: the checker for JitEmitRel's Comp' (JitLowerCheck's functions over callbacks, with a fallback to the family hooks); `check_emit_sound` (base hooks), `check_emit_sound_hooks` (any Hooks record), `judge_emit_sound`, closed |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
 | `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
 | `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
 | `rocq/JitFrontShare.v` | share's checker (`check_share`, reuse included), `front_hyps`, `check_share_sound` under HT, HP and D_wf, the HT analysis, and the 4 validated share rewrites |
-| `rocq/Audit_Jit.v` | Assumption audit of 886 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 915 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -1279,6 +1279,74 @@ Fifteen closed statements added (`Audit_Jit` 723 on the branch; 879 on `p2/int` 
 or theorem hypothesis: `ShenJitEmitSimCloScoped`, `ShenJitEmitSimVrhDom`, `ShenJitEmitSimAdequacyRefl`,
 `ShenJitEmitSimRaiseStar`, `ShenJitEmitSimSlot1Any`). The `scripts/report.py` pin is 274 (268 + 6) on the branch and 300 (294 + 6) on `p2/int` after the merge, computed;
 `make report` was not run. The evidence is in [STATUS](STATUS.md).
+
+### Extended back end: SMs keeps m_next fresh (r21-sms-fresh-fix)
+
+Branch `p2/r21-sms-fresh-fix` off `p2/int` `61f59e5`, with `p2/r22-emit-sim` `45dc6dc` merged in. Its merge
+into `p2/int` is the integrator's.
+
+**The repair.** `rocq/JitEmitInv.v` adds `Fresh m`: no heap key at or above `m_next` is in use. `SMs` gains the
+field `sm_fresh : Fresh m`. So `SM`, `MS'`, `Ends'` and `EndsSrc'` keep `m_next` fresh at every related state and
+at every end.
+
+**The corrected statements.** The text of `preservation'_statement`, `call_preservation'_statement`,
+`call_preservation_src'_statement` and `raise_resolve_statement` is unchanged, but each now ranges over the
+corrected relation. Nothing in a conclusion is dropped: the observation equivalence (traces, related final values
+and exceptions) is kept in full.
+
+**The refuted text is kept.** The text before the repair is kept verbatim with `_v1` added to every name:
+`SMs_v1`, `SM_v1`, `EvalCtx_v1`, `TestCtx_v1`, `OpCtx_v1`, `MS'_v1`, `Ends'_v1`, `EndsSrc'_v1`, and the four
+statements. r22-emit-sim's `preservation'_false`, `call_preservation'_false`, `call_preservation_src'_false` and
+`raise_resolve_false` now refute the `_v1` text. They are still closed.
+
+**New lemmas, all closed:**
+- `fresh_alloc`, `fresh_set_used`, `fresh_empty`, `fresh_used_lt`, `vrh_fresh_ext`;
+- `sms_alloc`: an allocation keeps `SMs`;
+- `sms_raise_final`: a raise with no handler ends in a machine that `SMs` relates and that holds the exception;
+- `fx_not_sm`: no `SM` relates the counterexample's machine.
+
+**The implications, re-proved against the corrected statements:**
+- `call_preservation'_of_preservation'`;
+- `preservation'_of_sim'`;
+- `call_preservation_src'_of_cp'`;
+- `call_preservation_src_old_fresh_of_cp'` and the `*_old_fresh_of_new` family (fix round 1 names; these are the
+  routes through the corrected statements, and they need `Fresh m`).
+
+**NOT reached: the byte-identical `JitKRef.call_preservation_src_statement`.**
+- `fresh_needed` (closed) shows why. The machine `fx_m` meets every premise of the old statement (`Com`, `CompFn`,
+  `entered`, and `GvalsRel []` as well), but no `SM` relates it.
+- So the corollary reaches `call_preservation_src_old_fresh_statement`: the old statement with
+  `GvalsRel [] s m` and `Fresh m` added, and the conclusion verbatim.
+- The old statement itself is still proved outright, by `JitKRefFund.call_preservation_src`.
+- Adding `Fresh m` is decision item 10 for Reuben (OPEN), alongside item 7's `GvalsRel`.
+
+**Mutants.** Two new mutants:
+- `ShenJitEmitInvFreshDropped` (`sm_fresh : True`): `sms_alloc` fails;
+- `ShenJitEmitInvFreshOneKey` (only `m_next` itself unused): `fresh_used_lt` fails.
+
+**Truth of the corrected statements is UNKNOWN.** They are not refuted and not proved: `sim'_statement`,
+`raise_resolve_statement` and `clo_scoped_statement` are still open.
+
+**Fix round 1 (no base theorem loses its statement).**
+- `preservation_old_of_new`, `call_preservation_old_of_new`, `call_preservation_src_old_of_new`, their primed
+  versions, `call_preservation_src_old_of_new''` and `JitEmitSim.call_preservation_src_old_of_cp'` have their base
+  (`fca6c3f`) statements again. Each is proved from its target directly (`*_old_holds`) and does not use its
+  hypotheses. They are not evidence that the corrected statements recover the old ones.
+- The Fresh-premise versions are kept under new names: `*_old_fresh_of_new`, `*_old_fresh_of_new'`,
+  `call_preservation_src_old_fresh_of_new''` and `call_preservation_src_old_fresh_of_cp'`.
+- `sm_embed` and `ms_embed` keep the `Fresh m` premise, because over the repaired relation their base text is false:
+  `JitEmitSim.sm_embed_text_false` and `ms_embed_text_false` (closed, at `fx_m`). The base text over the relation it
+  spoke of is kept as `sm_embed_v1` and `ms_embed_v1` (over `SM_v1`, `MS'_v1`).
+- Still NOT reached: a corollary from the corrected `call_preservation_src'_statement` to the byte-identical
+  `JitKRef.call_preservation_src_statement` that uses its hypothesis. The Rocq counterexamples to instantiation are
+  `fresh_needed` (closed) and, from the base, `gvals_needed`. Item 10 is OPEN.
+
+**Fix round 2 (`4ff09d1`).** `fresh_needed` and `gvals_needed` refute direct instantiation only. They are not
+counterexamples to recovery: the byte-identical statement is proved (`JitKRefFund.call_preservation_src`), so the
+implication holds trivially and the base-named `*_old_of_new` corollaries are not evidence. A normalize-and-transfer
+derivation is named in `rocq/JitEmitSim.v` with its obstacles and is NOT built, so the acceptance criterion (a Closed,
+non-vacuous corollary to the byte-identical statement) is not met. Item 10 in `docs/decisions/p2-decisions.md` now
+lists the corrected statements; OPEN.
 
 ### Pass split: the normal form (wave 1b)
 

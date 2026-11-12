@@ -105,6 +105,8 @@ p2/int then merged r22-front-cutderef (merge of `p2/r22-front-cutderef` `54bef61
 Shen/JIT audit module has 886 statements (879 plus 7) and the proof-mutation pin is 304 (300 plus 4 ShenJitFrontPrologCut
 mutants; 153 Shen/JIT mutants), so the audited total in `rocq/audit.d` is 1,847; counted from the merged tree, not
 measured by `make report` (not rerun: UNKNOWN).
+
+On 2026-11-12 the main session merged `p2/r21-sms-fresh-fix` into `p2/int` (the `Fresh m` repair Reuben approved, item 10): the Shen/JIT audit module is 915 statements and the pin 306, by arithmetic until the lane and `make report` re-run.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 

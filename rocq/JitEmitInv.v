@@ -19,6 +19,15 @@
    fundamental property), and the *_old_statement targets from the old
    theorems (preservation_old_holds, call_preservation_old_holds,
    call_preservation_src_old_of_fundamental; a sanity check, nothing about the new statements).
+   r21-sms-fresh-fix (closed): Fresh (no heap key at or above m_next in use) and SMs's sm_fresh;
+   fresh_empty, fresh_used_lt, fresh_alloc, fresh_set_used, vrh_fresh_ext, sms_alloc (an
+   allocation keeps SMs) and sms_raise_final (a raise with no handler ends in an SMs-related
+   machine holding the exception); the relation before the fix kept as SMs_v1, SM_v1,
+   EvalCtx_v1, TestCtx_v1, OpCtx_v1, MS'_v1, Ends'_v1, EndsSrc'_v1 and the refuted
+   preservation'_statement_v1, call_preservation'_statement_v1, call_preservation_src'_statement_v1
+   (refutations in JitEmitSim); sm_embed and ms_embed take Fresh m; the *_old_fresh statements
+   (each *_old statement with Fresh m added), the targets the *_old_of_new corollaries now reach,
+   and *_old_fresh_of_old; cx_fresh.
    Fix round 4 (closed): old_reflect_src (old_reflect_src_statement, PROVED from
    JitKRefFund.fundamental), call_preservation_src_old_holds, call_preservation_src_old_of_new'';
    env_ok_needed and resp_ok_bound_needed (preservation'_statement without env_ok is FALSE, so the
@@ -175,15 +184,30 @@ Definition HeapRel (mu : kmap) (s : store) (m : B.machine) : Prop :=
       Forall2 (VRh mu (B.m_heap m)) cells cells') \/
    (nth_error (heap s) l = Some [] /\ exists nc caps, B.tget p (B.m_heap m) = Some (B.OClo nc caps)).
 
+(* The allocation pointer is fresh: no heap key at or above m_next is in use (r21-sms-fresh-fix).
+   JitBytecode.alloc writes at m_next without looking and moves to its successor, so without this
+   a related machine may overwrite a live object on its next allocation (JitEmitSim.fx_next: an
+   exception over do's closure, after which FunRel' holds for no store). Every key a related
+   value, a mu cell or a gfun closure names is in use (each asks tget p (m_heap m) = Some _), so it
+   lies below m_next. Kept by an allocation (fresh_alloc) and by a heap write at a key in use
+   (fresh_set_used); the loader's empty machine has it (fresh_empty).
+   Does NOT say: anything about keys below m_next (in use or not), about m_allocs, or that a
+   machine whose m_next is stale behaves differently on every run (fx_m does on its first step). *)
+Definition Fresh (m : B.machine) : Prop :=
+ forall p, (B.m_next m <= p)%positive -> B.tget p (B.m_heap m) = None.
+
 (* Store against machine, without the continuation.
    Does NOT say: anything about cells outside mu, gfun entries of names the store does not
-   define beyond fr'_none, the sealed table, or the allocation counter. The kernel's do is not
-   here: the do frames ask it (JitEmitKont's DoK, instantiated with DoOK of the current store). *)
+   define beyond fr'_none, the sealed table, or the allocation counter beyond Fresh. The kernel's
+   do is not here: the do frames ask it (JitEmitKont's DoK, instantiated with DoOK of the current
+   store). Before r21-sms-fresh-fix it had no sm_fresh; that text is SMs_v1 below, and the
+   statements over it are refuted (JitEmitSim.*_false). *)
 Record SMs (mu : kmap) (s : store) (m : B.machine) : Prop := {
  sm_bij : pbij mu;
  sm_heap : HeapRel mu s m;
  sm_gvals : GvalsRel mu s m;
- sm_fun : FunRel' s m }.
+ sm_fun : FunRel' s m;
+ sm_fresh : Fresh m }.
 
 (* The source's KTrap frames, innermost first. *)
 Fixpoint trap_frames (k : list frame) : list (expr * lenv) := match k with
@@ -250,6 +274,135 @@ Inductive MS' (mu : kmap) : config -> B.machine -> Prop :=
      CCtx (HC m) (code m) cv caps (fp m) (st m) -> (cv = [] \/ ~ w (fp m + 1)) ->
      KD' (V mu m) (HC m) (DK s) (code m) cv caps (fp m) (st m) (cs m) (hs m) w o (B.m_rest m) k ->
      MS' mu (Cfg (Ret v) k s) m.
+
+(* ---------- the relation before r21-sms-fresh-fix (v1, kept for the refutations) ----------
+   SMs without sm_fresh, and SM, the three contexts and MS' over it, each a copy of the text before
+   r21-sms-fresh-fix with _v1 added to its name and to its fields and constructors (nothing else
+   changed). The *_v1 statements below are the text r22-emit-sim refuted (JitEmitSim.*_false);
+   they are kept so that each refutation stays about the text it refutes. No other statement uses
+   these. Does NOT say: anything the statements over SMs (with sm_fresh) do not. *)
+Record SMs_v1 (mu : kmap) (s : store) (m : B.machine) : Prop := {
+ sm_bij_v1 : pbij mu;
+ sm_heap_v1 : HeapRel mu s m;
+ sm_gvals_v1 : GvalsRel mu s m;
+ sm_fun_v1 : FunRel' s m }.
+
+Definition SM_v1 (mu : kmap) (s : store) (k : list frame) (m : B.machine) : Prop :=
+ SMs_v1 mu s m /\ HK (B.m_handlers m) k.
+
+Definition EvalCtx_v1 (mu : kmap) (cv : list name) (caps : list B.val) (g : env) (top : N) (dst : dest)
+    (r2 : list B.instr) (rho : lenv) (k : list frame) (s : store) (w : N -> Prop) (m : B.machine) : Prop :=
+ SM_v1 mu s k m /\ MEnv' (V mu m) (fp m) (st m) cv caps g rho /\ EnvBelow g top /\ Above (fp m) top w /\
+ CCtx (HC m) (code m) cv caps (fp m) (st m) /\ (cv = [] \/ ~ w (fp m + 1)) /\
+ KC' (V mu m) (HC m) (DK s) (code m) cv caps (fp m) (st m) (cs m) (hs m) w dst r2 k.
+Definition TestCtx_v1 (mu : kmap) (cv : list name) (caps : list B.val) (g : env) (top : N) (l : N)
+    (r2 : list B.instr) (rho : lenv) (k : list frame) (s : store) (w : N -> Prop) (m : B.machine) : Prop :=
+ SM_v1 mu s k m /\ MEnv' (V mu m) (fp m) (st m) cv caps g rho /\ EnvBelow g top /\ Above (fp m) top w /\
+ CCtx (HC m) (code m) cv caps (fp m) (st m) /\ (cv = [] \/ ~ w (fp m + 1)) /\
+ TK' (V mu m) (HC m) (DK s) (code m) cv caps (fp m) (st m) (cs m) (hs m) w true l r2 k.
+Definition OpCtx_v1 (mu : kmap) (cv : list name) (caps : list B.val) (g : env) (top : N) (o : B.operand)
+    (r2 : list B.instr) (rho : lenv) (k : list frame) (s : store) (w : N -> Prop) (m : B.machine) : Prop :=
+ SM_v1 mu s k m /\ MEnv' (V mu m) (fp m) (st m) cv caps g rho /\ EnvBelow g top /\ Above (fp m) top w /\
+ CCtx (HC m) (code m) cv caps (fp m) (st m) /\ (cv = [] \/ ~ w (fp m + 1)) /\
+ KD' (V mu m) (HC m) (DK s) (code m) cv caps (fp m) (st m) (cs m) (hs m) w o r2 k.
+
+Inductive MS'_v1 (mu : kmap) : config -> B.machine -> Prop :=
+ | MS'_eval_v1 cv caps g top e dst r2 rho k s w m :
+     Comp (code m) cv g top e dst (B.m_rest m) r2 -> EvalCtx_v1 mu cv caps g top dst r2 rho k s w m ->
+     MS'_v1 mu (Cfg (Eval rho e) k s) m
+ | MS'_test_v1 cv caps g top e l r2 rho k s w m :
+     CompT (code m) cv g top e l (B.m_rest m) r2 -> TestCtx_v1 mu cv caps g top l r2 rho k s w m ->
+     MS'_v1 mu (Cfg (Eval rho e) k s) m
+ | MS'_op_v1 cv caps g top e o top2 r2 rho k s w m :
+     CompOp (code m) cv g top e o top2 (B.m_rest m) r2 -> OpCtx_v1 mu cv caps g top o r2 rho k s w m ->
+     MS'_v1 mu (Cfg (Eval rho e) k s) m
+ | MS'_ret_v1 cv caps v v' o k s w m :
+     SM_v1 mu s k m -> read_o (code m) (fp m) (st m) o = Some v' -> VRh mu (B.m_heap m) v v' ->
+     CCtx (HC m) (code m) cv caps (fp m) (st m) -> (cv = [] \/ ~ w (fp m + 1)) ->
+     KD' (V mu m) (HC m) (DK s) (code m) cv caps (fp m) (st m) (cs m) (hs m) w o (B.m_rest m) k ->
+     MS'_v1 mu (Cfg (Ret v) k s) m.
+
+(* ---------- freshness is kept (closed) ---------- *)
+Lemma fresh_empty : Fresh B.empty_machine.
+Proof. intros p _. apply JitMeta.JitMeta.tget_leaf. Qed.
+
+Lemma fresh_used_lt : forall m p o, Fresh m -> B.tget p (B.m_heap m) = Some o -> (p < B.m_next m)%positive.
+Proof.
+ intros m p o F T. destruct (Pos.lt_total p (B.m_next m)) as [L|[E|L]]; [exact L| |];
+   rewrite (F p) in T by lia; discriminate.
+Qed.
+
+(* An allocation keeps Fresh: it writes at m_next and moves past it. *)
+Lemma fresh_alloc : forall m o, Fresh m -> Fresh (snd (B.alloc m o)).
+Proof.
+ intros m o F p L. cbn in L |- *. rewrite JitMeta.JitMeta.tget_tset_other by lia. apply F. lia.
+Qed.
+
+(* A heap write at a key in use keeps Fresh (a vector cell update, for one). *)
+Lemma fresh_set_used : forall m p o o', Fresh m -> B.tget p (B.m_heap m) = Some o' ->
+ Fresh (B.set_heap m (B.tset p o (B.m_heap m))).
+Proof.
+ intros m p o o' F T q L. cbn in L |- *. pose proof (fresh_used_lt m p o' F T) as Lp.
+ rewrite JitMeta.JitMeta.tget_tset_other by lia. apply F. exact L.
+Qed.
+
+(* Writing at a key not in use keeps every relation over the heap. *)
+Lemma vrh_fresh_ext : forall mu h p o, B.tget p h = None -> forall v v', VRh mu h v v' -> VRh mu (B.tset p o h) v v'.
+Proof.
+ intros mu h p o Np. assert (K : forall q x, B.tget q h = Some x -> B.tget q (B.tset p o h) = Some x).
+ { intros q x T. rewrite JitMeta.JitMeta.tget_tset_other; [exact T|]. intros ->. congruence. }
+ fix IH 3. intros v v' H. destruct H as [z|b|x|b|t| |a a' d d' Ha Hd|l q cells Il Tq
+   |x b rho q nc caps cv l0 Tq Ck Ci Il Lc Hc|b rho q nc caps cv l0 Tq Ck Ci Il Lc Hc|x q msg tv Tq Xo|hd q d0 o0 Tq].
+ - constructor.
+ - constructor.
+ - constructor.
+ - constructor.
+ - constructor.
+ - constructor.
+ - constructor; [exact (IH _ _ Ha)|exact (IH _ _ Hd)].
+ - eapply VRh_vec; [exact Il|exact (K _ _ Tq)].
+ - eapply VRh_lam; [exact (K _ _ Tq)|exact Ck|exact Ci|exact Il|exact Lc|].
+   intros i y Ni Ly. destruct (Hc i y Ni Ly) as (u & u' & Lu & Nu & Vu). exists u, u'. split; [exact Lu|split; [exact Nu|exact (IH _ _ Vu)]].
+ - eapply VRh_frozen; [exact (K _ _ Tq)|exact Ck|exact Ci|exact Il|exact Lc|].
+   intros i y Ni. destruct (Hc i y Ni) as (u & u' & Lu & Nu & Vu). exists u, u'. split; [exact Lu|split; [exact Nu|exact (IH _ _ Vu)]].
+ - eapply VRh_exn; [exact (K _ _ Tq)|exact Xo].
+ - eapply VRh_stream; exact (K _ _ Tq).
+Qed.
+
+(* An allocation keeps SMs, at the same mu and store: the new object goes to a key no related
+   value, cell or gfun closure names. Without sm_fresh this is false (JitEmitSim.fx_next). *)
+Theorem sms_alloc : forall mu s m o, SMs mu s m -> SMs mu s (snd (B.alloc m o)).
+Proof.
+ intros mu s m o [Pb Hr [G1 G2] Fr Fs].
+ assert (Np : B.tget (B.m_next m) (B.m_heap m) = None) by (apply Fs; lia).
+ assert (K : forall q x, B.tget q (B.m_heap m) = Some x -> B.tget q (B.tset (B.m_next m) o (B.m_heap m)) = Some x).
+ { intros q x T. rewrite JitMeta.JitMeta.tget_tset_other; [exact T|]. intros ->. congruence. }
+ constructor; cbn.
+ - exact Pb.
+ - intros l p I. destruct (Hr l p I) as [(c0 & c1 & N0 & T & F2)|(N0 & nc & caps & T)].
+   + left. exists c0, c1. split; [exact N0|split; [exact (K _ _ T)|]]. cbn.
+     eapply Forall2_impl; [|exact F2]. intros a b0 V0. exact (vrh_fresh_ext _ _ _ _ Np _ _ V0).
+   + right. split; [exact N0|]. exists nc, caps. exact (K _ _ T).
+ - split.
+   + intros x v L. destruct (G1 x v L) as (v' & T & Nc & Vr). exists v'. split; [exact T|split; [exact Nc|]].
+     exact (vrh_fresh_ext _ _ _ _ Np _ _ Vr).
+   + exact G2.
+ - destruct Fr as [U N0 P0 Q0]. constructor; [|exact N0|exact P0|exact Q0].
+   intros f ps b L. destruct (U f ps b L) as (l & c & caps & Gl & Hl & R). exists l, c, caps.
+   split; [exact Gl|split; [exact (K _ _ Hl)|exact R]].
+ - exact (fresh_alloc m o Fs).
+Qed.
+
+(* The end of a raise with no handler: the exception is allocated, and SMs still holds of the
+   final machine, which holds the exception. (The step r22-emit-sim's counterexample breaks.) *)
+Theorem sms_raise_final : forall mu s m msg v o m', SMs mu s m -> B.m_handlers m = [] ->
+ B.raise m msg v = B.MFinal o m' -> SMs mu s m' /\
+   exists l, o = B.FError (B.VExn l) /\ B.tget l (B.m_heap m') = Some (B.OExn msg v).
+Proof.
+ intros mu s m msg v o m' S H R. unfold B.raise in R. rewrite H in R. cbn in R. injection R as <- <-.
+ split; [exact (sms_alloc mu s m (B.OExn msg v) S)|]. exists (B.m_next m). split; [reflexivity|].
+ cbn. apply JitMeta.JitMeta.tget_tset_same.
+Qed.
 
 
 (* ---------- the old invariant embeds (any mu, no handler, no capture, no do frame) ---------- *)
@@ -318,17 +471,19 @@ Definition StoreRel (mu : kmap) (s : store) (m : B.machine) : Prop :=
 Lemma storerel_nil : forall s m, GvalsRel [] s m -> StoreRel [] s m.
 Proof. intros s m G. split; [exact pbij_nil|split; [intros l p I; destruct I|exact G]]. Qed.
 
-Lemma sm_embed : forall mu s k m, Com s m -> notrap k -> StoreRel mu s m -> SM mu s k m.
+(* Fresh is not in StoreRel (the old invariant does not carry it either): each embedding asks it
+   separately (r21-sms-fresh-fix). *)
+Lemma sm_embed : forall mu s k m, Com s m -> notrap k -> StoreRel mu s m -> Fresh m -> SM mu s k m.
 Proof.
- intros mu s k m [Hh Fr] Nt (Pb & Hr & G). split.
+ intros mu s k m [Hh Fr] Nt (Pb & Hr & G) Fs. split.
  - constructor; auto. apply funrel_embed; auto.
  - unfold HK. rewrite Hh, (notrap_frames k Nt). constructor.
 Qed.
 
 (* JitLowerStep's MS is MS' at any mu that relates the store's cells and globals (StoreRel). *)
-Theorem ms_embed : forall mu s c m, MS s c m -> StoreRel mu s m -> MS' mu c m.
+Theorem ms_embed : forall mu s c m, MS s c m -> StoreRel mu s m -> Fresh m -> MS' mu c m.
 Proof.
- intros mu s c m H G. destruct H as [g top e dst r2 rho k w m Cm Cc Me Eb Ab Kc|g top e l r2 rho k w m Cm Ct Me Eb Ab Tk
+ intros mu s c m H G Fs. destruct H as [g top e dst r2 rho k w m Cm Cc Me Eb Ab Kc|g top e l r2 rho k w m Cm Ct Me Eb Ab Tk
    |g top e o top2 r2 rho k w m Cm Co Me Eb Ab Kd|v v' o k w m Cm Ro Vr Kd];
    pose proof Cm as [Hh _];
    destruct (kont_embed mu (B.m_heap m) (HeapClo (B.m_heap m)) (DoOK s)) as (EKD & ETK & EKC & ERK).
@@ -346,6 +501,45 @@ Proof.
    split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKD; auto.
  - eapply MS'_ret with (cv := []) (caps := []) (o := o) (v' := v') (w := w).
    + apply sm_embed; auto. eapply notrap_kd; exact Kd.
+   + exact Ro.
+   + apply VR_VRh; auto.
+   + left; reflexivity.
+   + left; reflexivity.
+   + rewrite Hh. apply EKD; auto.
+Qed.
+
+(* sm_embed and ms_embed at their base text (before r21-sms-fresh-fix), over the relation they
+   then spoke of (SM_v1, MS'_v1: no sm_fresh). Over the repaired SM and MS' the base text is FALSE
+   (JitEmitSim.sm_embed_text_false, ms_embed_text_false, at r22-emit-sim's fx_m, whose m_next is in
+   use); sm_embed and ms_embed above add Fresh m for that reason.
+   Does NOT say: anything about SM or MS' (with sm_fresh). *)
+Lemma sm_embed_v1 : forall mu s k m, Com s m -> notrap k -> StoreRel mu s m -> SM_v1 mu s k m.
+Proof.
+ intros mu s k m [Hh Fr] Nt (Pb & Hr & G). split.
+ - constructor; auto. apply funrel_embed; auto.
+ - unfold HK. rewrite Hh, (notrap_frames k Nt). constructor.
+Qed.
+
+Theorem ms_embed_v1 : forall mu s c m, MS s c m -> StoreRel mu s m -> MS'_v1 mu c m.
+Proof.
+ intros mu s c m H G. destruct H as [g top e dst r2 rho k w m Cm Cc Me Eb Ab Kc|g top e l r2 rho k w m Cm Ct Me Eb Ab Tk
+   |g top e o top2 r2 rho k w m Cm Co Me Eb Ab Kd|v v' o k w m Cm Ro Vr Kd];
+   pose proof Cm as [Hh _];
+   destruct (kont_embed mu (B.m_heap m) (HeapClo (B.m_heap m)) (DoOK s)) as (EKD & ETK & EKC & ERK).
+ - eapply MS'_eval_v1 with (cv := []) (caps := []) (w := w); [apply ce_C; exact Cc|].
+   unfold EvalCtx_v1. split; [apply sm_embed_v1; auto; eapply notrap_kc; exact Kc|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKC; auto.
+ - eapply MS'_test_v1 with (cv := []) (caps := []) (w := w); [apply ce_T; exact Ct|].
+   unfold TestCtx_v1. split; [apply sm_embed_v1; auto; eapply notrap_tk; exact Tk|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply ETK; auto.
+ - eapply MS'_op_v1 with (cv := []) (caps := []) (w := w); [apply (proj1 (proj2 (proj2 (comp_embed _)))); exact Co|].
+   unfold OpCtx_v1. split; [apply sm_embed_v1; auto; eapply notrap_kd; exact Kd|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKD; auto.
+ - eapply MS'_ret_v1 with (cv := []) (caps := []) (o := o) (v' := v') (w := w).
+   + apply sm_embed_v1; auto. eapply notrap_kd; exact Kd.
    + exact Ro.
    + apply VR_VRh; auto.
    + left; reflexivity.
@@ -759,6 +953,34 @@ Definition call_preservation'_statement : Prop := forall mu s m c ps b args n (r
     mext mu mu' /\ MS' mu' c' m') \/
  (exists m1 k tS tT, Ends' mu c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
+(* ---------- the run statements before r21-sms-fresh-fix (v1, refuted) ----------
+   preservation'_statement and call_preservation'_statement as they were before
+   r21-sms-fresh-fix, over MS'_v1, SM_v1 and Ends'_v1 (SMs_v1: no sm_fresh); the text otherwise
+   unchanged. FALSE: JitEmitSim.preservation'_false and call_preservation'_false refute them at
+   cx_E, cx_pt, sealed [] (a stale m_next; the first allocation overwrites do's closure).
+   The statements above (preservation'_statement, call_preservation'_statement) are the corrected
+   ones: the same text over SMs with sm_fresh, and so with MS', SM and Ends' keeping m_next fresh
+   at every related state and at every end. Their conclusions keep everything the v1 ones had (the
+   same disjuncts, the same observation: traces, final values and exceptions related); only the
+   relation they speak of is stronger, in premise and conclusion alike. *)
+Inductive Ends'_v1 (mu : kmap) (c : config) (m1 : B.machine) (t : trace) : Prop :=
+ | E'_ok_v1 v v' s' m2 mu' : Srun c t (Cfg (Ret v) [] s') -> B.next E pt m1 = B.MFinal (B.FReturn v') m2 ->
+     mext mu mu' -> VRh mu' (B.m_heap m2) v v' -> SMs_v1 mu' s' m2 -> Ends'_v1 mu c m1 t
+ | E'_err_v1 x l msg tv s' m2 mu' : Srun c t (Cfg (Throw x) [] s') -> B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m2 ->
+     B.tget l (B.m_heap m2) = Some (B.OExn msg tv) -> exn_ok x msg -> mext mu mu' -> SMs_v1 mu' s' m2 -> Ends'_v1 mu c m1 t.
+
+Definition preservation'_statement_v1 : Prop := forall n mu c m (rs : nat -> B.jreq -> B.jres), env_ok rs -> MS'_v1 mu c m ->
+ (exists c' m' k tS tT mu', Srun c tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext mu mu' /\ MS'_v1 mu' c' m') \/
+ (exists m1 k tS tT, Ends'_v1 mu c m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+
+Definition call_preservation'_statement_v1 : Prop := forall mu s m c ps b args n (rs : nat -> B.jreq -> B.jres),
+ env_ok rs -> SM_v1 mu s [] m -> CompFn' c ps b -> List.length ps = List.length args -> entered' mu m c args ->
+ let c0 := Cfg (Eval (combine ps args) b) [] s in
+ (exists c' m' k tS tT mu', Srun c0 tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext mu mu' /\ MS'_v1 mu' c' m') \/
+ (exists m1 k tS tT, Ends'_v1 mu c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+
 (* ---------- the front end composed ---------- *)
 Section Src.
 Variable D : list (name * fundef).
@@ -797,6 +1019,31 @@ Definition call_preservation_src'_statement : Prop := forall mu s m c ps b0 b1 e
  (exists c' m' k tS tT mu', Srun ce tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
     mext mu mu' /\ MS' mu' c' m') \/
  (exists m1 k tS tT, EndsSrc' mu s c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
+
+(* call_preservation_src'_statement as it was before r21-sms-fresh-fix, over SM_v1, MS'_v1 and
+   EndsSrc'_v1 (SMs_v1: no sm_fresh); the text otherwise unchanged. FALSE:
+   JitEmitSim.call_preservation_src'_false refutes it at cx_E, cx_pt, sealed [], D = []. The
+   statement above is the corrected one: the same text over SMs with sm_fresh. *)
+Inductive EndsSrc'_v1 (mu : kmap) (s : store) (c0 : config) (m1 : B.machine) (t : trace) : Prop :=
+ | ES'_ok_v1 v0 v v' s0 s' w m2 mu' : Srun c0 t (Cfg (Ret v0) [] s0) ->
+     JitKRef.JitKRef.wext (JitKRef.JitKRef.id_world s) w -> JitKRef.JitKRef.GVal w v0 v ->
+     JitKRef.JitKRef.GStore w s0 s' ->
+     B.next E pt m1 = B.MFinal (B.FReturn v') m2 -> mext mu mu' -> VRh mu' (B.m_heap m2) v v' ->
+     SMs_v1 mu' s' m2 -> EndsSrc'_v1 mu s c0 m1 t
+ | ES'_err_v1 x l msg tv s0 s' w m2 mu' : Srun c0 t (Cfg (Throw x) [] s0) ->
+     JitKRef.JitKRef.wext (JitKRef.JitKRef.id_world s) w -> JitKRef.JitKRef.GStore w s0 s' ->
+     B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m2 -> B.tget l (B.m_heap m2) = Some (B.OExn msg tv) ->
+     exn_ok x msg -> mext mu mu' -> SMs_v1 mu' s' m2 -> EndsSrc'_v1 mu s c0 m1 t.
+
+Definition call_preservation_src'_statement_v1 : Prop := forall mu s m c ps b0 b1 e args n (rs : nat -> B.jreq -> B.jres),
+ env_ok rs -> JitKRef.JitKRef.D_wf sealed D -> JitKRef.JitKRef.KRef sealed D ps b0 b1 -> JitKRef.JitKRef.KRef sealed D ps b1 e ->
+ JitKRef.JitKRef.StoreHas D s -> store_ok s ->
+ SM_v1 mu s [] m -> CompFn' c ps e -> List.length ps = List.length args -> entered' mu m c args ->
+ let c0 := Cfg (Eval (combine ps args) b0) [] s in
+ let ce := Cfg (Eval (combine ps args) e) [] s in
+ (exists c' m' k tS tT mu', Srun ce tS c' /\ TRun rs k m tT m' /\ (n <= k)%nat /\ map Some tS = tT /\
+    mext mu mu' /\ MS'_v1 mu' c' m') \/
+ (exists m1 k tS tT, EndsSrc'_v1 mu s c0 m1 tS /\ TRun rs k m tT m1 /\ map Some tS = tT).
 
 (* ---------- the old fragment ---------- *)
 (* The old theorems, restated at the old fragment as corollaries of the new statements: empty mu,
@@ -916,10 +1163,45 @@ Definition call_preservation_src_old_statement : Prop := forall s m c ps b0 b1 e
  (exists c' m' k, Sstar ce c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
  (exists m1, JitKRef.JitKRef.EndsSrc sealed E pt s c0 m1 /\ TStar m m1).
 
-Theorem preservation_old_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_statement.
+(* The *_old statements with Fresh m added (r21-sms-fresh-fix): the targets the corollaries below
+   reach from the corrected new statements. Fresh m is needed for the same reason GvalsRel [] s m
+   is: the old premises (MS, Com) leave the machine's m_next unconstrained, and the corrected
+   invariant says nothing of a machine whose m_next is stale (JitEmitSim.fresh_needed: the old
+   premises hold at r22-emit-sim's fx_m, and SM at no mu). The *_old statements without it are
+   kept and still proved (preservation_old_holds, call_preservation_old_holds,
+   call_preservation_src_old_holds), but they no longer follow from the new statements.
+   Does NOT say: anything at a machine whose m_next is stale or whose globals VR does not relate. *)
+Definition preservation_old_fresh_statement : Prop := forall n s c m, MS s c m -> Fresh m -> GvalsRel [] s m ->
+ (exists c' m' k, Sstar c c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
+ (exists m1, JitLowerThm.Ends E pt sealed s c m1 /\ TStar m m1).
+
+Definition call_preservation_old_fresh_statement : Prop := forall s m c ps b args n,
+ Com s m -> JitLowerRel.CompFn c ps b -> List.length ps = List.length args -> entered m c args -> GvalsRel [] s m -> Fresh m ->
+ let c0 := Cfg (Eval (combine ps args) b) [] s in
+ (exists c' m' k, Sstar c0 c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
+ (exists m1, JitLowerThm.Ends E pt sealed s c0 m1 /\ TStar m m1).
+
+Definition call_preservation_src_old_fresh_statement : Prop := forall s m c ps b0 b1 e args n,
+ JitKRef.JitKRef.D_wf sealed D -> JitKRef.JitKRef.KRef sealed D ps b0 b1 -> JitKRef.JitKRef.KRef sealed D ps b1 e ->
+ JitKRef.JitKRef.StoreHas D s -> store_ok s ->
+ Com s m -> JitLowerRel.CompFn c ps e -> List.length ps = List.length args -> entered m c args -> GvalsRel [] s m -> Fresh m ->
+ let c0 := Cfg (Eval (combine ps args) b0) [] s in
+ let ce := Cfg (Eval (combine ps args) e) [] s in
+ (exists c' m' k, Sstar ce c' /\ JitLowerThm.TN E pt k m m' /\ (n <= k)%nat /\ MS s c' m') \/
+ (exists m1, JitKRef.JitKRef.EndsSrc sealed E pt s c0 m1 /\ TStar m m1).
+
+(* Each *_old_fresh statement is implied by its *_old statement (one more premise, unused). *)
+Lemma preservation_old_fresh_of_old : preservation_old_statement -> preservation_old_fresh_statement.
+Proof. intros P n s c m H _ G. exact (P n s c m H G). Qed.
+Lemma call_preservation_old_fresh_of_old : call_preservation_old_statement -> call_preservation_old_fresh_statement.
+Proof. intros P s m c ps b args n Cm Cf L En G _. exact (P s m c ps b args n Cm Cf L En G). Qed.
+Lemma call_preservation_src_old_fresh_of_old : call_preservation_src_old_statement -> call_preservation_src_old_fresh_statement.
+Proof. intros P s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G _. exact (P s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G). Qed.
+
+Theorem preservation_old_fresh_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_fresh_statement.
 Proof.
- intros Pr Rf n s c m H G. destruct env_ok_inhabited as [rs Eo].
- destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G)))
+ intros Pr Rf n s c m H Fs G. destruct env_ok_inhabited as [rs Eo].
+ destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G) Fs))
    as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En & Tr & Mp)].
  - destruct (proj1 (Rf s c m rs k tS tT m' Eo H G Tr Mp) c' mu' Ss Mx Ms) as [E0 Ms0]. subst tS; cbn in Mp; subst tT.
    left. exists c', m', k. repeat split; auto; [apply srun_nil_sstar; exact Ss|eapply trun_nil_tn; exact Tr].
@@ -927,11 +1209,11 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_old_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_statement.
+Theorem call_preservation_old_fresh_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_fresh_statement.
 Proof.
- intros Cp Rf s m c ps b args n Cm Cf L En G c0. destruct env_ok_inhabited as [rs Eo].
+ intros Cp Rf s m c ps b args n Cm Cf L En G Fs c0. destruct env_ok_inhabited as [rs Eo].
  pose proof (ms_entered s m c ps b args Cm Cf L En) as H0.
- destruct (Cp [] s m c ps b args n rs Eo (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+ destruct (Cp [] s m c ps b args n rs Eo (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G) Fs)
    (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
    as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
  - destruct (proj1 (Rf s c0 m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 Ms0]. subst tS; cbn in Mp; subst tT.
@@ -940,12 +1222,12 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> old_reflect_statement ->
- old_reflect_src_statement -> call_preservation_src_old_statement.
+Theorem call_preservation_src_old_fresh_of_new : call_preservation_src'_statement -> old_reflect_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_fresh_statement.
 Proof.
- intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G c0 ce. destruct env_ok_inhabited as [rs Eo].
+ intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G Fs c0 ce. destruct env_ok_inhabited as [rs Eo].
  pose proof (ms_entered s m c ps e args Cm Cf L En) as H0.
- destruct (Cp [] s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+ destruct (Cp [] s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G) Fs)
    (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
    as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
  - destruct (proj1 (Rf s ce m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 Ms0]. subst tS; cbn in Mp; subst tT.
@@ -979,10 +1261,10 @@ Definition old_reflect'_statement : Prop := forall s c m (rs : nat -> B.jreq -> 
    implications between statements: each old conclusion is recovered only once its hypotheses
    (preservation'/call_preservation'/call_preservation_src' and the reflections) are proved, and
    none of them is yet. *)
-Theorem preservation_old_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_statement.
+Theorem preservation_old_fresh_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_fresh_statement.
 Proof.
- intros Pr Rf n s c m H G. destruct env_ok_inhabited as [rs Eo].
- destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G)))
+ intros Pr Rf n s c m H Fs G. destruct env_ok_inhabited as [rs Eo].
+ destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G) Fs))
    as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En & Tr & Mp)].
  - destruct (proj1 (Rf s c m rs k tS tT m' Eo H G Tr Mp) c' mu' Ss Mx Ms) as [E0 (c'' & S2 & Ms0)].
    subst tS; cbn in Mp; subst tT.
@@ -992,11 +1274,11 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_old_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_statement.
+Theorem call_preservation_old_fresh_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_fresh_statement.
 Proof.
- intros Cp Rf s m c ps b args n Cm Cf L En G c0. destruct env_ok_inhabited as [rs Eo].
+ intros Cp Rf s m c ps b args n Cm Cf L En G Fs c0. destruct env_ok_inhabited as [rs Eo].
  pose proof (ms_entered s m c ps b args Cm Cf L En) as H0.
- destruct (Cp [] s m c ps b args n rs Eo (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+ destruct (Cp [] s m c ps b args n rs Eo (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G) Fs)
    (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
    as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
  - destruct (proj1 (Rf s c0 m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 (c'' & S2 & Ms0)].
@@ -1007,12 +1289,12 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_src_old_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
- old_reflect_src_statement -> call_preservation_src_old_statement.
+Theorem call_preservation_src_old_fresh_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_fresh_statement.
 Proof.
- intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G c0 ce. destruct env_ok_inhabited as [rs Eo].
+ intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G Fs c0 ce. destruct env_ok_inhabited as [rs Eo].
  pose proof (ms_entered s m c ps e args Cm Cf L En) as H0.
- destruct (Cp [] s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G))
+ destruct (Cp [] s m c ps b0 b1 e args n rs Eo Dw K1 K2 Sh So (sm_embed [] s [] m Cm (Forall_nil _) (storerel_nil s m G) Fs)
    (comp_embed_fn _ _ _ Cf) L (entered_embed [] s m c args Cm En))
    as [(c' & m' & k & tS & tT & mu' & Ss & Tr & Le & Mp & Mx & Ms)|(m1 & k & tS & tT & En1 & Tr & Mp)].
  - destruct (proj1 (Rf s ce m rs k tS tT m' Eo H0 G Tr Mp) c' mu' Ss Mx Ms) as [E0 (c'' & S2 & Ms0)].
@@ -1210,9 +1492,46 @@ Proof. exact (old_reflect_src_of_fundamental (JitKRefFund.JitKRefFund.fundamenta
 Theorem call_preservation_src_old_holds : call_preservation_src_old_statement.
 Proof. exact (call_preservation_src_old_of_fundamental (JitKRefFund.JitKRefFund.fundamental sealed D)). Qed.
 
+Theorem call_preservation_src_old_fresh_of_new'' : call_preservation_src'_statement -> old_reflect'_statement ->
+ call_preservation_src_old_fresh_statement.
+Proof. intros Cp Rf. exact (call_preservation_src_old_fresh_of_new' Cp Rf old_reflect_src). Qed.
+
+(* ---------- the *_old_of_new corollaries at their base text (r21-sms-fresh-fix, closed) ----------
+   preservation_old_of_new, call_preservation_old_of_new, call_preservation_src_old_of_new, their
+   primed versions and call_preservation_src_old_of_new'' with their statements as at fca6c3f
+   (each concludes its *_old_statement, without Fresh m). They are NOT derived from the new
+   statements: each is proved from its target directly (preservation_old_holds,
+   call_preservation_old_holds, call_preservation_src_old_holds), and its hypotheses are unused.
+   They are kept so that no theorem of the base loses its statement; they are not evidence that
+   the corrected statements recover the old ones. The route through the corrected statements is
+   the *_old_fresh_of_new family above, which needs Fresh m (JitEmitSim.fresh_needed: the old
+   premises hold at a machine no SM relates). The unprimed ones were vacuous already
+   (old_reflect_statement is false, old_reflect_false).
+   Does NOT say: anything about preservation'_statement, call_preservation'_statement or
+   call_preservation_src'_statement. *)
+Theorem preservation_old_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_statement.
+Proof. intros _ _. exact preservation_old_holds. Qed.
+
+Theorem call_preservation_old_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_statement.
+Proof. intros _ _. exact call_preservation_old_holds. Qed.
+
+Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> old_reflect_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_statement.
+Proof. intros _ _ _. exact call_preservation_src_old_holds. Qed.
+
+Theorem preservation_old_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_statement.
+Proof. intros _ _. exact preservation_old_holds. Qed.
+
+Theorem call_preservation_old_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_statement.
+Proof. intros _ _. exact call_preservation_old_holds. Qed.
+
+Theorem call_preservation_src_old_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_statement.
+Proof. intros _ _ _. exact call_preservation_src_old_holds. Qed.
+
 Theorem call_preservation_src_old_of_new'' : call_preservation_src'_statement -> old_reflect'_statement ->
  call_preservation_src_old_statement.
-Proof. intros Cp Rf. exact (call_preservation_src_old_of_new' Cp Rf old_reflect_src). Qed.
+Proof. intros _ _. exact call_preservation_src_old_holds. Qed.
 End Src.
 End Inv.
 
@@ -1255,6 +1574,12 @@ Definition cx_r : list B.instr := [B.ICall 0 1 (B.sym_of_text do_name) 2; B.IRet
 Definition cx_f : B.code := B.Code B.VNil 0 None 5 [] cx_r [] B.VNil.
 Definition cx_gfun : B.tree B.val := B.tset (B.sym_of_text do_name) (B.VClo 1) B.Leaf.
 Definition cx_heap : B.tree B.obj := B.tset 1 (B.OClo cx_do []) B.Leaf.
+(* A machine over cx_heap is fresh when its m_next is past key 1. *)
+Lemma cx_fresh : forall m, B.m_heap m = cx_heap -> (2 <= B.m_next m)%positive -> Fresh m.
+Proof.
+ intros m H L p Lp. rewrite H. unfold cx_heap. rewrite JitMeta.JitMeta.tget_tset_other by lia.
+ apply JitMeta.JitMeta.tget_leaf.
+Qed.
 Definition cx_m : B.machine := B.Machine (B.tset (B.skey 3) (B.VFix 1) (B.tset (B.skey 4) (B.VFix 2) B.Leaf)) 0 cx_f cx_r
  [] [] B.VCleared cx_heap 2 B.Leaf cx_gfun B.Leaf false 0.
 Definition cx_E : B.env := B.Env (fun _ => false) (fun _ => false) (fun _ => 0%Z).
@@ -1338,6 +1663,7 @@ Proof.
    + intros l p I; destruct I.
    + split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
    + apply funrel_embed. apply cx_funrel; reflexivity.
+   + apply cx_fresh; [reflexivity|cbn; lia].
  - unfold HK. cbn. constructor.
 Qed.
 
@@ -1582,6 +1908,7 @@ Proof.
    + intros l p I; destruct I.
    + split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
    + apply funrel_embed. apply cx_funrel; reflexivity.
+   + apply cx_fresh; [reflexivity|cbn; lia].
  - unfold HK. cbn. constructor.
 Qed.
 

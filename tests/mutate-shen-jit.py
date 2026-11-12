@@ -115,13 +115,14 @@ ShenJitEmitEvOfTime: ev_of translates no clock answer, as before the get-time co
 ShenJitEmitStoreRelNonEmpty: StoreRel asks for a non-empty bijection, which the old fragment at
   mu = [] has not. storerel_nil must fail.
 ShenJitEmitReflectTrace: old_reflect_statement no longer says the old-fragment run takes no source
-  IO (True in place of tS = []), so its conclusion is no silent run. preservation_old_of_new must
-  fail (at subst tS).
-ShenJitEmitReflectSrcTrace: the same for old_reflect_src_statement. call_preservation_src_old_of_new
+  IO (True in place of tS = []), so its conclusion is no silent run. preservation_old_fresh_of_new
   must fail (at subst tS).
-ShenJitEmitOldGvalsDropped: preservation_old_statement's GvalsRel [] s m premise becomes True. The
-  proof builds StoreRel [] s m from it for ms_embed, so preservation_old_of_new must fail (at
-  storerel_nil).
+ShenJitEmitReflectSrcTrace: the same for old_reflect_src_statement.
+  call_preservation_src_old_fresh_of_new must fail (at subst tS).
+ShenJitEmitOldGvalsDropped: preservation_old_statement's GvalsRel [] s m premise becomes True.
+  preservation_old_fresh_of_old passes that premise's proof on, so it must fail (r21-sms-fresh-fix:
+  preservation_old_of_new is now proved from preservation_old_holds and no longer builds StoreRel
+  from the premise).
 ShenJitEmitTRunIOSilent: TRun's IO step records no event, so an IO-free trace no longer means a
   silent run. trun_nil_tn must fail.
 ShenJitEmitNestShapeAccepted: the uniform-code nesting of JitEmitNestTest.NestShape is asserted
@@ -192,6 +193,12 @@ ShenJitEmitSimSlot1Any: evalctx_slot1_void without cv <> []: a code that capture
 ShenJitEmitSimFreshNext: the counterexample machine fx_m with a fresh allocation pointer (m_next 2,
   past do's closure at key 1): the raise no longer overwrites a live object, so fx_next (the
   overwrite) and with it call_preservation'_false must fail.
+ShenJitEmitInvFreshDropped: SMs's sm_fresh (r21-sms-fresh-fix) says nothing (True), as in SMs_v1:
+  the allocation pointer may be the key of a live object, which the next allocation overwrites
+  (JitEmitSim.fx_next). sms_alloc (an allocation keeps SMs) must fail.
+ShenJitEmitInvFreshOneKey: Fresh asks only that m_next itself be unused, not every key above it:
+  a key in use may then lie above m_next, and alloc's successor may be in use. fresh_used_lt must
+  fail.
 ShenJitKRefCallNoTableCexTable: JitKRefCallNoTableCex.SRel_nt with the table clause restored
   (gfuns s0 = gfuns s for True, and SRel_nt_table's proof supplying it). The counterexample's two
   stores have different tables, so call_rel_no_table_refuted must fail where it establishes SRel_nt
@@ -841,4 +848,8 @@ mutate('ShenJitEmitSimSlot1Any', sim,
 mutate('ShenJitEmitSimFreshNext', sim,
        " B.Machine fx_st 0 fx_c fx_r [] [] B.VCleared JitEmitInv.cx_heap 1 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.",
        " B.Machine fx_st 0 fx_c fx_r [] [] B.VCleared JitEmitInv.cx_heap 2 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.")
+mutate('ShenJitEmitInvFreshDropped', 'rocq/JitEmitInv.v', " sm_fresh : Fresh m }.", " sm_fresh : True }.")
+mutate('ShenJitEmitInvFreshOneKey', 'rocq/JitEmitInv.v',
+       " forall p, (B.m_next m <= p)%positive -> B.tget p (B.m_heap m) = None.",
+       " forall p, (B.m_next m = p)%positive -> B.tget p (B.m_heap m) = None.")
 print(' '.join(names))

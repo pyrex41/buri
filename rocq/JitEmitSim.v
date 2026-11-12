@@ -3,12 +3,26 @@
    NOTHING here is assumed or Admitted; each theorem takes the statements it uses as explicit
    arguments, so Print Assumptions shows no axiom.
 
-   FALSE as stated (closed, at JitEmitInv.cx_E, cx_pt, sealed []): preservation'_statement,
-   call_preservation'_statement, call_preservation_src'_statement (preservation'_false,
-   call_preservation'_false, call_preservation_src'_false), and this file's raise_resolve_statement
-   (raise_resolve_false). SMs does not keep the allocation pointer m_next fresh; see the section
-   "the statements are FALSE as stated". The implications below hold, but their conclusions are
-   targets only once SMs is repaired (emit-spec).
+   FALSE as stated by r22-emit-sim (closed, at JitEmitInv.cx_E, cx_pt, sealed []): the text now
+   named preservation'_statement_v1, call_preservation'_statement_v1,
+   call_preservation_src'_statement_v1 (JitEmitInv) and raise_resolve_statement_v1 (here), over
+   SMs_v1, which did not keep the allocation pointer m_next fresh (preservation'_false,
+   call_preservation'_false, call_preservation_src'_false, raise_resolve_false); see the section
+   "the statements are FALSE as stated".
+   Repaired by r21-sms-fresh-fix: SMs asks sm_fresh (JitEmitInv.Fresh), so SM, MS', Ends',
+   EndsSrc' and the statements over them keep m_next fresh. preservation'_statement,
+   call_preservation'_statement, call_preservation_src'_statement and raise_resolve_statement
+   are the corrected statements (their text unchanged, over the corrected SMs); the implications
+   below are proved against them. fx_not_sm: the counterexample's machine is related by no SM.
+   fresh_needed: it still meets the old statements' premises, so instantiating the corrected src
+   statement at the old premises reaches the old fragment only with Fresh m added
+   (call_preservation_src_old_fresh_of_cp' targets
+   JitEmitInv.call_preservation_src_old_fresh_statement), NOT the byte-identical
+   JitKRef.call_preservation_src_statement. fresh_needed refutes that one route, not recovery:
+   the byte-identical statement is proved outright (JitKRefFund.call_preservation_src), so no
+   counterexample to "corrected implies old" exists, and a derivation that uses its hypothesis
+   (normalize the machine, then transfer the run back) is NOT built. Truth of the corrected
+   statements: UNKNOWN (not refuted; not proved).
 
    Proved here (closed):
    - MEnv_bind', entered_ms': the configuration a call enters is MS'-related (cv = [], the
@@ -28,6 +42,9 @@
    - preservation'_of_sim': sim'_statement -> raise_resolve_statement -> preservation'_statement,
      the many-step theorem from the one-step one (an induction on n, inside it on the source's
      measure, IO events through env_ok shifted along the environment).
+   - entered_ms'_v1, call_preservation'_of_preservation'_v1: the same over the v1 relation, for
+     the refutations.
+   - fx_not_sm, fx_comp_old, fresh_needed (r21-sms-fresh-fix): see "after the repair".
    - the slot-1 witnesses (evalctx_slot1_void, ms'_slot1_frame): why the generic one-step proof
      (sim'_of_sims) does NOT go through on JitEmitKont's frames as stated; see there.
 
@@ -99,6 +116,26 @@ Proof.
  exact (Pr n mu c0 m rs Eo (entered_ms' mu s m c ps b args Sm Cf L En)).
 Qed.
 
+(* The same two over the relation before r21-sms-fresh-fix (JitEmitInv's *_v1), for the
+   refutations below. *)
+Lemma entered_ms'_v1 : forall mu s m c ps b args, SM_v1 mu s [] m -> CompFn' c ps b -> List.length ps = List.length args ->
+ entered' mu m c args -> MS'_v1 mu (Cfg (Eval (combine ps args) b) [] s) m.
+Proof.
+ intros mu s m c ps b args Sm [r' Cf] L (Hc & Hr & Hk & Hh & Aa).
+ eapply MS'_eval_v1 with (cv := []) (caps := []) (g := bind ps 2) (top := (2 + N.of_nat (List.length ps))%N)
+   (dst := DRet) (r2 := r') (w := fun a => (B.m_fp m + (2 + N.of_nat (List.length ps)) <= a)%N).
+ - rewrite Hc, Hr. exact Cf.
+ - unfold EvalCtx_v1. split; [exact Sm|]. split; [apply MEnv_bind'; [exact L|exact Aa]|].
+   split; [apply bind_below|]. split; [intros a A; exact A|]. split; [left; reflexivity|].
+   split; [left; reflexivity|]. rewrite Hk, Hh. apply KC'_ret; [intros a A; lia|constructor].
+Qed.
+
+Theorem call_preservation'_of_preservation'_v1 : preservation'_statement_v1 E pt sealed -> call_preservation'_statement_v1 E pt sealed.
+Proof.
+ intros Pr mu s m c ps b args n rs Eo Sm Cf L En c0.
+ exact (Pr n mu c0 m rs Eo (entered_ms'_v1 mu s m c ps b args Sm Cf L En)).
+Qed.
+
 (* ---------- many steps from one ---------- *)
 Notation Sstar := (Sstar sealed).
 Notation TStar := (TStar E pt).
@@ -130,6 +167,25 @@ Definition raise_resolve_statement : Prop := forall mu x k s m1 m2 msg tv cv cap
  (exists l msg' tv' s' m3 mu', Sstar (Cfg (Throw x) k s) (Cfg (Throw x) [] s') /\
     B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m3 /\ B.tget l (B.m_heap m3) = Some (B.OExn msg' tv') /\
     exn_ok x msg' /\ mext mu mu' /\ SMs mu' s' m3).
+
+(* raise_resolve_statement as r22-emit-sim stated it, over SM_v1, MS'_v1 and SMs_v1 (no
+   sm_fresh); the text otherwise unchanged. FALSE: raise_resolve_false (below). The statement
+   above is the corrected one: the same text over SM and SMs with sm_fresh. Its no-handler end is
+   JitEmitInv.sms_raise_final (closed) once the raising machine is SMs-related: the exception goes
+   to a fresh key. *)
+Definition raise_resolve_statement_v1 : Prop := forall mu x k s m1 m2 msg tv cv caps w,
+ B.next E pt m1 = B.raise m2 msg tv -> exn_ok x msg -> SM_v1 mu s k m2 ->
+ CCtx (HeapClo (B.m_heap m2)) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2) ->
+ ((exists o r, KD' (VRh mu (B.m_heap m2)) (HeapClo (B.m_heap m2)) (DoOK s) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2)
+     (B.m_conts m2) (B.m_handlers m2) w o r k) \/
+  (exists l r, TK' (VRh mu (B.m_heap m2)) (HeapClo (B.m_heap m2)) (DoOK s) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2)
+     (B.m_conts m2) (B.m_handlers m2) w true l r k) \/
+  (exists dst r, KC' (VRh mu (B.m_heap m2)) (HeapClo (B.m_heap m2)) (DoOK s) (B.m_code m2) cv caps (B.m_fp m2) (B.m_stack m2)
+     (B.m_conts m2) (B.m_handlers m2) w dst r k)) ->
+ (exists c' m' mu', Sstar (Cfg (Throw x) k s) c' /\ TPlus m1 m' /\ mext mu mu' /\ MS'_v1 mu' c' m') \/
+ (exists l msg' tv' s' m3 mu', Sstar (Cfg (Throw x) k s) (Cfg (Throw x) [] s') /\
+    B.next E pt m1 = B.MFinal (B.FError (B.VExn l)) m3 /\ B.tget l (B.m_heap m3) = Some (B.OExn msg' tv') /\
+    exn_ok x msg' /\ mext mu mu' /\ SMs_v1 mu' s' m3).
 
 (* preservation'_statement's conclusion, as a predicate. *)
 Definition PresC (n : nat) (mu : kmap) (c : config) (m : B.machine) (rs : nat -> B.jreq -> B.jres) : Prop :=
@@ -316,6 +372,7 @@ Proof.
      * intros l p I; destruct I.
      * split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate].
      * apply funrel_embed. apply JitEmitInv.cx_funrel; reflexivity.
+     * apply JitEmitInv.cx_fresh; [reflexivity|cbn; lia].
    + unfold HK. cbn. constructor.
  - vm_compute. reflexivity.
  - constructor.
@@ -357,9 +414,9 @@ Qed.
      call_preservation'_of_preservation');
    - call_preservation_src'_false: ~ call_preservation_src'_statement cx_E cx_pt [] [] (b0 = b1 = e,
      the KRef links by KRef_refl, D = []).
-   What the statements need: SMs to keep m_next fresh (every key at or above it unused, or at least
-   tget (m_next m) (m_heap m) = None with alloc's successor fresh in turn); that is a change to
-   JitEmitInv's SMs (emit-spec's), so this task stops here for these three statements.
+   What the statements need: SMs to keep m_next fresh (every key at or above it unused). That is
+   r21-sms-fresh-fix's JitEmitInv.Fresh and sm_fresh; the refutations below are of the v1 text
+   (SM_v1, SMs_v1, MS'_v1, Ends'_v1, EndsSrc'_v1), kept as it was refuted.
    Does NOT say: anything about a machine whose m_next is fresh (every machine the loader builds
    and every run from one), or about sim'_statement, which O'_raise satisfies before the allocation
    (its SM is of the machine that raises); the refutation is of the many-step statements' ends. *)
@@ -372,7 +429,7 @@ Definition fx_m : B.machine :=
  B.Machine fx_st 0 fx_c fx_r [] [] B.VCleared JitEmitInv.cx_heap 1 B.Leaf JitEmitInv.cx_gfun B.Leaf false 0.
 Definition fx_args : list value := [VNum (NInt 1)].
 
-Lemma fx_sm : SM [] JitEmitInv.cx_s [] fx_m.
+Lemma fx_sm : SM_v1 [] JitEmitInv.cx_s [] fx_m.
 Proof.
  split.
  - constructor.
@@ -420,10 +477,10 @@ Qed.
 
 (* The final machine of any end from fx_m: none is SMs-related to any store. *)
 Lemma fx_final_bad : forall o m2, B.next JitEmitInv.cx_E JitEmitInv.cx_pt fx_m = B.MFinal o m2 ->
- (forall v', o <> B.FReturn v') /\ forall mu s, ~ SMs mu s m2.
+ (forall v', o <> B.FReturn v') /\ forall mu s, ~ SMs_v1 mu s m2.
 Proof.
  intros o m2 N. destruct fx_next as (m' & Nx & G & msg & tv & Hl). rewrite Nx in N. injection N as <- <-.
- split; [intros v' E0; discriminate|]. intros mu s Ss. apply (fx_no_funrel s m' G); [|exact (sm_fun _ _ _ Ss)].
+ split; [intros v' E0; discriminate|]. intros mu s Ss. apply (fx_no_funrel s m' G); [|exact (sm_fun_v1 _ _ _ Ss)].
  intros c caps E0. rewrite Hl in E0. discriminate.
 Qed.
 
@@ -433,7 +490,7 @@ Proof.
   match goal with N : B.next _ _ fx_m = _ |- _ => rewrite Nx in N; discriminate end.
 Qed.
 
-Theorem call_preservation'_false : ~ call_preservation'_statement JitEmitInv.cx_E JitEmitInv.cx_pt [].
+Theorem call_preservation'_false : ~ call_preservation'_statement_v1 JitEmitInv.cx_E JitEmitInv.cx_pt [].
 Proof.
  intro Cp. destruct env_ok_inhabited as [rs Eo].
  destruct (Cp [] JitEmitInv.cx_s fx_m fx_c [fx_x] fx_b fx_args 1%nat rs Eo fx_sm fx_comp eq_refl fx_entered)
@@ -444,10 +501,10 @@ Proof.
      destruct (fx_final_bad _ _ Nf) as [Nr Ns]; [exact (Nr v' eq_refl)|exact (Ns _ _ Ss)].
 Qed.
 
-Theorem preservation'_false : ~ preservation'_statement JitEmitInv.cx_E JitEmitInv.cx_pt [].
-Proof. intro P. exact (call_preservation'_false (call_preservation'_of_preservation' _ _ _ P)). Qed.
+Theorem preservation'_false : ~ preservation'_statement_v1 JitEmitInv.cx_E JitEmitInv.cx_pt [].
+Proof. intro P. exact (call_preservation'_false (call_preservation'_of_preservation'_v1 _ _ _ P)). Qed.
 
-Theorem call_preservation_src'_false : ~ call_preservation_src'_statement JitEmitInv.cx_E JitEmitInv.cx_pt [] [].
+Theorem call_preservation_src'_false : ~ call_preservation_src'_statement_v1 JitEmitInv.cx_E JitEmitInv.cx_pt [] [].
 Proof.
  intro Cp. destruct env_ok_inhabited as [rs Eo].
  assert (Dw : JitKRef.JitKRef.D_wf [] []) by (split; constructor).
@@ -472,10 +529,10 @@ Definition fx_m2 : B.machine := B.set_rest fx_m [B.IReturn (B.OSlot 3)].
 Lemma fx_raise : B.next JitEmitInv.cx_E JitEmitInv.cx_pt fx_m = B.raise fx_m2 (B.t "hd: ~S is not a pair") (B.VFix 1).
 Proof. vm_compute. reflexivity. Qed.
 
-Theorem raise_resolve_false : ~ raise_resolve_statement JitEmitInv.cx_E JitEmitInv.cx_pt [].
+Theorem raise_resolve_false : ~ raise_resolve_statement_v1 JitEmitInv.cx_E JitEmitInv.cx_pt [].
 Proof.
  intro Rr.
- assert (Sm : SM [] JitEmitInv.cx_s [] fx_m2).
+ assert (Sm : SM_v1 [] JitEmitInv.cx_s [] fx_m2).
  { split.
    - constructor.
      + exact pbij_nil.
@@ -489,6 +546,86 @@ Proof.
  - right. right. exists DRet, []. apply KC'_ret; [intros a A; exact A|constructor].
  - destruct fx_next as (mx & Nx & _). unfold TS in T1. rewrite Nx in T1. discriminate.
  - exact (proj2 (fx_final_bad _ _ Nf) _ _ Ss).
+Qed.
+
+(* ---------- after the repair (r21-sms-fresh-fix, closed) ----------
+   SMs now asks sm_fresh (JitEmitInv.Fresh: no heap key at or above m_next in use). fx_m's m_next
+   is the key of do's closure, so no SM relates it, at any mu, store or continuation (fx_not_sm):
+   the counterexamples above say nothing about the corrected statements. But fx_m meets every
+   premise of the old statements (JitKRef.call_preservation_src_statement at 4a7346e and
+   JitLowerThm.call_preservation: Com, CompFn, entered), and GvalsRel [] too (fresh_needed). So no
+   corollary takes the corrected call_preservation_src'_statement to the byte-identical old
+   statement by instantiating it at the old premises: Fresh m must be added, as GvalsRel [] s m
+   already was (JitEmitInv.gvals_needed); the target reached is
+   JitEmitInv.call_preservation_src_old_fresh_statement (call_preservation_src_old_fresh_of_cp').
+   This refutes direct instantiation only. It is NOT a counterexample to recovering the old
+   statement: that statement is proved (JitKRefFund.call_preservation_src), so the implication
+   holds trivially, which is why the base-named *_old_of_new corollaries typecheck with their
+   hypotheses unused (they are not evidence). A non-vacuous derivation would run the corrected
+   statement at a normalized machine (m_next above every heap key, globals from the store) and
+   transfer the run back to m. NOT built. Its known obstacles: the old fragment's raise allocates
+   at m_next (JitLowerStep's raise lemma), so a stale m_next overwrites a live object and the two
+   final machines differ; the transfer needs a step-by-step agreement of B.next on machines that
+   differ in m_next and m_gval, which holds only for steps that neither allocate nor touch
+   globals, so it must carry the old invariant along the run; and globals the store binds to
+   values VRh relates at no mu (a closure needs a code object) may leave no normalized machine.
+   Does NOT say: that the corrected statements are true (sim'_statement, raise_resolve_statement
+   and clo_scoped_statement are not proved), or that the old statement is false (it is proved,
+   JitKRefFund.call_preservation_src). *)
+Lemma fx_not_sm : forall mu s k, ~ SM mu s k fx_m.
+Proof.
+ intros mu s k [Ss _]. pose proof (sm_fresh _ _ _ Ss 1%positive (Pos.le_refl _)) as F.
+ cbn in F. discriminate F.
+Qed.
+
+Lemma fx_comp_old : JitLowerRel.CompFn fx_c [fx_x] fx_b.
+Proof.
+ exists []. eapply JitLowerRel.C_ret. eapply JitLowerRel.O_val.
+ eapply JitLowerRel.C_prim with (p := PHd) (q := B.PHd) (ops := [B.OSlot 2]).
+ - vm_compute. reflexivity.
+ - reflexivity.
+ - reflexivity.
+ - discriminate.
+ - eapply JitLowerRel.Os_cons; [eapply JitLowerRel.O_var; [vm_compute; reflexivity|lia]|apply JitLowerRel.Os_nil].
+ - reflexivity.
+Qed.
+
+Example fresh_needed : Com JitEmitInv.cx_s fx_m /\ JitLowerRel.CompFn fx_c [fx_x] fx_b /\
+ List.length [fx_x] = List.length fx_args /\ JitLowerThm.entered fx_m fx_c fx_args /\
+ GvalsRel [] JitEmitInv.cx_s fx_m /\ ~ Fresh fx_m /\ forall mu s k, ~ SM mu s k fx_m.
+Proof.
+ split; [split; [reflexivity|apply JitEmitInv.cx_funrel; reflexivity]|].
+ split; [exact fx_comp_old|]. split; [reflexivity|].
+ split; [split; [reflexivity|split; [reflexivity|split; [reflexivity|]]];
+   eapply JitLowerKont.AA_cons; [vm_compute; reflexivity|constructor|constructor]|].
+ split; [split; [intros x v L; discriminate|intros x _ v' T; cbn in T; rewrite JitMeta.JitMeta.tget_leaf in T; discriminate]|].
+ split; [intro F; pose proof (F 1%positive (Pos.le_refl _)) as F1; cbn in F1; discriminate F1|].
+ exact fx_not_sm.
+Qed.
+
+(* The base text of JitEmitInv.sm_embed and ms_embed (no Fresh m premise) is FALSE over the
+   repaired SM and MS': at fx_m the old premises and StoreRel [] hold, and no SM relates fx_m
+   (fresh_needed). So Fresh m on sm_embed and ms_embed is needed, not a weakening for a proof's
+   sake; their base text over the relation it spoke of is JitEmitInv.sm_embed_v1, ms_embed_v1. *)
+Lemma ms'_sm : forall mu c m, MS' mu c m -> exists s k, SM mu s k m.
+Proof.
+ intros mu c m H. destruct H as [cv caps g top e dst r2 rho k s w m _ X|cv caps g top e l r2 rho k s w m _ X
+   |cv caps g top e o top2 r2 rho k s w m _ X|cv caps v v' o k s w m X]; exists s, k;
+   [exact (proj1 X)|exact (proj1 X)|exact (proj1 X)|exact X].
+Qed.
+
+Theorem sm_embed_text_false : ~ (forall mu s k m, Com s m -> notrap k -> StoreRel mu s m -> SM mu s k m).
+Proof.
+ intro H. destruct fresh_needed as (Cm & _ & _ & _ & G & _ & N).
+ exact (N [] _ [] (H [] JitEmitInv.cx_s [] fx_m Cm (Forall_nil _) (storerel_nil _ _ G))).
+Qed.
+
+Theorem ms_embed_text_false : ~ (forall mu s c m, MS s c m -> StoreRel mu s m -> MS' mu c m).
+Proof.
+ intro H. destruct fresh_needed as (Cm & Cf & L & En & G & _ & N).
+ pose proof (ms_entered _ _ _ _ _ _ Cm Cf L En) as M.
+ destruct (ms'_sm _ _ _ (H [] _ _ _ M (storerel_nil _ _ G))) as (s & k & Sm).
+ exact (N _ _ _ Sm).
 Qed.
 
 (* ---------- the front end composed ---------- *)
@@ -658,8 +795,23 @@ Proof.
 Qed.
 
 (* The old fragment's src statement (JitKRef.call_preservation_src_statement at mu = [], with
-   GvalsRel [] s m added; JitEmitInv.call_preservation_src_old_statement) from call_preservation',
-   clo_scoped and the catch-up reflection, through JitEmitInv.call_preservation_src_old_of_new''. *)
+   GvalsRel [] s m and Fresh m added; JitEmitInv.call_preservation_src_old_fresh_statement) from
+   call_preservation', clo_scoped and the catch-up reflection, through
+   JitEmitInv.call_preservation_src_old_of_new''. Its conclusion is the old statement's, verbatim;
+   its premises are the old ones plus those two (fresh_needed, JitEmitInv.gvals_needed: neither
+   follows from the old premises, and the corrected statements say nothing without them). *)
+Theorem call_preservation_src_old_fresh_of_cp' : call_preservation'_statement E pt sealed -> clo_scoped_statement ->
+ old_reflect'_statement E pt sealed -> call_preservation_src_old_fresh_statement E pt sealed D.
+Proof.
+ intros Cp Hs Rf. exact (call_preservation_src_old_fresh_of_new'' E pt sealed D (call_preservation_src'_of_cp' Cp Hs) Rf).
+Qed.
+
+(* call_preservation_src_old_of_cp' at its base text (fca6c3f), proof text unchanged. It goes
+   through JitEmitInv.call_preservation_src_old_of_new'', which is now proved from its target
+   (call_preservation_src_old_holds) and does not use the corrected statements: this theorem is
+   kept so that no base theorem loses its statement, and is NOT evidence that the corrected
+   statements recover the old one (that route is call_preservation_src_old_fresh_of_cp', which
+   needs Fresh m: fresh_needed). *)
 Theorem call_preservation_src_old_of_cp' : call_preservation'_statement E pt sealed -> clo_scoped_statement ->
  old_reflect'_statement E pt sealed -> call_preservation_src_old_statement E pt sealed D.
 Proof.
