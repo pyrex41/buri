@@ -1465,3 +1465,37 @@ r22-emit-sim (branch `p2/r22-emit-sim` off `p2/int` `fe461f4`; not merged, the i
 - mutants: `tests/mutate-shen-jit.py` generates 123 names. The six new `ShenJitEmitSim*` mutants (CloScoped, VrhDom, AdequacyRefl, RaiseStar, Slot1Any, FreshNext) were compiled against the lane's output: 6 of 6 rejected (RC=1 with an `Error:` line), 0 accepted. Log sha256 `af6c23aad90a342f8d8884b1d734267f6fc79085f67831361abf4012a669df20`. The other 117 were not rerun (UNKNOWN on this tree).
 - NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential lane, `gate_tests.sh`. The `scripts/report.py` pin 274 is computed (268 + 6).
 - Counts: 148 of 955 (source judge). Full-pipeline validated: UNKNOWN (not run).
+
+r21-sms-fresh-fix (branch `p2/r21-sms-fresh-fix` off `p2/int` `61f59e5`, with `p2/r22-emit-sim` `45dc6dc` merged in by `fca6c3f`. Its merge into `p2/int` is the integrator's).
+
+**What changed.**
+- `SMs` keeps `m_next` fresh: `JitEmitInv.Fresh` and the new field `sm_fresh`.
+- `preservation'_statement`, `call_preservation'_statement`, `call_preservation_src'_statement` and `raise_resolve_statement` are corrected. Their text is unchanged, and the relation they range over now keeps `m_next` fresh.
+- The pre-repair text is kept as `*_v1`. r22-emit-sim's four `*_false` theorems now refute the `*_v1` text, and are still closed.
+- New closed lemmas: `sms_alloc`, `sms_raise_final`, `fx_not_sm` and `fresh_needed`.
+- The implications are re-proved against the corrected statements. The old-fragment corollary `call_preservation_src_old_of_cp'` now targets `call_preservation_src_old_fresh_statement`: the old statement with `GvalsRel [] s m` and `Fresh m` added.
+
+**NOT reached:** a corollary to the byte-identical `JitKRef.call_preservation_src_statement` (4a7346e).
+- `fresh_needed` (closed) shows why: the old premises hold at `fx_m`, yet no `SM` relates it.
+- Adding `Fresh m` is decision item 10: OPEN, no sign-off from Reuben.
+
+**Evidence** on commit `04ffd08`. This docs-only commit changes nothing under `rocq`, `scripts` or `tests`.
+- lane: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-sms-fresh-fix-lane-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh` on a `git archive` of `04ffd08` in buri-lps, Rocq 9.3, 08:10:41Z to 08:54:29Z. Result:
+  - LANE_RC=0;
+  - emit syntactic gate: 0 violations;
+  - 741 of 741 Closed under the global context (`Audit_Jit.log` sha256 `ca3ee1382c490074a5484e0d440965cd40a9958a37d0ba737d7630d21c2b6129`);
+  - rocqchk passed;
+  - emit term-level gate: 0 violations over 388 constants of 5 modules;
+  - stage 0: 148 accepted, 807 rejected, 0 unreadable of 955, as recorded (source judge);
+  - image step as recorded;
+  - differential NOT RUN.
+  
+  Log sha256 `61a227d416e40b028ca556a50cdd7dabbb2bea8281572d30ae2b65b1399b4b86`.
+- mutants: the 45 `ShenJitEmit*` mutants that `tests/mutate-shen-jit.py` generates on `04ffd08` were compiled with Rocq 9.3 under rocq-slot (-P2) against the same sources. All 45 were rejected, 0 accepted. They include:
+  - `ShenJitEmitInvFreshDropped`: `sms_alloc` fails;
+  - `ShenJitEmitInvFreshOneKey`: `fresh_used_lt` fails;
+  - `ShenJitEmitSimFreshNext`: `fx_next` fails.
+  
+  sha256 of the concatenated logs `7c2941ffdbb80454d8fcbb62ddd0352d7b0103c97273b9c54a9c1b09091489b2`. The other 80 mutants were not rerun, so their status is UNKNOWN on this tree.
+- Counts: 741 audited statements. Mutation pin 276 (274 + 2), computed.
+- NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The count of kernel definitions validated out of 955 is therefore UNKNOWN; the source judge accepts 148 of 955.

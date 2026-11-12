@@ -1118,6 +1118,52 @@ or theorem hypothesis: `ShenJitEmitSimCloScoped`, `ShenJitEmitSimVrhDom`, `ShenJ
 `ShenJitEmitSimRaiseStar`, `ShenJitEmitSimSlot1Any`). The `scripts/report.py` pin is 274 (268 + 6), computed;
 `make report` was not run. The evidence is in [STATUS](STATUS.md).
 
+### Extended back end: SMs keeps m_next fresh (r21-sms-fresh-fix)
+
+Branch `p2/r21-sms-fresh-fix` off `p2/int` `61f59e5`, with `p2/r22-emit-sim` `45dc6dc` merged in. Its merge
+into `p2/int` is the integrator's.
+
+**The repair.** `rocq/JitEmitInv.v` adds `Fresh m`: no heap key at or above `m_next` is in use. `SMs` gains the
+field `sm_fresh : Fresh m`. So `SM`, `MS'`, `Ends'` and `EndsSrc'` keep `m_next` fresh at every related state and
+at every end.
+
+**The corrected statements.** The text of `preservation'_statement`, `call_preservation'_statement`,
+`call_preservation_src'_statement` and `raise_resolve_statement` is unchanged, but each now ranges over the
+corrected relation. Nothing in a conclusion is dropped: the observation equivalence (traces, related final values
+and exceptions) is kept in full.
+
+**The refuted text is kept.** The text before the repair is kept verbatim with `_v1` added to every name:
+`SMs_v1`, `SM_v1`, `EvalCtx_v1`, `TestCtx_v1`, `OpCtx_v1`, `MS'_v1`, `Ends'_v1`, `EndsSrc'_v1`, and the four
+statements. r22-emit-sim's `preservation'_false`, `call_preservation'_false`, `call_preservation_src'_false` and
+`raise_resolve_false` now refute the `_v1` text. They are still closed.
+
+**New lemmas, all closed:**
+- `fresh_alloc`, `fresh_set_used`, `fresh_empty`, `fresh_used_lt`, `vrh_fresh_ext`;
+- `sms_alloc`: an allocation keeps `SMs`;
+- `sms_raise_final`: a raise with no handler ends in a machine that `SMs` relates and that holds the exception;
+- `fx_not_sm`: no `SM` relates the counterexample's machine.
+
+**The implications, re-proved against the corrected statements:**
+- `call_preservation'_of_preservation'`;
+- `preservation'_of_sim'`;
+- `call_preservation_src'_of_cp'`;
+- `call_preservation_src_old_of_cp'` and the `*_old_of_new` family.
+
+**NOT reached: the byte-identical `JitKRef.call_preservation_src_statement`.**
+- `fresh_needed` (closed) shows why. The machine `fx_m` meets every premise of the old statement (`Com`, `CompFn`,
+  `entered`, and `GvalsRel []` as well), but no `SM` relates it.
+- So the corollary reaches `call_preservation_src_old_fresh_statement`: the old statement with
+  `GvalsRel [] s m` and `Fresh m` added, and the conclusion verbatim.
+- The old statement itself is still proved outright, by `JitKRefFund.call_preservation_src`.
+- Adding `Fresh m` is decision item 10 for Reuben (OPEN), alongside item 7's `GvalsRel`.
+
+**Mutants.** Two new mutants:
+- `ShenJitEmitInvFreshDropped` (`sm_fresh : True`): `sms_alloc` fails;
+- `ShenJitEmitInvFreshOneKey` (only `m_next` itself unused): `fresh_used_lt` fails.
+
+**Truth of the corrected statements is UNKNOWN.** They are not refuted and not proved: `sim'_statement`,
+`raise_resolve_statement` and `clo_scoped_statement` are still open.
+
 ### Pass split: the normal form (wave 1b)
 
 `lower.shen` lowers in passes: `share` (KL to KL), `norm` (KL to the normal form), then emission (normal form to
