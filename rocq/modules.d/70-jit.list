@@ -58,3 +58,4 @@ JitKRefCallNoTableCex
 JitFrontCheck
 JitFrontChainTest
 JitFrontShare
+JitFrontInline

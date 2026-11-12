@@ -6469,7 +6469,8 @@
     "rocq/JitKRefCallNoTableCex.v",
     "rocq/JitFrontCheck.v",
     "rocq/JitFrontChainTest.v",
-    "rocq/JitFrontShare.v"
+    "rocq/JitFrontShare.v",
+    "rocq/JitFrontInline.v"
    ],
    "history": [
     {
@@ -6616,6 +6617,16 @@
      "source": "rocq/JitFrontShare.v",
      "recorded": "2026-11-11: open. r1-share-ht verifier fixes: share_needs_hd_tl (closed) proves both halves of HP necessary for share_rule's soundness; share_premises_sat (closed) shows HT, HP and D_wf jointly satisfiable at a model D, so check_share_sound is not vacuous (pinned D and sealed: UNKNOWN). The share link's 4 of 4 validated v0.6 share rewrites are KRef evidence conditional on HT, HP and D_wf, which with HT exclude Com on the current back end (ht_not_com): not an end-to-end link. ShenJitFrontShareChainFactUnchecked is a proof-level mutant (no decision of check_share changes); ShenJitFrontShareReuseOpBlind is the reuse relation's decision-level mutant. 328 audited statements.",
      "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontInline.v",
+     "recorded": "2026-11-11: open. r1-f-inline: aeq_sound proved (JitFrontD.aeq_sound_statement, every sealed and D; first from Section hypotheses fund_below and prim_compat_statement, then instantiated), 16 statements audited (each Closed under the global context; 7 added after review: cx_not_KRef, bx_not_KRef, aeq_lam_cx_not_KRef, aeq_let_cx_not_KRef, reach_ret, KRef_ret, KRef_throw_any). inline_site_sound_statement and bind_site_sound_statement are FALSE as stated: inline_site_unsound and bind_site_unsound are Rocq-checked counterexamples (a frozen argument (freeze id_key) thawed in place reads the closure's own identity cell on the source side and the caller's id_key on the target side; neither frozen_free, hidden nor bind_site's disjointness guard excludes KLPort.id_key). JitFrontInline.bind_site_unsound is a second, independent witness of the refutation JitFrontProlog.bind_site_unsound (r1-f-prolog) also proves; both are kept (distinct qualified names). Proposed fix, not applied (JitFrontD.v is D00's; the owner or integrator decides whether to change the statement): reject a frozen argument with id_key free (inl_site_g, bind_site_g); the soundness of the guarded inline and bind checkers remains open (integer substitution, thaw-with, depth cut, fold, bound-now). Test, not proof (Rocq vm_compute of site_report on the decoded stage 0 table, stage0 ec9b3872..., witness set e45add98...): 5430 inline sites, 5424 accepted fold off and 5430 fold on, unchanged by the guard; 0 frozen arguments reading id_key; 37 bound-now sites, 37 accepted, unchanged by the guard. Mutants ShenJitFrontAeqLamNoRn, ShenJitFrontAeqLetIdKey, ShenJitFrontInlGuard, ShenJitFrontBindGuard, ShenJitFrontChainFinalThrow (5).",
+     "reconciliation": "r1-f-inline, Phase 2 front track, 11 November 2026; built on p2/int at 7cb676e."
+    },
+    {
+     "source": "rocq/JitFrontInline.v",
+     "recorded": "2026-11-11: open. p2/r1-f-inline merged with p2/int f42d6c4 (after r1-f-sugar and r1-f-prolog) on its own branch: no statement changed; the union has 539 Audit_Jit statements (523 + the 16 of JitFrontInline) and a proof-mutation pin of 234 (229 + the 5 r1-f-inline mutants). No count changes: the source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN (no full-pipeline judge was run). Evidence on e317b27 (buri-lps, Rocq 9.3): SKIP_DIFF=1 scripts/check-shen-jit.sh exit 0 (539 audited statements closed, rocqchk passed; stage0 148 accepted of 955; differential NOT RUN), log sha256 c921aa18...4130; site_report re-run (test, not proof): [5430; 5430; 5424; 5424; 5430; 5430; 0; 37; 37; 37], stage0 ec9b3872..., norm e45add98...b69dd1, log sha256 98a5afe7...6e22; the 5 r1-f-inline mutants rejected at aeq_shadow, aeq_let_cx, inl_site_g_cx, bind_site_g_cx, chain_final_raise, log sha256 005470f8...085. The full mutation suite, make prove and the differential were not run (UNKNOWN).",
+     "reconciliation": "r1-f-inline fix round, merge of p2/int f42d6c4, 11 November 2026."
     }
    ]
   },

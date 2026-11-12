@@ -181,7 +181,7 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
 | `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
 | `rocq/JitFrontShare.v` | share's checker (`check_share`, reuse included), `front_hyps`, `check_share_sound` under HT, HP and D_wf, the HT analysis, and the 4 validated share rewrites |
-| `rocq/Audit_Jit.v` | Assumption audit of 778 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 794 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -357,6 +357,7 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitLowerStage0.v`, `tests/shen-jit/stage0_to_rocq.py` | Decoding stage 0 files in Rocq, from a trusted tokenizer |
 | `rocq/JitFrontSugar.v` | r1-f-sugar: the norm checkers of the cond, sugar, thaw-sugar and trap-sugar families, each proved to establish KRef, and `chk_front` (congruence plus the four) proved sound from the compatibility lemmas |
 | `rocq/JitFrontD.v` | D00: the front rules' store D (a lowered store), built from decoded stage 0 data; `D_compiled'`; the allowed store facts; the inline relation `inl_site` and `aeq`, with their soundness statements (unproved) |
+| `rocq/JitFrontInline.v` | r1-f-inline: `aeq_sound` proved; `inline_site_sound_statement` and `bind_site_sound_statement` refuted (a thawed frozen argument reading `id_key`); guarded checkers `inl_site_g`, `bind_site_g` (soundness unproved); the refuted sites and aeq's pinned witnesses proved not KRef pairs (`cx_not_KRef`, `bx_not_KRef`, `aeq_lam_cx_not_KRef`, `aeq_let_cx_not_KRef`); real-site `site_report` |
 
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
 definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes

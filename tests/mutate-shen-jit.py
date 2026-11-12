@@ -281,6 +281,25 @@ ShenJitFrontShareChainFactUnchecked: a chain let records the fact of the source'
   (the fact must be the target's own path; JitFrontShare.v, the proof's expr_eqb_eq step). A proof-level
   mutant: with rec = fchk share_rules, (hd y)/(tl y) is accepted only against itself, so no decision of
   check_share changes; ShenJitFrontShareReuseOpBlind is the reuse relation's decision-level mutant.
+ShenJitFrontAeqLamNoRn: aeq compares a lambda's bodies without pairing the two binders, so
+  ((lambda x x) 1) is alpha-equivalent to ((lambda y x) 1), a pair JitFrontInline's
+  aeq_lam_cx_not_KRef proves is not a refinement. Built as JitFrontD.v + JitFrontInline.v
+  (mutate_chain); JitFrontD's Example aeq_shadow fails first (the mutant also rejects an equivalent
+  pair); JitFrontInline's aeq_lam_cx pins the unsound direction.
+ShenJitFrontAeqLetIdKey: aeq's let case drops binder_ok, so a let may bind the closure-identity key,
+  which a freeze then rebinds on one side only. Built as JitFrontD.v + JitFrontInline.v; the
+  Example aeq_let_cx must fail: the mutant accepts the pair aeq_let_cx_not_KRef proves is not a
+  refinement.
+ShenJitFrontInlGuard: inl_site_g drops its id_key guard on frozen arguments, so it accepts the
+  inline counterexample. inl_site_g_cx must fail: the mutant accepts the site cx_not_KRef proves
+  is not a refinement. (Test evidence about the guard: the guarded checker's soundness is open.)
+ShenJitFrontBindGuard: bind_site_g drops its id_key guard, so it accepts the bound-now
+  counterexample. bind_site_g_cx must fail: the mutant accepts the site bx_not_KRef proves is not a
+  refinement. (Test evidence about the guard, as above.)
+ShenJitFrontChainFinalThrow: chain_ok stops checking that its last configuration is not a raise, so
+  a chain may end in the (XUnboundVar y) raise no_reach_iter excludes (no_reach_iter is then
+  false). The Lemma chain_final_raise must fail. (Dropping the check on the configurations before
+  the last instead is an equivalent mutant: with no trap frame, a raise there reaches the last.)
 """
 import re
 from pathlib import Path
@@ -678,4 +697,20 @@ mutate('ShenJitFrontShareReuseOpBlind', 'rocq/JitFrontShare.v',
        "Definition path_eqb (p q : path) : bool := text_eqb (fst p) (fst q).")
 mutate('ShenJitFrontShareChainFactUnchecked', 'rocq/JitFrontShare.v',
        "   | Some o => if expr_eqb E E' && bound g y then", "   | Some o => if bound g y then")
+finl = ['rocq/JitFrontD.v', 'rocq/JitFrontInline.v']
+mutate_chain('ShenJitFrontAeqLamNoRn', finl,
+       ' | ELam x b0, ELam y b => binder_ok x y && aeq ((x, y) :: rn) b0 b\n | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a',
+       ' | ELam x b0, ELam y b => binder_ok x y && aeq rn b0 b\n | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a')
+mutate_chain('ShenJitFrontAeqLetIdKey', finl,
+       ' | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a && aeq ((x, y) :: rn) b0 b\n | EIf c0 a0 b0, EIf c a b => aeq rn c0 c',
+       ' | ELet x a0 b0, ELet y a b => aeq rn a0 a && aeq ((x, y) :: rn) b0 b\n | EIf c0 a0 b0, EIf c a b => aeq rn c0 c')
+mutate('ShenJitFrontInlGuard', 'rocq/JitFrontInline.v',
+       ' forallb (fun n => negb (reads_id n)) nargs && F.inl_site fold letdo D f nargs e.',
+       ' F.inl_site fold letdo D f nargs e.')
+mutate('ShenJitFrontBindGuard', 'rocq/JitFrontInline.v',
+       ' forallb (fun n => negb (reads_id n)) nargs && F.bind_site fold D nargs e.',
+       ' F.bind_site fold D nargs e.')
+mutate('ShenJitFrontChainFinalThrow', 'rocq/JitFrontInline.v',
+       ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)) && not_throw (iter N c0).',
+       ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)).')
 print(' '.join(names))

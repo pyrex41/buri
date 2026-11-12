@@ -3,6 +3,7 @@ From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep Jit
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
  JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex.
 From Buri Require Import JitFrontCheck JitFrontChainTest JitFrontShare.
+From Buri Require Import JitFrontInline.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -785,3 +786,19 @@ Print Assumptions JitFrontShare.JitFrontShare.reach_closed.
 Print Assumptions JitFrontShare.JitFrontShare.hx_inv_star.
 Print Assumptions JitFrontShare.JitFrontShare.share_needs_hd_tl.
 Print Assumptions JitFrontShare.JitFrontShare.share_premises_sat.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_sound.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_sound_of.
+Print Assumptions JitFrontInline.JitFrontInline.REnv_tag.
+Print Assumptions JitFrontInline.JitFrontInline.inline_site_unsound.
+Print Assumptions JitFrontInline.JitFrontInline.bind_site_unsound.
+Print Assumptions JitFrontInline.JitFrontInline.no_reach_iter.
+Print Assumptions JitFrontInline.JitFrontInline.KRef_throw.
+Print Assumptions JitFrontInline.JitFrontInline.inl_site_g_inl_site.
+Print Assumptions JitFrontInline.JitFrontInline.bind_site_g_bind_site.
+Print Assumptions JitFrontInline.JitFrontInline.cx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.bx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_lam_cx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.aeq_let_cx_not_KRef.
+Print Assumptions JitFrontInline.JitFrontInline.reach_ret.
+Print Assumptions JitFrontInline.JitFrontInline.KRef_ret.
+Print Assumptions JitFrontInline.JitFrontInline.KRef_throw_any.
