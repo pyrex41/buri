@@ -44,6 +44,32 @@ answers none of the items below. **No item has an answer, so Q0 and items 1 to 1
 - If Reuben answers later, a later intake adds his words to this record, with the date and the scope.
   This entry is not edited to carry them.
 
+**Intake of 2026-11-12 by the main session (supersedes the OPEN statuses above; those entries are kept
+as written).** Reuben answered every item through the main session's question tool. His answers were
+never relayed to the workflow agents, which is why the intakes above found none. Each question and his
+selected answer are quoted verbatim, with the UTC time of the answer, in
+[`p2-answers-verbatim.md`](p2-answers-verbatim.md). The table gives his exact answer text for each
+item; the "decided" column is the option's own description from that question, not a new reading.
+Approval of a premise or statement is not proof of it: no `status` in `spec/obligations.json` changes
+because of this intake.
+
+| # | answered (UTC) | Reuben's answer, verbatim | decided |
+|---|---|---|---|
+| Q0 | 2026-11-10T21:39:47Z | "Inherit decision status (Recommended)" | A callee-link failure whose failing callees are all decision-gated inherits the gate; it does not count against the cap of 20. |
+| 1 | 2026-11-10T21:39:47Z | "Wire them, hash in KL (Recommended)" | Wire `jit_port_prims_proposed` into `jit_rules`; `hash` is a KL transcription of `hash_go`. |
+| 2 | 2026-11-12T17:00:56Z | "Gated residual for now (Recommended)" | eval-kl stays a named, decision-gated residual in Phase 2; dependents inherit the gate. (10 Nov, "No stops": the theorem may not end at a named limit point.) |
+| 3 | 2026-11-12T17:00:56Z | "Model identity (Recommended)" | Add allocation identity to the source model so `same?`/`tagged?` match the binary. |
+| 4 | 2026-11-12T17:00:56Z | "Model it exactly (Recommended)" | The source profile gets Shen/JIT's NaN semantics for `=`, using item 3's identity. |
+| 5 | 2026-11-11T13:39:26Z | "Named residuals (Recommended)" | HT and HP become the open named residual OB-JIT-SHARE-THAW; share-dependent definitions are counted as conditionally validated, reported separately. |
+| 6 | 2026-11-11T14:03:36Z | "Approve all (Recommended)" | DoD (2) amended to "uncurrying: no rule". |
+| 7 (shape rows) | 2026-11-11T14:03:36Z | "Approve all (Recommended)" | `env_ok`, the one-argument window, `GvalsRel`, the catch-up form and the index shape approved. |
+| 7 (absvector) | 2026-11-11T14:03:36Z | "Bytecode bound in profile (Recommended)" | Shen/JIT's absvector limit goes into the source profile; above it, a catchable error. |
+| 7 (error-to-string) | 2026-11-11T14:03:36Z | "Model real message (Recommended)" | The source profile carries the message; `error-to-string` returns it; compared exactly. |
+| 7 (IO) | 2026-11-11T14:03:36Z | "Model prefix + stream state (Recommended)" | The KL source port models open's home-directory prefix and per-stream open/closed/direction state; IO failure raises to the nearest handler. |
+| 8 | 2026-11-11T14:03:36Z | "Approve all (Recommended)" | State the guarded `inline_site_sound_g`/`bind_site_sound_g` statements; keep the refuted statements and refutations as the record. |
+| 9 | 2026-11-11T14:03:36Z | "Approve all (Recommended)" | Option (a): D_wf admits fixed-name `FPrim` entries; KRef's D_wf uses re-proved. |
+| 10 | 2026-11-12T13:27:11Z | "go" (to a question whose first option was "Approve (Recommended)") | `Fresh m` becomes the `sm_fresh` field of SMs and a premise of the old-fragment corollaries; the corrected statements are DoD (1)'s targets for `call_preservation_src'`; the `*_v1` refutations stay. |
+
 While an item is OPEN its default stands. That default is the status quo, or a named residual. It is
 **not** the packet's recommendation. Where the packet recommends approving or amending something, that
 recommendation is not adopted.
