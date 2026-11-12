@@ -1532,3 +1532,12 @@ r21-front-land into p2/int (integration): `--no-ff` merge of `p2/r21-front-land`
 - judge_hooks: `JOBS=2 bash tests/shen-jit/judge_hooks.sh JitEmitCheck /tmp/p2-int-mr21fl-lane /lps/p6/sj/build/stage0 /tmp/p2-int-mr21fl-jh`, 11:24:30Z to 11:25:04Z, exit 0, JUDGE_HOOKS_OK, 148 of 955, equal to JitLowerStage0's judge (gained 0, lost 0); log sha256 `4471f39540a71f39faefadf463afe52575616484571dec8c187bd66e83e72b98`.
 - mutants: the 26 added since `61f59e5` (4 ShenJitEmitCheck, 22 ShenJitFront), each `/lps/bin/rocq-slot timeout 2400 rocq compile -Q /tmp/p2-int-mr21fl-lane Buri <name>.v`, two at a time, 11:08:22Z to 11:24:12Z: 26 of 26 rejected with an Error, 0 accepted, 0 timeouts; log sha256 `7487efd8caa6bcfb2f46467308b009fece0f66a445acd925344d3fc4d7591bb8`. The other 117 were not rerun on this tree (their modules are unchanged since `61f59e5`; evidence on the merged tree for them is UNKNOWN).
 - Counts: 148 of 955 kernel definitions validated by the source judge; full-pipeline validated: UNKNOWN. NOT RUN, UNKNOWN: `make prove` (Coq 8.18), `make report` (pin 294 is arithmetic), the differential, the full-pipeline judge, `check-shen-jit-norm.sh`, `gate_tests.sh`.
+
+r22-front-inline-guard (branch `p2/r22-front-inline-guard` off `p2/int` `130f4c1`, 12 November 2026, docs and ledger only):
+decision item 8 (guarded inline and bind statements) is OPEN, with no answer from Reuben, so no Rocq file and no statement
+changed. `inline_site_sound_statement` and `bind_site_sound_statement` stand, refuted. The soundness of `inl_site_g` and
+`bind_site_g` is NOT proved and was not attempted. The 528 stage 0 definitions with an inlining marker (census) are filed
+as residuals under `OB-JIT-LOWER-OPTIMIZATIONS`, citing item 8. They overlap other residual classes and are not additive.
+Count floor: the 23 definitions T02 forecasts under F-inline beyond the merged 148 are rejected by the item 8 gate (census:
+alpha-only sites, none needs fold). Audit_Jit and the mutation pin are unchanged. Counts: 148 of 955 (source judge);
+full-pipeline validated: UNKNOWN.
