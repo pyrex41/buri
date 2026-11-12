@@ -1179,6 +1179,13 @@ statements. r22-emit-sim's `preservation'_false`, `call_preservation'_false`, `c
   `JitKRef.call_preservation_src_statement` that uses its hypothesis. The Rocq counterexamples to instantiation are
   `fresh_needed` (closed) and, from the base, `gvals_needed`. Item 10 is OPEN.
 
+**Fix round 2 (`4ff09d1`).** `fresh_needed` and `gvals_needed` refute direct instantiation only. They are not
+counterexamples to recovery: the byte-identical statement is proved (`JitKRefFund.call_preservation_src`), so the
+implication holds trivially and the base-named `*_old_of_new` corollaries are not evidence. A normalize-and-transfer
+derivation is named in `rocq/JitEmitSim.v` with its obstacles and is NOT built, so the acceptance criterion (a Closed,
+non-vacuous corollary to the byte-identical statement) is not met. Item 10 in `docs/decisions/p2-decisions.md` now
+lists the corrected statements; OPEN.
+
 ### Pass split: the normal form (wave 1b)
 
 `lower.shen` lowers in passes: `share` (KL to KL), `norm` (KL to the normal form), then emission (normal form to

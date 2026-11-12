@@ -1512,7 +1512,7 @@ r21-sms-fresh-fix fix round 1 (Rocq commit `df4175f` on `bf727e0`).
 - The Rocq counterexamples to instantiation are `JitEmitSim.fresh_needed` and, from the base, `JitEmitInv.gvals_needed`. Both are closed. In each, the old premises hold at a machine that the new invariant relates at no mu.
 - Decision item 10 was sent to main, because r21-decision-intake was not addressable. It is OPEN, with no sign-off from Reuben. The options are:
   - (a) accept `Fresh m` and `GvalsRel [] s m` as the extra premises of the recovery target;
-  - (b) fund a normalization lemma (GvalsRel still blocks it);
+  - (b) fund a normalization lemma (GvalsRel may still block it);
   - (c) change the relation or the requirement.
 
 **Evidence** on commit `df4175f`. The following docs-only commit changes nothing under `rocq`, `scripts` or `tests`.
@@ -1534,3 +1534,17 @@ r21-sms-fresh-fix fix round 1 (Rocq commit `df4175f` on `bf727e0`).
 
   sha256 of the concatenated logs `dfbb9c9118f9759533849d44a58b9c9f74718a31ea3ca1e9f4b92fafc3920711`. The other mutants were not rerun: UNKNOWN on this tree.
 - NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The number of kernel definitions validated out of 955 is UNKNOWN.
+
+r21-sms-fresh-fix fix round 2 (commit `4ff09d1` on `b102be7`; comments and the decision record only, no statement or proof changed).
+
+**What changed.**
+- Framing corrected in `rocq/JitEmitSim.v`. `fresh_needed` and `gvals_needed` refute direct instantiation of the corrected statement at the old premises. They are NOT counterexamples to recovering the old statement: `JitKRef.call_preservation_src_statement` is proved outright (`JitKRefFund.call_preservation_src`), so "corrected implies old" holds trivially, which is why the base-named `*_old_of_new` corollaries typecheck with their hypotheses unused. Those corollaries are kept for name preservation only and are not evidence.
+- A non-vacuous route (normalize the machine, apply the corrected statement, transfer the run back) is named with its obstacles and NOT built: the old fragment's raise allocates at `m_next`; the transfer needs `B.next` agreement on machines differing in `m_next` and `m_gval`, carried along the run; store globals with no `VRh` image may leave no normalized machine.
+- Decision item 10 in `docs/decisions/p2-decisions.md` now names the corrected statements, the `Fresh m` premise of `sm_embed`/`ms_embed`, the `*_v1` copies and the `_text_false` refutations. `r21-decision-intake` is not an addressable agent, so the entry is written on this branch for the integrator. Status OPEN, no sign-off from Reuben.
+
+**Still NOT reached (acceptance not met):** a Closed corollary from the corrected `call_preservation_src'_statement` to the byte-identical 4a7346e `JitKRef.call_preservation_src_statement` that uses its hypothesis.
+
+**Evidence** on commit `4ff09d1`.
+- lane: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-sms-fresh-fix-r2-lane /lps/bin/rocq-slot bash scripts/check-shen-jit.sh` on a `git archive` of `4ff09d1` in buri-lps, Rocq 9.3: LANE_RC=0; 754 of 754 audited statements Closed under the global context (`Audit_Jit.log` sha256 `b5f568a5d68604fbfa73d355440df77d89e24f761575d998fa38208f4946b3eb`); rocqchk passed; emit term-level gate 0 violations over 401 constants; stage 0: 148 accepted, 807 rejected, 0 unreadable of 955 (source judge); differential NOT RUN. Log sha256 `d4894a8ab46aeb536b60681299116f1c8fceb1b6bc5e28708233d534553b4549` (identical to the `df4175f` log; only comments changed).
+- mutant: `ShenJitEmitInvFreshDropped` (`sm_fresh : True`) applied to `JitEmitInv.v` of `4ff09d1` and compiled with Rocq 9.3 under rocq-slot: rejected (RC 1, `sms_alloc` fails at line 377). Log sha256 `c5970c55fbb98fefc1c38e0689fef3ca238129aae906e7fdfb843f09ecbadf58`. The other mutants were not rerun on `4ff09d1`: UNKNOWN on this tree.
+- NOT run, so UNKNOWN: `make prove`, `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The number of kernel definitions validated out of 955 is UNKNOWN.

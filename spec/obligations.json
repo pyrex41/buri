@@ -6379,6 +6379,11 @@
      "source": "rocq/JitEmitInv.v",
      "recorded": "2026-11-12: open (r21-sms-fresh-fix fix round 1, commit df4175f; not merged into p2/int). The base statements of preservation_old_of_new, call_preservation_old_of_new, call_preservation_src_old_of_new, their primed versions, call_preservation_src_old_of_new'' and JitEmitSim.call_preservation_src_old_of_cp' are restored. Each is proved from its *_old_holds target and does not use its hypotheses, so none is evidence of recovery. The Fresh-premise routes are renamed *_old_fresh_of_new, *_old_fresh_of_new', call_preservation_src_old_fresh_of_new'' and call_preservation_src_old_fresh_of_cp'. sm_embed_v1 and ms_embed_v1 keep the base embedding text over SM_v1 and MS'_v1. JitEmitSim.sm_embed_text_false and ms_embed_text_false (closed) refute the base embedding text over the repaired SM. NOT reached: a corollary from call_preservation_src'_statement to the byte-identical JitKRef.call_preservation_src_statement that uses its hypothesis; the Rocq counterexamples to instantiation are fresh_needed and gvals_needed. Decision item 10 for Reuben is OPEN.",
      "reconciliation": "r21-sms-fresh-fix fix round 1: base theorem statements restored, Fresh routes renamed, 12 November 2026."
+    },
+    {
+     "source": "rocq/JitEmitSim.v",
+     "recorded": "2026-11-12: open (r21-sms-fresh-fix fix round 2, commit 4ff09d1; not merged into p2/int; comments and decision record only). fresh_needed and gvals_needed refute direct instantiation of the corrected call_preservation_src'_statement at the old premises, not recovery: the byte-identical JitKRef.call_preservation_src_statement is proved outright (JitKRefFund.call_preservation_src), so the base-named *_old_of_new corollaries hold trivially and are not evidence. A normalize-and-transfer derivation is named with its obstacles in rocq/JitEmitSim.v and is NOT built; a Closed non-vacuous corollary to the byte-identical statement is NOT reached. Lane LANE_RC=0 on 4ff09d1 (754 of 754 Closed); ShenJitEmitInvFreshDropped rejected (sms_alloc). Decision item 10 updated in docs/decisions/p2-decisions.md with the corrected statements; OPEN, no sign-off from Reuben.",
+     "reconciliation": "r21-sms-fresh-fix fix round 2: counterexample framing corrected, item 10 updated, 12 November 2026."
     }
    ]
   },
