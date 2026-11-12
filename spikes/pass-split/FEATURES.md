@@ -9,9 +9,11 @@ exists, so the full-pipeline validated count is UNKNOWN). The only acceptance co
 counts: src 148, nf 150, tf 174, from the rerun after `=` against a symbol constant was admitted (below; src 111, nf 112,
 tf 133 at the T02 run, before it). Every other number is a prediction or a count of syntax.
 
-Family tasks use `features.tsv` for their count-floor checks. A definition counts toward a task's floor if its
-`features` or `required_families` column names that task's item. The forecast assumes every other item the row lists
-is also present.
+Family tasks take their count floor from `FORECAST.tsv` (section "Per-family forecast" below), not from
+`features.tsv`'s columns: for each norm and emit family, the definitions forecast as accepted under the **merged
+features plus that family alone**. That is a census forecast, not proof, and not a validated count. (Before
+r22-t02-refresh this paragraph said a definition counted toward a floor if its row named the task's item, assuming every
+other item it lists present; that reading is superseded.)
 
 ## Inputs and commands (bound)
 
@@ -48,7 +50,50 @@ T02 row A2, and each rerun row A(k) for k >= 2 equals T02 row A(k+1). Rerun verd
 `e5bb67fa37a3fe41e9aa37252c900af2d95a8da8cd2bcfc9f21de4a48b974560`, tf
 `59bf05943b55fff986ab3a082dd104868e175801e3ddbef5c0f7029f44cd6f84`. `feature_census.py` sha256 `a870685cdbe6182497227b4bb2822b7fb4c99d2311b9e28594c690d9235973a4`,
 `features.tsv` `6eeef6975e3aa820dc7668ce3df8b30ae92bba3ae40a4f63cde2b2baa47c98a3`. The generated tables at the end of
-this file are the rerun's. The table below, and the analysis sections, are the T02 run's unless they say otherwise.
+this file are the r22-t02-refresh run's (same verdicts as this rerun; below). The table below, and the analysis sections, are the T02 run's unless they say otherwise.
+
+**Refresh, 11 November 2026 (branch `p2/r22-t02-refresh`, on `p2/int` `fe461f4`; rocq/ unchanged by this branch).**
+The judge was rerun from this branch's own Rocq build on the same stage 0 set and T02 capture, and the census
+regenerated with the current-set check against the pinned per-file counts and the new per-family forecast:
+
+```
+rocq-slot bash tests/shen-jit/judge_split_rocq.sh /tmp/p2-r22-t02-refresh-crocq                     # ROCQ_OK
+JOBS=2 rocq-slot bash tests/shen-jit/judge_split.sh /tmp/p2-r22-t02-refresh-crocq /lps/p6/sj/build/stage0 \
+     /tmp/p2-T02-capture/witness /tmp/p2-r22-t02-refresh-judge                                     # JUDGE_SPLIT_DONE, rc 0
+diff tests/shen-jit/stage0-accepted.txt /tmp/p2-r22-t02-refresh-judge/src.counts                   # empty
+python3 tests/shen-jit/feature_census.py /lps/p6/sj/build/stage0 /tmp/p2-T02-capture /tmp/p2-r22-t02-refresh-judge \
+     spikes/pass-split/features.tsv --accepted tests/shen-jit/stage0-accepted.txt \
+     --forecast spikes/pass-split/FORECAST.tsv > tables.md                                       # exit 0 (0 mismatches)
+python3 tests/shen-jit/feature_census.py --check-tsv spikes/pass-split/features.tsv tests/shen-jit/stage0-accepted.txt
+                                                                                                    # exit 0, 148 = 148 = 148
+```
+
+Rocq verdicts src 148, nf 150, tf 174 of 955, the same `.codes` as the rerun above (src `6a4816e8...`, nf
+`e5bb67fa...`, tf `59bf0594...`, LC_ALL=C order). The current-set prediction (BASE, cond/type/dynamic-apply
+transparent) agrees with them on every definition and, per file, with `tests/shen-jit/stage0-accepted.txt` (24 of 24
+files). Row 0 is unchanged (148 direct, 174 emit), and `features.tsv` regenerated **byte-identical**
+(`6eeef6975e3aa820dc7668ce3df8b30ae92bba3ae40a4f63cde2b2baa47c98a3`): its `rocq_src` column already held the 148.
+`feature_census.py` sha256 `b4eb11f453dda14c618fc31dcdced16c16922f89d4494b776f34da92667f78bb`, `FORECAST.tsv`
+`ef8cce1528f17dc5c41744a8148c866e695e34bbedcaa957c5f8d57149cf1736`, generated tables
+`0eb85b532532fb2a6718ed6b63c67900fa8b15bf26a2d19208c4b7ef3104c511`; a second run from the same inputs reproduced all
+three byte for byte. Negative controls (tests, not proof): a pinned file with one file's count raised by one makes both
+the main run (`lower 34`) and `--check-tsv` (`core 13`) exit 1, naming that file. Rocq 9.3.0 (switch `lps`), Python
+3.12.3, container `buri-lps`. Census, not proof.
+
+Lane on commit `fe556f2` (this branch's census commit): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r22-t02-refresh-lane-out
+rocq-slot bash scripts/check-shen-jit.sh`, 21:17:59Z to 22:03:37Z, LANE_RC=0, log sha256
+`4dcfa280055225e1e3987619ba1ebd1ceae95a0d588d237eee062321e2631eef`: tables match, 708 audited statements closed,
+rocqchk passed, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded, image step as recorded. The
+differential, `gate_tests.sh`, `make prove` and the mutation suite were not run: UNKNOWN. This branch adds no
+theorem, checker or relation, so no audit entry, mutant or pin changes. The commit after `fe556f2` touches only this
+file and regenerates `tests/shen-jit/stage0-residuals.txt` (`stage0_residuals.py /lps/p6/sj/build/stage0
+/tmp/p2-T02-capture/witness /tmp/p2-r22-t02-refresh-judge ...`, rc 0, 148 of 955, residual 807): the only changed
+line is the header's `feature_census.py` sha256 (`a870685c...` to `b4eb11f4...`), so the rows, which use
+`feature_census.eq_kind`, are byte-identical. Lane on that commit, `131801f`: `SKIP_DIFF=1
+JIT_OUT=/tmp/p2-r22-t02-refresh-lane-out2 rocq-slot bash scripts/check-shen-jit.sh`, 22:07:09Z to 22:49:23Z,
+LANE_RC=0, log sha256 `7b23a0486611ed509720ea9e0f9014e9b937203dd0a70b246c758ec58a581d83`: tables match, 708
+audited statements closed, rocqchk passed, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded, image
+step as recorded; differential not run (UNKNOWN). The commit after `131801f` touches only this file.
 
 | what | value |
 |---|---|
@@ -86,8 +131,11 @@ judge's `tf` variant sees the same term.
 - **Front families**, from the ticks of the count run. `fired_families` lists every family that fired;
   `required_families` lists the ones a validation needs.
   - Families: `share` (share chains), `inline` (sealed inlining and the marker), `cond`, `sugar` (type, protect,
-    lambda application, curried apply, fn), `trap-sugar`, `thaw-sugar`, `fold-cons`, `fold-arith`, `copy` (freeze and
-    lambda copying), `bind` (shen.bind!), `cut-deref` (fired 0 times), `eval-kl`.
+    one-argument lambda application), `trap-sugar`, `thaw-sugar`, `fold-cons`, `fold-arith`, `copy` (freeze and
+    lambda copying), `bind` (shen.bind!), `cut-deref` (fired 0 times), `eval-kl`, and since r22-t02-refresh `uncurry`
+    (curried apply, lambda application with more than one argument: JitFrontSugar rejects both and defers them to
+    the uncurrying family) and `fn` (fn sugar: no rule, no owning task). `uncurry` and `fn` fire 0 times at 0.6, so
+    the move out of `sugar` changes no count and no `features.tsv` byte.
   - If only cond or type fired, the source form is validated directly. Comp has `C_cond_*` and `C_type`. Nothing is
     required.
   - If any other family fired, the definition goes source -> norm -> bytecode, and the front end has to justify every
@@ -211,6 +259,71 @@ is listed under the first decision item it needs:
 
 The full list is below. These counts are predictions; nothing was accepted beyond Rocq's 148 (src judge).
 
+## Per-family forecast (`FORECAST.tsv`; census evidence only)
+
+**This is census evidence only: a forecast, not proof and not a validated count.** For each norm (front) family and
+each emit family, `FORECAST.tsv` lists the stage 0 definitions predicted accepted under the **merged feature set plus
+that family alone**, with each set's sha256 (names sorted by UTF-8 bytes, LF after each), the full set and the
+definitions new against the merged baseline. The family tasks use it for their count floor: a definition in the
+family's forecast set that the Rocq judge rejects must be explained (a Rocq rejection trace naming a construct outside
+the family, a Rocq counterexample, or a decision-gated reason).
+
+- **Merged set.** Emit: `BASE` only (Comp today: `=` against an `eq_safe_val` constant, symbols included). Every
+  `Rule_X`, `RuleT_X` and `RuleO_X` hook in `rocq/JitEmitRule<X>.v` still has zero constructors on `p2/int` `fe461f4`,
+  so no emit family is merged. Front: `cond`, `sugar`, `thaw-sugar`, `trap-sugar`, whose checkers
+  `JitFrontSugar.chk_front` composes and `chk_front_sound` proves sound (premise `D_wf` only). `bind` is not merged:
+  `JitFrontProlog.bind_rule` is proved sound but is not composed into a checker, and covers only bound-now with a
+  literal freeze (census `bind` also has `unified-now` and `bound-now-frozen`).
+- **Rows.** Front: `F-share`, `F-inline`, `F-sugar` (merged), `F-fold` (`fold-cons`, `fold-arith`), `F-copy`,
+  `F-bind`, `F-cut-deref` (fires 0 times), `F-uncurry` (0), `F-fn` (0; no rule, no owner). Emit, after the seven
+  `JitEmitRule<X>` files: `E-Eq` (`eq-two-computed`, the guarded part), `E-Store` (`value/set`, `vector`), `E-Prim`
+  (the heap-free KL primitives, `simple-error`, `error-to-string`, `io`), `E-DoFold` (`do`, `folded-const`), `E-Clo`
+  (`lambda`, `freeze`, `let-freeze`), `E-App` (`apply-dynamic`, `thaw`), `E-Trap` (`trap`). Decision items, each a named
+  residual by default: `D-eq-nan` (all two-computed `=`, NaN constants), `D-eval-kl`, `D-port-identity`,
+  `D-port-other`. Choices made here: `vector` includes `absvector?` and goes to Store (whose header names absvector,
+  `<-address`, `address->`); `io` goes to Prim (no IO rule file). The script asserts every census item is in some
+  row, and in exactly one row apart from `D-eq-nan`, which deliberately repeats `E-Eq`'s `eq-two-computed` (it is the
+  guarded part plus the decision-gated rest) and is left out of that check.
+- **Variants.** `src`: what the existing source judge would accept with the set's emit features in Comp (cond, type,
+  dynamic-apply transparent, any other rewrite rejects); `direct`: source -> norm -> bytecode with the set's emit
+  features and front families; `nf`, `tf`: emit only, on `judge_split.sh`'s nf and tf inputs. A definition needing two
+  non-merged families is in neither family's row.
+- **Which variant is the floor.** A family task compares the judge variant it actually runs with the row variant of
+  the same name: `src` for the source judge (or `judge_hooks.sh` on `<f>.forms`), `nf` or `tf` for `judge_split.sh`'s
+  erased inputs, `direct` for a full-pipeline judge. The variants differ (E-App: src 156, direct 158, because
+  thaw-sugar is merged on the front but opaque to the source judge).
+- **Recomputing a sha256.** Column 10 holds the set: `printf '%s\n' "$defs" | tr , '\n' | LC_ALL=C sort | sha256sum`
+  reproduces column 8 (checked on rows `merged`, `E-Store`, `D-port-other`, variant direct).
+- **Self-check.** `F-sugar` adds 0 on every variant, matching SHEN-JIT.md's statement that the forecast set for the
+  four sugar families is empty, and row `merged` src is the Rocq src 148.
+
+| family | kind | status | src (new) | direct (new) | nf (new) | tf (new) | direct sha256 |
+|---|---|---|---:|---:|---:|---:|---|
+| `merged` | baseline | merged | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-share` | norm | open | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-inline` | norm | open | 148 (+0) | 171 (+23) | 150 (+0) | 174 (+0) | `6dfebb72318d9621...` |
+| `F-sugar` | norm | merged | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-fold` | norm | open | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-copy` | norm | open | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-bind` | norm | open | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-cut-deref` | norm | open | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-uncurry` | norm | open | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `F-fn` | norm | unowned | 148 (+0) | 148 (+0) | 150 (+0) | 174 (+0) | `ba415b460153578e...` |
+| `E-Eq` | emit | open | 148 (+0) | 148 (+0) | 150 (+0) | 204 (+30) | `ba415b460153578e...` |
+| `E-Store` | emit | open | 210 (+62) | 210 (+62) | 212 (+62) | 249 (+75) | `a602c49bae00765d...` |
+| `E-Prim` | emit | open | 190 (+42) | 190 (+42) | 192 (+42) | 251 (+77) | `8961c738a36b9732...` |
+| `E-DoFold` | emit | open | 155 (+7) | 155 (+7) | 173 (+23) | 206 (+32) | `37a47b182e5dc66f...` |
+| `E-Clo` | emit | open | 156 (+8) | 156 (+8) | 159 (+9) | 194 (+20) | `505aa03286e0f42c...` |
+| `E-App` | emit | open | 156 (+8) | 158 (+10) | 160 (+10) | 186 (+12) | `9188f385be3705a7...` |
+| `E-Trap` | emit | open | 148 (+0) | 149 (+1) | 151 (+1) | 175 (+1) | `981506a48bb59520...` |
+| `D-eq-nan` | decision | decision | 172 (+24) | 172 (+24) | 174 (+24) | 232 (+58) | `8653f77a88730f99...` |
+| `D-eval-kl` | decision | decision | 148 (+0) | 150 (+2) | 150 (+0) | 174 (+0) | `a91c350e706c9227...` |
+| `D-port-identity` | decision | decision | 150 (+2) | 150 (+2) | 152 (+2) | 182 (+8) | `94e52e55d81dd3e1...` |
+| `D-port-other` | decision | decision | 165 (+17) | 165 (+17) | 167 (+17) | 215 (+41) | `799df2b89541c169...` |
+
+Counts are predictions (census) from the T02 capture (witness set `e45add98...`); the Rocq source judge accepts 148 of
+955, and the full-pipeline validated count is UNKNOWN.
+
 ## Not done, or UNKNOWN
 
 - Chain depth is a lower bound. Node-level depth for unmarked rewrites (cond, sugar, copying, bind!) needs a tick that
@@ -219,8 +332,9 @@ The full list is below. These counts are predictions; nothing was accepted beyon
   whose rule turns out narrower than the emitted shapes would lower the counts. The current set's 0 mismatches do not
   test features that are not yet in Comp.
 - The callee closure leaves out dynamic application and function-symbol constants, as above.
-- `SKIP_DIFF=1 scripts/check-shen-jit.sh` passed on this branch: tables match, 70 audited statements closed, rocqchk
-  passed, stage0 111 accepted of 955 as recorded. The differential was not run, and neither were `gate_tests.sh` or
+- Historical (the T02 run, superseded by the reruns above and the r22-t02-refresh section): `SKIP_DIFF=1
+  scripts/check-shen-jit.sh` passed on `p2/T02`: tables match, 70 audited statements closed, rocqchk passed, stage0
+  111 accepted of 955 as recorded then. The differential was not run, and neither were `gate_tests.sh` or
   the full gate: UNKNOWN on this branch. This change adds no theorem, checker or relation. (That is the T02 run; the
   rerun's lane result is in the `p2/eq-guard-merge` commit message.)
 
@@ -239,6 +353,9 @@ The rest of this file is `feature_census.py`'s output, unedited.
 | nf (held out) | 150 | 150 | 0 |
 
 definitions: 955; unreadable (verdict 0) in src, nf or tf: 0; unexplained mismatches: 0
+
+Pinned per-file src counts (`tests/shen-jit/stage0-accepted.txt`): Rocq verdicts and the current-set
+prediction each agree on 24 of 24 files; disagreeing lines: 0
 
 ## Forecast: cumulative feature sets in census rank order
 

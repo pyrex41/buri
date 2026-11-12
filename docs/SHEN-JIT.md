@@ -638,6 +638,14 @@ current `Comp` matches the Rocq src (148), nf (150) and tf (174) verdicts on eve
 change: 111, 112 and 133). It also forecasts what each feature, each family and each residual decision (port
 primitives, eval-kl, identity, NaN `=`) would admit, directly and under the callee-closure limit. That limit cuts the
 current 148 to 63 (111 to 46 before), because 450 definitions reach a 181-definition strongly connected component.
+Refreshed on `p2/r22-t02-refresh` (11 November 2026): the judge rerun from that branch's Rocq build gives the same src,
+nf and tf verdicts, the current-set prediction agrees with them and with `tests/shen-jit/stage0-accepted.txt` per file
+(`feature_census.py --accepted`, and `--check-tsv` from `features.tsv` alone), and `features.tsv` regenerated
+byte-identical. New: `spikes/pass-split/FORECAST.tsv`, the per-family forecast the family tasks take their count floor
+from. For each norm and emit family it lists the definitions forecast accepted under the merged features (emit: today's
+Comp, every `JitEmitRule<X>` hook still empty; front: cond, sugar, thaw-sugar, trap-sugar, composed by `chk_front`)
+plus that family alone, with the set's sha256. **Census evidence only**: a forecast from the untrusted witness, not
+proof and not a validated count.
 
 **The one-slot `cons` chain** (`JitLowerRel.C_chain`). `lower.shen` computes `(cons K Tail)`, with K a constant and Tail
 a `cons`, by lowering Tail into D and then emitting `(prim D cons (const K) D)`, which reads D and writes it. The rule
