@@ -873,3 +873,19 @@ Print Assumptions JitFrontCopyFold.JitFrontCopyFold.copy_chk_sound.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRel_ca_lastvar.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_bindsite.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_bind_sound.
+From Buri Require Import JitEmitSim.
+Print Assumptions JitEmitSim.JitEmitSim.entered_ms'.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_of_preservation'.
+Print Assumptions JitEmitSim.JitEmitSim.preservation'_of_sim'.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_of_sim'.
+Print Assumptions JitEmitSim.JitEmitSim.evalctx_slot1_void.
+Print Assumptions JitEmitSim.JitEmitSim.ms'_slot1_frame.
+Print Assumptions JitEmitSim.JitEmitSim.vrh_refl.
+Print Assumptions JitEmitSim.JitEmitSim.adequacy_tr.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src'_of_cp'.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src_old_of_cp'.
+Print Assumptions JitEmitSim.JitEmitSim.fx_next.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_false.
+Print Assumptions JitEmitSim.JitEmitSim.preservation'_false.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src'_false.
+Print Assumptions JitEmitSim.JitEmitSim.raise_resolve_false.

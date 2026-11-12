@@ -92,6 +92,12 @@ p2/int then merged the front checkers (share, inline, copy/fold; merge branch `p
 the Shen/JIT audit module has 864 statements (753 plus 111) and the proof-mutation pin is 294 (272 plus 22
 ShenJitFront mutants; 143 Shen/JIT mutants), so the audited total in `rocq/audit.d` is 1,825. These are counted
 from the merged tree, not measured by `make report`, which was not rerun: UNKNOWN until it is.
+p2/int then merged r22-emit-sim's JitEmitSim (merge branch `p2/r22-sim-land`, the refutations of
+`preservation'_statement`, `call_preservation'_statement`, `call_preservation_src'_statement` and
+`raise_resolve_statement`): on that tree the Shen/JIT audit module has 879 statements (864 plus 15) and the
+proof-mutation pin is 300 (294 plus 6 ShenJitEmitSim mutants; 149 Shen/JIT mutants), so the audited total in
+`rocq/audit.d` is 1,840. These are counted from the merged tree, not measured by `make report`, which was not
+rerun: UNKNOWN until it is.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
