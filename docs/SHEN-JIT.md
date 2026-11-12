@@ -1154,7 +1154,7 @@ closures, folded constants, port primitives), not from erase; pass-capture's cen
 **Coq 8.18.** `make prove` runs Coq 8.18 (`toolchain.lock.json`, `scripts/bootstrap-rocq`). The pinned 8.18 debs
 (checksums from `rocq-packages.lock`) were used in an amd64 Ubuntu 24.04 container. Under them, the 70-jit chain
 from `Observation` through `JitNormStage0` compiled with `scripts/rocq coqc -Q . Buri`, the six statements printed
-"Closed under the global context", and `coqchk` replayed `JitNorm` and `JitNormStage0`. On `p2/int` merge commit
+"Closed under the global context", and `coqchk` replayed `JitNorm` and `JitNormStage0`. On merge commit
 `b314bc7` (r21-base-land), a full `make report` ran in an emulated linux/amd64 Ubuntu container with the pinned 8.18
 debs: exit 0, so `make prove` (its `make check` prerequisite) exited 0 with `BURI_ROCQ_OK 1671 audited theorems` and
 268 rejected proof mutations, equal to the `scripts/report.py` pin (commands, logs and sha256 in STATUS.md).
