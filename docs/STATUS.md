@@ -1499,3 +1499,38 @@ r21-sms-fresh-fix (branch `p2/r21-sms-fresh-fix` off `p2/int` `61f59e5`, with `p
   sha256 of the concatenated logs `7c2941ffdbb80454d8fcbb62ddd0352d7b0103c97273b9c54a9c1b09091489b2`. The other 80 mutants were not rerun, so their status is UNKNOWN on this tree.
 - Counts: 741 audited statements. Mutation pin 276 (274 + 2), computed.
 - NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The count of kernel definitions validated out of 955 is therefore UNKNOWN; the source judge accepts 148 of 955.
+
+r21-sms-fresh-fix fix round 1 (Rocq commit `df4175f` on `bf727e0`).
+
+**What changed.**
+- The base (`fca6c3f`) statements of `preservation_old_of_new`, `call_preservation_old_of_new`, `call_preservation_src_old_of_new`, their primed versions, `call_preservation_src_old_of_new''` and `JitEmitSim.call_preservation_src_old_of_cp'` are restored verbatim. Each is proved from its target (`preservation_old_holds`, `call_preservation_old_holds`, `call_preservation_src_old_holds`) and does not use its hypotheses. They are NOT evidence that the corrected statements recover the old ones.
+- The Fresh-premise routes through the corrected statements keep their proofs under new names: `*_old_fresh_of_new`, `*_old_fresh_of_new'`, `call_preservation_src_old_fresh_of_new''` and `JitEmitSim.call_preservation_src_old_fresh_of_cp'`.
+- `sm_embed` and `ms_embed` keep `Fresh m`, because their base text is false over the repaired `SM`/`MS'`. The refutations are `JitEmitSim.sm_embed_text_false` and `ms_embed_text_false` (closed, at `fx_m`, through `ms'_sm`). The base text over the relation it spoke of is kept as `sm_embed_v1` and `ms_embed_v1`.
+- 13 new audited statements, 754 in all. The pin stays 276 (no new mutants). The descriptions of `ShenJitEmitReflectTrace`, `ShenJitEmitReflectSrcTrace` and `ShenJitEmitOldGvalsDropped` now name the theorem that actually fails.
+
+**Still NOT reached:** a corollary from the corrected `call_preservation_src'_statement` to the byte-identical `JitKRef.call_preservation_src_statement` (4a7346e) that uses its hypothesis.
+- The Rocq counterexamples to instantiation are `JitEmitSim.fresh_needed` and, from the base, `JitEmitInv.gvals_needed`. Both are closed. In each, the old premises hold at a machine that the new invariant relates at no mu.
+- Decision item 10 was sent to main, because r21-decision-intake was not addressable. It is OPEN, with no sign-off from Reuben. The options are:
+  - (a) accept `Fresh m` and `GvalsRel [] s m` as the extra premises of the recovery target;
+  - (b) fund a normalization lemma (GvalsRel still blocks it);
+  - (c) change the relation or the requirement.
+
+**Evidence** on commit `df4175f`. The following docs-only commit changes nothing under `rocq`, `scripts` or `tests`.
+- lane: `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-sms-fresh-fix-r1-lane /lps/bin/rocq-slot bash scripts/check-shen-jit.sh`, run on a `git archive` of `df4175f` in buri-lps under Rocq 9.3. Results:
+  - LANE_RC=0;
+  - 754 audited statements Closed under the global context (`Audit_Jit.log` sha256 `b5f568a5d68604fbfa73d355440df77d89e24f761575d998fa38208f4946b3eb`);
+  - rocqchk passed;
+  - emit term-level gate: 0 violations over 401 constants;
+  - stage 0: 148 accepted, 807 rejected, 0 unreadable of 955 (source judge);
+  - differential NOT RUN.
+
+  Log sha256 `d4894a8ab46aeb536b60681299116f1c8fceb1b6bc5e28708233d534553b4549`.
+- mutants: all 45 `ShenJitEmit*` mutants generated on `df4175f` were rejected (Rocq 9.3, rocq-slot). They include:
+  - `ShenJitEmitInvFreshDropped` (`sms_alloc` fails);
+  - `ShenJitEmitInvFreshOneKey`;
+  - `ShenJitEmitOldGvalsDropped` (`preservation_old_fresh_of_old` fails);
+  - `ShenJitEmitReflectTrace` (`preservation_old_fresh_of_new` fails);
+  - `ShenJitEmitReflectSrcTrace` (`call_preservation_src_old_fresh_of_new` fails).
+
+  sha256 of the concatenated logs `dfbb9c9118f9759533849d44a58b9c9f74718a31ea3ca1e9f4b92fafc3920711`. The other mutants were not rerun: UNKNOWN on this tree.
+- NOT run, so UNKNOWN: `make prove` (Coq 8.18), `make report`, the full mutation suite, the differential, `gate_tests.sh`, `check-shen-jit-norm.sh` and the full-pipeline judge. The number of kernel definitions validated out of 955 is UNKNOWN.

@@ -179,7 +179,7 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved; SMs keeps `m_next` fresh (`Fresh`, `sm_fresh`, `sms_alloc`, r21-sms-fresh-fix), the pre-repair relation and statements kept as `*_v1` |
 | `rocq/JitEmitSim.v` | The generic parts as implications: `preservation'` from `sim'` and `raise_resolve`, `call_preservation'` from `preservation'`, `call_preservation_src'` from `call_preservation'` and `clo_scoped`; the slot-1 gap witnessed; the pre-repair `preservation'`, `call_preservation'`, `call_preservation_src'` and `raise_resolve` (now `*_v1`) refuted (stale `m_next`) (r22-emit-sim); `fx_not_sm` and `fresh_needed` after the repair (r21-sms-fresh-fix) |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 741 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 754 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -1147,7 +1147,8 @@ statements. r22-emit-sim's `preservation'_false`, `call_preservation'_false`, `c
 - `call_preservation'_of_preservation'`;
 - `preservation'_of_sim'`;
 - `call_preservation_src'_of_cp'`;
-- `call_preservation_src_old_of_cp'` and the `*_old_of_new` family.
+- `call_preservation_src_old_fresh_of_cp'` and the `*_old_fresh_of_new` family (fix round 1 names; these are the
+  routes through the corrected statements, and they need `Fresh m`).
 
 **NOT reached: the byte-identical `JitKRef.call_preservation_src_statement`.**
 - `fresh_needed` (closed) shows why. The machine `fx_m` meets every premise of the old statement (`Com`, `CompFn`,
@@ -1163,6 +1164,20 @@ statements. r22-emit-sim's `preservation'_false`, `call_preservation'_false`, `c
 
 **Truth of the corrected statements is UNKNOWN.** They are not refuted and not proved: `sim'_statement`,
 `raise_resolve_statement` and `clo_scoped_statement` are still open.
+
+**Fix round 1 (no base theorem loses its statement).**
+- `preservation_old_of_new`, `call_preservation_old_of_new`, `call_preservation_src_old_of_new`, their primed
+  versions, `call_preservation_src_old_of_new''` and `JitEmitSim.call_preservation_src_old_of_cp'` have their base
+  (`fca6c3f`) statements again. Each is proved from its target directly (`*_old_holds`) and does not use its
+  hypotheses. They are not evidence that the corrected statements recover the old ones.
+- The Fresh-premise versions are kept under new names: `*_old_fresh_of_new`, `*_old_fresh_of_new'`,
+  `call_preservation_src_old_fresh_of_new''` and `call_preservation_src_old_fresh_of_cp'`.
+- `sm_embed` and `ms_embed` keep the `Fresh m` premise, because over the repaired relation their base text is false:
+  `JitEmitSim.sm_embed_text_false` and `ms_embed_text_false` (closed, at `fx_m`). The base text over the relation it
+  spoke of is kept as `sm_embed_v1` and `ms_embed_v1` (over `SM_v1`, `MS'_v1`).
+- Still NOT reached: a corollary from the corrected `call_preservation_src'_statement` to the byte-identical
+  `JitKRef.call_preservation_src_statement` that uses its hypothesis. The Rocq counterexamples to instantiation are
+  `fresh_needed` (closed) and, from the base, `gvals_needed`. Item 10 is OPEN.
 
 ### Pass split: the normal form (wave 1b)
 

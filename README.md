@@ -84,8 +84,8 @@ Shen/JIT mutants); the measured count equals the pin. The previous `make report`
 at `1495f49`, before the 0.6 re-pin. Later commits that change only docs or the ledger keep these results;
 for any other tree they are UNKNOWN until `make report` is rerun.
 Since then, on branch `p2/r21-sms-fresh-fix` (not yet merged into `p2/int`), r22-emit-sim's JitEmitSim and the
-r21-sms-fresh-fix repair raise the Shen/JIT audit module to 741 statements (725 after the JitEmitSim merge) and
-the pin to 276 (274 after JitEmitSim's six mutants), 1,702 audited theorems in all. These are arithmetic, checked
+r21-sms-fresh-fix repair raise the Shen/JIT audit module to 754 statements (725 after the JitEmitSim merge, 741
+before the repair's fix round 1) and the pin to 276 (274 after JitEmitSim's six mutants), 1,715 audited theorems in all. These are arithmetic, checked
 by the Shen/JIT lane and by compiling each Shen/JIT mutant in Rocq 9.3, not by `make report`, so the table
 below is still `b314bc7`'s.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
