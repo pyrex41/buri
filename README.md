@@ -73,18 +73,23 @@ As of commit `1495f49` (7 November 2026):
 
 ### The last full check
 
-`make report` passed on 7 November 2026 in a Linux x86-64 container, on the tree committed as `1495f49`
-(the v0.4 cons-chain rule in the Shen/JIT lowerer proof).
-Since then the Shen/JIT lane was re-pinned to 0.6 (branch `p2/v06`): its audit module has 710 statements (708 before r22-image-verdict's sealing premise `JitImageSealing.ext_names` and `sealing_exclusion_statement`, 704 before r21-mutation-hygiene's JitKRefCallNoTableCex, 527 before r21-emit-spec-land's emit statements, that is the 161 emit-spec statements of `p2/r1-emit-spec-merge` and 16 more proved emit lemmas, 523 before r21-image-lane's JitImage, 515 before r1-f-prolog's JitFrontProlog, 475 before r1-f-sugar's JitFrontSugar, 463 before r1-d00-merge's JitFrontD, 263 before KTerm, 249 before KRef's fundamental property, 242 before KRef's named-call compatibility lemma, 226 before fv against scoped, 199 before KRef's control compatibility lemmas, 183 before primitive parametricity, 169 before the KRef closure lemmas, 112 before KRef's structural lemmas, 109 before the `=` budget assembly, 88 before the `=` budget step and walk, 70 at the re-pin, 65 before)
-and the proof-mutation pin is 268 (267 before r21-mutation-hygiene's ShenJitKRefCallNoTableCexTable, 230 before r21-emit-spec-land's 37 emit-spec mutants of `p2/r1-emit-spec-merge`, 229 before r21-image-lane's ShenJitImageNoCodeEq, 222 before r1-f-prolog's seven FrontProlog mutants, 216 before r1-f-sugar's six FrontSugar mutants, 203 before r1-d00-merge's thirteen Front mutants, 201 before KTerm, 199 before KRef's fundamental property, 198 before KRef's named-call compatibility lemma, 194 before the fv, fund_below, PoutRel and PrimOutRel mutants, 191 before KRef's control compatibility lemmas, 189 before primitive parametricity, 188 before the KRef closure lemmas, 186 before KRef's structural lemmas, 184 before the `=` budget assembly, 180 before the `=` budget step and walk, 178 at the re-pin, 175 before). Those were checked by the lane and by compiling each Shen/JIT mutant in
-Rocq 9.3; `make report` was not rerun after the re-pin, so the totals below are UNKNOWN for the current tree. (`make report` cannot run in buri-lps, which is aarch64 and has no loader for the bundled amd64 Coq 8.18.0; a diagnostic run by r21-mutation-hygiene outside buri-lps at `dae16a0` exits 2 because `make prove` fails compiling `rocq/JitEqBudgetStep.v` under Coq 8.18, before the mutation suite, so the pins since the re-pin, 268 included, are still unmeasured by it.)
+`make report` passed (rc 0) on 12 November 2026 on the tree committed as `b314bc7` (tree
+`5f2f9c7220f38d37ebb8ef31edfc95470ddec0de`, branch `p2/r21-base-land`: the Shen/JIT 0.6 lane with the Coq 8.18
+fix to `rocq/JitEqBudgetStep.v` merged), in an emulated Linux x86-64 container (`--platform linux/amd64` under
+Docker Desktop on an aarch64 host) with the bundled Coq 8.18.0. Log sha256 `09d47b1b...`, `_build/report.json`
+sha256 `6cdef54c...`; the full record, with every hash, is in [docs/STATUS.md](docs/STATUS.md) under
+r21-base-land. `make prove` under Coq 8.18 exited 0 inside it (as part of `make check`, not run standalone).
+The Shen/JIT audit module has 710 statements, all closed, and the proof-mutation pin is 268 (117 of them
+Shen/JIT mutants); the measured count equals the pin. The previous `make report` pass was on 7 November 2026
+at `1495f49`, before the 0.6 re-pin. Later commits that change only docs or the ledger keep these results;
+for any other tree they are UNKNOWN until `make report` is rerun.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
 | Gate | Result |
 |---|---|
-| Rocq audit | 1,026 audited theorems, replayed with `coqchk` |
-| Proof mutations | 175 deliberately broken variants, all rejected |
+| Rocq audit | 1,671 audited theorems, replayed with `coqchk` |
+| Proof mutations | 268 deliberately broken variants, all rejected |
 | Shen test suites | 1,126 checks across 27 suites |
 | Shen-Scheme comparisons | 108 cases (tests, not proof) |
 | Orchestration checks | 27 |
