@@ -5007,6 +5007,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Q0 (do callee-link failures inherit a decision gate?). Standing default: the literal DoD reading; a callee-link failure is a non-gated residual against the cap of 20, so with any of items 1, 3 or 4 a residual Phase 2 cannot be done (forecast in the packet, computed at f42d6c4, not re-run on 91718d4).",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Q0 (do callee-link failures inherit a decision gate?). Standing default: the literal DoD reading; a callee-link failure is a non-gated residual against the cap of 20. Under this status quo Phase 2 cannot reach the cap of 20 (forecast in the packet, computed at f42d6c4, not re-run on 5f7fc96).",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     }
    ]
   },
@@ -5314,6 +5319,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 3 (identity primitives). Standing default: named residual; no model change.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 3 (identity primitives). Standing default: named residual; no model change.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     }
    ]
   },
@@ -5478,6 +5488,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 4 (= on two possibly-NaN computed operands). Standing default: named residual; pguard unchanged.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 4 (= on two possibly-NaN computed operands). Standing default: named residual; pguard unchanged.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     }
    ]
   },
@@ -6191,6 +6206,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 1 (port primitives with no approved source meaning). Standing default: named residual; no port primitive wired into jit_rules.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 1 (port primitives with no approved source meaning). Standing default: named residual; no port primitive wired into jit_rules.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     }
    ]
   },
@@ -6222,6 +6242,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 4, cycle half. Standing default: a named limit; Out' has no case for it.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 4, cycle half. Standing default: a named limit; Out' has no case for it.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     }
    ]
   },
@@ -6362,8 +6387,18 @@
     },
     {
      "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 7 (emit-spec premises and design choices). Standing default: none of env_ok, the one-argument window, GvalsRel, the catch-up form or the Rule_X index shape is approved; the five frame_prim exclusions stand and their 35 definitions (census at f42d6c4) are non-gated residuals.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 10 (corrected SMs/m_next statements, r21-sms-fresh-fix), added by this intake. No r21-sms-fresh-fix branch or worktree existed on 2026-11-11, so no corrected statement text exists to approve and none is proposed. The current preservation'_statement, call_preservation'_statement and call_preservation_src'_statement are refuted in Rocq on p2/r22-emit-sim 82679ef (unmerged; preservation'_false, call_preservation'_false, call_preservation_src'_false, raise_resolve_false; not re-run here, UNKNOWN on this tree): SMs does not keep m_next fresh. Standing default: the statements stay as written in rocq/JitEmitInv.v, refuted; DoD (1)'s call_preservation_src' cannot be proved as stated.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 10 (corrected SMs/m_next statements). The corrected statements (Fresh m, sm_fresh field of SMs; preservation', call_preservation', call_preservation_src' text unchanged over the corrected SMs, truth UNKNOWN) are on p2/r21-sms-fresh-fix 4ff09d1. The refutations of the old text are on p2/r22-emit-sim 82679ef. Both are unmerged into p2/int 5f7fc96, and neither was re-run here (UNKNOWN on this tree). Options presented, unranked: (a) accept Fresh m and GvalsRel [] s m as extra premises of the recovery target; (b) fund the normalize-and-transfer lemma; (c) change the relation or the requirement. Standing default: no corrected statement approved; the statements stay as written in rocq/JitEmitInv.v on p2/int; DoD (1)'s call_preservation_src' cannot be proved as stated there.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     },
     {
      "source": "rocq/JitEmitCheck.v",
@@ -6600,8 +6635,18 @@
     },
     {
      "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 5 (share premises HT and HP). Standing default: HT and HP stay Section hypotheses of check_share_sound (p2/r1-share-ht); not replaced by a D check, not recorded as met.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 6 (uncurrying DoD amendment). Standing default: DoD (2) not amended; its uncurrying line stays unmet (uncurry_not_kref).",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 6 (uncurrying DoD amendment). Standing default: DoD (2) not amended; its uncurrying line stays unmet (uncurry_not_kref).",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     },
     {
      "source": "docs/decisions/p2-decisions.md",
@@ -6610,8 +6655,18 @@
     },
     {
      "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 8 (guarded inline and bind statements). Standing default: inline_site_sound_statement and bind_site_sound_statement stand, refuted; no guarded replacement approved.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 9 (fixed-name FPrim entries in D_wf). Standing default: D_wf unchanged; fold_arith_needs_store stands and its 6 definitions (census) are non-gated residuals.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 9 (fixed-name FPrim entries in D_wf). Standing default: D_wf unchanged; fold_arith_needs_store stands and its 6 definitions (census) are non-gated residuals.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     },
     {
      "source": "rocq/JitFrontCheck.v",
@@ -7030,6 +7085,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 2 (eval-kl). Standing default: named residual; runtime lowering outside the claim.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: OPEN; no answer from Reuben. Decision intake (r22-decide, branch p2/r22-decide off p2/int 5f7fc96): Q0 and items 1 to 10 were sent to the orchestrator (main) on 2026-11-12, to present to Reuben and relay his verbatim words. No reply came back before commit. The only message from Reuben that reached this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer, and none is inferred. Nothing is approved and the status is unchanged. Item 2 (eval-kl). Standing default: named residual; runtime lowering outside the claim.",
+     "reconciliation": "r22-decide, Phase 2 decision intake, 12 November 2026."
     }
    ]
   },
