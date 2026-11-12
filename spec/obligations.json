@@ -6742,6 +6742,11 @@
      "source": "rocq/JitFrontProlog.v",
      "recorded": "2026-11-11: open; decision-gated, no rule. Test, not proof (Rocq prolog_scan over the 955 parsed stage 0 sources): 0 definitions with the source shape (the census's 0 firings).",
      "reconciliation": "r1-f-prolog, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontProlog.v",
+     "recorded": "2026-11-12: open; decision-gated (item 1, port primitives with no approved source meaning; item 3, identity). No rule. Rocq counterexample deref_eq_unsound (closed, in Audit_Jit, with star_reach_user): with D holding the kernel's shen.deref, shen.lazyderef and shen.pvar? and the port's shen-jit.deref= (real bodies) and a store without shen-jit.same? (its jit_rules state), the deref= pair at the source shape (dx_src_shape) is not in KRef: the target raises (XUndefinedFun shen-jit.same?) after 78 steps, the source returns false after 150 steps and raises only resource errors. So no deref= rule is sound for every store meeting D until shen-jit.same? has an approved meaning. Test, not proof (prolog_scan re-run): 0 stage 0 sites.",
+     "reconciliation": "r22-front-cutderef, Phase 2 front track, 12 November 2026."
     }
    ]
   },
@@ -6751,18 +6756,27 @@
    "scope": "universal",
    "owner": "E2E-38",
    "packages": [],
-   "status": "open",
+   "status": "partial",
    "boundary": "KLambda to KLambda (lower.shen's cut-fail, v0.6)",
    "identity": "rocq/JitFrontProlog.v",
    "statement": "A norm rule for cut-fail ((shen.cut B L K (freeze (when false B2 L2 K2 C))), all variables, to (if (shen.unlocked? L) (shen.lock K L) false)) is sound against KRef for every store meeting D.",
    "premises": [
-    "soundness needs shen.cut's and when's lowered bodies in D (store facts JitFrontD does not name) and a proof that the source call runs to e_cut's residual (if (and (= W false) U) (shen.lock K L) W) with W false, related to the target by renaming and the and/= partial evaluation",
-    "vacuous for stage 0: the source shape occurs in no stage 0 definition (Rocq prolog_scan: 16 calls of shen.cut with a frozen fourth argument in 8 definitions, none whose frozen body is a when call), so no stage 0 verdict depends on this rule"
+    "cut_rule reads from D: shen.cut's body in the kernel's shape (let W (p4) (if (and (= W false) U) A W)), when's (if q1 _ false), = as FPrim PEqual and the kernel's do; a D whose lowered shen.cut has another shape is refused by the rule, not accepted",
+    "no D built by JitFrontD.D_of meets the rule today: D_of holds FUser rows only and = (a primitive, no stage 0 row, not in stage 0's sealed list, so not allowed by D_wf) is never in it; the rule needs (=, FPrim PEqual) in D, the same limit as fold-arith (JitFrontD interface item 2, decision item 9)",
+    "vacuous for stage 0: the source shape occurs in no stage 0 definition (Rocq prolog_scan, re-run by r22-front-cutderef: 0 of 955; 16 calls of shen.cut with a frozen fourth argument in 8 definitions, none freezing a when call), so no stage 0 verdict depends on this rule",
+    "partial, not discharged: it depends on OB-JIT-LOWER-FRONT (open), the front-end obligation the norm checker's rules compose into"
    ],
    "depends_on": [
     "OB-JIT-LOWER-FRONT"
    ],
-   "evidence": [],
+   "evidence": [
+    {
+     "kind": "universal-theorem",
+     "ref": "JitFrontProlog.JitFrontProlog.cut_rule_sound",
+     "establishes": "model-proof",
+     "note": "D_wf -> rule_sound (cut_rule D), for every sealed and D; in Audit_Jit, Closed under the global context (lane on p2/r22-front-cutderef)"
+    }
+   ],
    "completion_evidence": "A cut-fail rule with its store facts, proved sound in rocq/JitFrontProlog.v, with a mutant the lane rejects; or this obligation closed as out of scope for the pinned stage 0 by Reuben.",
    "sources": [
     "rocq/JitFrontProlog.v",
@@ -6774,6 +6788,11 @@
      "source": "rocq/JitFrontProlog.v",
      "recorded": "2026-11-11: open; no rule, not proved. Test, not proof (Rocq prolog_scan): 0 of 955 stage 0 definitions have the source shape.",
      "reconciliation": "r1-f-prolog, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontProlog.v",
+     "recorded": "2026-11-12: partial. r22-front-cutderef (branch p2/r22-front-cutderef off p2/int 5f7fc96): cut_rule, the v0.6 cut-fail rewrite as a front rule of F00's rule shape, proved sound for every store D from D_wf (cut_rule_sound, Rocq, closed): the source call anti-reduces by silent source steps (ERel_anti, ERel_push_run) through shen.cut's and when's bodies in D to shen.cut's residual U under and's and if's frames, with W bound to false; U and A are related to the target's U' and A' by beq (p2 read as L, p3 as K), the frames by KRel_andr_if, W to false by ERel_sval; no KRef transitivity. Audited: cut_rule_sound, ERel_push_run, KRel_andr_if, cut_run, cut_run2. Pins: cut_rule_accepts, cut_rule_rejects_when_true, cut_rule_rejects_swap, cut_rule_rejects_scope, cut_rule_rejects_when_body, cut_rule_rejects_user_eq. Mutants ShenJitFrontPrologCutWhen, ShenJitFrontPrologCutEq, ShenJitFrontPrologCutSwap, ShenJitFrontPrologCutScope. Test, not proof (prolog_scan re-run): 0 stage 0 sites. Count floor: T02 forecasts F-cut-deref at +0.",
+     "reconciliation": "r22-front-cutderef, Phase 2 front track, 12 November 2026."
     }
    ]
   },

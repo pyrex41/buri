@@ -92,6 +92,9 @@ p2/int then merged the front checkers (share, inline, copy/fold; merge branch `p
 the Shen/JIT audit module has 864 statements (753 plus 111) and the proof-mutation pin is 294 (272 plus 22
 ShenJitFront mutants; 143 Shen/JIT mutants), so the audited total in `rocq/audit.d` is 1,825. These are counted
 from the merged tree, not measured by `make report`, which was not rerun: UNKNOWN until it is.
+On branch `p2/r22-front-cutderef` (cut-fail rule and deref= counterexample, `rocq/JitFrontProlog.v`) the Shen/JIT
+audit module has 871 statements (864 plus 7) and the proof-mutation pin is 298 (294 plus 4 ShenJitFrontPrologCut
+mutants), so the audited total in `rocq/audit.d` is 1,832; counted, not measured by `make report` (not rerun: UNKNOWN).
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
