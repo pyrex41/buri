@@ -252,7 +252,8 @@ Proof.
    + destruct (Rr mu' x k s' m1 m2 msg tv cv caps w Nr Xo Sm Cc Fr)
        as [(c2 & m3 & mu2 & S2 & Tp & M2 & Ms2)|(l & msg' & tv' & s2 & m3 & mu2 & S2 & Nf & Lh & Xo' & M2 & Sms)].
      * eapply presc_step; [eapply Sstar_trans; [exact Ss|exact S2]| |eapply mext_trans; [exact Mx|exact M2]|].
-       -- destruct Tp as (ma & T1 & T2). destruct Ts as [|m0 mb m1' T0 T3].
+       -- assert (Tp1 : TPlus m1 m3) by (first [exact Tp|eauto]).
+          destruct Tp1 as (ma & T1 & T2). destruct Ts as [|m0 mb m1' T0 T3].
           ++ exists ma. split; [exact T1|exact T2].
           ++ exists mb. split; [exact T0|]. eapply TStar_trans; [exact T3|]. econstructor; [exact T1|exact T2].
        -- exact (IHn mu2 c2 m3 rs Eo Ms2).
@@ -288,7 +289,7 @@ Lemma evalctx_slot1_void : forall mu cv caps g top r2 rho k s w m, cv <> [] ->
  ~ EvalCtx mu cv caps g top (DSlot 1) r2 rho k s w m.
 Proof.
  intros mu cv caps g top r2 rho k s w m Ncv (_ & _ & _ & _ & _ & Wf & Kc).
- destruct Wf as [Ecv|Nw]; [exact (Ncv Ecv)|]. inversion Kc; subst. contradiction.
+ destruct Wf as [Ecv|Nw]; [subst cv; congruence|]. inversion Kc; subst. contradiction.
 Qed.
 
 Definition sl_z : name := JitEmitInv.cx_z.

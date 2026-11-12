@@ -670,7 +670,7 @@ mutate('ShenJitEmitSimVrhDom', sim,
        "forall mu s h, (forall l p, In (l, p) mu -> True) ->")
 mutate('ShenJitEmitSimAdequacyRefl', sim,
        " (forall x, In x g -> exists v, lookup x rho = Some v /\\ forall k, VRel k (id_world s) v v) ->",
-       " (forall x, In x g -> exists v, lookup x rho = Some v /\\ forall k, True) ->")
+       " (forall x, In x g -> exists v, lookup x rho = Some v /\\ forall k : nat, True) ->")
 mutate('ShenJitEmitSimRaiseStar', sim,
        " (exists c' m' mu', Sstar (Cfg (Throw x) k s) c' /\\ TPlus m1 m' /\\ mext mu mu' /\\ MS' mu' c' m') \\/",
        " (exists c' m' mu', Sstar (Cfg (Throw x) k s) c' /\\ TStar m1 m' /\\ mext mu mu' /\\ MS' mu' c' m') \\/")
