@@ -410,7 +410,7 @@ Local Notation rd := (rd y x).
 
 Lemma agree_rd : Forall2 (fun a a' => leaf_eq R P a a' = Some true) (map rd Y) (map rd X).
 Proof.
- apply list_eq_true in Ag. clear -Ag Sy. induction Ag as [|a a' xs ys H F IH]; cbn; constructor; [|exact IH].
+ apply list_eq_true in Ag. clear -Ag Sy. induction Ag as [|a a' xs ys H F IH]; cbn; constructor; [|apply IH; assumption].
  apply leaf_rd, leaf_sym; assumption.
 Qed.
 
@@ -418,7 +418,7 @@ Lemma xy_true : forall H d, list_eq (E H (S d)) X Y = Some true /\ list_eq (E H 
 Proof.
  intros H d. apply list_eq_true in Ag. split; apply list_eq_true.
  - eapply Forall2_impl; [|exact Ag]. intros u v. apply leaf_true_eq.
- - clear -Ag Sy. induction Ag as [|a a' xs ys Ha F IH]; constructor; [|exact IH].
+ - clear -Ag Sy. induction Ag as [|a a' xs ys Ha F IH]; constructor; [|apply IH; assumption].
    apply leaf_true_eq, leaf_sym; assumption.
 Qed.
 
