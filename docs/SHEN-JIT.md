@@ -183,7 +183,7 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
 | `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
 | `rocq/JitFrontShare.v` | share's checker (`check_share`, reuse included), `front_hyps`, `check_share_sound` under HT, HP and D_wf, the HT analysis, and the 4 validated share rewrites |
-| `rocq/Audit_Jit.v` | Assumption audit of 879 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 886 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -487,10 +487,42 @@ shape), unified-now's in 4 (7), cut-fail's and deref='s in 0 (16 calls of shen.c
 definitions, none freezing a `when` call). Residuals, each a ledger entry: `OB-JIT-FRONT-PROLOG-UNIFY` (unified-now: its
 target calls port forms over `shen-jit.same?`, `shen-jit.deref`, `shen-jit.pvar?`, `shen-jit.pvar-offset`; identity and port
 primitives, decision-gated), `OB-JIT-FRONT-PROLOG-DEREFEQ` (deref=: `shen-jit.same?` on one cell against = on two copies,
-the NaN case; decision-gated; vacuous for stage 0) and `OB-JIT-FRONT-PROLOG-CUTFAIL` (no rule; vacuous for stage 0). Every D
+the NaN case; decision-gated; vacuous for stage 0) and `OB-JIT-FRONT-PROLOG-CUTFAIL` (no rule; vacuous for stage 0; since
+r22-front-cutderef a rule, below). Every D
 holding shen.bind! still fails `D_compiled'` (`shen-jit.pvar-offset`, `OB-JIT-PORT-PRIMS`), so the 6 bound-now definitions
 stay residual in the full pipeline. bind_rule on the real sites (test, not proof: Rocq `bind_rule_report` via `stage0_to_rocq.py --prolog-D` over the decoded table, witness set e45add98..., recursive checker accepting everything, empty scope, so the structural part `beq` is what is tested): all 37 bound-now sites in the 6 definitions accepted (shen.system-S-h 18, shen.primitive 3, shen.l-rules 1, shen.myassume 6, shen.p-hyps 6, shen.variancy-signature 3). No count
 changes: the full-pipeline validated count is UNKNOWN.
+
+r22-front-cutderef (branch `p2/r22-front-cutderef` off `p2/int` `5f7fc96`), the v0.6 Prolog rewrites in `rocq/JitFrontProlog.v`:
+- cut-fail: `cut_rule_sound` (Rocq, closed, in Audit_Jit): the rule `cut_rule`, of the F00 `rule` shape, is sound against
+  KRef for every store D, from `D_wf`. The source call `(shen.cut B L K (freeze (when false B2 L2 K2 C)))`, every argument a
+  variable of the scope, anti-reduces by silent source steps (`ERel_anti`, then `ERel_push_run`: the arguments, the freeze's
+  new cell, shen.cut's entry, the thaw, when's call and its false, `(= W false)`) to shen.cut's residual `U` under `and`'s
+  and `if`'s frames; the target `(if U' A' false)` takes its if's one step. `U'` and `A'` are related to D's `U` and `A`
+  by `beq` (alpha-equivalence, shen.cut's p2 read as L and p3 as K), the frames by `KRel_andr_if`, `W` to `false` by
+  `ERel_sval`. No KRef transitivity. The rule reads from D shen.cut's body in the kernel's shape (thaw inlined as `(p4)`),
+  when's `(if q1 _ false)`, `=` as `FPrim PEqual` and the kernel's do; a D with another lowered shen.cut is refused, not
+  accepted unsoundly. No D built by `JitFrontD.D_of` meets the rule today: `=` is a primitive with no stage 0 row, not in
+  stage 0's sealed list (so `D_wf` excludes it) and never in a `D_of` store, the same limit as fold-arith (JitFrontD
+  interface item 2, decision item 9). `cut_rule` is not registered in any assembled norm checker (nor is `bind_rule`);
+  registering it is the norm assembly's. Deviations from the task's F00 wording, following `bind_rule_sound`'s precedent:
+  the recursive checker is not called (every argument is a variable; the target's parts are checked against D's body
+  of shen.cut by `beq`), and `cut_rule_sound` is closed directly (through `beq_sound`, `fund_gen` and the KRef cores),
+  not first under Section hypotheses naming the compat statements. Pins: `cut_rule_accepts`,
+  `cut_rule_rejects_when_true`, `_swap`, `_scope`, `_when_body`, `_user_eq`. Mutants `ShenJitFrontPrologCutWhen`,
+  `ShenJitFrontPrologCutEq`, `ShenJitFrontPrologCutSwap`, `ShenJitFrontPrologCutScope`.
+- deref=: no rule. `deref_eq_unsound` (Rocq, closed): with D holding the kernel's shen.deref, shen.lazyderef and
+  shen.pvar? and the port's `shen-jit.deref=`, all with their real bodies, and a store without `shen-jit.same?` (its
+  `jit_rules` state; a port primitive with no approved meaning, decision item 1), the deref= pair at the source shape
+  (`dx_src_shape`) is not in KRef: the target raises `(XUndefinedFun shen-jit.same?)` after 78 steps, the source returns
+  false after 150 and raises only resource errors (`star_reach_user`). So no deref= rule is sound for every store meeting
+  D. `OB-JIT-FRONT-PROLOG-DEREFEQ` stays open, decision-gated (items 1 and 3).
+- Scan re-run (test, not proof: `stage0_to_rocq.py --prolog /lps/p6/sj/build/stage0`, Rocq `prolog_scan` over the 955
+  parsed stage 0 sources; generated file sha256 `ffdf7be9640daa275d8a34768729ec10d671c56b2637c41f2c4f22e0fabb8968`):
+  cut-fail 0 definitions (0 sites), deref= 0 (0), shen.cut with a frozen fourth argument 8 (16), bound-now direct 6 (25),
+  let-frozen 5 (23), unified-now 4 (7), as before. Count floor: T02 forecasts F-cut-deref at +0 in every mode
+  (`spikes/pass-split/FORECAST.tsv`, 148 src, 148 direct, 150 nf, 174 tf), and neither rewrite fires in stage 0, so no
+  forecast-accepted definition is left to explain. No count changes; the full-pipeline validated count is UNKNOWN.
 
 **The front passes** (`rocq/JitKRef.v` with proofs in `JitKRefGround.v` and `JitKRefCompose.v`; old names in `rocq/JitLowerEquiv.v`; `OB-JIT-LOWER-FRONT`). lower.shen shares (b0 to b1) and normalizes
 (b1 to e) before it emits code for e. `KRef g e0 e` is a step-indexed Kripke refinement on KLambda expressions under

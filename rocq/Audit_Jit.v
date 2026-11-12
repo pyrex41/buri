@@ -889,3 +889,10 @@ Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_false.
 Print Assumptions JitEmitSim.JitEmitSim.preservation'_false.
 Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src'_false.
 Print Assumptions JitEmitSim.JitEmitSim.raise_resolve_false.
+Print Assumptions JitFrontProlog.JitFrontProlog.cut_rule_sound.
+Print Assumptions JitFrontProlog.JitFrontProlog.ERel_push_run.
+Print Assumptions JitFrontProlog.JitFrontProlog.KRel_andr_if.
+Print Assumptions JitFrontProlog.JitFrontProlog.cut_run.
+Print Assumptions JitFrontProlog.JitFrontProlog.cut_run2.
+Print Assumptions JitFrontProlog.JitFrontProlog.star_reach_user.
+Print Assumptions JitFrontProlog.JitFrontProlog.deref_eq_unsound.
