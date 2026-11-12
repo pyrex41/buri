@@ -873,3 +873,10 @@ Print Assumptions JitFrontCopyFold.JitFrontCopyFold.copy_chk_sound.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRel_ca_lastvar.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_bindsite.
 Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_bind_sound.
+Print Assumptions JitFrontProlog.JitFrontProlog.cut_rule_sound.
+Print Assumptions JitFrontProlog.JitFrontProlog.ERel_push_run.
+Print Assumptions JitFrontProlog.JitFrontProlog.KRel_andr_if.
+Print Assumptions JitFrontProlog.JitFrontProlog.cut_run.
+Print Assumptions JitFrontProlog.JitFrontProlog.cut_run2.
+Print Assumptions JitFrontProlog.JitFrontProlog.star_reach_user.
+Print Assumptions JitFrontProlog.JitFrontProlog.deref_eq_unsound.

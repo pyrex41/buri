@@ -261,6 +261,14 @@ ShenJitFrontPrologScope: bind_rule checks the fresh names against no scope, so a
   name of g the next argument reads. bind_rule_sound must fail.
 ShenJitFrontPrologDoFirst: bind_rule takes a do returning its FIRST argument. bind_rule_sound must fail.
 ShenJitFrontPrologP4Key: bind_rule checks p3, not p4, against id_key. bind_rule_sound must fail.
+ShenJitFrontPrologCutWhen: cut_rule takes any else branch of D's when, so (when false ...) need not be
+  false. cut_rule_rejects_when_body (and cut_rule_sound) must fail.
+ShenJitFrontPrologCutEq: cut_rule takes any D entry for =, so (= false false) need not be true.
+  cut_rule_rejects_user_eq (and cut_rule_sound) must fail.
+ShenJitFrontPrologCutSwap: cut_rule pairs shen.cut's p3 with L and p2 with K in A, so the target's
+  (shen.lock L K) is accepted for (shen.lock K L). cut_rule_accepts and cut_rule_rejects_swap must fail.
+ShenJitFrontPrologCutScope: cut_rule checks the call's variables against no scope, so a source lookup
+  may fail where the target returns. cut_rule_rejects_scope (and cut_rule_sound) must fail.
 ShenJitImageNoCodeEq: check_def gives Match without comparing the loaded code with the image's
   decoded code. check_def_sound must fail.
 ShenJitEmitCheckLabel: JitEmitCheck's stepC skips the label of a returning if's else branch (the
@@ -707,6 +715,14 @@ mutate('ShenJitFrontPrologDoFirst', prolog,
        '     negb (text_eqb v1 v2) && text_eqb v2 v2\' &&', '     negb (text_eqb v1 v2) && text_eqb v1 v2\' &&')
 mutate('ShenJitFrontPrologP4Key', prolog,
        ' && negb (text_eqb p4 id_key) &&', ' && negb (text_eqb p3 id_key) &&')
+mutate('ShenJitFrontPrologCutWhen', prolog,
+       ' match e with EIf (EVar q1) _ (EBool false) => Some q1 | _ => None end.', ' match e with EIf (EVar q1) _ _ => Some q1 | _ => None end.')
+mutate('ShenJitFrontPrologCutEq', prolog,
+       ' Some (FPrim PEqual), Some (FUser [d1; d2] (EVar d2\')) =>', ' Some _, Some (FUser [d1; d2] (EVar d2\')) =>')
+mutate('ShenJitFrontPrologCutSwap', prolog,
+       ' p2 [(p3, kk); (p2, l)] a aT', ' p2 [(p3, l); (p2, kk)] a aT')
+mutate('ShenJitFrontPrologCutScope', prolog,
+       ' forallb (bound g) [b; l; kk; b2; l2; k2; c] &&', ' forallb (bound g) [] &&')
 image = 'rocq/JitImage.v'
 mutate('ShenJitImageNoCodeEq', image,
        '     | Some k\' => if code_eqb k k\' then Match g else Differ g end end',

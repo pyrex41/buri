@@ -28,11 +28,25 @@
      against id_key, which the source's freeze closure binds (tagged_env) and the expansion, which
      runs the body in place, does not. bind_rule adds that guard; Example bind_rule_rejects_id_key
      pins it.
+   - cut_rule_sound (r22-front-cutderef): the cut-fail rule `cut_rule`, of the same `rule` shape, is
+     sound for every store D (from D_wf): the source call anti-reduces (silent source steps,
+     ERel_anti and ERel_push_run, a new cell for the freeze) through shen.cut's and when's bodies, as
+     D gives them, to shen.cut's residual U under (and)'s and (if)'s frames, with W bound to false;
+     U and A are related to the target's U' and A' by beq (renaming p2 to L, p3 to K), the frames by
+     KRel_andr_if, W to false by ERel_sval. The rule reads shen.cut, when, = (FPrim PEqual) and do
+     from D and checks every variable of the call against the scope. Pins (Examples, before any
+     proof): cut_rule_accepts, cut_rule_rejects_when_true, _swap, _scope, _when_body, _user_eq.
+   - deref_eq_unsound: deref= has no rule, and none is sound for every store meeting D. With D
+     holding the kernel's shen.deref, shen.lazyderef and shen.pvar? and the port's shen-jit.deref=
+     (their real bodies) and a store without shen-jit.same? (its jit_rules state: a port primitive
+     with no approved meaning, decision item 1), a deref= pair at the source shape is not in KRef:
+     the target raises (XUndefinedFun shen-jit.same?), the source returns false (star_reach_user).
    - The scan (prolog_scan, Rocq vm_compute over the 955 parsed stage 0 sources; a test, not proof;
-     run by stage0_to_rocq.py --prolog on /lps/p6/sj/build/stage0 at 934cfa5): cut-fail's shape 0
-     definitions (0 sites), deref='s 0 (0), shen.cut with a frozen fourth argument 8 (16),
-     bound-now's direct shape 6 (25), the let-frozen shape 5 (23 lets), unified-now's 4 (7). So
-     the absence of a cut-fail or deref= rule changes no stage 0 verdict; see the residuals below.
+     run by stage0_to_rocq.py --prolog on /lps/p6/sj/build/stage0 at 934cfa5, re-run by
+     r22-front-cutderef with the same result): cut-fail's shape 0 definitions (0 sites), deref='s 0
+     (0), shen.cut with a frozen fourth argument 8 (16), bound-now's direct shape 6 (25), the
+     let-frozen shape 5 (23 lets), unified-now's 4 (7). So cut_rule changes no stage 0 verdict (it
+     fires on no stage 0 definition), and neither does deref='s residual.
    - bind_rule_report (a test, not proof; stage0_to_rocq.py --prolog-D over the decoded table,
      witness set e45add98...): bind_rule, with a recursive checker accepting everything, accepts all
      37 bound-now sites of stage 0 (6 definitions) against their D_of stores.
@@ -44,16 +58,16 @@
      shen-jit.pvar-offset. Under jit_rules these are named calls into the store, which D cannot pin
      (no KL body exists for them), so no rule for unified-now is sound for every store meeting D;
      there is none here. It fires in 4 definitions (7 sites) of stage 0.
-   - OB-JIT-FRONT-PROLOG-DEREFEQ (decision-gated: identity primitives). deref= replaces two deep
-     copies and = by shen-jit.deref=, which answers true through shen-jit.same? on one cell where
-     = on the copies compares contents (false on a NaN leaf: OB-JIT-NAN-IDENTITY). There is no rule.
+   - OB-JIT-FRONT-PROLOG-DEREFEQ (decision-gated: port primitives with no approved meaning, item 1,
+     and identity, item 3). deref= replaces two deep copies and = by shen-jit.deref=, which answers
+     through shen-jit.same?; jit_rules gives same? no meaning and D cannot pin it (deref_eq_unsound).
+     Even with same? as pointer identity, it answers true on one cell where = on the copies compares
+     contents (false on a NaN leaf: OB-JIT-NAN-IDENTITY; not proved here). There is no rule.
      Vacuous for stage 0: the source shape occurs in no stage 0 definition (prolog_scan).
-   - OB-JIT-FRONT-PROLOG-CUTFAIL (no rule, vacuous for stage 0). Its soundness needs shen.cut's,
-     when's, shen.unlocked?'s and shen.lock's lowered bodies in D and a proof that the source call
-     runs to e_cut's residual (if (and (= W false) U) (shen.lock K L) W) with W false; it is not
-     proved here. The source shape occurs in no stage 0 definition (prolog_scan: 16 calls of
-     shen.cut with a frozen fourth argument, in 8 definitions, none whose frozen body is a `when`
-     call), so no stage 0 verdict depends on it.
+   - OB-JIT-FRONT-PROLOG-CUTFAIL: discharged as a rule (cut_rule_sound) for stores whose D holds
+     shen.cut's body in the kernel's shape (thaw inlined as (p4)), when's (if q1 _ false), = as the
+     primitive and the kernel's do; a D whose lowered shen.cut has another shape is refused by the
+     rule (not unsound). Vacuous for stage 0 (prolog_scan: 0 sites).
    - bound-now through a let-bound freeze (12 of stage 0's 37 sites): frozen-in copies E into the
      bind call; the rule for that shape is the freeze-copying family's (it rewrites the source to the
      direct shape, then this rule applies).
@@ -147,6 +161,114 @@ Definition bind_rule (D : list (name * fundef)) : rule := fun rec g e0 e =>
      beq (S (F.dsize eB)) (fun e' => rec (gfv g e') ex0 e') p4 [(p3, a3); (p2, a2); (p1, a1)] eB n
    | _, _ => false end
  | _, _ => false end.
+
+(* ======================= the cut-fail rule (v0.6) ======================= *)
+(* Source (shen.cut B L K (freeze (when false B2 L2 K2 C))), every argument a variable; target
+   (if U' A' false), cut-fail's expansion (if (shen.unlocked? L) (shen.lock K L) false) as norm
+   left it. The rule reads shen.cut's, when's and ='s meanings from D, never from the store:
+   - shen.cut: four distinct parameters p1..p4 and the body
+       (let W (thaw p4) (if (and (= W false) U) A W))      [the kernel's, thaw inlined as (p4)]
+     with W not p2 or p3. U and A are whatever norm made of (shen.unlocked? p2) and
+     (shen.lock p3 p2) in that body (inlined or not); the target's U' and A' are checked against
+     them by beq, alpha-equivalence with p2 renamed to L and p3 to K, and no thawed place (tk is
+     false everywhere);
+   - when: five parameters and a body (if q1 _ false), q1 the first: (when false ...) is false;
+   - = is the primitive (FPrim PEqual): (= false false) is true;
+   - the kernel's do, as bind_rule (beq reads a let whose name is unused as do).
+   Every variable of the source call is in the scope g, so each source lookup succeeds; L and K are
+   paired with p2 and p3 by binder_ok (neither is id_key).
+   Soundness (cut_rule_sound) is source anti-reduction in two steps and no KRef transitivity: the
+   source runs silently from the call, through the argument list, the freeze's cell, shen.cut's
+   entry, the thaw and when, to the residual (if (and (= W false) U) A W) with W bound to false
+   (cut_run, then ERel_anti); from there it runs silently to U under (and)'s and (if)'s frames
+   (cut_run2, ERel_push_run) while the target takes its if's one step to U'; the frames are
+   related (KRel_andr_if), U against U' and A against A' by beq_sound, W against false by ERel_sval.
+   The recursive checker is not called: every argument is a variable, and what replaces the call is
+   checked against D's body of shen.cut, not against the source. *)
+Definition cf_cut : name := kw "shen.cut".
+Definition cf_when : name := kw "when".
+Definition cf_eq : name := kw "=".
+
+(* The source call's shape, its variables read off. *)
+Definition cut_call (e0 : expr) : option (name * name * name * (name * name * name * name)) :=
+ match e0 with
+ | ECall f [EVar b; EVar l; EVar kk; EFreeze (ECall h [EBool false; EVar b2; EVar l2; EVar k2; EVar c])] =>
+   if text_eqb f cf_cut && text_eqb h cf_when then Some (b, l, kk, (b2, l2, k2, c)) else None
+ | _ => None end.
+
+(* shen.cut's body in D: (let W (p4) (if (and (= W false) U) A W)); its p4, W, U and A. *)
+Definition cut_body (e : expr) : option (name * name * expr * expr) :=
+ match e with
+ | ELet wv (EApp (EVar p4) []) (EIf (EAnd (ECall eqf [EVar wv1; EBool false]) u) a (EVar wv2)) =>
+   if text_eqb wv wv1 && text_eqb wv wv2 && text_eqb eqf cf_eq then Some (p4, wv, u, a) else None
+ | _ => None end.
+
+(* when's body in D: (if q1 _ false); its q1. *)
+Definition when_body (e : expr) : option name :=
+ match e with EIf (EVar q1) _ (EBool false) => Some q1 | _ => None end.
+
+Definition cut_rule (D : list (name * fundef)) : rule := fun rec g e0 e =>
+ match cut_call e0, e with
+ | Some (b, l, kk, (b2, l2, k2, c)), EIf uT aT (EBool false) =>
+   forallb (bound g) [b; l; kk; b2; l2; k2; c] &&
+   match lookup cf_cut D, lookup cf_when D, lookup cf_eq D, lookup do_name D with
+   | Some (FUser [p1; p2; p3; p4] eC), Some (FUser [q1; _; _; _; _] eW), Some (FPrim PEqual), Some (FUser [d1; d2] (EVar d2')) =>
+     match cut_body eC, when_body eW with
+     | Some (p4', wv, u, a), Some q1' =>
+       text_eqb p4 p4' && text_eqb q1 q1' && nodupb [p1; p2; p3; p4] &&
+       negb (text_eqb wv p2) && negb (text_eqb wv p3) && negb (text_eqb d1 d2) && text_eqb d2 d2' &&
+       F.binder_ok p2 l && F.binder_ok p3 kk &&
+       beq (S (F.dsize u)) (fun _ => false) p2 [(p3, kk); (p2, l)] u uT &&
+       beq (S (F.dsize a)) (fun _ => false) p2 [(p3, kk); (p2, l)] a aT
+     | _, _ => false end
+   | _, _, _, _ => false end
+ | _, _ => false end.
+
+(* Pins, on a D with the kernel's bodies (cut_D: shen.cut, when, = and do; shen.unlocked? and
+   shen.lock called, not inlined). Placed before any proof, so that a mutant of the rule's checks
+   fails here first. *)
+Definition cn (t : string) : name := of_string t.
+Definition cut_unl : name := kw "shen.unlocked?".
+Definition cut_lock : name := kw "shen.lock".
+Definition cut_D : list (name * fundef) :=
+ [(cf_cut, FUser [cn "V1"; cn "V2"; cn "V3"; cn "V4"] (ELet (cn "W") (EApp (EVar (cn "V4")) [])
+    (EIf (EAnd (ECall cf_eq [EVar (cn "W"); EBool false]) (ECall cut_unl [EVar (cn "V2")]))
+         (ECall cut_lock [EVar (cn "V3"); EVar (cn "V2")]) (EVar (cn "W")))));
+  (cf_when, FUser [cn "U1"; cn "U2"; cn "U3"; cn "U4"; cn "U5"] (EIf (EVar (cn "U1")) (EApp (EVar (cn "U5")) []) (EBool false)));
+  (cf_eq, FPrim PEqual);
+  (do_name, FUser [cn "D1"; cn "D2"] (EVar (cn "D2")))].
+Definition cut_src (fb : bool) : expr := ECall cf_cut [EVar (cn "B"); EVar (cn "L"); EVar (cn "K");
+  EFreeze (ECall cf_when [EBool fb; EVar (cn "B"); EVar (cn "L"); EVar (cn "K"); EVar (cn "C")])].
+Definition cut_tgt : expr := EIf (ECall cut_unl [EVar (cn "L")]) (ECall cut_lock [EVar (cn "K"); EVar (cn "L")]) (EBool false).
+Definition cut_g : list name := [cn "B"; cn "L"; cn "K"; cn "C"].
+
+(* The rule fires on the v0.6 shape, with the recursive checker refusing everything. *)
+Example cut_rule_accepts : cut_rule cut_D (fun _ _ _ => false) cut_g (cut_src false) cut_tgt = true.
+Proof. vm_compute. reflexivity. Qed.
+(* Not on (when true ...): its thaw runs C, which need not fail. *)
+Example cut_rule_rejects_when_true : cut_rule cut_D (fun _ _ _ => true) cut_g (cut_src true) cut_tgt = false.
+Proof. vm_compute. reflexivity. Qed.
+(* Not with L and K swapped in the target: A' must be A with p2 read as L and p3 as K. *)
+Example cut_rule_rejects_swap : cut_rule cut_D (fun _ _ _ => true) cut_g (cut_src false)
+  (EIf (ECall cut_unl [EVar (cn "L")]) (ECall cut_lock [EVar (cn "L"); EVar (cn "K")]) (EBool false)) = false.
+Proof. vm_compute. reflexivity. Qed.
+(* Not with a variable of the call outside the scope. *)
+Example cut_rule_rejects_scope : cut_rule cut_D (fun _ _ _ => true) [cn "L"; cn "K"] (cut_src false) cut_tgt = false.
+Proof. vm_compute. reflexivity. Qed.
+
+(* Not when D's when answers true where its test is false: (when false ...) is then true, and the
+   source returns it where the target may return shen.lock's value. *)
+Definition cut_D_when_true : list (name * fundef) :=
+ map (fun p => if text_eqb (fst p) cf_when
+   then (cf_when, FUser [cn "U1"; cn "U2"; cn "U3"; cn "U4"; cn "U5"] (EIf (EVar (cn "U1")) (EApp (EVar (cn "U5")) []) (EBool true)))
+   else p) cut_D.
+Example cut_rule_rejects_when_body : cut_rule cut_D_when_true (fun _ _ _ => true) cut_g (cut_src false) cut_tgt = false.
+Proof. vm_compute. reflexivity. Qed.
+(* Not when D's = is a user function: (= false false) need not be true. *)
+Definition cut_D_user_eq : list (name * fundef) :=
+ map (fun p => if text_eqb (fst p) cf_eq then (cf_eq, FUser [cn "E1"; cn "E2"] (EBool false)) else p) cut_D.
+Example cut_rule_rejects_user_eq : cut_rule cut_D_user_eq (fun _ _ _ => true) cut_g (cut_src false) cut_tgt = false.
+Proof. vm_compute. reflexivity. Qed.
 
 Section Sound.
 Variables (sealed : list name) (D : list (name * fundef)).
@@ -779,6 +901,254 @@ Proof.
  - intros j1 w1 L1 W1. apply Kx; [exact (proj2 W1)|]. eapply EnvRel_mono; [|exact W1|exact HEnv]. lia.
 Qed.
 End Bind.
+
+(* ======================= the cut-fail rule is sound ======================= *)
+Section Cut.
+
+(* ERel_push with a silent source run, in a store meeting D, in place of the source's one step. *)
+Theorem ERel_push_run : forall k w rho0 e0 rho e rho0' e0' rho' e' (F0 F : list frame -> list frame),
+ (forall K0 s0, JitKRef.JitKRef.StoreHas D s0 -> srun (Cfg (Eval rho0 e0) K0 s0) [] (Cfg (Eval rho0' e0') (F0 K0) s0)) ->
+ (forall K s, next_r R P (Cfg (Eval rho e) K s) = MTau (Cfg (Eval rho' e') (F K) s)) ->
+ (forall j w' K0 K, (j < k)%nat -> wext w w' -> KRel j w' K0 K -> KRel j w' (F0 K0) (F K)) ->
+ (forall j w', (j < k)%nat -> wext w w' -> ERel j w' rho0' e0' rho' e') ->
+ ERel k w rho0 e0 rho e.
+Proof.
+ intros k w rho0 e0 rho e rho0' e0' rho' e' F0 F E0 E HF He. apply ERel_iff.
+ intros j L w' W K0 K HK s0 s HS. destruct j as [|j]; [apply ObsT_0|].
+ assert (Hs0 : JitKRef.JitKRef.StoreHas D s0) by (destruct HS as (_ & H0 & _); exact H0).
+ apply ObsT_running.
+ - reflexivity.
+ - unfold nonterm. rewrite E. exact I.
+ - intros x. cbn [kont mem]. apply (KRel_throw sealed D); [eapply KRel_mono; [|apply wext_refl; exact (proj2 W)|exact HK]; lia|eapply SRel_down; [|exact HS]; lia].
+ - intros c1 E1. rewrite E in E1. injection E1 as <-. eexists; split; [apply E0; exact Hs0|].
+   eapply ERel_apply; [apply (He j w'); [lia|exact W]|apply le_n|eapply wext_self; exact HS| |].
+   + apply HF; [lia|exact W|eapply KRel_mono; [|apply wext_refl; exact (proj2 W)|exact HK]; lia].
+   + eapply SRel_down; [|exact HS]; lia.
+ - intros q kk r E1. rewrite E in E1. discriminate.
+Qed.
+
+Lemma asbool_some : forall v b, asbool v = Some b -> v = VBool b.
+Proof. intros v b H. destruct v; cbn in H; try discriminate. injection H as ->. reflexivity. Qed.
+
+(* The source's (and)'s right frame over its (if)'s frame, against the target's (if)'s frame: a
+   boolean passes through and on to the branches, anything else raises XNotBoolean on both sides. *)
+Lemma KRel_andr_if : forall k w a0 b0 rho0 a b rho K0 K, KRel k w K0 K ->
+ ERel k w rho0 a0 rho a -> ERel k w rho0 b0 rho b ->
+ KRel k w (KAndR :: KIf a0 b0 rho0 :: K0) (KIf a b rho :: K).
+Proof.
+ intros k w a0 b0 rho0 a b rho K0 K HK Ha Hb.
+ assert (Thr : forall j w' x s0 s, (S j <= k)%nat -> wext w w' -> SRel (S j) w' s0 s ->
+   ObsT (S j) w' (Cfg (Throw x) (KAndR :: KIf a0 b0 rho0 :: K0) s0) (Cfg (Throw x) (KIf a b rho :: K) s)).
+ { intros j w' x s0 s L W HS. apply ObsT_throw_src; [reflexivity|]. apply ObsT_throw_src; [reflexivity|].
+   apply ObsT_throw_tgt; [reflexivity|]. eapply throw_at; [exact L|exact W|exact HK|exact HS]. }
+ apply KRel_iff. intros j L w' W. split.
+ - intros v0 v s0 s HV HS. destruct j as [|j]; [apply ObsT_0|]. apply ObsT_running.
+   + reflexivity.
+   + unfold nonterm. rewrite next_KIf. exact I.
+   + intros x. cbn [kont mem]. destruct j as [|j]; [apply ObsT_0|]. apply Thr; [lia|exact W|eapply SRel_down; [|exact HS]; lia].
+   + intros c1 E. rewrite next_KIf in E. injection E as <-. pose proof (VRel_asbool sealed D _ _ _ _ HV) as Ab.
+     destruct (asbool v0) as [[|]|] eqn:A0; rewrite <- Ab.
+     * exists (Cfg (Eval rho0 a0) K0 s0). split.
+       -- eapply srun_tau; [rewrite next_KAndR, A0; reflexivity|]. eapply srun_tau; [apply next_KIf|]. apply srun_refl.
+       -- eapply ERel_at; [exact L|exact W|exact Ha|exact HK|exact HS].
+     * exists (Cfg (Eval rho0 b0) K0 s0). split.
+       -- eapply srun_tau; [rewrite next_KAndR, A0; reflexivity|]. eapply srun_tau; [apply next_KIf|]. apply srun_refl.
+       -- eapply ERel_at; [exact L|exact W|exact Hb|exact HK|exact HS].
+     * exists (Cfg (Throw XNotBoolean) K0 s0). split.
+       -- eapply srun_tau; [rewrite next_KAndR, A0; reflexivity|]. eapply srun_tau; [apply throw_frame_next; reflexivity|]. apply srun_refl.
+       -- eapply throw_at; [exact L|exact W|exact HK|exact HS].
+   + intros q kk r E. rewrite next_KIf in E. discriminate.
+ - intros x s0 s HS. destruct j as [|j]; [apply ObsT_0|]. apply Thr; [exact L|exact W|exact HS].
+Qed.
+
+Lemma call_eq_ff : forall K s, lookup cf_eq (gfuns s) = Some (FPrim PEqual) ->
+ call_named_r R P cf_eq [VBool false; VBool false] K s = MTau (Cfg (Ret (VBool true)) K s).
+Proof. intros K s E. unfold call_named_r. rewrite E. reflexivity. Qed.
+
+(* From the residual to U: (if (and (= W false) U) A W), W bound to false, runs silently to U under
+   (and)'s right frame and (if)'s frame. *)
+Lemma cut_run2 : forall rho' wv u a K0 s, JitKRef.JitKRef.StoreHas D s -> In (cf_eq, FPrim PEqual) D ->
+ lookup wv rho' = Some (VBool false) ->
+ srun (Cfg (Eval rho' (EIf (EAnd (ECall cf_eq [EVar wv; EBool false]) u) a (EVar wv))) K0 s) []
+   (Cfg (Eval rho' u) (KAndR :: KIf a (EVar wv) rho' :: K0) s).
+Proof.
+ intros rho' wv u a K0 s Hs Ie Lw.
+ eapply srun_tau; [reflexivity|]. eapply srun_tau; [reflexivity|]. eapply srun_tau; [reflexivity|].
+ eapply srun_tau; [apply sval_next; exact Lw|]. eapply srun_tau; [apply next_KCallArgs_cons|].
+ eapply srun_tau; [apply sval_next; reflexivity|].
+ eapply srun_tau; [rewrite next_ca_call; apply call_eq_ff; exact (Hs _ _ Ie)|].
+ eapply srun_tau; [reflexivity|]. apply srun_refl.
+Qed.
+
+(* From the call to the residual: the arguments, the freeze's new cell, shen.cut's entry, the thaw,
+   when's call and its false. *)
+Lemma cut_run : forall rho0 b l kk b2 l2 k2 c vb vl vk K0 s0 p1 p2 p3 p4 wv u a q1 q2 q3 q4 q5 tw,
+ JitKRef.JitKRef.StoreHas D s0 ->
+ In (cf_cut, FUser [p1; p2; p3; p4] (ELet wv (EApp (EVar p4) []) (EIf (EAnd (ECall cf_eq [EVar wv; EBool false]) u) a (EVar wv)))) D ->
+ In (cf_when, FUser [q1; q2; q3; q4; q5] (EIf (EVar q1) tw (EBool false))) D ->
+ p4 <> p1 -> p4 <> p2 -> p4 <> p3 ->
+ lookup b rho0 = Some vb -> lookup l rho0 = Some vl -> lookup kk rho0 = Some vk ->
+ (forall x, In x [b2; l2; k2; c] -> exists v, lookup x (tagged_env rho0 s0) = Some v) ->
+ srun (Cfg (Eval rho0 (ECall cf_cut [EVar b; EVar l; EVar kk; EFreeze (ECall cf_when [EBool false; EVar b2; EVar l2; EVar k2; EVar c])])) K0 s0) []
+   (Cfg (Eval ((wv, VBool false) :: combine [p1; p2; p3; p4]
+                 [vb; vl; vk; VFrozen (ECall cf_when [EBool false; EVar b2; EVar l2; EVar k2; EVar c]) (tagged_env rho0 s0)])
+              (EIf (EAnd (ECall cf_eq [EVar wv; EBool false]) u) a (EVar wv))) K0 (with_cell s0)).
+Proof.
+ intros rho0 b l kk b2 l2 k2 c vb vl vk K0 s0 p1 p2 p3 p4 wv u a q1 q2 q3 q4 q5 tw Hs Ic Iw N1 N2 N3 Lb Ll Lk Hx.
+ destruct (Hx b2 ltac:(cbn; tauto)) as [v2 L2]. destruct (Hx l2 ltac:(cbn; tauto)) as [v3 L3].
+ destruct (Hx k2 ltac:(cbn; tauto)) as [v4 L4]. destruct (Hx c ltac:(cbn; tauto)) as [v5 L5].
+ assert (Lp4 : lookup p4 (combine [p1; p2; p3; p4] [vb; vl; vk; VFrozen (ECall cf_when [EBool false; EVar b2; EVar l2; EVar k2; EVar c]) (tagged_env rho0 s0)])
+   = Some (VFrozen (ECall cf_when [EBool false; EVar b2; EVar l2; EVar k2; EVar c]) (tagged_env rho0 s0))).
+ { cbn [combine]. rewrite (lookup_cons_ne p4 p1), (lookup_cons_ne p4 p2), (lookup_cons_ne p4 p3) by assumption.
+   apply lookup_cons_eq. }
+ eapply srun_tau; [reflexivity|]. eapply srun_tau; [apply sval_next; exact Lb|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply sval_next; exact Ll|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply sval_next; exact Lk|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply JitKRefCompatClo.JitKRefCompatClo.next_frz|].
+ eapply srun_tau; [rewrite next_ca_call; apply call_named_user; [exact (Hs _ _ Ic)|reflexivity]|].
+ eapply srun_tau; [apply next_ELet|]. eapply srun_tau; [reflexivity|].
+ eapply srun_tau; [apply sval_next; exact Lp4|]. eapply srun_tau; [reflexivity|].
+ eapply srun_tau; [reflexivity|]. eapply srun_tau; [apply sval_next; reflexivity|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply sval_next; exact L2|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply sval_next; exact L3|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply sval_next; exact L4|].
+ eapply srun_tau; [apply next_KCallArgs_cons|]. eapply srun_tau; [apply sval_next; exact L5|].
+ eapply srun_tau; [rewrite next_ca_call; apply call_named_user; [exact (Hs _ _ Iw)|reflexivity]|].
+ eapply srun_tau; [reflexivity|].
+ eapply srun_tau; [apply sval_next; cbn; rewrite text_eqb_refl; reflexivity|].
+ eapply srun_tau; [apply next_KIf|]. eapply srun_tau; [apply sval_next; reflexivity|].
+ eapply srun_tau; [apply next_KLet|]. apply srun_refl.
+Qed.
+
+Lemma cut_call_inv : forall e0 b l kk b2 l2 k2 c, cut_call e0 = Some (b, l, kk, (b2, l2, k2, c)) ->
+ e0 = ECall cf_cut [EVar b; EVar l; EVar kk; EFreeze (ECall cf_when [EBool false; EVar b2; EVar l2; EVar k2; EVar c])].
+Proof.
+ intros e0 b l kk b2 l2 k2 c H. unfold cut_call in H.
+ repeat match type of H with
+ | context [match ?x with _ => _ end] => is_var x; destruct x; try discriminate H
+ | context [match ?x with _ => _ end] => let E := fresh "E" in destruct x eqn:E; try discriminate H
+ end.
+ injection H as <- <- <- <- <- <- <-. apply andb_true_iff in E as [E1 E2].
+ apply text_eqb_eq in E1, E2. subst. reflexivity.
+Qed.
+
+Lemma cut_body_inv : forall e p4 wv u a, cut_body e = Some (p4, wv, u, a) ->
+ e = ELet wv (EApp (EVar p4) []) (EIf (EAnd (ECall cf_eq [EVar wv; EBool false]) u) a (EVar wv)).
+Proof.
+ intros e p4 wv u a H. unfold cut_body in H.
+ repeat match type of H with
+ | context [match ?x with _ => _ end] => is_var x; destruct x; try discriminate H
+ | context [match ?x with _ => _ end] => let E := fresh "E" in destruct x eqn:E; try discriminate H
+ end.
+ injection H as <- <- <- <-. apply andb_true_iff in E as [E E3]. apply andb_true_iff in E as [E1 E2].
+ apply text_eqb_eq in E1, E2, E3. subst. reflexivity.
+Qed.
+
+Lemma when_body_inv : forall e q1, when_body e = Some q1 -> exists tw, e = EIf (EVar q1) tw (EBool false).
+Proof.
+ intros e q1 H. unfold when_body in H.
+ repeat match type of H with
+ | context [match ?x with _ => _ end] => is_var x; destruct x; try discriminate H
+ end.
+ injection H as <-. eexists. reflexivity.
+Qed.
+
+Theorem cut_rule_sound : D_wf -> rule_sound (cut_rule D).
+Proof.
+ intros Dw rec Hrec g e0 e H. unfold cut_rule in H.
+ destruct (cut_call e0) as [[[[b l] kk] [[[b2 l2] k2] c]]|] eqn:Ec; [|discriminate H].
+ apply cut_call_inv in Ec. subst e0.
+ destruct e as [| | | | | | | |uT aT ef| | | | | | | | |]; try discriminate H.
+ destruct ef as [| | | [|]| | | | | | | | | | | | | |]; try discriminate H.
+ apply andb_true_iff in H as [Sc H].
+ destruct (lookup cf_cut D) as [[|ps eC]|] eqn:LC; try discriminate H.
+ destruct ps as [|p1 [|p2 [|p3 [|p4 [|]]]]]; try discriminate H.
+ destruct (lookup cf_when D) as [[|qs eW]|] eqn:LW; try discriminate H.
+ destruct qs as [|q1 [|q2 [|q3 [|q4 [|q5 [|]]]]]]; try discriminate H.
+ destruct (lookup cf_eq D) as [[[]|]|] eqn:LE; try discriminate H.
+ destruct (lookup do_name D) as [[|ds ed]|] eqn:LD; try discriminate H.
+ destruct ds as [|d1 [|d2 [|]]]; try discriminate H.
+ destruct ed as [| | | | |d2'| | | | | | | | | | | |]; try discriminate H.
+ destruct (cut_body eC) as [[[[p4' wv] u] a]|] eqn:EC; [|discriminate H].
+ destruct (when_body eW) as [q1'|] eqn:EW; [|discriminate H].
+ apply cut_body_inv in EC. apply when_body_inv in EW as [tw EW]. subst eC eW.
+ repeat (apply andb_true_iff in H as [H ?]).
+ rename H into P4. apply text_eqb_eq in P4. subst p4'.
+ match goal with E : text_eqb q1 q1' = true |- _ => apply text_eqb_eq in E; subst q1' end.
+ match goal with E : text_eqb d2 d2' = true |- _ => apply text_eqb_eq in E; subst d2' end.
+ match goal with E : negb (text_eqb d1 d2) = true |- _ => apply negb_true_iff, text_eqb_false in E; rename E into D12 end.
+ match goal with E : negb (text_eqb wv p2) = true |- _ => apply negb_true_iff, text_eqb_false in E; rename E into Nw2 end.
+ match goal with E : negb (text_eqb wv p3) = true |- _ => apply negb_true_iff, text_eqb_false in E; rename E into Nw3 end.
+ match goal with E : F.binder_ok p2 l = true |- _ => rename E into B2 end.
+ match goal with E : F.binder_ok p3 kk = true |- _ => rename E into B3 end.
+ match goal with E : beq _ _ _ _ u uT = true |- _ => rename E into Bu end.
+ match goal with E : beq _ _ _ _ a aT = true |- _ => rename E into Ba end.
+ match goal with E : nodupb _ = true |- _ => rename E into ND end.
+ (* distinct parameters *)
+ cbn [nodupb bound existsb] in ND. rewrite !orb_false_r in ND.
+ repeat (apply andb_true_iff in ND as [? ND]). rewrite !negb_orb in *.
+ repeat match goal with Hn : (negb _ && _)%bool = true |- _ => apply andb_true_iff in Hn as [? ?] end.
+ repeat match goal with Hn : negb (text_eqb _ _) = true |- _ => apply negb_true_iff in Hn; apply text_eqb_false in Hn end.
+ destruct (binder_ok_ne _ _ B2) as [Np2 Nl]. destruct (binder_ok_ne _ _ B3) as [Np3 Nkk].
+ pose proof (lookup_some_In _ _ _ LC) as IC. pose proof (lookup_some_In _ _ _ LW) as IW.
+ pose proof (lookup_some_In _ _ _ LE) as IE. pose proof (lookup_some_In _ _ _ LD) as ID.
+ (* the scope *)
+ assert (Hg : forall x, In x [b; l; kk; b2; l2; k2; c] -> In x g).
+ { intros x Ix. apply bound_iff. exact (proj1 (forallb_forall _ _) Sc x Ix). }
+ intros k w rho0 rho Ww HEnv.
+ destruct (HEnv b ltac:(apply Hg; cbn; tauto)) as (vb & vbt & Lb & _ & _).
+ destruct (HEnv l ltac:(apply Hg; cbn; tauto)) as (vl & vlt & Ll & Llt & Vl).
+ destruct (HEnv kk ltac:(apply Hg; cbn; tauto)) as (vk & vkt & Lk & Lkt & Vk).
+ apply ERel_anti. intros j w' K0 s0 s Lj W HS.
+ assert (Hs0 : JitKRef.JitKRef.StoreHas D s0) by (destruct HS as (_ & Hsh & _); exact Hsh).
+ set (vf := VFrozen (ECall cf_when [EBool false; EVar b2; EVar l2; EVar k2; EVar c]) (tagged_env rho0 s0)).
+ set (rho' := (wv, VBool false) :: combine [p1; p2; p3; p4] [vb; vl; vk; vf]).
+ exists rho', (EIf (EAnd (ECall cf_eq [EVar wv; EBool false]) u) a (EVar wv)), (with_cell s0).
+ split; [|split; [apply SRel_with_cell; exact HS|]].
+ { apply (cut_run rho0 b l kk b2 l2 k2 c vb vl vk K0 s0 p1 p2 p3 p4 wv u a q1 q2 q3 q4 q5 tw);
+    try assumption; try congruence.
+   intros x Ix. unfold tagged_env. destruct (text_eqb x id_key) eqn:Ex.
+   - apply text_eqb_eq in Ex. subst x. exists (VVec (List.length (heap s0))). apply lookup_cons_eq.
+   - apply text_eqb_false in Ex. rewrite lookup_cons_ne by exact Ex.
+     assert (Ig : In x g) by (apply Hg; cbn in Ix |- *; tauto).
+     destruct (HEnv x Ig) as (v & _ & Lx & _). exists v. exact Lx. }
+ (* rho' reads p2 as L's value and p3 as K's *)
+ assert (Lp2 : lookup p2 rho' = Some vl).
+ { unfold rho'. rewrite lookup_cons_ne by congruence. cbn [combine].
+   rewrite (lookup_cons_ne p2 p1) by congruence. apply lookup_cons_eq. }
+ assert (Lp3 : lookup p3 rho' = Some vk).
+ { unfold rho'. rewrite lookup_cons_ne by congruence. cbn [combine].
+   rewrite (lookup_cons_ne p3 p1), (lookup_cons_ne p3 p2) by congruence. apply lookup_cons_eq. }
+ assert (Bq : forall e0' e', beq (S (F.dsize e0')) (fun _ => false) p2 [(p3, kk); (p2, l)] e0' e' = true ->
+   forall j2 w2, (j2 <= k)%nat -> wext w w2 -> ERel j2 w2 rho' e0' rho e').
+ { intros e0' e' B j2 w2 L2 W2.
+   apply (beq_sound Dw (fun _ => false) p2 (EBool false) [] rho [] j2 w2) with (v1 := d1) (v2 := d2)
+     (fuel := S (F.dsize e0')) (rn := [(p3, kk); (p2, l)]).
+   - intros e1 T. discriminate T.
+   - intros x' [].
+   - exact Np2.
+   - exact ID.
+   - exact D12.
+   - exact B.
+   - split; [apply le_n|]. split; [apply wext_refl; exact (proj2 W2)|]. split; [|split; [|split]].
+     + intros x' y' Ix Fr V. pose proof (var_ok_bound _ _ _ V Fr) as Iv.
+       destruct Iv as [E|[E|[]]]; injection E as <- <-.
+       * exists vk, vkt. split; [exact Lp3|split; [exact Lkt|]]. eapply VRel_mono; [exact L2|exact W2|exact Vk].
+       * exists vl, vlt. split; [exact Lp2|split; [exact Llt|]]. eapply VRel_mono; [exact L2|exact W2|exact Vl].
+     + intros _ Fp. unfold F.free_in in Fp. cbn [existsb fst] in Fp. rewrite text_eqb_refl, orb_true_r in Fp. discriminate Fp.
+     + intros z _ _ _. reflexivity.
+     + intros a' b' [E|[E|[]]]; injection E as <- <-; split; assumption. }
+ apply (ERel_push_run j w' rho' _ rho _ rho' u rho uT
+   (fun K1 => KAndR :: KIf a (EVar wv) rho' :: K1) (fun K1 => KIf aT (EBool false) rho :: K1)).
+ - intros K1 s1 Hs1. apply cut_run2; [exact Hs1|exact IE|unfold rho'; apply lookup_cons_eq].
+ - intros K1 s1. reflexivity.
+ - intros j2 w2 K1 K2 L2 W2 HK. apply KRel_andr_if; [exact HK| |].
+   + apply Bq; [exact Ba|lia|eapply wext_trans; [exact W|exact W2]].
+   + apply (JitKRefCompatCtl.JitKRefCompatCtl.ERel_sval sealed D j2 w2 rho' (EVar wv) rho (EBool false) (VBool false) (VBool false));
+      [unfold rho'; apply lookup_cons_eq|reflexivity|apply VRel_bool].
+ - intros j2 w2 L2 W2. apply Bq; [exact Bu|lia|eapply wext_trans; [exact W|exact W2]].
+Qed.
+End Cut.
 End Sound.
 
 (* ======================= D00's bind_site_sound_statement is false ======================= *)
@@ -931,6 +1301,140 @@ Proof.
  - discriminate E.
 Qed.
 
+(* ======================= deref= : no rule; a Rocq counterexample (decision-gated) ======================= *)
+(* lower.shen's deref= replaces (= (shen.deref X B) (shen.deref Y B)) by (shen-jit.deref= X Y B),
+   a port defun (src/port/shen-jit.kl:177) that calls shen-jit.same? on two pairs. shen-jit.same?
+   is a port primitive with no approved source meaning (decision item 1, OB-JIT-PORT-PRIMS; and
+   identity, item 3, OB-JIT-IDENTITY-MODEL): jit_rules has none (port_prim is None), and it has no KL
+   body, so no D can pin it. deref_eq_unsound: with D holding the kernel's shen.deref,
+   shen.lazyderef and shen.pvar? and the port's shen-jit.deref=, all four with their real bodies,
+   and a store with the primitives they use but no shen-jit.same? (its jit_rules state), the pair
+   (let X [1] (let Y [2] (let B () (= (shen.deref X B) (shen.deref Y B)))))  against
+   (let X [1] (let Y [2] (let B () (shen-jit.deref= X Y B))))
+   is not in KRef: the target raises (XUndefinedFun shen-jit.same?) after dx_tgt_steps steps, the
+   source returns false, and its only raises are resource errors (XUser _). (shen.pvar? is given the
+   kernel's body: the port's own calls shen-jit.pvar?, another primitive with no meaning, and with
+   it both sides raise alike on the first deref.) So no rule for deref= is sound for every store
+   meeting D, and none is added: OB-JIT-FRONT-PROLOG-DEREFEQ stays open, decision-gated. *)
+Definition dx_v (t : string) : expr := EVar (cn t).
+Definition dx_deref : name := kw "shen.deref".
+Definition dx_lazy : name := kw "shen.lazyderef".
+Definition dx_pvar : name := kw "shen.pvar?".
+Definition dx_same : name := kw "shen-jit.same?".
+Definition dx_follow (v1 v2 : string) (rec : name) : expr :=
+ ELet (cn "W") (ECall (kw "<-address") [dx_v v2; ECall (kw "<-address") [dx_v v1; ENum (NInt 1)]])
+   (EIf (ECall (kw "=") [dx_v "W"; ESym (kw "shen.-null-")]) (dx_v v1) (ECall rec [dx_v "W"; dx_v v2])).
+Definition dx_D : list (name * fundef) :=
+ [(dx_pvar, FUser [cn "V"] (EAnd (ECall (kw "absvector?") [dx_v "V"])
+     (ECall (kw "=") [ETrap (ECall (kw "<-address") [dx_v "V"; ENum (NInt 0)]) (ELam (cn "Z") (ESym (kw "shen.not-pvar")));
+                      ESym (kw "shen.pvar")])));
+  (dx_lazy, FUser [cn "V1"; cn "V2"] (EIf (ECall dx_pvar [dx_v "V1"]) (dx_follow "V1" "V2" dx_lazy) (dx_v "V1")));
+  (dx_deref, FUser [cn "V1"; cn "V2"] (ECond
+     [(ECall (kw "cons?") [dx_v "V1"],
+       ECall (kw "cons") [ECall dx_deref [ECall (kw "hd") [dx_v "V1"]; dx_v "V2"]; ECall dx_deref [ECall (kw "tl") [dx_v "V1"]; dx_v "V2"]]);
+      (EBool true, EIf (ECall dx_pvar [dx_v "V1"]) (dx_follow "V1" "V2" dx_deref) (dx_v "V1"))]));
+  (F.deref_eq_name, FUser [cn "X"; cn "Y"; cn "Bd"] (ELet (cn "A") (ECall dx_lazy [dx_v "X"; dx_v "Bd"])
+     (ELet (cn "B") (ECall dx_lazy [dx_v "Y"; dx_v "Bd"])
+       (EIf (EAnd (ECall (kw "cons?") [dx_v "A"]) (ECall (kw "cons?") [dx_v "B"]))
+         (EOr (ECall dx_same [dx_v "A"; dx_v "B"])
+              (EAnd (ECall F.deref_eq_name [ECall (kw "hd") [dx_v "A"]; ECall (kw "hd") [dx_v "B"]; dx_v "Bd"])
+                    (ECall F.deref_eq_name [ECall (kw "tl") [dx_v "A"]; ECall (kw "tl") [dx_v "B"]; dx_v "Bd"])))
+         (ECall (kw "=") [dx_v "A"; dx_v "B"])))))].
+Definition dx_sealed : list name := map fst dx_D.
+Definition dx_prims : list (name * fundef) :=
+ map (fun p => (kw (prim_name p), FPrim p)) [PConsP; PEqual; PHd; PTl; PCons; PAbsvectorP; PAddressGet].
+Definition dx_st : store := Store [] [] (dx_D ++ dx_prims).
+Definition dx_lets (body : expr) : expr :=
+ ELet (cn "X") (ECall (kw "cons") [ENum (NInt 1); ENil]) (ELet (cn "Y") (ECall (kw "cons") [ENum (NInt 2); ENil])
+   (ELet (cn "Bd") ENil body)).
+Definition dx_src : expr := dx_lets (ECall (kw "=") [ECall dx_deref [dx_v "X"; dx_v "Bd"]; ECall dx_deref [dx_v "Y"; dx_v "Bd"]]).
+Definition dx_tgt : expr := dx_lets (ECall F.deref_eq_name [dx_v "X"; dx_v "Y"; dx_v "Bd"]).
+
+(* The source's shape is deref='s (the scan's matcher), so this is the rewrite at a real site shape. *)
+Example dx_src_shape : existsb (fun e => match e with
+  | ECall f [ECall d1 [_; _]; ECall d2 [_; _]] => text_eqb f (kw "=") && text_eqb d1 dx_deref && text_eqb d2 dx_deref
+  | _ => false end) (F.subterms dx_src) = true.
+Proof. vm_compute. reflexivity. Qed.
+
+(* star_reach, with the raise's exception: a resource error is (XUser _). *)
+Lemma star_reach_user : forall sealed c0 m,
+ (forall i c, (i <= m)%nat -> iter_tau sealed i c0 = Some c ->
+   no_io (next_r (jit_rules sealed) jit_profile c) = true /\ forallb JitKRefBase.JitKRefBase.nontrap (kont c) = true) ->
+ iter_tau sealed (S m) c0 = None ->
+ forall t c, JitKRef.JitKRef.srun sealed c0 t c ->
+ (exists i, (i <= m)%nat /\ iter_tau sealed i c0 = Some c) \/
+ (exists msg K s, c = Cfg (Throw (XUser msg)) K s /\ forallb JitKRefBase.JitKRefBase.nontrap K = true).
+Proof.
+ intros sealed c0 m Hc Hn t c Hs.
+ assert (Bd : forall i c, iter_tau sealed i c0 = Some c -> (i <= m)%nat).
+ { intros i c1 E. destruct (Nat.le_gt_cases i m) as [L|L]; [exact L|].
+   rewrite (iter_none_ge sealed (S m) c0 Hn i L) in E. discriminate. }
+ assert (G : forall c1, (exists i, (i <= m)%nat /\ iter_tau sealed i c0 = Some c1) \/
+   (exists msg K s, c1 = Cfg (Throw (XUser msg)) K s /\ forallb JitKRefBase.JitKRefBase.nontrap K = true) ->
+   forall t c2, JitKRef.JitKRef.srun sealed c1 t c2 ->
+   (exists i, (i <= m)%nat /\ iter_tau sealed i c0 = Some c2) \/
+   (exists msg K s, c2 = Cfg (Throw (XUser msg)) K s /\ forallb JitKRefBase.JitKRefBase.nontrap K = true)).
+ { intros c1 Hc1 t1 c2 H2. unfold JitKRef.JitKRef.srun in H2.
+   induction H2 as [c1|c1 l c1' t1 c2 St H2 IH]; [exact Hc1|]. apply IH. clear IH H2.
+   destruct (step_r_cases sealed _ _ _ St) as [[E ->]|[(q & kk & r & E & -> & ->)|(r & x & Rc & Rx & -> & ->)]].
+   - destruct Hc1 as [(i & L & Ei)|(msg & K & s & -> & NK)].
+     + left. exists (S i). split; [|cbn; rewrite Ei, E; reflexivity].
+       apply (Bd (S i) c1'). cbn. rewrite Ei, E. reflexivity.
+     + right. destruct K as [|f K]; [discriminate|]. cbn in NK. apply andb_true_iff in NK as [Nf NK].
+       rewrite throw_frame_next in E by exact Nf. injection E as <-. exists msg, K, s. split; [reflexivity|exact NK].
+   - exfalso. destruct Hc1 as [(i & L & Ei)|(msg & K & s & -> & NK)].
+     + destruct (Hc i c1 L Ei) as [Io _]. rewrite E in Io. discriminate.
+     + destruct K as [|f K]; [discriminate|]. cbn in NK. apply andb_true_iff in NK as [Nf _].
+       rewrite throw_frame_next in E by exact Nf. discriminate.
+   - right. assert (Ux : exists msg, x = XUser msg) by (destruct r; cbn in Rx; injection Rx as <-; eexists; reflexivity).
+     destruct Ux as [msg ->]. destruct Hc1 as [(i & L & Ei)|(y & K & s & -> & NK)].
+     + exists msg, (kont c1), (mem c1). split; [reflexivity|]. exact (proj2 (Hc i c1 L Ei)).
+     + cbn in Rc. discriminate. }
+ apply (G c0 ltac:(left; exists 0%nat; split; [lia|reflexivity]) t c Hs).
+Qed.
+
+Definition dx_tgt_steps : nat := 78.
+Definition dx_src_steps : nat := 150.
+
+Theorem deref_eq_unsound : ~ JitKRef.JitKRef.KRef dx_sealed dx_D [] dx_src dx_tgt.
+Proof.
+ intros H.
+ assert (Dw : JitKRef.JitKRef.D_wf dx_sealed dx_D).
+ { split; [apply Forall_forall; intros p I; apply in_map; exact I|vm_compute; repeat constructor; cbn; intuition discriminate]. }
+ assert (Wf : wf_world []) by (split; constructor).
+ specialize (H (S dx_tgt_steps) [] [] [] Wf (fun x I => match I with end)).
+ assert (SH : JitKRef.JitKRef.StoreHas dx_D dx_st).
+ { intros f d I. repeat (destruct I as [E|I]; [injection E as <- <-; vm_compute; reflexivity|]). destruct I. }
+ assert (HS : JitKRef.JitKRef.SRel dx_sealed dx_D (S dx_tgt_steps) [] dx_st dx_st).
+ { split; [exact Wf|split; [exact SH|split; [exact SH|split; [reflexivity|split; [constructor|intros l0 l []]]]]]. }
+ pose proof (proj1 (ERel_iff dx_sealed dx_D (S dx_tgt_steps) [] [] _ [] dx_tgt) H (S dx_tgt_steps) (le_n _) []
+   (wext_refl [] Wf) [] [] (JitKRefGround.JitKRefGround.KRel_top dx_sealed dx_D (S dx_tgt_steps) [] Wf) dx_st dx_st HS) as O.
+ assert (Ht : JitKRef.JitKRef.runs dx_sealed dx_tgt_steps (Cfg (Eval [] dx_tgt) [] dx_st) []
+   (Cfg (Throw (XUndefinedFun dx_same)) [] dx_st)).
+ { apply iter_runs. vm_compute. reflexivity. }
+ destruct (O dx_tgt_steps [] _ ltac:(lia) Ht) as (_ & Hthr & _).
+ destruct (Hthr (XUndefinedFun dx_same) dx_st eq_refl) as (s0 & w' & Hs & _).
+ set (c0 := Cfg (Eval [] dx_src) [] dx_st) in Hs.
+ assert (HC : forall i c, (i <= dx_src_steps)%nat -> iter_tau dx_sealed i c0 = Some c ->
+   no_io (next_r (jit_rules dx_sealed) jit_profile c) = true /\ forallb JitKRefBase.JitKRefBase.nontrap (kont c) = true).
+ { intros i c L Ei. assert (Ck : forallb (fun i => match iter_tau dx_sealed i c0 with
+       | Some c => no_io (next_r (jit_rules dx_sealed) jit_profile c) && forallb JitKRefBase.JitKRefBase.nontrap (kont c)
+       | None => true end) (seq 0 (S dx_src_steps)) = true) by (vm_compute; reflexivity).
+   rewrite forallb_forall in Ck. specialize (Ck i ltac:(apply in_seq; lia)). rewrite Ei in Ck.
+   apply andb_true_iff in Ck. exact Ck. }
+ assert (HN : iter_tau dx_sealed (S dx_src_steps) c0 = None) by (vm_compute; reflexivity).
+ destruct (star_reach_user dx_sealed c0 dx_src_steps HC HN [] _ Hs) as [(i & L & Ei)|(msg & K & s & E & _)].
+ - (* no configuration of the source's chain is a raise *)
+   assert (Ck : forallb (fun i => match iter_tau dx_sealed i c0 with
+       | Some (Cfg (Throw _) _ _) => false | _ => true end) (seq 0 (S dx_src_steps)) = true) by (vm_compute; reflexivity).
+   rewrite forallb_forall in Ck. specialize (Ck i ltac:(apply in_seq; lia)). rewrite Ei in Ck. discriminate Ck.
+ - injection E as E _ _. discriminate E.
+Qed.
+
+(* And the source returns false, at its chain's end (a test of the counterexample's reading). *)
+Example dx_src_false : iter_tau dx_sealed dx_src_steps (Cfg (Eval [] dx_src) [] dx_st) = Some (Cfg (Ret (VBool false)) [] dx_st).
+Proof. vm_compute. reflexivity. Qed.
+
 (* ======================= the Prolog shapes in stage 0's sources (a TEST harness, not proof) ======================= *)
 (* Run by tests/shen-jit/stage0_to_rocq.py --prolog over the decoded .forms of every stage 0 file. For each
    shape, the number of definitions with at least one occurrence and the number of occurrences, in
@@ -976,8 +1480,9 @@ Example scan_deref_eq : is_deref_eq (ECall (kw "=") [ECall deref_name [EVar (kw 
   ECall deref_name [EVar (kw "Y"); EVar (kw "B")]]) = true.
 Proof. vm_compute. reflexivity. Qed.
 
-(* No rule of this file fires on the two v0.6 shapes: bind_rule refuses them whatever the recursive
-   checker says (the norm checker has no cut-fail or deref= rule; see the header's residuals). *)
+(* bind_rule does not fire on the two v0.6 shapes, whatever the recursive checker says: cut-fail is
+   cut_rule's (cut_rule_accepts), and deref= has no rule (deref_eq_unsound; see the header's
+   residuals). *)
 Example bind_rule_not_cut_fail : forall D rec g e, bind_rule D rec g (ECall cut_name [EVar (kw "B"); EVar (kw "L"); EVar (kw "K");
   EFreeze (ECall when_name [EBool false; EVar (kw "B"); EVar (kw "L"); EVar (kw "K"); EVar (kw "C")])]) e = false.
 Proof.
