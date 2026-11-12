@@ -425,6 +425,12 @@ and share's HT/HP counterexamples (`share_needs_thaw_outright`, `lit_kref`, `ht_
 `share_needs_hd_tl` shows is needed). `p2/D00` is superseded by `p2/r1-d00-merge`'s squash, which is already in `p2/int`
 with all 145 of D00's declarations unchanged; only stale comments differ. The ledger records both under
 `OB-JIT-LOWER-FRONT`. Decision items 5, 6 and 8 stay open. Counts: 148 of 955 (source judge); full-pipeline validated: UNKNOWN.
+Item 8 (r22-front-inline-guard, 12 November 2026): not approved (OPEN, no answer from Reuben), so no Rocq file or
+statement changed. `inline_site_sound_statement` and `bind_site_sound_statement` stand, refuted; the soundness of the
+guarded `inl_site_g` and `bind_site_g` is not proved, and no F00 rule for the inlining marker, integer-argument
+substitution or thaw-with is wired. The 528 definitions with an inlining marker (census) are residuals under
+`OB-JIT-LOWER-OPTIMIZATIONS`, citing item 8; they overlap other residual classes and are not additive. T02's F-inline
+forecast (direct 171, 23 beyond the merged 148, all alpha-only sites by census) is explained by the item 8 gate.
 
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
 definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes
