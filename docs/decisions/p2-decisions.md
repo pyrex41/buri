@@ -569,7 +569,7 @@ item 10 stays **OPEN**.
 p2/int `52898d1`) was to land the corrected SMs (`Fresh m_next`) and the corrected `preservation'`,
 `call_preservation'` and `call_preservation_src'_statement` from p2/r21-sms-fresh-fix `d2041f6` only if
 item 10 was answered with approval. At `52898d1` item 10 is OPEN: no answer from Reuben is recorded
-here, in `spec/obligations.json` or in any p2 branch. So no statement in `rocq/JitEmitInv.v` changed and
+here, in `spec/obligations.json` or on any `p2/*` branch tip (checked with `git grep`). So no statement in `rocq/JitEmitInv.v` changed and
 no Rocq file changed on that branch. The `*_v1` text, the re-review against JitEmitSim's
 counterexamples, mutant `ShenJitEmitInvFreshDropped` and `old_reflect'_statement` were not touched.
 `call_preservation_src'` (DoD (1)) stays **unmet**: on p2/int it is refuted as stated
