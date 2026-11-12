@@ -6291,7 +6291,8 @@
     "rocq/JitEmitRel.v",
     "rocq/JitEmitKont.v",
     "rocq/JitEmitInv.v",
-    "docs/decisions/p2-decisions.md"
+    "docs/decisions/p2-decisions.md",
+    "rocq/JitEmitCheck.v"
    ],
    "history": [
     {
@@ -6363,6 +6364,11 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 10 (corrected SMs/m_next statements, r21-sms-fresh-fix), added by this intake. No r21-sms-fresh-fix branch or worktree existed on 2026-11-11, so no corrected statement text exists to approve and none is proposed. The current preservation'_statement, call_preservation'_statement and call_preservation_src'_statement are refuted in Rocq on p2/r22-emit-sim 82679ef (unmerged; preservation'_false, call_preservation'_false, call_preservation_src'_false, raise_resolve_false; not re-run here, UNKNOWN on this tree): SMs does not keep m_next fresh. Standing default: the statements stay as written in rocq/JitEmitInv.v, refuted; DoD (1)'s call_preservation_src' cannot be proved as stated.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitEmitCheck.v",
+     "recorded": "2026-11-11: open (r22-emit-check, branch p2/r22-emit-check off p2/int fe461f4, not yet merged; the integrator records that merge). rocq/JitEmitCheck.v adds a checker for JitEmitRel's Comp' (JitLowerCheck's six functions over callbacks, falling back to the seven families' Comp, CompT and CompOp hooks) and its soundness, proved in Section Chk under LiftC/LiftT/LiftO and then instantiated: check_emit_sound (base hooks, every family empty), check_emit_sound_hooks (any Hooks record), judge_emit_sound; 43 statements in Audit_Jit. No Rule_X is inverted; the family lifts use only Rule_X_map and Rule_X_all, and the hook constructors through the inj_C_X/inj_T_X/inj_O_X definitions appended to rocq/JitEmitRel.v (construction only; outside the task's file list, pending integrator approval). Mutants ShenJitEmitCheckLabel, ShenJitEmitCheckHookRest, ShenJitEmitCheckMismatch, ShenJitEmitCheckNoneAccept. Every family hook is still empty, so with the base hooks the source judge accepts exactly JitLowerStage0's 148 of 955 (tests/shen-jit/judge_hooks.sh). No construct this entry lists is admitted by the checker yet; the full-pipeline validated count is UNKNOWN. Lane and mutant evidence: docs/STATUS.md (r22-emit-check).",
+     "reconciliation": "r22-emit-check branch, 11 November 2026."
     }
    ]
   },

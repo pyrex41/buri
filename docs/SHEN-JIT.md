@@ -177,8 +177,9 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitNestTest.v` | A copy with a non-empty nested dummy rule, its `Comp_ind'`, and `suffix` proved by it |
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
+| `rocq/JitEmitCheck.v` | r22-emit-check: the checker for JitEmitRel's Comp' (JitLowerCheck's functions over callbacks, with a fallback to the family hooks); `check_emit_sound` (base hooks), `check_emit_sound_hooks` (any Hooks record), `judge_emit_sound`, closed |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 710 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 753 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -852,6 +853,57 @@ counts, not the full-pipeline count, which is UNKNOWN (no full-pipeline judge ha
 
   Each mutant is refused under Rocq 9.3 inside the lemma it names. The mutation pin is 215 (fix 1 recorded 209 for 26 added mutants; the history gives 184 + 31). Lane
   result: in the task report.
+
+### The emit checker (r22-emit-check)
+
+Branch `p2/r22-emit-check`. `rocq/JitEmitCheck.v` decides JitEmitRel's Comp' for a code object and a
+definition. Its core is JitLowerCheck's six functions, ported one for one (`stepC` .. `stepA`). Each
+takes `c` and `cv` as arguments and makes every recursive call through a callback. The fuel-indexed
+`chk` .. `chkTA` tie the knot. When the core step gives no answer, `chk`, `chkT` and `chkOp` fall
+back to the Comp, CompT and CompOp hooks.
+
+- **Family interface.** A family X writes its hooks (`HkC`, `HkT`, `HkO`, plain function types
+  over the six callbacks) in its own `rocq/JitEmitRule<X>.v`, because only that file may name
+  Rule_X's constructors. It proves their soundness in graph form: `HookC_ok Rule_X h` (`HookT_ok`,
+  `HookO_ok`). From callbacks that keep code suffixes, an accepted hook yields a Rule_X derivation
+  over the callbacks' graphs, plus a suffix afterwards. These types are Pi-types and never mention
+  Comp, so a rule file can state them before JitEmitRel exists.
+- **Lifting to Comp.** `lift_famC`, `lift_famT` and `lift_famO` lift a family's derivation to Comp
+  with the family's `Rule_X_all` (each nested premise gets the fuel IH) and `Rule_X_map`. The last
+  step is the family's injection `JitEmitRel.inj_C_X`, `inj_T_X` or `inj_O_X`. These definitions
+  were appended to JitEmitRel.v so that no other file names a hook constructor. No Rule_X is
+  inverted, and neither `Comp_ind'` nor a generated scheme is used: soundness builds derivations by
+  induction on fuel.
+- **Soundness.** `chk_sound` and `check_emit_gen_sound` are proved in Section Chk under
+  `LiftC hC`, `LiftT hT` and `LiftO hO`. They are then instantiated twice: `check_emit_sound_hooks`
+  covers any `Hooks` record (seven `Fam`s, each with its graph-form proofs), and `check_emit_sound`
+  covers the base hooks, where every family is `fam_none`. `judge_emit_sound` states that an
+  accepted stage 0 definition is parsed, built, has the right arity and no entry, and is `CompFn'`.
+  All are closed.
+- **Judge driver.** `tests/shen-jit/judge_hooks.sh HOOKMOD ROCQ_DIR STAGE0_DIR OUT_DIR [EXPECTED]`
+  runs `judge_emit_all HOOKMOD.hooks` beside `JitLowerStage0.judge_all` on every stage 0 file, using
+  `stage0_to_rocq.py --hooks`. It compares the two per definition and fails if a definition is
+  lost, or if the base hooks gain one. A family passes its own hook module. The counts are
+  source-judge counts, not full-pipeline counts.
+- **Mutants.** `ShenJitEmitCheckLabel` (stepC skips an else label), `ShenJitEmitCheckHookRest`
+  (the fallback returns the starting code), `ShenJitEmitCheckMismatch` (the Eq lift injects
+  through the Store hook) and `ShenJitEmitCheckNoneAccept` (the empty hook accepts a hook node
+  with no Rule_X derivation). `Mismatch` is rejected by a type error, because Rule_Eq and
+  Rule_Store are distinct inductives, so it shows only that a lift cannot be built from the wrong
+  family's rule. `Label`, `HookRest` and `NoneAccept` change what the checker accepts, and the
+  soundness proof fails (`stepC_sound`, `lift_orC`, `none_okC`).
+- **Deviations for review.** (1) The spec says the checker uses "only Comp_ind'". It uses no
+  induction over Comp at all: soundness runs from the checker to the relation, so it builds
+  derivations (by induction on fuel) and never takes one apart; Comp_ind' is for proofs that
+  consume a Comp derivation. What the spec forbids, inverting a Rule_X outside its family file, is
+  not done, and the lane's syntactic and term-level gates check it. (2) `rocq/JitEmitRel.v` is
+  outside this task's file list. The 21 appended `inj_*` definitions are the only change to it.
+  Each is a hook constructor named as a definition, used only to build a derivation; the gate that
+  forbids naming `C_X` outside JitEmitRel.v exists to stop inversion, which a definition equal to
+  a constructor cannot do. The alternative, building `C_X` by tactic (`constructor`) in
+  JitEmitCheck.v, would get past the gate silently. This needs the integrator's approval.
+- **Does NOT say.** That the checker accepts every lowering (rejection proves nothing), or anything
+  about the semantics of accepted code (JitEmitInv).
 
 ### Emit-spec premises settled in Rocq (r1-emit-spec-merge)
 

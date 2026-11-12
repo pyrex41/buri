@@ -83,6 +83,11 @@ The Shen/JIT audit module has 710 statements, all closed, and the proof-mutation
 Shen/JIT mutants); the measured count equals the pin. The previous `make report` pass was on 7 November 2026
 at `1495f49`, before the 0.6 re-pin. Later commits that change only docs or the ledger keep these results;
 for any other tree they are UNKNOWN until `make report` is rerun.
+Since then p2/int merged r22-emit-check's JitEmitCheck (merge branch `p2/r21-emit-check-land`): on that tree the
+Shen/JIT audit module has 753 statements (710 plus 43) and the proof-mutation pin is 272 (268 plus the four
+ShenJitEmitCheck mutants), so the audited total in `rocq/audit.d` is 1,714. Those were checked by the Shen/JIT lane
+and by compiling each new mutant in Rocq 9.3; `make report` was not rerun on it, so its totals are UNKNOWN there
+and the table below still states the `b314bc7` measurement.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
