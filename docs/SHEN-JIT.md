@@ -410,6 +410,20 @@ validated count is UNKNOWN. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFold
 `ShenJitFrontCfVarScope`, `ShenJitFrontCopyLetScope`, `ShenJitFrontCopyNoDrop`, `ShenJitFrontLamArgScope`,
 `ShenJitFrontKcInvIdKey`, `ShenJitFrontThawNoD`, `ShenJitFrontCopyBindScope` and `ShenJitFrontCopyBindDrop`.
 
+**Front landing** (r21-front-land, branch `p2/r21-front-land` off `p2/int` `61f59e5`, 12 November 2026). Three
+`--no-ff` merges: `p2/r1-share-ht` `0695f04` (`4efdbbd`), `p2/r1-f-inline` `be367ab` (`56bb04d`) and
+`p2/r1-f-copy-fold-apply` `6278940` (`9106846`). No statement changed: `JitFrontShare.v`, `JitFrontCheck.v`,
+`JitFrontChainTest.v`, `JitFrontInline.v` and `JitFrontCopyFold.v` are byte-identical to their branch heads, and no
+other Rocq file differs from `p2/int` except the registries. Union: 821 audited statements (710 + 68 + 16 + 27), mutation
+pin 290 (268 + 6 + 5 + 11), 139 Shen/JIT mutants. Every refutation is kept and audited: `JitFrontInline.inline_site_unsound`,
+`JitFrontInline.bind_site_unsound`, `JitFrontProlog.bind_site_unsound`, `uncurry_not_kref`, `fold_arith_needs_store`,
+and share's HT/HP counterexamples (`share_needs_thaw_outright`, `lit_kref`, `ht_not_com`, `ht_not_compiled`,
+`share_needs_hd_tl`). `p2/F00` is superseded by `p2/r1-share-ht`, which merged it and then replaced 14 of
+`JitFrontShare.v`'s statements (reuse folded into the rule, FrontHyps derived, the HP premise added, which
+`share_needs_hd_tl` shows is needed). `p2/D00` is superseded by `p2/r1-d00-merge`'s squash, which is already in `p2/int`
+with all 145 of D00's declarations unchanged; only stale comments differ. The ledger records both under
+`OB-JIT-LOWER-FRONT`. Decision items 5, 6 and 8 stay open. Counts: 148 of 955 (source judge); full-pipeline validated: UNKNOWN.
+
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
 definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes
 a store body the body F's code is CompFn-related to, and that code lowers the inlined normal form, which the src judge

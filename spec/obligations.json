@@ -6641,6 +6641,31 @@
      "source": "rocq/JitFrontCopyFold.v",
      "recorded": "2026-11-11: open. r1-f-copy-fold-apply fix round (on c66e05e): 17 more statements in rocq/Audit_Jit.v (499 in all, each Closed under the global context). fold_arith_needs_store: counterexample, no premise, so fold-arith's D fact is necessary (interface item 2 decides whether any real D has it). Freeze and lambda copying: the known-closure relation KRefF (KRefF_nil: KRefF [] = KRef), congruence from the ERel-level lemmas (KRefF_let, KRefF_lam and the others) under Section hypotheses naming fund_gen_statement and prim_compat_statement, then instantiated; KRefF_letfrz and KRefF_letlam (the dropped let), ERel_thaw_site, KRefF_thaw and KRefF_thaw_call (a thaw, (X) or (thaw X) with the kernel thaw body in D, against the copied body), apply_chain, lam_krel, ERel_lam_site and KRefF_lamsite (a known lambda applied to all its parameters against nested lets); the copy checker cc with cc_same_sound, cc_sound_hyp, cc_sound (D_wf and a hook's soundness) and copy_chk_sound (no hook: D_wf alone). Not proved: the bind site under a known frozen closure (every let-frozen copy has one, lower.shen frozen-binds?), frozen-late hoist, inline-frozen's site rule (F-inline's; it can use ERel_thaw_site). cc was not run over stage 0 data: its count of the 955 definitions is UNKNOWN; source judge 148 of 955 unchanged. Mutants ShenJitFrontCopyLetScope, ShenJitFrontCopyNoDrop, ShenJitFrontLamArgScope, ShenJitFrontKcInvIdKey and ShenJitFrontThawNoD (mutation pin 225).",
      "reconciliation": "r1-f-copy-fold-apply fix round, Phase 2 front track, 11 November 2026; built on p2/int at 7cb676e."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-12: open (no status changed). r21-front-land (branch p2/r21-front-land off p2/int 61f59e5) lands the three front branches with --no-ff merges: p2/r1-share-ht 0695f04 (4efdbbd), p2/r1-f-inline be367ab (56bb04d), p2/r1-f-copy-fold-apply 6278940 (9106846). No statement changed: rocq/JitFrontShare.v, JitFrontCheck.v and JitFrontChainTest.v are byte-identical to p2/r1-share-ht 0695f04, JitFrontInline.v to p2/r1-f-inline be367ab, JitFrontCopyFold.v to p2/r1-f-copy-fold-apply 6278940 (git diff --quiet <branch> 9106846 -- <file>), and every other file under rocq/ except the three registries (Audit_Jit.v, audit.d, modules.d) is identical to p2/int 61f59e5. Registries unioned append-only: Audit_Jit 821 statements (710 + 68 share-ht + 16 inline + 27 copy-fold; every Print Assumptions line of p2/int and of each branch head is present, none duplicated, every added line names a JitFront module), modules.d/70-jit.list and check-shen-jit.sh FILES gain JitFrontCheck JitFrontChainTest JitFrontShare JitFrontInline JitFrontCopyFold, mutation pin 290 (268 + 6 + 5 + 11), tests/mutate-shen-jit.py 139 names (117 + 22 ShenJitFront*), stage0_to_rocq.py gains --share (with share-ht's DEEP_MODES dispatch for --norm and --share, merged as is) and --uncurry. Refutations kept, each in Audit_Jit: JitFrontInline.inline_site_unsound, JitFrontInline.bind_site_unsound, JitFrontProlog.bind_site_unsound, JitFrontCopyFold.uncurry_not_kref, JitFrontCopyFold.fold_arith_needs_store, and the HT/HP counterexamples JitFrontShare.share_needs_thaw_outright, ht_not_com, ht_not_compiled, lit_kref, share_needs_hd_tl. Lane and mutant evidence: see the next entry.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontD.v",
+     "recorded": "2026-11-12: p2/D00 (head d9b7cff) is SUPERSEDED by p2/int, not merged: its content entered p2/int squashed, by p2/r1-d00-merge (3338413, an ancestor of p2/int; p2/D00 is not). Checked at r21-front-land: every Theorem/Lemma/Definition/Fixpoint/Inductive/Example of p2/D00's rocq/JitFrontD.v is in p2/int's with the same statement text (145 declarations, 0 dropped, 0 changed, comments stripped; p2/int has 211), every Print Assumptions line of p2/D00's Audit_Jit.v is in the union, and git diff p2/D00 p2/int -- rocq/JitFrontD.v deletes only comment lines (D00's progress note '111 of 955 ... validated (src)', its bind_site/D_compiled' test notes and its UNKNOWN for inl_site on real sites, all replaced by r1-d00-merge's Rocq-run results). Merging p2/D00 itself would only re-add those stale comments, so it is not merged; its statements bind_site_sound_statement and inline_site_sound_statement stay as stated and stay refuted (JitFrontProlog.bind_site_unsound, JitFrontInline.inline_site_unsound, bind_site_unsound).",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCheck.v",
+     "recorded": "2026-11-12: p2/F00 (head dd6d791) is SUPERSEDED by p2/r1-share-ht, which merged it (334c460; git merge-base --is-ancestor p2/F00 p2/r1-share-ht holds), so F00's commits land in p2/r21-front-land through 4efdbbd and F00 is not merged separately. Checked: JitFrontCheck.v (20 declarations) and JitFrontChainTest.v (18) have the same statement text as at F00; JitFrontShare.v keeps all 76 F00 declarations and changes 14 of them (base_chk, chain_chk, chain_why, chain_hyps, chain_hyps_mono, thaw_from_hyps, then_from_hyps, chain_base, chain_and, chain_let, chain_sound, check_share_sound, cx_tgt_runs, share_rule_needs_thaw) because r1-share-ht folded share's reuse into the rule and derived FrontHyps (front_hyps from D_wf, so check_share_sound no longer takes FrontHyps) and added the HP premise, which share_needs_hd_tl proves necessary (each half): F00's own check_share_sound, with FrontHyps and without HP, is replaced, not weakened. Every Print Assumptions line of p2/F00's Audit_Jit.v (214) is in the union. F00's HT counterexamples (share_needs_thaw_outright, lit_kref) are kept.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
+    },
+    {
+     "source": "docs/decisions/p2-decisions.md",
+     "recorded": "2026-11-12: still OPEN, awaiting Reuben (no decision recorded, nothing discharged). Decision items 5 (share HT/HP, p2/r1-share-ht 0695f04), 6 (uncurrying, p2/r1-f-copy-fold-apply 6278940) and 8 (guarded inline and bind statements, p2/r1-f-inline be367ab), recorded above as 'unmerged', are now merged by r21-front-land (branch p2/r21-front-land, 9106846), with their Rocq items in this tree's Audit_Jit; the recommended defaults are not applied and no statement was changed.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
+    },
+    {
+     "source": "scripts/check-shen-jit.sh",
+     "recorded": "2026-11-12: open (no status changed). r21-front-land lane and mutant evidence. Evidence on the proof tree of 9106846 (git archive 9106846 | shasum -a 256 = 4bd0dee6884d49f47973e2403c4c14b32e943b384f5c767c526694ef085bbbbe, extracted in buri-lps /work/p2-r21-front-land; later commits on the branch change only docs and the ledger): lane `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-front-land-out /lps/bin/rocq-slot bash scripts/check-shen-jit.sh`, Rocq 9.3, 07:59:56Z to 08:39:28Z, LANE_RC=0, log sha256 bc9986ead6d7ca81355f05cb19a5c8491c61be6e85f1402af4ce849be6f5c83c: emit syntactic gate 0 violations, Audit_Jit.log 821 lines all 'Closed under the global context' and no other line (sha256 51b8a2db046449e4baf54f8e89d0e7c42ab47edd3f4991ce71d652a60b947aa4), rocqchk passed, emit term-level gate 0 violations over 285 constants of 4 modules, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded (source judge), image step as recorded, differential NOT RUN. Mutants: all 139 names of `python3 tests/mutate-shen-jit.py` (48 ShenJitFront*, the 22 new ones included), each `/lps/bin/rocq-slot timeout 2400 rocq compile -Q /tmp/p2-r21-front-land-out Buri <mutant>.v`, two at a time, 08:42Z to 09:28Z: 139 rejected with an Error, 0 accepted, 0 timeouts (results sha256 b31f3e8becff68812b5782736211d1825732231259c99178dd2c54b51d17f948, per-mutant error line and message sha256 1eb7ecc08e2047fc9db63d4bfcb639d75294ded377ff8e35f5d71f0070db6a74). Controls in the same -Q build: the unmutated JitFrontCheck, JitFrontChainTest, JitFrontShare, JitFrontInline and JitFrontCopyFold under fresh names, and the unmutated JitFrontD + JitFrontInline chain, each compile with rc 0. Counts: 148 of 955 (source judge); full-pipeline validated: UNKNOWN. NOT RUN, UNKNOWN: make prove (Coq 8.18), make report (pin 290 is arithmetic), the differential, the full-pipeline judge, check-shen-jit-norm.sh, gate_tests.sh.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
     }
    ]
   },
@@ -7045,6 +7070,11 @@
      "source": "rocq/JitFrontShare.v",
      "recorded": "2026-11-11: open. r1-share-ht second verifier pass: HP's store side has HT's provenance, proved in Rocq: hd_tl_fixed (hd and tl are fixed names), hd_tl_defun_refused (defun of either raises XBadDefinition), hd_tl_stable (no srun changes their function), so a D binding them describes the image's initial store (OB-JIT-IMAGE), as thaw_stable does for HT. HT is not proved for the pinned D (no pinned D exists in Rocq; ht_not_com and ht_not_compiled exclude Com and D_compiled on this back end); it stays this named residual. The HT and HP premise decision was sent to the orchestrator (main session) for Reuben on 2026-11-11; no ruling is recorded. 331 audited statements.",
      "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-12: status unchanged (open). Merged into p2/r21-front-land (9106846, --no-ff) with no statement changed; see OB-JIT-LOWER-FRONT's r21-front-land entries.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
     }
    ]
   },
@@ -7084,6 +7114,11 @@
      "source": "rocq/JitFrontCopyFold.v",
      "recorded": "2026-11-11: open. r1-f-copy-fold-apply second fix round (p2/int f42d6c4 merged in): 3 more statements in rocq/Audit_Jit.v (550 in all, each Closed under the global context): KRel_ca_lastvar, KRefF_bindsite and cc_bind_sound, bound-now under a known frozen closure (cc_bind: JitFrontProlog.bind_rule's checks with the fourth argument the entry's name, proved through JitFrontProlog.beq_sound). Mutants ShenJitFrontCopyBindScope and ShenJitFrontCopyBindDrop (pin 240). uncurry_scan (test, Rocq vm_compute over the 955 stage 0 sources): 0 dynamic applications of two or more arguments.",
      "reconciliation": "r1-f-copy-fold-apply second fix round, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-12: status unchanged (open). Merged into p2/r21-front-land (9106846, --no-ff) with no statement changed; see OB-JIT-LOWER-FRONT's r21-front-land entries.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
     }
    ]
   },
@@ -7123,6 +7158,11 @@
      "source": "rocq/JitFrontCopyFold.v",
      "recorded": "2026-11-11: open. r1-f-copy-fold-apply second fix round (p2/int f42d6c4 merged in): 3 more statements in rocq/Audit_Jit.v (550 in all, each Closed under the global context): KRel_ca_lastvar, KRefF_bindsite and cc_bind_sound, bound-now under a known frozen closure (cc_bind: JitFrontProlog.bind_rule's checks with the fourth argument the entry's name, proved through JitFrontProlog.beq_sound). Mutants ShenJitFrontCopyBindScope and ShenJitFrontCopyBindDrop (pin 240). uncurry_scan (test, Rocq vm_compute over the 955 stage 0 sources): 0 dynamic applications of two or more arguments.",
      "reconciliation": "r1-f-copy-fold-apply second fix round, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-12: status unchanged (open). Merged into p2/r21-front-land (9106846, --no-ff) with no statement changed; see OB-JIT-LOWER-FRONT's r21-front-land entries.",
+     "reconciliation": "r21-front-land, Phase 2 front integration, 12 November 2026."
     }
    ]
   }
