@@ -274,6 +274,65 @@ ShenJitEmitCheckMismatch: the Eq family's lift injects through Comp's Store hook
 ShenJitEmitCheckNoneAccept: the empty hook noneC (every family's hook while its Rule_X is empty)
   accepts, returning the code it was given, so the checker accepts a hook node for which no Rule_X
   derivation exists. A behavioural mutant: it changes what the checker accepts. none_okC must fail.
+ShenJitFrontNoScope: fchk's equality case without `scoped g e`. KRef_refl needs it (a free variable
+  outside the scope may be bound to unrelated values on the two sides). Rejected first at the
+  decision: fchk_rejects_unscoped (vm_compute, placed right after fchk) no longer holds.
+ShenJitFrontSameFuel: fchk passes its own fuel, not fuel - 1, to the rules' recursive checker.
+  The definition is no longer structural; Rocq refuses the Fixpoint (the guard condition is the
+  property itself: termination of the check, and the induction fchk_sound runs on the fuel).
+ShenJitFrontShareElseSwap: share's chain base accepts (if T' (thaw G) X'), the else and then branches
+  swapped. Rejected first at the decision: share_rejects_swap (vm_compute, before every proof).
+ShenJitFrontShareThawAny: share accepts (thaw H) for any variable H as the else branch, not only the
+  ElseN the let binds. Rejected first at the decision: share_rejects_thaw_other (vm_compute).
+ShenJitFrontShareReuseOpBlind: share's reuse compares a reused path by its base variable only, not
+  its hd/tl operations (path_eqb without the operation list). Rejected first at the decision:
+  share_reuse_rejects_wrong_op (vm_compute: (hd V) against a variable bound to (tl V)).
+ShenJitFrontShareChainFactUnchecked: a chain let records the fact of the source's (hd y)/(tl y)
+  without checking that the target's let binds the same expression. Rejected at chain_fact_cases
+  (the fact must be the target's own path; JitFrontShare.v, the proof's expr_eqb_eq step). A proof-level
+  mutant: with rec = fchk share_rules, (hd y)/(tl y) is accepted only against itself, so no decision of
+  check_share changes; ShenJitFrontShareReuseOpBlind is the reuse relation's decision-level mutant.
+ShenJitFrontAeqLamNoRn: aeq compares a lambda's bodies without pairing the two binders, so
+  ((lambda x x) 1) is alpha-equivalent to ((lambda y x) 1), a pair JitFrontInline's
+  aeq_lam_cx_not_KRef proves is not a refinement. Built as JitFrontD.v + JitFrontInline.v
+  (mutate_chain); JitFrontD's Example aeq_shadow fails first (the mutant also rejects an equivalent
+  pair); JitFrontInline's aeq_lam_cx pins the unsound direction.
+ShenJitFrontAeqLetIdKey: aeq's let case drops binder_ok, so a let may bind the closure-identity key,
+  which a freeze then rebinds on one side only. Built as JitFrontD.v + JitFrontInline.v; the
+  Example aeq_let_cx must fail: the mutant accepts the pair aeq_let_cx_not_KRef proves is not a
+  refinement.
+ShenJitFrontInlGuard: inl_site_g drops its id_key guard on frozen arguments, so it accepts the
+  inline counterexample. inl_site_g_cx must fail: the mutant accepts the site cx_not_KRef proves
+  is not a refinement. (Test evidence about the guard: the guarded checker's soundness is open.)
+ShenJitFrontBindGuard: bind_site_g drops its id_key guard, so it accepts the bound-now
+  counterexample. bind_site_g_cx must fail: the mutant accepts the site bx_not_KRef proves is not a
+  refinement. (Test evidence about the guard, as above.)
+ShenJitFrontChainFinalThrow: chain_ok stops checking that its last configuration is not a raise, so
+  a chain may end in the (XUnboundVar y) raise no_reach_iter excludes (no_reach_iter is then
+  false). The Lemma chain_final_raise must fail. (Dropping the check on the configurations before
+  the last instead is an equivalent mutant: with no trap frame, a raise there reaches the last.)
+ShenJitFrontFoldNoRange: cfold folds + without the fixnum range check, where jit_rules' + raises.
+  cfold_run must fail.
+ShenJitFrontFoldNoPrim: cfold folds + without asking that D binds + to the primitive, so the store's
+  + may be any function. cfold_run must fail.
+ShenJitFrontFoldMinusAdds: cfold's - case computes x + y. cfold_run must fail.
+ShenJitFrontCfVarScope: cf_same accepts a variable without asking that it is in scope, where the two
+  environments may bind it to unrelated values. cf_same_sound must fail.
+ShenJitFrontCopyLetScope: the let-frozen intro rule checks the body with X still in scope, so a target
+  X (an outer binding) would be compared with the source's closure. cc_intro_sound must fail.
+ShenJitFrontCopyNoDrop: cc_same keeps every known-closure entry under a lambda binder, though the binder
+  may rebind the closure's name or a free name of its body. cc_same_sound must fail.
+ShenJitFrontLamArgScope: the known-lambda site checks the arguments in the full scope, though the target
+  evaluates the later ones under the earlier parameters' lets. cc_lam_sound must fail.
+ShenJitFrontKcInvIdKey: the frozen entry's invariant forgets that its free names exclude the closure-
+  identity key, which tagged environments bind on one side only. Rocq rejects it at kc_inv_mono, the
+  first proof that destructures the invariant (Inv_tag also needs the dropped conjunct).
+ShenJitFrontThawNoD: the (thaw X) site is accepted without the kernel's thaw body in D, so the store's
+  thaw may be any function. cc_thaw_sound must fail.
+ShenJitFrontCopyBindScope: cc_bind checks the expansion's fresh names against no scope, so a let may
+  shadow a name of g the next argument reads. cc_bind_sound must fail.
+ShenJitFrontCopyBindDrop: cc_bind checks Y0 with every known-closure entry, though the first let may
+  shadow a name of an entry's closure scope. cc_bind_sound must fail.
 """
 import re
 from pathlib import Path
@@ -670,4 +729,67 @@ mutate('ShenJitEmitCheckMismatch', emitcheck,
 mutate('ShenJitEmitCheckNoneAccept', emitcheck,
        "Definition noneC : HkC := fun _ _ _ _ _ _ _ _ _ _ _ _ _ => None.",
        "Definition noneC : HkC := fun _ _ _ _ _ _ _ _ _ _ _ _ r => Some r.")
+mutate('ShenJitFrontNoScope', 'rocq/JitFrontCheck.v',
+       ' | S f => (expr_eqb e0 e && scoped g e)', ' | S f => (expr_eqb e0 e)')
+mutate('ShenJitFrontSameFuel', 'rocq/JitFrontCheck.v',
+       '          || existsb (fun r => r (fchk rules f) g e0 e) rules', '          || existsb (fun r => r (fchk rules fuel) g e0 e) rules')
+mutate('ShenJitFrontShareElseSwap', 'rocq/JitFrontShare.v',
+       " | EIf T' X' Z => is_thaw_of G Z && rec g C T' && then_chk rec g0 [] Pt X X'", " | EIf T' Z X' => is_thaw_of G Z && rec g C T' && then_chk rec g0 [] Pt X X'")
+mutate('ShenJitFrontShareThawAny', 'rocq/JitFrontShare.v',
+       ' | ECall t [EVar H] => text_eqb t thaw_name && text_eqb H G', ' | ECall t [EVar H] => text_eqb t thaw_name')
+mutate('ShenJitFrontShareReuseOpBlind', 'rocq/JitFrontShare.v',
+       "Definition path_eqb (p q : path) : bool := text_eqb (fst p) (fst q) && forall2b Bool.eqb (snd p) (snd q).",
+       "Definition path_eqb (p q : path) : bool := text_eqb (fst p) (fst q).")
+mutate('ShenJitFrontShareChainFactUnchecked', 'rocq/JitFrontShare.v',
+       "   | Some o => if expr_eqb E E' && bound g y then", "   | Some o => if bound g y then")
+finl = ['rocq/JitFrontD.v', 'rocq/JitFrontInline.v']
+mutate_chain('ShenJitFrontAeqLamNoRn', finl,
+       ' | ELam x b0, ELam y b => binder_ok x y && aeq ((x, y) :: rn) b0 b\n | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a',
+       ' | ELam x b0, ELam y b => binder_ok x y && aeq rn b0 b\n | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a')
+mutate_chain('ShenJitFrontAeqLetIdKey', finl,
+       ' | ELet x a0 b0, ELet y a b => binder_ok x y && aeq rn a0 a && aeq ((x, y) :: rn) b0 b\n | EIf c0 a0 b0, EIf c a b => aeq rn c0 c',
+       ' | ELet x a0 b0, ELet y a b => aeq rn a0 a && aeq ((x, y) :: rn) b0 b\n | EIf c0 a0 b0, EIf c a b => aeq rn c0 c')
+mutate('ShenJitFrontInlGuard', 'rocq/JitFrontInline.v',
+       ' forallb (fun n => negb (reads_id n)) nargs && F.inl_site fold letdo D f nargs e.',
+       ' F.inl_site fold letdo D f nargs e.')
+mutate('ShenJitFrontBindGuard', 'rocq/JitFrontInline.v',
+       ' forallb (fun n => negb (reads_id n)) nargs && F.bind_site fold D nargs e.',
+       ' F.bind_site fold D nargs e.')
+mutate('ShenJitFrontChainFinalThrow', 'rocq/JitFrontInline.v',
+       ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)) && not_throw (iter N c0).',
+       ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)).')
+cf = 'rocq/JitFrontCopyFold.v'
+mutate('ShenJitFrontFoldNoRange', cf,
+       "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
+       "     if (text_eqb f plus_name && d_has D plus_name is_add)%bool then Some (x + y)%Z")
+mutate('ShenJitFrontFoldNoPrim', cf,
+       "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
+       "     if (text_eqb f plus_name && fits (x + y))%bool then Some (x + y)%Z")
+mutate('ShenJitFrontFoldMinusAdds', cf,
+       "     else if (text_eqb f minus_name && d_has D minus_name is_sub && fits (x - y))%bool then Some (x - y)%Z",
+       "     else if (text_eqb f minus_name && d_has D minus_name is_sub && fits (x - y))%bool then Some (x + y)%Z")
+mutate('ShenJitFrontCfVarScope', cf,
+       " | EVar x, EVar y => text_eqb x y && bound g x\n",
+       " | EVar x, EVar y => text_eqb x y\n")
+mutate('ShenJitFrontCopyLetScope', cf,
+       "     rec (KF x b0 (K.fv b0) :: drop x F) (rem x g) body0 e",
+       "     rec (KF x b0 (K.fv b0) :: drop x F) g body0 e")
+mutate('ShenJitFrontCopyNoDrop', cf,
+       " | ELam x b0, ELam y b => text_eqb x y && rec (drop x F) (x :: g) b0 b",
+       " | ELam x b0, ELam y b => text_eqb x y && rec F (x :: g) b0 b")
+mutate('ShenJitFrontLamArgScope', cf,
+       "forall2b (rec (dropl (p :: ps) F) (reml (p :: ps) g)) (a1 :: as0) as1",
+       "forall2b (rec (dropl (p :: ps) F) g) (a1 :: as0) as1")
+mutate('ShenJitFrontKcInvIdKey', cf,
+       " | KF x e0 gl => x <> id_key /\\ ~ In id_key gl /\\",
+       " | KF x e0 gl => x <> id_key /\\")
+mutate('ShenJitFrontThawNoD', cf,
+       " | ECall f [EVar x] => text_eqb f FD.thaw_name && d_has D FD.thaw_name is_thaw_body &&",
+       " | ECall f [EVar x] => text_eqb f FD.thaw_name &&")
+mutate('ShenJitFrontCopyBindScope', cf,
+       "     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] g &&",
+       "     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] [] &&")
+mutate('ShenJitFrontCopyBindDrop', cf,
+       "     rec F g x0 x && rec (dropl [a1] F) g y0 y && rec (dropl [a2; a1] F) g b0 b &&",
+       "     rec F g x0 x && rec F g y0 y && rec (dropl [a2; a1] F) g b0 b &&")
 print(' '.join(names))

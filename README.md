@@ -88,6 +88,10 @@ Shen/JIT audit module has 753 statements (710 plus 43) and the proof-mutation pi
 ShenJitEmitCheck mutants), so the audited total in `rocq/audit.d` is 1,714. Those were checked by the Shen/JIT lane
 and by compiling each new mutant in Rocq 9.3; `make report` was not rerun on it, so its totals are UNKNOWN there
 and the table below still states the `b314bc7` measurement.
+p2/int then merged the front checkers (share, inline, copy/fold; merge branch `p2/r21-front-land`): on that tree
+the Shen/JIT audit module has 864 statements (753 plus 111) and the proof-mutation pin is 294 (272 plus 22
+ShenJitFront mutants; 143 Shen/JIT mutants), so the audited total in `rocq/audit.d` is 1,825. These are counted
+from the merged tree, not measured by `make report`, which was not rerun: UNKNOWN until it is.
 Reports are unsigned. GitHub Actions jobs now start, but they exceed the workflow's 20-minute limit, so
 for current evidence run `make report` yourself.
 
