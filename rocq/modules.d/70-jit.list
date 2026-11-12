@@ -54,6 +54,7 @@ JitEmitRel
 JitEmitNestTest
 JitEmitKont
 JitEmitInv
+JitEmitSim
 JitKRefCallNoTableCex
 JitEmitCheck
 JitFrontCheck

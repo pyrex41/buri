@@ -60,7 +60,7 @@ recommendation is not adopted.
 | 7 | emit-spec premises and design choices | OPEN (no answer received) | None of the five shape and scope rows is approved. The five `frame_prim` exclusions stand, and their 35 definitions (census at `f42d6c4`) are non-gated residuals. |
 | 8 | guarded inline and bind statements | OPEN (no answer received) | The refuted statements `inline_site_sound_statement` and `bind_site_sound_statement` stand, refuted. No guarded replacement is approved. |
 | 9 | fixed-name `FPrim` entries in D_wf | OPEN (no answer received) | D_wf is unchanged. `fold_arith_needs_store` stands, and the 6 definitions (census) are non-gated residuals. |
-| 10 | corrected SMs / `m_next` statements (r21-sms-fresh-fix) | OPEN (no answer received, 2026-11-11 and 2026-11-12). The corrected statements now exist on p2/r21-sms-fresh-fix `4ff09d1`. The refutations of the old text are on p2/r22-emit-sim `82679ef`. Both are unmerged into p2/int `5f7fc96` (see item 10, update of 2026-11-12) | No corrected statement is approved. On p2/int the statements stay as written in `rocq/JitEmitInv.v`; on the branch the refuted text is kept as `*_v1`. See item 10. |
+| 10 | corrected SMs / `m_next` statements (r21-sms-fresh-fix) | OPEN (no answer received, 2026-11-11 and 2026-11-12). The corrected statements now exist on p2/r21-sms-fresh-fix `4ff09d1`, unmerged into p2/int. The refutations of the old text, first on p2/r22-emit-sim `82679ef`, are on `p2/int` since r22-sim-land merged `45dc6dc` (`rocq/JitEmitSim.v`) (see item 10, update of 2026-11-12) | No corrected statement is approved. On p2/int the statements stay as written in `rocq/JitEmitInv.v`, refuted (`rocq/JitEmitSim.v`); on p2/r21-sms-fresh-fix the refuted text is kept as `*_v1`. See item 10. |
 
 The counts in this packet were computed at `f42d6c4`. They were **not re-run** on `91718d4`. The
 full-pipeline validated count stays UNKNOWN.
@@ -147,7 +147,7 @@ count of 20 non-gated residuals.
 | 7 | emit-spec premises and design choices (p2/r1-emit-spec-merge) | `env_ok_needed`, `resp_ok_bound_needed`, `env_ok_inhabited`, `dv_*`, `gvals_needed`, `old_reflect_false`, `old_reflect'_iff_core`, `cx_catch_up`, `JitEmitNestTest` | `frame_prim` exclusions: 35 (census). `=` with `pguard`: 206 (item 4). One-argument window: 0 (census). `env_ok`: on every run statement; 18 use KL IO (census). Shapes: 0 | approve `env_ok`, the window, `GvalsRel`, catch-up and the index shape. For the `frame_prim` exclusions, decide the five source-model questions so that the families can admit them | 0 if the model questions are decided and the families land. Otherwise 35 (census): over the cap |
 | 8 | guarded inline and bind statements | `JitFrontInline.inline_site_unsound`, `bind_site_unsound` (r1-f-inline); `JitFrontProlog.bind_site_unsound` (p2/int) | 528 with an inline marker, 7 with bound-now (37 sites) (census). The guard changes 0 verdicts (`site_report`, test) | approve: guarded statements, refutations kept | 0 once guarded soundness is proved. Until then the 528 cannot pass: over the cap |
 | 9 | fixed-name primitive entries (`+`, `-`) in D_wf | `JitFrontCopyFold.fold_arith_needs_store` (no premise); `JitProfile.jit_defun_fixed_refused`; the `hd_tl_stable` pattern | 6 (census; the same 6 by `d00_inline_census.py` MODE=5 and by Rocq's inline-site test, 522 of 528 without fold) | approve: D_wf admits fixed-name `FPrim` entries, with a `fixed_stable` lemma. This also settles HP on the real D (item 5) | 0 if approved. Otherwise 6 of the 20 |
-| 10 | corrected SMs / `m_next` statements (added by r21-decision-intake) | `JitEmitSim.preservation'_false`, `call_preservation'_false`, `call_preservation_src'_false`, `raise_resolve_false`, `fx_next`, `fx_no_funrel` (p2/r22-emit-sim `82679ef`, unmerged) | every run statement (statement shape) | none. The corrected statements (`Fresh m`, `sm_fresh`) are on p2/r21-sms-fresh-fix `4ff09d1`, unmerged, and are not approved. Options (a), (b) and (c) are in item 10, unranked | DoD (1)'s `call_preservation_src'` cannot be proved as stated on p2/int. Over the corrected SMs its truth is UNKNOWN |
+| 10 | corrected SMs / `m_next` statements (added by r21-decision-intake) | `JitEmitSim.preservation'_false`, `call_preservation'_false`, `call_preservation_src'_false`, `raise_resolve_false`, `fx_next`, `fx_no_funrel` (p2/r22-emit-sim `82679ef`; on `p2/int` since r22-sim-land merged `45dc6dc`) | every run statement (statement shape) | none. The corrected statements (`Fresh m`, `sm_fresh`) are on p2/r21-sms-fresh-fix `4ff09d1`, unmerged, and are not approved. Options (a), (b) and (c) are in item 10, unranked | DoD (1)'s `call_preservation_src'` cannot be proved as stated on p2/int. Over the corrected SMs its truth is UNKNOWN |
 
 Across items 1 to 4, 391 of the 807 residual definitions touch at least one gated item (census, from
 the `decisions` column of `stage0-residuals.txt`). The other 416 touch none. They wait on emit and
@@ -476,10 +476,11 @@ found nothing by that name:
 
 No corrected statement text exists for Reuben to approve. This packet does not propose any.
 
-**Evidence that the current statements are false.** All of it is in Rocq, on p2/r22-emit-sim `82679ef`.
-That branch is unmerged: `82679ef` is not an ancestor of `91718d4`, and `rocq/JitEmitSim.v` does not
-exist on `p2/int`. Its Audit_Jit lists the following, and its lane evidence commit `43349ba` reports
-them closed. They were not re-run here (UNKNOWN on this tree).
+**Evidence that the current statements are false.** All of it is in Rocq, first on p2/r22-emit-sim `82679ef`.
+When this item was written that branch was unmerged (`82679ef` was not an ancestor of `91718d4`). The
+refutation is now on `p2/int`: r22-sim-land (branch `p2/r22-sim-land`) merged `p2/r22-emit-sim` `45dc6dc`
+unchanged, so `rocq/JitEmitSim.v` and the lines below are in p2/int's Audit_Jit. The merge's lane evidence
+is in docs/STATUS.md under r22-sim-land. This adds evidence only; it answers nothing, and the item stays OPEN.
 
 - `preservation'_false`, `call_preservation'_false` and `call_preservation_src'_false` refute the three
   statements at `cx_E`, `cx_pt`, sealed `[]`. `raise_resolve_false` refutes that branch's own premise.
@@ -556,6 +557,13 @@ The Rocq claims in the update are as those branches reported them. They were not
 so they are UNKNOWN here. On 2026-11-12 item 10 was presented to Reuben through main, and no answer came
 back. It stays **OPEN**. Options (a), (b) and (c) are listed in the order the branch gave them and are
 not ranked.
+
+**Merged into p2/int after `r22-decide`.** The r22-sim-land merge (branch `p2/r22-sim-land`, `f802162`)
+brought `rocq/JitEmitSim.v` from p2/r22-emit-sim `45dc6dc` (a descendant of `82679ef`) into p2/int, so the
+refutations listed above are now in p2/int's Audit_Jit; its lane evidence is in docs/STATUS.md under
+r22-sim-land and under the integration entry for this merge. `4ff09d1` (the corrected statements) is still
+not an ancestor of p2/int, and `rocq/JitEmitInv.v` still has the pre-repair SMs. This adds evidence only;
+item 10 stays **OPEN**.
 
 ## Ledger
 
