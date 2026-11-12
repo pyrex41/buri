@@ -565,6 +565,17 @@ r22-sim-land and under the integration entry for this merge. `4ff09d1` (the corr
 not an ancestor of p2/int, and `rocq/JitEmitInv.v` still has the pre-repair SMs. This adds evidence only;
 item 10 stays **OPEN**.
 
+**r22-sms-land, 2026-11-12: not approved, nothing landed.** Task r22-sms-land (branch `p2/r22-sms-land` off
+p2/int `52898d1`) was to land the corrected SMs (`Fresh m_next`) and the corrected `preservation'`,
+`call_preservation'` and `call_preservation_src'_statement` from p2/r21-sms-fresh-fix `d2041f6` only if
+item 10 was answered with approval. At `52898d1` item 10 is OPEN: no answer from Reuben is recorded
+here, in `spec/obligations.json` or on any `p2/*` branch tip (checked with `git grep`). So no statement in `rocq/JitEmitInv.v` changed and
+no Rocq file changed on that branch. The `*_v1` text, the re-review against JitEmitSim's
+counterexamples, mutant `ShenJitEmitInvFreshDropped` and `old_reflect'_statement` were not touched.
+`call_preservation_src'` (DoD (1)) stays **unmet**: on p2/int it is refuted as stated
+(`JitEmitSim.call_preservation_src'_false`), and over the corrected SMs its truth is UNKNOWN.
+`old_reflect'_statement` stays unsettled (UNKNOWN).
+
 ## Ledger
 
 Each item has a dated `history` entry in `spec/obligations.json` saying "awaiting Reuben's decision,
