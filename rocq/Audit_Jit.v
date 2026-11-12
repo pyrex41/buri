@@ -4,6 +4,7 @@ From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep Jit
  JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex.
 From Buri Require Import JitFrontCheck JitFrontChainTest JitFrontShare.
 From Buri Require Import JitFrontInline.
+From Buri Require Import JitFrontCopyFold.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -802,3 +803,30 @@ Print Assumptions JitFrontInline.JitFrontInline.aeq_let_cx_not_KRef.
 Print Assumptions JitFrontInline.JitFrontInline.reach_ret.
 Print Assumptions JitFrontInline.JitFrontInline.KRef_ret.
 Print Assumptions JitFrontInline.JitFrontInline.KRef_throw_any.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.fold_cons_erase.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cfold_run.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.ERel_src_ret.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.fold_arith_kref.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cf_chk_sound_hyp.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cf_chk_sound.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.uncurry_not_kref.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.fold_arith_needs_store.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_nil.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_let.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_lam.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_letfrz.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_letlam.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.ERel_thaw_site.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_thaw.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_thaw_call.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.apply_chain.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.lam_krel.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.ERel_lam_site.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_lamsite.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_same_sound.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_sound_hyp.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_sound.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.copy_chk_sound.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRel_ca_lastvar.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.KRefF_bindsite.
+Print Assumptions JitFrontCopyFold.JitFrontCopyFold.cc_bind_sound.

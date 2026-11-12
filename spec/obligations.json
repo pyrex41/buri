@@ -6442,7 +6442,10 @@
     "the callees b0 calls are the store's, which under FunRel are the lowered bodies, not the kernel's source definitions; composing definitions with each other needs function tables related by KRef, not equal",
     "front-end checkers must reject norm's (fn F) rewrites, open-call inlining guarded by shen-jit.inlined?, and eval-kl to shen-jit.eval-kl: none can satisfy KRef in Buri's KLambda (none fires at stage 0)",
     "fresh_ok is parametric in the lowerer's namespace: stage 0 emits stage0.lower.*, the run-time lowerer shen-jit.lower.*, and fresh_ok in the run-time namespace fails on the lowerer's own definitions",
-    "D is a lowered store (D00, rocq/JitFrontD.v): each callee's body in D is its erased stage 0 normal form, so D_compiled is the emit check on the callee; the inline rule relates the inlined normal body to that body by inl_site (alpha-equivalence, integer substitution, thaw-with, depth cut), and JitKRef.fresh_ok over D_bodies is false on lowered bodies, so the fresh premise the front rules use is fresh_front (b0 and the callees' source bodies)"
+    "D is a lowered store (D00, rocq/JitFrontD.v): each callee's body in D is its erased stage 0 normal form, so D_compiled is the emit check on the callee; the inline rule relates the inlined normal body to that body by inl_site (alpha-equivalence, integer substitution, thaw-with, depth cut), and JitKRef.fresh_ok over D_bodies is false on lowered bodies, so the fresh premise the front rules use is fresh_front (b0 and the callees' source bodies)",
+    "norm's dynamic-application uncurrying is not in KRef against JitNorm.erase's curried form (JitFrontCopyFold.uncurry_not_kref: a head bound to a partial application returns in the source (F A B) and raises XArity in ((F A) B) under jit_rules' arity errors); no sound checker accepts it until OB-JIT-FRONT-UNCURRY is decided",
+    "fold-arith needs a store fact for + and -: JitFrontCopyFold.fold_arith_needs_store (no premise) refutes KRef sealed [] [] (+ 1 2) 3 with a store SRel allows, whose + is a user function; a D built by D_of has no such fact (JitFrontD interface item 2) Candidate fix (D00 interface item 2): + and - are fixed names (JitProfile.is_fixed_name, jit_defun_fixed_refused), so K.D_wf could admit fixed-name FPrim entries with a stability lemma like sealed_stable.",
+    "freeze and lambda copying are related through the known-closure relation JitFrontCopyFold.KRefF (KRef with the premise that each let-bound closure the target copied away is what the source binds, its captured environment related on its free names to the target's), whose congruence is proved from the ERel-level lemmas, not from the KRef-level compat statements, which cannot carry that premise"
    ],
    "depends_on": [
     "OB-JIT-LOWER-FRAGMENT",
@@ -6470,7 +6473,8 @@
     "rocq/JitFrontCheck.v",
     "rocq/JitFrontChainTest.v",
     "rocq/JitFrontShare.v",
-    "rocq/JitFrontInline.v"
+    "rocq/JitFrontInline.v",
+    "rocq/JitFrontCopyFold.v"
    ],
    "history": [
     {
@@ -6627,6 +6631,16 @@
      "source": "rocq/JitFrontInline.v",
      "recorded": "2026-11-11: open. p2/r1-f-inline merged with p2/int f42d6c4 (after r1-f-sugar and r1-f-prolog) on its own branch: no statement changed; the union has 539 Audit_Jit statements (523 + the 16 of JitFrontInline) and a proof-mutation pin of 234 (229 + the 5 r1-f-inline mutants). No count changes: the source judge accepts 148 of 955; the full-pipeline validated count is UNKNOWN (no full-pipeline judge was run). Evidence on e317b27 (buri-lps, Rocq 9.3): SKIP_DIFF=1 scripts/check-shen-jit.sh exit 0 (539 audited statements closed, rocqchk passed; stage0 148 accepted of 955; differential NOT RUN), log sha256 c921aa18...4130; site_report re-run (test, not proof): [5430; 5430; 5424; 5424; 5430; 5430; 0; 37; 37; 37], stage0 ec9b3872..., norm e45add98...b69dd1, log sha256 98a5afe7...6e22; the 5 r1-f-inline mutants rejected at aeq_shadow, aeq_let_cx, inl_site_g_cx, bind_site_g_cx, chain_final_raise, log sha256 005470f8...085. The full mutation suite, make prove and the differential were not run (UNKNOWN).",
      "reconciliation": "r1-f-inline fix round, merge of p2/int f42d6c4, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open. r1-f-copy-fold-apply proved and audited (7 statements in rocq/Audit_Jit.v, 482 in all, each Closed under the global context): fold_cons_erase (erase of a folded pair constant equals erase of the unfolded [prim cons] node, so fold-cons is the identity at KLambda and the congruence checker accepts it), cfold_run and ERel_src_ret (source anti-reduction to a returned value), fold_arith_kref (+ and - of integer literals, nested, against the folded literal, given (+, FPrim PAdd) / (-, FPrim PSub) in D, checked by the checker, and every intermediate in jit_rules' fixnum range), cf_chk_sound_hyp (the checker cf_chk, congruence plus fold-arith, sound under Section hypotheses naming the compat_* statements and D_wf), cf_chk_sound (instantiated from JitKRefCompatCtl, JitKRefCompatClo and JitKRefFund; D_wf the only premise) and uncurry_not_kref (counterexample, no premise: uncurrying is not a KRef refinement). Not proved: freeze copying (let-frozen copy, frozen-late hoist, inline-frozen) and lambda copying (let-lambda); each needs a source-only known-closure environment fact KRef's environment relation does not carry, so source anti-reduction to an intermediate source term cannot state the use-site step. fold-arith accepts nothing on a D built by D_of (JitFrontD interface item 2: + and - are not sealed). Mutants ShenJitFrontFoldNoRange, ShenJitFrontFoldNoPrim, ShenJitFrontFoldMinusAdds and ShenJitFrontCfVarScope (mutation pin 220).",
+     "reconciliation": "r1-f-copy-fold-apply, Phase 2 front track, 11 November 2026; built on p2/int at 7cb676e."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open. r1-f-copy-fold-apply fix round (on c66e05e): 17 more statements in rocq/Audit_Jit.v (499 in all, each Closed under the global context). fold_arith_needs_store: counterexample, no premise, so fold-arith's D fact is necessary (interface item 2 decides whether any real D has it). Freeze and lambda copying: the known-closure relation KRefF (KRefF_nil: KRefF [] = KRef), congruence from the ERel-level lemmas (KRefF_let, KRefF_lam and the others) under Section hypotheses naming fund_gen_statement and prim_compat_statement, then instantiated; KRefF_letfrz and KRefF_letlam (the dropped let), ERel_thaw_site, KRefF_thaw and KRefF_thaw_call (a thaw, (X) or (thaw X) with the kernel thaw body in D, against the copied body), apply_chain, lam_krel, ERel_lam_site and KRefF_lamsite (a known lambda applied to all its parameters against nested lets); the copy checker cc with cc_same_sound, cc_sound_hyp, cc_sound (D_wf and a hook's soundness) and copy_chk_sound (no hook: D_wf alone). Not proved: the bind site under a known frozen closure (every let-frozen copy has one, lower.shen frozen-binds?), frozen-late hoist, inline-frozen's site rule (F-inline's; it can use ERel_thaw_site). cc was not run over stage 0 data: its count of the 955 definitions is UNKNOWN; source judge 148 of 955 unchanged. Mutants ShenJitFrontCopyLetScope, ShenJitFrontCopyNoDrop, ShenJitFrontLamArgScope, ShenJitFrontKcInvIdKey and ShenJitFrontThawNoD (mutation pin 225).",
+     "reconciliation": "r1-f-copy-fold-apply fix round, Phase 2 front track, 11 November 2026; built on p2/int at 7cb676e."
     }
    ]
   },
@@ -7031,6 +7045,84 @@
      "source": "rocq/JitFrontShare.v",
      "recorded": "2026-11-11: open. r1-share-ht second verifier pass: HP's store side has HT's provenance, proved in Rocq: hd_tl_fixed (hd and tl are fixed names), hd_tl_defun_refused (defun of either raises XBadDefinition), hd_tl_stable (no srun changes their function), so a D binding them describes the image's initial store (OB-JIT-IMAGE), as thaw_stable does for HT. HT is not proved for the pinned D (no pinned D exists in Rocq; ht_not_com and ht_not_compiled exclude Com and D_compiled on this back end); it stays this named residual. The HT and HP premise decision was sent to the orchestrator (main session) for Reuben on 2026-11-11; no ruling is recorded. 331 audited statements.",
      "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-FRONT-UNCURRY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "lower.shen norm-apply against KRef (KLambda to KLambda)",
+   "identity": "rocq/JitFrontCopyFold.v",
+   "statement": "norm-apply's rewrite of a dynamic call (F A1 ... An), n >= 2, to ((F A1) ... An) is validated per definition against KRef, or each definition that needs it is a named residual with its reason.",
+   "premises": [
+    "JitFrontCopyFold.uncurry_not_kref (Rocq, no premise): KRef fails for (F 1 2) against ((F 1) 2) when F is bound to VPartial g [] with g of arity 2: the source calls g with both arguments and returns, the target calls g with one, which jit_rules refuses (arity errors), and raises XArity",
+    "independently, for a non-atomic An the source evaluates An before applying F to the earlier arguments and the witness after, an IO-order difference when F's application has effects (not checked in Rocq)",
+    "Under jit_rules no VPartial value is made (KLPort.call_named_r: arity_mismatch raises XArity before the Nat.ltb branch; shen-jit docs/semantics.md section 9 at 934cfa5: applying a closure to too few arguments raises), so the counterexample's value is reachable only through KRef's quantification over related environments; option (b) would also need atomic trailing arguments or a let-binding of them in lower.shen for the order difference",
+    "JitFrontCopyFold.uncurry_scan (test, Rocq vm_compute, stage0_to_rocq.py --uncurry over the 955 stage 0 sources at 934cfa5): 0 dynamic applications of two or more arguments, 0 with a non-atomic trailing argument; so this item changes no stage 0 verdict"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT"
+   ],
+   "evidence": [],
+   "completion_evidence": "Reuben's decision between (a) JitNorm.erase mapping an apply chain back to the multi-argument EApp of the source (uncurrying then the identity at KLambda, as fold-cons is; the emit relation then owns the chain, whose apply-all evaluates every argument first when they are variables or constants), (b) a KRef variant whose environments exclude partial applications (a reviewed statement change), or (c) every definition with a chain of two or more arguments a named residual; then the chosen option checked in Rocq.",
+   "sources": [
+    "rocq/JitFrontCopyFold.v",
+    "rocq/JitNorm.v",
+    "rocq/KLPort.v"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open; a decision item, Reuben's call. r1-f-copy-fold-apply proved uncurry_not_kref (audited, Closed under the global context); cf_chk rejects the curried witness (Example cf_uncurry_rejected). Census (spikes/pass-split/CENSUS.md, not proof): dynamic application in 40 stage 0 definitions, 157 sites, how many with two or more arguments not counted here (UNKNOWN).",
+     "reconciliation": "r1-f-copy-fold-apply, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open. r1-f-copy-fold-apply second fix round (p2/int f42d6c4 merged in): 3 more statements in rocq/Audit_Jit.v (550 in all, each Closed under the global context): KRel_ca_lastvar, KRefF_bindsite and cc_bind_sound, bound-now under a known frozen closure (cc_bind: JitFrontProlog.bind_rule's checks with the fourth argument the entry's name, proved through JitFrontProlog.beq_sound). Mutants ShenJitFrontCopyBindScope and ShenJitFrontCopyBindDrop (pin 240). uncurry_scan (test, Rocq vm_compute over the 955 stage 0 sources): 0 dynamic applications of two or more arguments.",
+     "reconciliation": "r1-f-copy-fold-apply second fix round, Phase 2 front track, 11 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-FRONT-COPY",
+   "kind": "model-proof",
+   "scope": "universal",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "lower.shen let-frozen, frozen-late, inline-frozen and let-lambda against KRef (KLambda to KLambda)",
+   "identity": "rocq/JitFrontCopyFold.v",
+   "statement": "Every stage 0 site of freeze copying (let-frozen copy, frozen-late hoist, inline-frozen) and lambda copying (let-lambda) is accepted by a checker proved to establish KRef, or the definition is a named residual with its reason.",
+   "premises": [
+    "JitFrontCopyFold.cc_sound / copy_chk_sound (closed): the copy checker cc establishes KRef for the dropped let, thaws of a known frozen closure ((X), and (thaw X) with the kernel thaw body in D) against the copied body, and a known curried lambda applied to all its parameters against nested lets",
+    "let-frozen copy fires only with a (shen.bind! A B C X) use (frozen-binds?), which frozen-in turns into bound-now with the frozen body copied in; that site is proved: JitFrontCopyFold.cc_bind_sound / KRefF_bindsite (closed), JitFrontProlog.bind_rule's checks with the fourth argument the known closure's name. Every D holding shen.bind! fails D_compiled' today (shen-jit.pvar-offset, OB-JIT-PORT-PRIMS), so those definitions stay full-pipeline residuals",
+    "inline-frozen is part of F-inline's inline-site rule; ERel_thaw_site and KRefF_thaw are the lemmas it can use",
+    "frozen-late hoist evaluates a simple test twice in the target; simple-test? admits shen-jit.pvar?, a port primitive with no approved source meaning (OB-JIT-PORT-PRIMS)"
+   ],
+   "depends_on": [
+    "OB-JIT-LOWER-FRONT"
+   ],
+   "evidence": [],
+   "completion_evidence": "cc (with the frozen-late rule proved) run in Rocq over the stage 0 tables, every copying definition of spikes/pass-split/CENSUS.md (let-frozen copy 5, frozen-late hoist 3, inline-frozen 6, let-lambda 6) accepted or named as a residual with a Rocq-checked reason.",
+   "sources": [
+    "rocq/JitFrontCopyFold.v",
+    "rocq/JitFrontD.v",
+    "spikes/pass-split/CENSUS.md"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open. r1-f-copy-fold-apply fix round proved the known-closure relation KRefF and the copy checker cc (cc_sound, copy_chk_sound; audited, Closed under the global context). Not proved: the frozen bind site, frozen-late hoist, inline-frozen's site rule. Not run on stage 0 data: the number of definitions cc accepts is UNKNOWN.",
+     "reconciliation": "r1-f-copy-fold-apply fix round, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCopyFold.v",
+     "recorded": "2026-11-11: open. r1-f-copy-fold-apply second fix round (p2/int f42d6c4 merged in): 3 more statements in rocq/Audit_Jit.v (550 in all, each Closed under the global context): KRel_ca_lastvar, KRefF_bindsite and cc_bind_sound, bound-now under a known frozen closure (cc_bind: JitFrontProlog.bind_rule's checks with the fourth argument the entry's name, proved through JitFrontProlog.beq_sound). Mutants ShenJitFrontCopyBindScope and ShenJitFrontCopyBindDrop (pin 240). uncurry_scan (test, Rocq vm_compute over the 955 stage 0 sources): 0 dynamic applications of two or more arguments.",
+     "reconciliation": "r1-f-copy-fold-apply second fix round, Phase 2 front track, 11 November 2026."
     }
    ]
   }

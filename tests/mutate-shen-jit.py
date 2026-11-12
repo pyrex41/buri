@@ -300,6 +300,28 @@ ShenJitFrontChainFinalThrow: chain_ok stops checking that its last configuration
   a chain may end in the (XUnboundVar y) raise no_reach_iter excludes (no_reach_iter is then
   false). The Lemma chain_final_raise must fail. (Dropping the check on the configurations before
   the last instead is an equivalent mutant: with no trap frame, a raise there reaches the last.)
+ShenJitFrontFoldNoRange: cfold folds + without the fixnum range check, where jit_rules' + raises.
+  cfold_run must fail.
+ShenJitFrontFoldNoPrim: cfold folds + without asking that D binds + to the primitive, so the store's
+  + may be any function. cfold_run must fail.
+ShenJitFrontFoldMinusAdds: cfold's - case computes x + y. cfold_run must fail.
+ShenJitFrontCfVarScope: cf_same accepts a variable without asking that it is in scope, where the two
+  environments may bind it to unrelated values. cf_same_sound must fail.
+ShenJitFrontCopyLetScope: the let-frozen intro rule checks the body with X still in scope, so a target
+  X (an outer binding) would be compared with the source's closure. cc_intro_sound must fail.
+ShenJitFrontCopyNoDrop: cc_same keeps every known-closure entry under a lambda binder, though the binder
+  may rebind the closure's name or a free name of its body. cc_same_sound must fail.
+ShenJitFrontLamArgScope: the known-lambda site checks the arguments in the full scope, though the target
+  evaluates the later ones under the earlier parameters' lets. cc_lam_sound must fail.
+ShenJitFrontKcInvIdKey: the frozen entry's invariant forgets that its free names exclude the closure-
+  identity key, which tagged environments bind on one side only. Rocq rejects it at kc_inv_mono, the
+  first proof that destructures the invariant (Inv_tag also needs the dropped conjunct).
+ShenJitFrontThawNoD: the (thaw X) site is accepted without the kernel's thaw body in D, so the store's
+  thaw may be any function. cc_thaw_sound must fail.
+ShenJitFrontCopyBindScope: cc_bind checks the expansion's fresh names against no scope, so a let may
+  shadow a name of g the next argument reads. cc_bind_sound must fail.
+ShenJitFrontCopyBindDrop: cc_bind checks Y0 with every known-closure entry, though the first let may
+  shadow a name of an entry's closure scope. cc_bind_sound must fail.
 """
 import re
 from pathlib import Path
@@ -713,4 +735,38 @@ mutate('ShenJitFrontBindGuard', 'rocq/JitFrontInline.v',
 mutate('ShenJitFrontChainFinalThrow', 'rocq/JitFrontInline.v',
        ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)) && not_throw (iter N c0).',
        ' && is_final (next_r R P (iter N c0)) && no_trap (kont (iter N c0)).')
+cf = 'rocq/JitFrontCopyFold.v'
+mutate('ShenJitFrontFoldNoRange', cf,
+       "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
+       "     if (text_eqb f plus_name && d_has D plus_name is_add)%bool then Some (x + y)%Z")
+mutate('ShenJitFrontFoldNoPrim', cf,
+       "     if (text_eqb f plus_name && d_has D plus_name is_add && fits (x + y))%bool then Some (x + y)%Z",
+       "     if (text_eqb f plus_name && fits (x + y))%bool then Some (x + y)%Z")
+mutate('ShenJitFrontFoldMinusAdds', cf,
+       "     else if (text_eqb f minus_name && d_has D minus_name is_sub && fits (x - y))%bool then Some (x - y)%Z",
+       "     else if (text_eqb f minus_name && d_has D minus_name is_sub && fits (x - y))%bool then Some (x + y)%Z")
+mutate('ShenJitFrontCfVarScope', cf,
+       " | EVar x, EVar y => text_eqb x y && bound g x\n",
+       " | EVar x, EVar y => text_eqb x y\n")
+mutate('ShenJitFrontCopyLetScope', cf,
+       "     rec (KF x b0 (K.fv b0) :: drop x F) (rem x g) body0 e",
+       "     rec (KF x b0 (K.fv b0) :: drop x F) g body0 e")
+mutate('ShenJitFrontCopyNoDrop', cf,
+       " | ELam x b0, ELam y b => text_eqb x y && rec (drop x F) (x :: g) b0 b",
+       " | ELam x b0, ELam y b => text_eqb x y && rec F (x :: g) b0 b")
+mutate('ShenJitFrontLamArgScope', cf,
+       "forall2b (rec (dropl (p :: ps) F) (reml (p :: ps) g)) (a1 :: as0) as1",
+       "forall2b (rec (dropl (p :: ps) F) g) (a1 :: as0) as1")
+mutate('ShenJitFrontKcInvIdKey', cf,
+       " | KF x e0 gl => x <> id_key /\\ ~ In id_key gl /\\",
+       " | KF x e0 gl => x <> id_key /\\")
+mutate('ShenJitFrontThawNoD', cf,
+       " | ECall f [EVar x] => text_eqb f FD.thaw_name && d_has D FD.thaw_name is_thaw_body &&",
+       " | ECall f [EVar x] => text_eqb f FD.thaw_name &&")
+mutate('ShenJitFrontCopyBindScope', cf,
+       "     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] g &&",
+       "     FD.binder_ok p1 a1 && FD.binder_ok p2 a2 && FD.binder_ok p3 a3 && FD.disjoint [a1; a2; a3] [] &&")
+mutate('ShenJitFrontCopyBindDrop', cf,
+       "     rec F g x0 x && rec (dropl [a1] F) g y0 y && rec (dropl [a2; a1] F) g b0 b &&",
+       "     rec F g x0 x && rec F g y0 y && rec (dropl [a2; a1] F) g b0 b &&")
 print(' '.join(names))

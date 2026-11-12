@@ -181,7 +181,7 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
 | `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
 | `rocq/JitFrontShare.v` | share's checker (`check_share`, reuse included), `front_hyps`, `check_share_sound` under HT, HP and D_wf, the HT analysis, and the 4 validated share rewrites |
-| `rocq/Audit_Jit.v` | Assumption audit of 794 statements |
+| `rocq/Audit_Jit.v` | Assumption audit of 821 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -358,6 +358,57 @@ runtime lowering and prove the checker's binary later, as the emitter spike chos
 | `rocq/JitFrontSugar.v` | r1-f-sugar: the norm checkers of the cond, sugar, thaw-sugar and trap-sugar families, each proved to establish KRef, and `chk_front` (congruence plus the four) proved sound from the compatibility lemmas |
 | `rocq/JitFrontD.v` | D00: the front rules' store D (a lowered store), built from decoded stage 0 data; `D_compiled'`; the allowed store facts; the inline relation `inl_site` and `aeq`, with their soundness statements (unproved) |
 | `rocq/JitFrontInline.v` | r1-f-inline: `aeq_sound` proved; `inline_site_sound_statement` and `bind_site_sound_statement` refuted (a thawed frozen argument reading `id_key`); guarded checkers `inl_site_g`, `bind_site_g` (soundness unproved); the refuted sites and aeq's pinned witnesses proved not KRef pairs (`cx_not_KRef`, `bx_not_KRef`, `aeq_lam_cx_not_KRef`, `aeq_let_cx_not_KRef`); real-site `site_report` |
+| `rocq/JitFrontCopyFold.v` | r1-f-copy-fold-apply: the checker `cf_chk` (congruence plus fold-arith), `cf_chk_sound` from the compat lemmas; fold-cons as the identity at KLambda (`fold_cons_erase`); `uncurry_not_kref`, the counterexample to dynamic-application uncurrying; `fold_arith_needs_store`; the known-closure relation `KRefF` and the copy checker `cc` (freeze and lambda copying, and bound-now under a known frozen closure, `cc_bind_sound`), `cc_sound`, `copy_chk_sound`; `uncurry_scan` |
+
+**Constant folding, uncurrying and copying** (`rocq/JitFrontCopyFold.v`, r1-f-copy-fold-apply, 11 November 2026).
+`cf_chk D fuel g e0 e` accepts equal literals, a variable in scope, the same head constructor with its parts accepted,
+and fold-arith: a source `+`/`-` of integer literals (nested) against the folded literal, when D binds `+` (`-`) to the
+primitive and every intermediate is in jit_rules' fixnum range. `cf_chk_sound_hyp` proves it sound under Section
+hypotheses naming the `compat_*` statements; `cf_chk_sound` instantiates them, with `D_wf` the only premise. The fold
+case is source anti-reduction to a returned value (`cfold_run`, `ERel_src_ret`). fold-cons needs no rule: the erasure of
+a folded pair is the cons chain (`fold_cons_erase`), so the witness equals the source at KLambda. fold-arith accepts
+nothing on a D built by `D_of` (D00 interface item 2: `+` and `-` are not sealed), and the store fact is necessary:
+`fold_arith_needs_store` (no premise) refutes `KRef sealed [] [] (+ 1 2) 3` with a store, allowed by SRel, whose `+` is
+a user function. A candidate fix, outside this file: `+` and `-` are fixed names (`is_fixed_name`; defun of one raises),
+so `D_wf` could admit fixed-name primitive entries with a stability lemma like `sealed_stable`; Reuben's or D00's call.
+Until then no real fold-arith site is accepted. Dynamic-application uncurrying is not a KRef refinement: `uncurry_not_kref` (no premise) binds F to a
+partial application of a 2-ary g, where `(F 1 2)` returns and `((F 1) 2)` raises XArity under jit_rules' arity errors;
+neither checker accepts the curried witness, and the way forward is a decision (`OB-JIT-FRONT-UNCURRY`). Two facts for
+it: under jit_rules no VPartial is ever made (`arity_errors` raises XArity before `call_named_r` could return one;
+shen-jit's semantics.md section 9 at 934cfa5 agrees), so the counterexample's value is reachable only through KRef's
+quantification over all related environments; and for a non-atomic trailing argument the evaluation order also changes
+(not Rocq-checked, since no stage 0 site has one). `uncurry_scan` (Rocq vm_compute over the 955 parsed stage 0 sources,
+`stage0_to_rocq.py --uncurry`; a test) finds 0 dynamic applications of two or more arguments, so the rewrite changes
+no stage 0 verdict.
+
+Freeze and lambda copying are proved for these site shapes: the let lower.shen drops, a thaw of the copied closure, a
+known lambda applied to all its parameters, and bound-now under a let-bound freeze. They go through a
+known-closure relation `KRefF F g e0 e`: KRef's statement with one more premise on the environments, that each entry of F
+(a let-bound frozen closure `KF X E0 gl`, or a curried lambda `KL X P Ps I0 gl`) is what the source binds X to, with the
+closure's captured environment related on its free names gl to the target's current one. `KRefF [] g` is `KRef g`
+(`KRefF_nil`). KRef's environment relation cannot carry this (the target has no X), so KRefF's congruence is proved from
+the ERel-level lemmas KRef's compat statements are proved from, under Section hypotheses naming `fund_gen_statement` and
+`prim_compat_statement`, then instantiated. Rules: the let that the target dropped (`KRefF_letfrz`, `KRefF_letlam`: the
+body is checked with X out of scope); a thaw, `(X)` or `(thaw X)` with the kernel's thaw body in D, against the copied
+body (`KRefF_thaw`, `KRefF_thaw_call`); a known lambda applied to all its parameters against nested lets of the
+parameters (`KRefF_lamsite`: the source evaluates every argument, then applies the curried closure, `apply_chain`; the
+target binds each in turn, `lam_krel`; arguments are checked without the parameters in scope); and congruence, where a
+binder drops the entries it would shadow; and bound-now under a known frozen closure, `(shen.bind! A B C X)` against
+the expansion with E copied in (`KRefF_bindsite`, `cc_bind_sound`: JitFrontProlog's `bind_rule` checks with the fourth
+argument the entry's X, proved through JitFrontProlog's `beq_sound` with the closure's captured environment, and
+`KRel_ca_lastvar` for the source's read of X). The checker `cc` (with an optional hook for further site rules) is sound:
+`cc_sound` (D_wf and the hook's soundness), `copy_chk_sound` (no hook, D_wf alone). Examples test it on a let-frozen
+copy, the `(thaw X)` form with and without thaw in D, capture by an intermediate binder (rejected), an escaping use
+(rejected), a two-parameter let-lambda, a partial use (rejected) and an argument naming a parameter (rejected).
+Examples `cc_bind_copy`, `cc_bind_wrong_body` and `cc_bind_shadow` test the bind site. Not covered: every D holding
+`shen.bind!` fails `D_compiled'` today (`shen-jit.pvar-offset`, `OB-JIT-PORT-PRIMS`), so the let-frozen-copy definitions
+stay full-pipeline residuals whatever `cc_bind` proves; inline-frozen is F-inline's site rule,
+which can use `ERel_thaw_site`/`KRefF_thaw`; frozen-late hoist (evaluates a simple test twice, and simple tests may use
+the port primitive `shen-jit.pvar?`, `OB-JIT-PORT-PRIMS`) is not proved. `cc` has not been run over whole stage 0 definitions (alone it cannot
+accept one that also needs another family's rewrite), so how many of the 955 it helps accept is UNKNOWN; the source judge stays at 148 of 955 and the full-pipeline
+validated count is UNKNOWN. Mutants `ShenJitFrontFoldNoRange`, `ShenJitFrontFoldNoPrim`, `ShenJitFrontFoldMinusAdds`,
+`ShenJitFrontCfVarScope`, `ShenJitFrontCopyLetScope`, `ShenJitFrontCopyNoDrop`, `ShenJitFrontLamArgScope`,
+`ShenJitFrontKcInvIdKey`, `ShenJitFrontThawNoD`, `ShenJitFrontCopyBindScope` and `ShenJitFrontCopyBindDrop`.
 
 **The front rules' store D** (`rocq/JitFrontD.v`, D00, 9 November 2026). D is a lowered store: for each callee a
 definition's rewrites rely on, D holds `FUser ps e_F` with `e_F` the erased stage 0 normal form of F. Com's FunRel makes

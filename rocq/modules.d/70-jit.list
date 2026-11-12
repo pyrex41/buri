@@ -59,3 +59,4 @@ JitFrontCheck
 JitFrontChainTest
 JitFrontShare
 JitFrontInline
+JitFrontCopyFold
