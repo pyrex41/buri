@@ -14,11 +14,15 @@
    call_preservation'_statement, call_preservation_src'_statement and raise_resolve_statement
    are the corrected statements (their text unchanged, over the corrected SMs); the implications
    below are proved against them. fx_not_sm: the counterexample's machine is related by no SM.
-   fresh_needed: it still meets the old statements' premises, so the corrected src statement
-   reaches the old fragment only with Fresh m added (call_preservation_src_old_of_cp' targets
+   fresh_needed: it still meets the old statements' premises, so instantiating the corrected src
+   statement at the old premises reaches the old fragment only with Fresh m added
+   (call_preservation_src_old_fresh_of_cp' targets
    JitEmitInv.call_preservation_src_old_fresh_statement), NOT the byte-identical
-   JitKRef.call_preservation_src_statement. Truth of the corrected statements: UNKNOWN (not
-   refuted; not proved).
+   JitKRef.call_preservation_src_statement. fresh_needed refutes that one route, not recovery:
+   the byte-identical statement is proved outright (JitKRefFund.call_preservation_src), so no
+   counterexample to "corrected implies old" exists, and a derivation that uses its hypothesis
+   (normalize the machine, then transfer the run back) is NOT built. Truth of the corrected
+   statements: UNKNOWN (not refuted; not proved).
 
    Proved here (closed):
    - MEnv_bind', entered_ms': the configuration a call enters is MS'-related (cv = [], the
@@ -553,7 +557,18 @@ Qed.
    corollary takes the corrected call_preservation_src'_statement to the byte-identical old
    statement by instantiating it at the old premises: Fresh m must be added, as GvalsRel [] s m
    already was (JitEmitInv.gvals_needed); the target reached is
-   JitEmitInv.call_preservation_src_old_fresh_statement (call_preservation_src_old_of_cp').
+   JitEmitInv.call_preservation_src_old_fresh_statement (call_preservation_src_old_fresh_of_cp').
+   This refutes direct instantiation only. It is NOT a counterexample to recovering the old
+   statement: that statement is proved (JitKRefFund.call_preservation_src), so the implication
+   holds trivially, which is why the base-named *_old_of_new corollaries typecheck with their
+   hypotheses unused (they are not evidence). A non-vacuous derivation would run the corrected
+   statement at a normalized machine (m_next above every heap key, globals from the store) and
+   transfer the run back to m. NOT built. Its known obstacles: the old fragment's raise allocates
+   at m_next (JitLowerStep's raise lemma), so a stale m_next overwrites a live object and the two
+   final machines differ; the transfer needs a step-by-step agreement of B.next on machines that
+   differ in m_next and m_gval, which holds only for steps that neither allocate nor touch
+   globals, so it must carry the old invariant along the run; and globals the store binds to
+   values VRh relates at no mu (a closure needs a code object) may leave no normalized machine.
    Does NOT say: that the corrected statements are true (sim'_statement, raise_resolve_statement
    and clo_scoped_statement are not proved), or that the old statement is false (it is proved,
    JitKRefFund.call_preservation_src). *)

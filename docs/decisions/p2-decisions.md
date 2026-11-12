@@ -39,7 +39,7 @@ recommendation is not adopted.
 | 7 | emit-spec premises and design choices | OPEN (no answer received) | None of the five shape and scope rows is approved. The five `frame_prim` exclusions stand, and their 35 definitions (census at `f42d6c4`) are non-gated residuals. |
 | 8 | guarded inline and bind statements | OPEN (no answer received) | The refuted statements `inline_site_sound_statement` and `bind_site_sound_statement` stand, refuted. No guarded replacement is approved. |
 | 9 | fixed-name `FPrim` entries in D_wf | OPEN (no answer received) | D_wf is unchanged. `fold_arith_needs_store` stands, and the 6 definitions (census) are non-gated residuals. |
-| 10 | corrected SMs / `m_next` statements (r21-sms-fresh-fix) | OPEN (no answer received; the corrected statements were not found) | `preservation'_statement`, `call_preservation'_statement` and `call_preservation_src'_statement` stay as written in `rocq/JitEmitInv.v`, refuted on an unmerged branch. No corrected statement is approved. See item 10. |
+| 10 | corrected SMs / `m_next` statements (r21-sms-fresh-fix) | OPEN (no answer received). The corrected statements now exist on p2/r21-sms-fresh-fix (see item 10, update of 2026-11-12) | No corrected statement is approved. On p2/int the statements stay as written in `rocq/JitEmitInv.v`; on the branch the refuted text is kept as `*_v1`. See item 10. |
 
 The counts in this packet were computed at `f42d6c4`. They were **not re-run** on `91718d4`. The
 full-pipeline validated count stays UNKNOWN.
@@ -480,6 +480,49 @@ cannot be. Two things are needed before Reuben can decide:
 - that branch's Rocq evidence.
 
 **Ledger:** OB-JIT-LOWER-FRAGMENT, which owns the emit-spec statements.
+
+**Update, 2026-11-12 (r21-sms-fresh-fix, branch p2/r21-sms-fresh-fix, fix round 2).** The corrected
+statements now exist. This entry was written on that branch, because `r21-decision-intake` is not an
+addressable agent; the integrator carries it into the intake record. Status: **OPEN**. No answer from
+Reuben was received. "we are back early -- resume the workflow" answers no item.
+
+What Reuben is asked to sign off, all in `rocq/JitEmitInv.v` unless named otherwise:
+
+- `Fresh m` (no heap key at or above `m_next` in use) and the new field `sm_fresh` of `SMs`. SM, MS',
+  Ends' and EndsSrc' inherit it. This strengthens the relation; it weakens no conclusion.
+- `preservation'_statement`, `call_preservation'_statement`, `call_preservation_src'_statement` and
+  `JitEmitSim.raise_resolve_statement`: text unchanged, over the corrected SMs. Their conclusions,
+  including the observation equivalence (`map Some tS = tT`), are unchanged. Truth UNKNOWN (not refuted,
+  not proved).
+- The refuted text is kept as `*_statement_v1` over `SMs_v1`, and `preservation'_false`,
+  `call_preservation'_false`, `call_preservation_src'_false` and `raise_resolve_false` refute the `_v1`
+  text (closed).
+- `sm_embed` and `ms_embed` take a new premise, `Fresh m`. Their base text is false over the repaired
+  relation (`JitEmitSim.sm_embed_text_false`, `ms_embed_text_false`, closed). The base text over the old
+  relation is kept as `sm_embed_v1` and `ms_embed_v1`.
+- The old-fragment recovery reached through the corrected statements is
+  `call_preservation_src_old_fresh_statement`: the 4a7346e `JitKRef.call_preservation_src_statement`
+  with `GvalsRel [] s m` and `Fresh m` added, conclusion verbatim, and conditional on
+  `old_reflect'_statement` (truth UNKNOWN), as at the base.
+
+What is NOT reached: a corollary from the corrected `call_preservation_src'_statement` to the
+byte-identical `JitKRef.call_preservation_src_statement` that uses its hypothesis.
+
+- `JitEmitSim.fresh_needed` and `JitEmitInv.gvals_needed` (closed) refute only direct instantiation: the
+  old premises hold at a machine the new invariant relates at no mu.
+- They are not counterexamples to recovery. The byte-identical statement is proved outright
+  (`JitKRefFund.call_preservation_src`), so the implication holds trivially. That is why the base-named
+  `*_old_of_new` corollaries typecheck with their hypotheses unused. They are kept for name preservation
+  and are not evidence.
+- A non-vacuous route would normalize the machine (`m_next` above every key, globals from the store),
+  apply the corrected statement and transfer the run back. It was not built. Its obstacles are named in
+  `rocq/JitEmitSim.v` ("after the repair").
+
+Options for Reuben:
+
+- (a) accept `Fresh m` and `GvalsRel [] s m` as extra premises of the recovery target;
+- (b) fund the normalize-and-transfer lemma (a new task; its feasibility is UNKNOWN);
+- (c) change the relation or the requirement.
 
 ## Ledger
 
