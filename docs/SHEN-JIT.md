@@ -867,8 +867,10 @@ counts, not the full-pipeline count, which is UNKNOWN (no full-pipeline judge ha
     and no failure. `env_ok_inhabited` shows the premise is satisfiable.
 
   A family that needs an excluded frame goes back through emit-spec. These residuals are open in
-  `OB-JIT-LOWER-FRAGMENT`. Whether the new statements are true is UNKNOWN until emit-sim proves
-  them.
+  `OB-JIT-LOWER-FRAGMENT`. On `p2/int` since r22-sim-land, `preservation'_statement`,
+  `call_preservation'_statement` and `call_preservation_src'_statement` are refuted in Rocq (stale `m_next`;
+  see "Extended back end: the generic parts" below). Whether `sim'_statement` and the `sim_X_statement`s are
+  true is UNKNOWN.
 - **Invariant and statements.** `rocq/JitEmitInv.v` defines:
   - `mu`, a partial bijection between KLambda locations and bytecode keys;
   - `VRh` (`VR_VRh`; it relates no partial application, `VRh_no_partial`);
