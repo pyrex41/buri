@@ -1437,6 +1437,36 @@ r21-base-land (integration, branch `p2/r21-base-land` on `p2/int` `91718d4`, the
 - census (not proof): `python3 tests/shen-jit/feature_census.py --check-tsv spikes/pass-split/features.tsv tests/shen-jit/stage0-accepted.txt` on the tree, rc 0, "rocq_src accepted 148, predicted 148; pinned 148; mismatches 0", log sha256 `d383f8797c5d56559bd6eb39d8a8ad842bec51bc18d91868cfa0c33bf113ec24`; `feature_census.py` sha256 `b4eb11f4...` as r22-t02-refresh recorded.
 Counts: 148 of 955 (source judge); full-pipeline validated: UNKNOWN. Not run here, UNKNOWN: the differential (lane without SKIP_DIFF), the full-pipeline judge, `check-shen-jit-norm.sh`, `gate_tests.sh`.
 Head update: `ca87436` merges `p2/int` `ea7659b` (r21-decision-intake: `docs/decisions/p2-decisions.md` and `spec/obligations.json` only) with `--no-ff`; `5fee5c5` (docs only) updates README's last-full-check section and gate table to the `make report` results above (1,671 audited theorems, 268 rejected proof mutations, 1,126 checks across 27 suites, 108 conformance cases, 27 orchestration checks) and corrects the `git archive` sha256 above. `git diff --quiet b314bc7 5fee5c5 -- rocq scripts tests spikes Makefile` is empty, so the 117-mutant run and `make report` above apply to `5fee5c5`'s proof tree by that identity (they were not rerun on `5fee5c5`). Lane rerun on `5fee5c5` (`git archive 5fee5c5 | shasum -a 256` = `b74f6516f42c65ee800d6d71bad6d755a3a422df07494f177d4064ab545c8373`, extracted in buri-lps `/work/p2-r21-base-land`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r21-base-land-out timeout 7200 /lps/bin/rocq-slot bash scripts/check-shen-jit.sh`, Rocq 9.3, 06:11:28Z to 06:43:48Z, LANE_RC=0, log sha256 `b9c068c7b5017e2d0ce6a965bb4d56ec4274e00d6f9d5fb8bbf0347f64547cba` (identical to the `b314bc7` run): emit gates 0 violations, `Audit_Jit.log` 710 lines all "Closed under the global context" (sha256 `2d61479f...`), rocqchk passed, stage0 148 accepted, 807 rejected, 0 unreadable of 955 as recorded (source judge), image step as recorded, differential NOT RUN. Commits after `5fee5c5` on this branch change only docs. Not run on `5fee5c5`, UNKNOWN: the differential, the full-pipeline judge, `check-shen-jit-norm.sh`, `gate_tests.sh`, the mutants and `make report` (bound by tree identity only).
+Sixty-five are the front checkers (branch `p2/F00`, merged onto `p2/int` with share's reuse on branch `p2/r1-share-ht`).
+Six in `rocq/JitFrontCheck.v`: `fchk`, one checker for every front pass, parameterised by rewrite rules (equality with
+`scoped`, the same head with recursion, then each rule given the checker at one fuel less), `fchk_sound` from a
+`FrontHyps` premise and each rule's `rule_sound`, and `fchk_rejects_unscoped` (vm_compute). Eight in
+`rocq/JitFrontChainTest.v`, a synthetic test: two toy source rewrites chain at one node (vm_compute). Fifty-one in
+`rocq/JitFrontShare.v`. `front_hyps` derives FrontHyps from D_wf, every other field a closed theorem of the KRef track,
+so FrontHyps is no longer a premise anywhere. Share's else rewrite, (if C X Y) to (let ElseN (freeze Y') (unchain C X'
+ElseN)), and its reuse of a chain variable for a hd/tl the chain took (lower.shen's reuse/canon) are one rule: the
+chain records path facts for its lets of (hd y)/(tl y) (`chain_fact`), and the then branch is checked by `then_chk`
+(rec, a source path against a target variable with the same fact over a scope variable, or the same named call or
+let). `check_share_sound` is closed with three explicit premises: HT (D defines thaw as the kernel does), HP (D holds
+hd and tl as the primitives, added by this task, each half necessary by `share_needs_hd_tl`, a closed Rocq counterexample; `hp_of_com`: any store with Com meets its
+store side, but D_wf then needs hd and tl in the image's sealed list, not established) and D_wf. HT cannot be dropped:
+`share_needs_thaw_outright` gives a D (hd and tl only) where D_wf, FrontHyps and HP hold and share_rule is not
+rule_sound (the target's `(thaw G)` raises XUndefinedFun where the source returns). HT is not discharged for the
+pinned D, and on this back end cannot be: thaw's function can only be the initial store's (`thaw_stable`,
+`thaw_defun_refused`: defun refuses thaw, the kernel's own defun included), and Comp has no dynamic apply
+(`comp_no_app`), so no store meeting a D with thaw has Com (`ht_not_com`) and D_compiled fails (`ht_not_compiled`):
+the share link cannot yet be composed with call_preservation_src. Named residual `OB-JIT-SHARE-THAW` (HT, and HP's
+sealed side), awaiting the lead's and Reuben's decision (no report to Reuben is evidenced by this task).
+HT, HP and D_wf hold together at a model D (`share_premises_sat`), so check_share_sound is not vacuous; whether they
+hold for the pinned D and sealed is UNKNOWN. **Share link at v0.6: 4 of 4 share rewrites validated** (`share_rewrites_validated`, vm_compute, in
+the lane: `shen.macros`, `shen.process-let`, `shen.lambda-of-defun`, `shen.process-assoc`), and a report-only run of
+check_share on all 955 pairs of the witness set (sha256 `6881eb29...`) accepts 955 of 955 (951 unchanged by share).
+These are share-link counts, not the full-pipeline count. Mutants `ShenJitFrontNoScope`, `ShenJitFrontSameFuel`,
+`ShenJitFrontShareElseSwap`, `ShenJitFrontShareThawAny`, `ShenJitFrontShareReuseOpBlind` (path comparison ignores
+hd/tl) and `ShenJitFrontShareChainFactUnchecked` (chain fact without checking the target's let) are rejected, five at
+decision lemmas or the Fixpoint guard and the last at `chain_fact_cases`'s proof (a proof-level mutant: with
+rec = fchk share_rules it changes no decision) (Rocq 9.3; the Coq 8.18 compile of
+these files, and so `make prove`, was not run).
 Comparison with the binary is test evidence. Shen/JIT is not verified.
 
 Heap image (lane-checked since r21-image-lane, the instance lemma closed; [SHEN-JIT-IMAGE.md](SHEN-JIT-IMAGE.md)): `rocq/JitImage.v` decodes the

@@ -55,3 +55,6 @@ JitEmitNestTest
 JitEmitKont
 JitEmitInv
 JitKRefCallNoTableCex
+JitFrontCheck
+JitFrontChainTest
+JitFrontShare

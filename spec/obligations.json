@@ -6378,12 +6378,14 @@
    "statement": "Each rewrite lower.shen makes besides plain lowering preserves behavior: sharing of factorised tests, constant folding of cons, + and -, inlining of sealed and open functions, frozen-goto labels, let of lambdas and freezes, (fn F) calls, do, thaw, protect and the Prolog rewrites, including 0.6's cut-fail fold and (= (shen.deref X B) (shen.deref Y B)) to shen-jit.deref=.",
    "premises": [],
    "depends_on": [
-    "OB-JIT-LOWER-FRAGMENT"
+    "OB-JIT-LOWER-FRAGMENT",
+    "OB-JIT-SHARE-THAW"
    ],
    "evidence": [],
    "completion_evidence": "Relation rules for each rewrite, with their simulation cases.",
    "sources": [
-    "docs/SHEN-JIT.md"
+    "docs/SHEN-JIT.md",
+    "rocq/JitFrontShare.v"
    ],
    "history": [
     {
@@ -6405,6 +6407,21 @@
      "source": "docs/SHEN-JIT.md",
      "recorded": "2026-11-09: 0.6 adds two norm rewrites (THORN cut-fail to (if (shen.unlocked? L) (shen.lock K L) false); deref equality to shen-jit.deref=), neither admitted. Dictionary-keyed constant sharing (NaN never shared) and the instruction counter in mark do not affect JitLowerRel, which reads constants by index and value.",
      "reconciliation": "Re-pin of the Shen/JIT lane to 0.6 (934cfa5), 9 November 2026."
+    },
+    {
+     "source": "docs/SHEN-JIT.md",
+     "recorded": "2026-11-10: open. Sharing of factorised tests (F00, branch p2/F00): rocq/JitFrontShare.v proves share's else rewrite sound (share_rule_sound) with one premise beyond FrontHyps, HT (D defines thaw as (defun thaw (V) (V))). Two items stay open here. (1) Share's reuse of a chain-bound variable for a hd/tl the chain already took (lower.shen's reuse/canon) is not covered: relating (hd V) to a variable holding its value needs a relation that carries an environment fact KRef does not; every one of the 4 share rewrites of stage 0 at v0.6 (shen.macros, shen.process-let, shen.lambda-of-defun, shen.process-assoc) reuses, so 0 of the 4 are validated (report-only run; the other 951 of 955 witnesses are unchanged by share and accepted by equality). (2) HT for the real D: HT is decidable membership, but a D holding thaw meets D_compiled only once emission (Comp, the emit track) admits thaw's body, a 0-ary dynamic apply.",
+     "reconciliation": "F00 fix round, 10 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. Sharing of factorised tests (r1-share-ht, branch p2/r1-share-ht on p2/int at 5779555, with p2/F00 merged): share's reuse is now covered and validated. rocq/JitFrontShare.v adds path facts (a variable holds a variable's value with hd/tl applied), chain_fact (a chain let of (hd y) or (tl y) records the target fact), then_chk (the then branch: rec, a source path against a target variable with the same fact over a scope variable, or the same named call or let, a let of a reused path recording the fact on both sides) and their soundness: src_path, VRel_pops, reuse_path_vals, ERel_reuse_var, ERel_reuse_let, then_sound, chain_let_path, chain_fact_cases, then share_rule_sound and check_share_sound under three explicit premises: HT (D defines thaw as the kernel does), HP (D holds hd and tl as the primitives; any store with Com meets it, hp_of_com) and D_wf (FrontHyps is derived from it by front_hyps, no longer a premise). share_rewrites_validated (vm_compute): all 4 of 4 share rewrites of stage 0 at v0.6 are accepted (shen.macros, shen.process-let, shen.lambda-of-defun, shen.process-assoc, macros.forms lines 5, 9, 14, 20, against the share witness set sha256 6881eb29...); judge_share_sound turns acceptance into KRef under HT, HP and D_wf. Report-only run of check_share on all 955 pairs: 955 accepted, 0 rejected, 0 unparsed (951 unchanged by share, by equality; the 4 rewrites by share_rule). Share-link count only, not the full-pipeline count. Mutants ShenJitFrontShareReuseOpBlind (path comparison ignores hd/tl: share_reuse_rejects_wrong_op fails) and ShenJitFrontShareChainFactUnchecked (chain fact recorded without checking the target binds the same expression: chain_fact_cases fails) are rejected. Still open here: HT for the pinned D (OB-JIT-SHARE-THAW) and every other rewrite this obligation lists (folding, inlining, frozen-goto labels, let of lambdas and freezes, (fn F), do, thaw, protect, the Prolog rewrites, cut-fail and deref=).",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. r1-share-ht verifier fixes: share_needs_hd_tl (closed) proves both halves of HP necessary for share_rule's soundness; share_premises_sat (closed) shows HT, HP and D_wf jointly satisfiable at a model D, so check_share_sound is not vacuous (pinned D and sealed: UNKNOWN). The share link's 4 of 4 validated v0.6 share rewrites are KRef evidence conditional on HT, HP and D_wf, which with HT exclude Com on the current back end (ht_not_com): not an end-to-end link. ShenJitFrontShareChainFactUnchecked is a proof-level mutant (no decision of check_share changes); ShenJitFrontShareReuseOpBlind is the reuse relation's decision-level mutant. 328 audited statements.",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
     }
    ]
   },
@@ -6449,7 +6466,10 @@
     "rocq/JitFrontSugar.v",
     "rocq/JitFrontProlog.v",
     "docs/decisions/p2-decisions.md",
-    "rocq/JitKRefCallNoTableCex.v"
+    "rocq/JitKRefCallNoTableCex.v",
+    "rocq/JitFrontCheck.v",
+    "rocq/JitFrontChainTest.v",
+    "rocq/JitFrontShare.v"
    ],
    "history": [
     {
@@ -6581,6 +6601,21 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 9 (fixed-name FPrim entries in D_wf). Standing default: D_wf unchanged; fold_arith_needs_store stands and its 6 definitions (census) are non-gated residuals.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontCheck.v",
+     "recorded": "2026-11-09: open. F00 (branch p2/F00), 31 audited statements, each Closed under the global context. rocq/JitFrontCheck.v: fchk, one front checker parameterised by rules (equality with scoped, same head with recursion, then each rule given fchk at one fuel less), rule_sound, the FrontHyps record (D_wf, KRef_refl, KRef_scope, ERel anti-reduction, every compat_* statement; a premise, never an axiom; KRef_scope and anti-reduction proved as front_scope_proved and front_anti_proved), and fchk_sound under FrontHyps and Forall rule_sound. rocq/JitFrontChainTest.v (synthetic): two closed toy rules chain at one node; acceptance and both rejections by vm_compute. rocq/JitFrontShare.v: share's else rewrite (let ElseN (freeze Y') (unchain C X' ElseN)), share_rule_sound proved with no FrontHyps (premise: D defines thaw as (defun thaw (V) (V))), check_share_sound under FrontHyps; kernel_thaw_parses (vm_compute) checks that stage 0's form of thaw parses to the definition the premise names, and stage 0's source judge rejects thaw's own code, so a D holding thaw fails D_compiled until emission admits a dynamic apply. Share's reuse of a chain variable for a hd/tl the chain took is NOT covered. Report-only run on the v0.6 share witnesses (sha256 6881eb29...): check_share validates 0 of the 4 share rewrites: it accepts 951 of 955 pairs, all unchanged by share (equality case; share_rule does not fire), and the 4 rejected are the share-chain definitions shen.macros, shen.process-let, shen.lambda-of-defun and shen.process-assoc, each with a Rocq rejection trace ending at a reused chain variable. The thaw premise (HT) amends the spec, which asked for FrontHyps alone, and Rocq shows it is needed: share_rule_needs_thaw (closed, no premise) proves share_rule is not rule_sound at D = [] (thaw unbound: the target raises XUndefinedFun thaw where the source returns 1; its rec, literal equality, is sound at every D by lit_kref, proved directly), so by share_rule_sound_needs_thaw the FrontHyps-only form holds at D = [] only if FrontHyps sealed [] is false, which kref-fund's front_hyps is to prove it is not; accepting HT or requiring its discharge is the spec owner's decision. Mutants ShenJitFrontNoScope, ShenJitFrontShareElseSwap and ShenJitFrontShareThawAny are rejected at decision lemmas placed before every proof (fchk_rejects_unscoped, share_rejects_swap, share_rejects_thaw_other, vm_compute); ShenJitFrontSameFuel at the Fixpoint guard. Not proved: FrontHyps (the compatibility lemmas and KRef_refl), HT for the real D, share's reuse, norm's checkers.",
+     "reconciliation": "Front checker framework and share checker (F00), 9 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. r1-share-ht (branch p2/r1-share-ht): FrontHyps is derived, front_hyps : D_wf -> FrontHyps sealed D, every field from a closed theorem (JitKRefFund.KRef_refl, compat_trap, compat_app, compat_call; JitKRefCompatCtl.compat_lit, var, let, if, and, or, cond, type, defun; JitKRefCompatClo.compat_lambda, compat_freeze; front_scope_proved, front_anti_proved). The share link's check_share_sound is closed under its explicit premises HT, HP and D_wf (no FrontHyps, no Section hypothesis left), and share_needs_thaw_outright shows HT cannot be dropped: at D_hp (hd and tl as primitives, no thaw) D_wf, FrontHyps and HP hold and share_rule is not rule_sound. 323 audited statements, each Closed under the global context. Still open: norm's checkers (the second front link), and HT for the pinned D (OB-JIT-SHARE-THAW), without which the share link cannot be composed with call_preservation_src (ht_not_com).",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. r1-share-ht verifier fixes: share_needs_hd_tl (closed) proves both halves of HP necessary for share_rule's soundness; share_premises_sat (closed) shows HT, HP and D_wf jointly satisfiable at a model D, so check_share_sound is not vacuous (pinned D and sealed: UNKNOWN). The share link's 4 of 4 validated v0.6 share rewrites are KRef evidence conditional on HT, HP and D_wf, which with HT exclude Com on the current back end (ht_not_com): not an end-to-end link. ShenJitFrontShareChainFactUnchecked is a proof-level mutant (no decision of check_share changes); ShenJitFrontShareReuseOpBlind is the reuse relation's decision-level mutant. 328 audited statements.",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
     }
    ]
   },
@@ -6939,6 +6974,52 @@
      "source": "docs/decisions/p2-decisions.md",
      "recorded": "2026-11-11: OPEN; no answer from Reuben. Decision intake (r21-decision-intake, branch p2/r21-decision-intake off p2/int 91718d4): the only message from Reuben received for this intake is the relayed workflow request \"we are back early -- resume the workflow\", which answers no item. No agent, script or computed task text may supply an answer; nothing is approved and the status is unchanged. Item 2 (eval-kl). Standing default: named residual; runtime lowering outside the claim.",
      "reconciliation": "r21-decision-intake, Phase 2 decision intake, 11 November 2026."
+    }
+   ]
+  },
+  {
+   "id": "OB-JIT-SHARE-THAW",
+   "kind": "model-proof",
+   "scope": "instance",
+   "owner": "E2E-38",
+   "packages": [],
+   "status": "open",
+   "boundary": "Initial function table and sealed set to the share link's premises",
+   "identity": "rocq/JitFrontShare.v",
+   "statement": "The share link's premises hold for the pinned build: the function table the image starts from binds thaw to the kernel's (defun thaw (V) (V)) (HT) and hd and tl to their primitives (HP), the pinned sealed list contains thaw, hd and tl (D_wf of a D holding them), and that table also meets Com, so that JitFrontShare.check_share_sound composes with call_preservation_src for the definitions whose share witness uses (thaw ElseN) or reuses a path.",
+   "premises": [
+    "HT is necessary: share_needs_thaw_outright (Rocq, closed) shows share_rule is not rule_sound at a D_wf D with HP and FrontHyps but no thaw",
+    "thaw's entry can come only from the initial store: under jit_rules no step changes a fixed name's function (thaw_stable) and defun of thaw raises XBadDefinition (thaw_defun_refused), the kernel's own defun included, although lower.shen's check-defun lowers the kernel's thaw at stage 0 (measured: sys.sbc line 1 is (code thaw 1 5 () ((move 4 2) (tail-call-value 3 0)) ...))",
+    "on the current back end HT excludes Com: Comp has no rule for a dynamic application (comp_no_app), so no store meeting a D with thaw has Com s m (ht_not_com) and D_compiled is false (ht_not_compiled)",
+    "HP is a premise this task added (r1-share-ht) for share's reuse; each half is necessary, proved in Rocq: share_needs_hd_tl (closed) gives, for o each of hd and tl, a D_wf D with HT and FrontHyps that leaves o open, and a store holding o as a user function with a store effect, where share_rule is not rule_sound. Its store side holds wherever call_preservation_src applies (hp_of_com: Com gives FunRel's fr_name). Its sealed side does not follow: D_wf puts every name of D in sealed, and sealed is the image's; jit_rules (hd :: tl :: sealed) and jit_rules sealed agree on every name (hd and tl are fixed names) but are not equal terms, so enlarging sealed is not free",
+    "HT, HP and D_wf are jointly satisfiable: share_premises_sat (closed) at D_share = [thaw as the kernel's; hd; tl as primitives] with sealed [thaw; hd; tl]. A model instance only: whether the pinned D and sealed meet them is UNKNOWN"
+   ],
+   "depends_on": [
+    "OB-JIT-IMAGE-CODE",
+    "OB-JIT-LOWER-FRAGMENT",
+    "OB-JIT-IMAGE-SEALING"
+   ],
+   "evidence": [],
+   "completion_evidence": "Comp (an emit family) relates thaw's 0-ary dynamic apply, so that ht_not_com no longer holds; the image's initial function table is shown in Rocq to bind thaw to the kernel's definition and hd and tl to their primitives (OB-JIT-IMAGE-CODE / OB-JIT-IMAGE-INIT); and the pinned sealed list contains thaw, hd and tl (OB-JIT-IMAGE-SEALING), or D_wf is widened to admit fixed names, whose function no run changes (fixed_step). Or the share link is restated so that it needs none of these.",
+   "sources": [
+    "rocq/JitFrontShare.v",
+    "docs/SHEN-JIT.md"
+   ],
+   "history": [
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. Named residual for the share link's premises HT and HP (r1-share-ht). Not discharged for the pinned D: no stage 0 code can establish HT in the model (thaw's entry is the initial store's), with HT call_preservation_src's premises cannot all hold until emission admits a dynamic apply (ht_not_com), and D_wf of a D holding thaw, hd and tl needs them in the pinned sealed list, which is not established. Reported to the spec owner as necessary premises: HT with the Rocq counterexample share_needs_thaw_outright; HP by argument only.",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. r1-share-ht verifier fixes: HP's necessity is now proved in Rocq (share_needs_hd_tl, each half) and HT, HP and D_wf are shown jointly satisfiable at a model D (share_premises_sat); 328 audited statements. Correction to the entry above: 'reported to the spec owner' meant listed for the lead; no report to Reuben is evidenced. HT for the pinned D remains undischarged (thaw_stable, ht_not_com, ht_not_compiled) and awaits the lead's and Reuben's decision as a named residual.",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
+    },
+    {
+     "source": "rocq/JitFrontShare.v",
+     "recorded": "2026-11-11: open. r1-share-ht second verifier pass: HP's store side has HT's provenance, proved in Rocq: hd_tl_fixed (hd and tl are fixed names), hd_tl_defun_refused (defun of either raises XBadDefinition), hd_tl_stable (no srun changes their function), so a D binding them describes the image's initial store (OB-JIT-IMAGE), as thaw_stable does for HT. HT is not proved for the pinned D (no pinned D exists in Rocq; ht_not_com and ht_not_compiled exclude Com and D_compiled on this back end); it stays this named residual. The HT and HP premise decision was sent to the orchestrator (main session) for Reuben on 2026-11-11; no ruling is recorded. 331 audited statements.",
+     "reconciliation": "r1-share-ht, Phase 2 front track, 11 November 2026."
     }
    ]
   }

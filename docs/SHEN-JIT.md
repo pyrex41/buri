@@ -178,7 +178,10 @@ and tl be in `sealed` therefore does not match the image's sealed bits (see SHEN
 | `rocq/JitEmitKont.v` | Every continuation frame the families get (handler, dynamic-call window of at most one argument, do, closure-entry return, the primitives `frame_prim` admits) |
 | `rocq/JitEmitInv.v` | The generalized back-end invariant and statements (`sim_X_statement`, `preservation'`, `call_preservation'`, `call_preservation_src'`), unproved |
 | `rocq/JitKRefCallNoTableCex.v` | `call_rel` without SRel's table clause refuted (`call_rel_no_table_refuted`) |
-| `rocq/Audit_Jit.v` | Assumption audit of 710 statements |
+| `rocq/JitFrontCheck.v` | `fchk`, the front checkers' framework (rules chained at one node), and `fchk_sound` under `FrontHyps` |
+| `rocq/JitFrontChainTest.v` | Synthetic test of rule chaining: two toy rules, acceptance and rejection by vm_compute |
+| `rocq/JitFrontShare.v` | share's checker (`check_share`, reuse included), `front_hyps`, `check_share_sound` under HT, HP and D_wf, the HT analysis, and the 4 validated share rewrites |
+| `rocq/Audit_Jit.v` | Assumption audit of 778 statements |
 | `tests/shen-jit/` | Capture from the binary, packaging, Rocq harness, known differences |
 | `ports/shen-jit/` | The named build's script and patch |
 | `scripts/check-shen-jit.sh` | `make check-shen-jit`, the opt-in gate |
@@ -1158,6 +1161,134 @@ from `Observation` through `JitNormStage0` compiled with `scripts/rocq coqc -Q .
 `b314bc7` (r21-base-land), a full `make report` ran in an emulated linux/amd64 Ubuntu container with the pinned 8.18
 debs: exit 0, so `make prove` (its `make check` prerequisite) exited 0 with `BURI_ROCQ_OK 1671 audited theorems` and
 268 rejected proof mutations, equal to the `scripts/report.py` pin (commands, logs and sha256 in STATUS.md).
+
+### Front checkers: the framework and share (F00, branch `p2/F00`; reuse and HT, branch `p2/r1-share-ht`)
+
+**Framework** (`rocq/JitFrontCheck.v`). Every front checker is `fchk rules fuel g e0 e` for a list of rules. At each
+node it tries, in order: syntactic equality with `scoped g e` (KRef_refl); the same head constructor on both sides,
+recursing into the parts with the scope extended for `let` and `lambda` (the compat_* statements); then each rule,
+given `fchk rules (fuel - 1)` as its recursive checker. A rule may rewrite the source side at the current node and
+call the recursive checker on the same target node, so a second rule can fire on the rewritten source there: rewrites
+stacked at one position chain without transitivity of KRef. Extra target steps are paid from the step index inside a
+rule's own proof. `rule_sound r` says: for every recursive checker sound at every index, every pair r accepts is in
+KRef. `fchk_sound` is proved from `FrontHyps` (D_wf, KRef_refl, KRef_scope, ERel anti-reduction and every compat_*
+statement of `JitKRef.v`) and `Forall rule_sound rules`. FrontHyps is a premise, never an axiom, and it is now derived:
+`front_hyps : D_wf -> FrontHyps sealed D` (in `JitFrontShare.v`), every field a closed theorem (KRef_refl and the
+compatibility lemmas of the KRef track, `front_scope_proved`, `front_anti_proved`).
+
+**Chain test** (`rocq/JitFrontChainTest.v`, synthetic). Two toy rules, each with a closed `rule_sound`: if-true
+elimination, and let of a literal around its own variable, `(let X L X)` to `L` (the general substitution of a literal
+into any body is not a rule: it needs a substitution lemma under closures). `(if true (let x 5 x) 0)` against `5` needs
+both at the root; fchk accepts it with both rules and rejects it with either removed (at fuel 4 by vm_compute, and at
+every fuel).
+
+**Share** (`rocq/JitFrontShare.v`). lower.shen at 934cfa5 rewrites `(if C X Y)`, C a chain of `and` and `let`, to
+`(let ElseN (freeze Y') (unchain C X' ElseN))`, and in X' replaces a `hd`/`tl` the chain already took by the chain
+variable bound to it (`reuse`, `canon`). `share_rule` checks that ElseN and the closure identity key are not in scope,
+`Y` against `Y'`, and that the body is C unchained: each test checked in the chain's scope, each chain binder outside
+the outer scope and different from ElseN, every else branch exactly `(thaw ElseN)`, and the then branch checked by
+`then_chk` in the outer scope. Reuse is carried by path facts: a fact `(W, (X, ops))` says W holds X's value with
+hd (true) / tl (false) applied in order. A chain `let W (hd y)` or `(tl y)`, the same on both sides, records W's target
+fact, composed through y's own fact (`chain_fact`). `then_chk` accepts what the recursive checker accepts, a source path
+against a target variable whose fact is the same path over a variable of the scope (`reuse_var`), and the same named
+call or `let` with its parts checked again; a `let` of a reused path records the fact on both sides, and a `let`
+that rebinds a name drops the facts about it or over it.
+
+`share_rule_sound`: three target steps make the frozen closure, whose cell is target-only and outside the world; each
+`(thaw ElseN)` takes six target steps to `Y'`, paid from the index (`thaw_erel`); the source's `and`/KAndR/if frames are
+related to the target's if frames (`kif_base`, `kand_frame`); a chain `let` binds the same name on both sides
+(`chain_let`), and a chain `let` of a path steps both sides through the call frame, the variable and the primitive, so
+the target's value is the path's or both raise the same `XPrim` (`chain_let_path`); the then branch is related by
+`then_sound`: a reused path is re-evaluated by the source silently (`src_path`) to a value related to the target
+variable's (`VRel_pops`, `reuse_path_vals`), a `let` of one records the fact (`ERel_reuse_let`), and named calls use
+`compat_call_core`. `check_share_sound` (and `judge_share_sound`) have three explicit premises, no Section hypothesis
+left and no FrontHyps:
+- **HT**: D defines `thaw` as the kernel does, `(defun thaw (V) (V))` (`kernel_thaw_parses`: stage 0's form of thaw
+  parses to exactly that);
+- **HP**: D holds `hd` and `tl` as the primitives, so a re-evaluated path gives the value the target's variable holds.
+  This task added it; each half is necessary, proved in Rocq (`share_needs_hd_tl`, below). Its store side
+  holds wherever call_preservation_src applies: any store with `Com s m` holds them (`hp_of_com`, from FunRel's
+  `fr_name`). Its sealed side does not follow: D_wf puts hd and tl in `sealed`, which is the image's, and
+  `jit_rules (hd :: tl :: sealed)` equals `jit_rules sealed` only extensionally. Part of the residual below;
+- **D_wf**, from which `front_hyps` gives FrontHyps and `JitKRefFund` gives `fund_below` for `then_chk`'s call case.
+
+**HT is necessary.** `share_needs_thaw_outright` (closed): at D = [(hd, PHd); (tl, PTl)] with hd and tl sealed, D_wf,
+FrontHyps and HP all hold, and share_rule is not rule_sound. share_rule with rec = syntactic equality of literals
+(`cx_rec`, sound at every D by `lit_kref`) accepts `(if false 0 1)` against `(let G (freeze 1) (if false 0 (thaw
+G)))`; the source returns 1, the target in 9 steps (`cx_tgt_runs`) calls thaw, which the store does not bind, and raises
+`XUndefinedFun thaw`, a throw no source run matches (`cx_inv_star`). SRel makes both stores share one function table,
+but nothing else says what that table's thaw does.
+
+**HP is necessary, each half.** `share_needs_hd_tl o` (closed), for o each of hd and tl: at D = [thaw as the kernel's;
+the other of hd/tl as its primitive] with sealed = [thaw; hd; tl], D_wf, FrontHyps and HT hold, D leaves o open, and
+share_rule is not rule_sound. KRef ranges over every store meeting D, and one store holds o as a user function that
+returns a global counter's old value and sets it to 1. share_rule with rec = scoped syntactic equality (sound by
+`KRef_refl`) accepts `(if (let S (o V) true) (o V) 0)` against `(let G (freeze 0) (let S (o V) (if true S (thaw G))))`
+(`hx_accepted`): the target calls o once and returns 0 (`hx_tgt_runs`, 25 steps); every source run stays on its
+deterministic path (computed by `reach`, closed under steps by `reach_closed`), which calls o twice and returns only 1,
+or is a throw under trap-free frames (`hx_inv_star`). No related source value exists.
+
+**The premises hold together.** `share_premises_sat` (closed): at D_share = [thaw as the kernel's; hd; tl as the
+primitives] with sealed = [thaw; hd; tl], D_wf, HT and HP all hold, so check_share_sound is not vacuous. This is a
+model instance, not the pinned build: whether the pinned D and sealed meet them is UNKNOWN (the residual below), and
+with HT no store has Com (`ht_not_com`).
+
+**HT (and HP's sealed side) for the pinned D: not discharged, a named residual (`OB-JIT-SHARE-THAW`).** D_wf of a D
+holding thaw, hd and tl also needs them in the pinned sealed list (OB-JIT-IMAGE-SEALING), not established. For HT,
+two facts, each proved in Rocq:
+- thaw's function can only be the initial store's. `thaw_fixed` (thaw is a fixed name), `thaw_defun_refused` (under
+  `jit_rules`, `(defun thaw ...)` raises XBadDefinition, the kernel's own `(defun thaw (V3830) (V3830))` included) and
+  `thaw_stable` (no run changes `lookup thaw`). So HT is a fact about the image's starting table (OB-JIT-IMAGE), not
+  something stage 0 code can establish in the model. Measured, not proved: lower.shen's `check-defun` does lower the
+  kernel's defun of thaw at stage 0, where thaw is sealed, and `sys.sbc` line 1 is
+  `(code thaw 1 5 () ((move 4 2) (tail-call-value 3 0)) ...)`, a 0-ary dynamic tail call. The model's
+  `defun_allowed` refuses that defun; the binary's lowerer accepts it.
+- on this back end HT excludes Com. Comp has no rule for a dynamic application (`comp_no_app`), so no code object is
+  related to thaw's body: a store that meets a D holding the kernel's thaw has no machine with `Com s m`
+  (`ht_not_com`), and `D_compiled` is false for every code list (`ht_not_compiled`). `call_preservation_src` takes
+  StoreHas and Com, so with HT its premises cannot all hold: the share link does not yet compose end to end, for any
+  definition. It does once an emit family relates the 0-ary dynamic apply (the binary's `tail-call-value`) and the
+  image's table is related (OB-JIT-IMAGE-CODE). `ht_dwf_sat` shows HT alone is consistent with D_wf;
+  `share_premises_sat` shows HT, HP and D_wf together are.
+
+Freshness is tested directly by the checker; `fresh_not_bound` shows fresh_ok's reserved-name premise implies the tests
+for the lowerer's names. no_keyword_binders is not used by check_share: both it and its soundness read Rocq's parse.
+
+**Stage 0 at 0.6: 4 of 4 share rewrites validated.** `share_rewrites_validated` (vm_compute, audited, so in the lane)
+accepts the four definitions share rewrites, macros.forms lines 5, 9, 14 and 20 of the pinned stage 0 against the
+same lines of the share witness set (sha256 `6881eb294f9a7c90641351ff1a487297e2a6828389354387519ebfc41e97902d`, the
+CENSUS.md hash; the two files themselves: `macros.forms` sha256 `2bb8f7a12a5fd33672d03febc9a89e5cd0266416d8a7bbbc636ea77805915a39`,
+`macros.share` sha256 `d16a9b35f64e3f3083f3bb8259e557cb003da28e5215cf58ae009d40db553a59`; the inlined `sx` terms are
+stage0_to_rocq.py's `rocq(parse(tokens(...))[i-1])` of lines 5, 9, 14 and 20, and nothing in the lane rechecks them
+against the files): `shen.macros` (three nested frozen elses and an inner one at `shen.@ch`, reused paths at `put`,
+`get`, `unput` and `@ch`), `shen.process-let`, `shen.lambda-of-defun` and `shen.process-assoc`. Each pair differs, so
+only share_rule accepts it. A report-only run of `tests/shen-jit/stage0_to_rocq.py --share` over all 24 files accepts
+955 of 955 pairs (951 unchanged by share, by equality). These are share-link counts: they say nothing about norm or
+emission, are conditional on HT, HP and D_wf, and are not the full-pipeline count of kernel definitions validated.
+
+Mutants rejected by Rocq: `ShenJitFrontNoScope` (`fchk_rejects_unscoped` fails), `ShenJitFrontShareElseSwap`
+(`share_rejects_swap`), `ShenJitFrontShareThawAny` (`share_rejects_thaw_other`), `ShenJitFrontShareReuseOpBlind` (paths
+compared by base only: `share_reuse_rejects_wrong_op` fails, (hd V) against a variable bound to (tl V)), each at a
+vm_compute decision lemma placed before every proof; `ShenJitFrontSameFuel` at the Fixpoint guard; and
+`ShenJitFrontShareChainFactUnchecked` (a chain fact recorded without checking that the target's let binds the same
+expression) at `chain_fact_cases`, whose statement needs that check. That last one is a proof-level mutant, not an
+unsoundness witness: with rec = fchk share_rules, (hd y) or (tl y) is accepted only against itself, so dropping the
+check changes no decision of check_share, and no decision lemma can reject it. The reuse relation's decision-level
+mutant is `ShenJitFrontShareReuseOpBlind`.
+
+Re-checked under Rocq 9.3 only, at commit `b86a4cd` (git archive into `/work/p2-r1-share-ht-b86`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-c scripts/check-shen-jit.sh` in buri-lps, rc 0, log sha256 `5ddcb05386f07e7a099a1a8915d1a46f9039f532c086dbddeb15cdbc182f7f68`: 328 audited statements closed, rocqchk passed, stage 0 148 of 955 as recorded. The six front mutants regenerated by `tests/mutate-shen-jit.py` from that archive (56 names) and compiled against `/tmp/p2-r1-share-ht-lane-c`: each rejected, NoScope at `fchk_rejects_unscoped`, SameFuel by the Fixpoint guard, ElseSwap at `share_rejects_swap`, ThawAny at `share_rejects_thaw_other`, ReuseOpBlind at `share_reuse_rejects_wrong_op`, ChainFactUnchecked at `chain_fact_cases`. Not run at `b86a4cd`: the differential, `make prove`, `make report`, gate_tests.sh (UNKNOWN).
+
+Re-checked under Rocq 9.3 only, at commit `f4490d8` (tracked files copied into `/work/p2-r1-share-ht`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-d /lps/bin/rocq-slot scripts/check-shen-jit.sh` in buri-lps, rc 0, log `/tmp/p2-r1-share-ht-lane-d.log` sha256 `ba222d72849cdf30967e634184910090d9c5061ccaab3811dc8c05dffd61df30`: 331 audited statements closed (adds `hd_tl_fixed`, `hd_tl_defun_refused`, `hd_tl_stable`), rocqchk passed, stage 0 judge 148 accepted of 955 as recorded. HP's store side now has HT's provenance in Rocq: hd and tl are fixed names, defun of either is refused, no run changes their function, so both premises describe the image's initial store (OB-JIT-IMAGE). HT for the pinned D is still not proved (OB-JIT-SHARE-THAW, open), and the HT/HP premise decision awaits Reuben. Mutation pin: `report.py` asserted 201 at merge-base `5779555` with a stale 189 in the summary dict; this branch adds 6 front mutants (NoScope, SameFuel, ShareElseSwap, ShareThawAny, ShareReuseOpBlind, ShareChainFactUnchecked), so both read 207. Not run at `f4490d8`: the differential, `make prove` (Coq 8.18), `make report`, `scripts/proof-mutations`, gate_tests.sh, the ledger tests, the front mutants (UNKNOWN).
+
+Checked under Rocq 9.3 only, at commit `eb65acc` (branch `p2/r1-share-ht`): `SKIP_DIFF=1 JIT_OUT=/tmp/p2-r1-share-ht-lane-b
+scripts/check-shen-jit.sh` in buri-lps, rc 0, log sha256 `7a478cae8a15735ce2588014473dddfa3efd61d776bdabdfad9af0d94eaed94e`:
+323 audited statements closed, rocqchk passed, stage 0 148 of 955 as recorded (each of the 36 compiled files equal to
+the commit's). The six front mutants regenerated from that commit (56 names) and compiled against that output: each
+rejected, at the lines named above. The 955-pair share tally against the same output: 955, 0, 0 (counts.txt sha256
+`4557dd0cc9f22fb7526d7e2551290a04e8002591d57fa09aae97aaca940187e2`). Not run: the differential, the Coq 8.18 compile of the
+three files and of the mutants (`make prove`, `scripts/proof-mutations`), `make report` (so the pin 207 = 201 + 6 new
+Shen/JIT mutants, 50 names at `p2/int` and 56 here, is not checked by it), gate_tests.sh, tests/ledger.shen and
+stage0_residuals.py: UNKNOWN.
 
 ## Differential results
 
