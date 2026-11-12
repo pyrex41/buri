@@ -1,7 +1,7 @@
 (* Assumption audit of the Shen/JIT Phase 1 semantics. Theorems about the model only. *)
 From Buri Require Import KLPort JitMeta JitProfile JitLowerPrim JitLowerStep JitLowerThm JitLowerCheck JitLowerEquiv JitKRefBase JitKRefCompatClo JitEqBudget JitEqBudgetStep JitEqBudgetWalk JitEqBudgetCore JitKRefPrim JitKRefCompatCtl JitKRefFv JitKRefCompatCall JitKRefFund JitKTermGround JitKTermBase JitKTermCompatClo JitKTermPrim JitKTermCompatCtl JitKTermCompatCall JitKTermFv JitKTermFund JitKRefTerm JitKRefTermThm JitFrontD JitFrontSugar JitFrontProlog JitImage
  JitEmitRuleEq JitEmitRuleStore JitEmitRulePrim JitEmitRuleDoFold JitEmitRuleClo JitEmitRuleApp JitEmitRuleTrap
- JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex.
+ JitEmitRel JitEmitNestTest JitEmitKont JitEmitInv JitKRefCallNoTableCex JitEmitCheck.
 Print Assumptions JitBytecode.JitBytecode.text_of_sym_of_text.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_inj.
 Print Assumptions JitBytecode.JitBytecode.sym_of_text_eqb.
@@ -716,3 +716,46 @@ Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.call_rel_no_table_
 Print Assumptions JitKRefCallNoTableCex.JitKRefCallNoTableCex.cx_tables_differ.
 Print Assumptions JitImage.JitImageSealing.ext_names.
 Print Assumptions JitImage.JitImageSealing.sealing_exclusion_statement.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_famC.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_famT.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_famO.
+Print Assumptions JitEmitCheck.JitEmitCheck.chk_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.check_emit_gen_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.check_emit_sound_hooks.
+Print Assumptions JitEmitCheck.JitEmitCheck.check_emit_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.judge_emit_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.sound_recok.
+Print Assumptions JitEmitCheck.JitEmitCheck.gC.
+Print Assumptions JitEmitCheck.JitEmitCheck.gT.
+Print Assumptions JitEmitCheck.JitEmitCheck.gO.
+Print Assumptions JitEmitCheck.JitEmitCheck.gS.
+Print Assumptions JitEmitCheck.JitEmitCheck.gW.
+Print Assumptions JitEmitCheck.JitEmitCheck.gA.
+Print Assumptions JitEmitCheck.JitEmitCheck.pC.
+Print Assumptions JitEmitCheck.JitEmitCheck.pT.
+Print Assumptions JitEmitCheck.JitEmitCheck.pO.
+Print Assumptions JitEmitCheck.JitEmitCheck.pS.
+Print Assumptions JitEmitCheck.JitEmitCheck.pW.
+Print Assumptions JitEmitCheck.JitEmitCheck.pA.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepC_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepT_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepO_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepS_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepW_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepA_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepC_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepT_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepO_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepS_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepW_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.stepA_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_orC.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_orT.
+Print Assumptions JitEmitCheck.JitEmitCheck.lift_orO.
+Print Assumptions JitEmitCheck.JitEmitCheck.none_okC.
+Print Assumptions JitEmitCheck.JitEmitCheck.none_okT.
+Print Assumptions JitEmitCheck.JitEmitCheck.none_okO.
+Print Assumptions JitEmitCheck.JitEmitCheck.chk_fn_sound.
+Print Assumptions JitEmitCheck.JitEmitCheck.hooksC_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.hooksT_lift.
+Print Assumptions JitEmitCheck.JitEmitCheck.hooksO_lift.

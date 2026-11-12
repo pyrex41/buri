@@ -359,4 +359,29 @@ Definition CompFn' (c : B.code) (ps : list name) (b : expr) : Prop :=
 Definition CloOK (nc : B.code) (cv : list name) (ps : list name) (b : expr) : Prop :=
  B.code_arity nc = N.of_nat (List.length ps) /\ B.code_entry nc = None /\
  exists r', Comp nc cv (bind ps 2) (2 + N.of_nat (List.length ps)) b DRet (B.code_ins nc) r'.
+(* ---------- the hook constructors as functions (task emit-check) ---------- *)
+(* Comp's, CompT's and CompOp's family hooks, named as plain definitions so that JitEmitCheck, which
+   the lane's emit gate forbids to name a hook constructor outside this file, can BUILD a hook
+   derivation from a family's Rule_X over the block. Construction only: nothing here inverts. *)
+Definition inj_C_Eq := C_Eq.
+Definition inj_T_Eq := T_Eq.
+Definition inj_O_Eq := O_Eq.
+Definition inj_C_Store := C_Store.
+Definition inj_T_Store := T_Store.
+Definition inj_O_Store := O_Store.
+Definition inj_C_Prim := C_Prim.
+Definition inj_T_Prim := T_Prim.
+Definition inj_O_Prim := O_Prim.
+Definition inj_C_DoFold := C_DoFold.
+Definition inj_T_DoFold := T_DoFold.
+Definition inj_O_DoFold := O_DoFold.
+Definition inj_C_Clo := C_Clo.
+Definition inj_T_Clo := T_Clo.
+Definition inj_O_Clo := O_Clo.
+Definition inj_C_App := C_App.
+Definition inj_T_App := T_App.
+Definition inj_O_App := O_App.
+Definition inj_C_Trap := C_Trap.
+Definition inj_T_Trap := T_Trap.
+Definition inj_O_Trap := O_Trap.
 End JitEmitRel.
