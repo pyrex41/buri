@@ -588,6 +588,31 @@ Proof.
  exact fx_not_sm.
 Qed.
 
+(* The base text of JitEmitInv.sm_embed and ms_embed (no Fresh m premise) is FALSE over the
+   repaired SM and MS': at fx_m the old premises and StoreRel [] hold, and no SM relates fx_m
+   (fresh_needed). So Fresh m on sm_embed and ms_embed is needed, not a weakening for a proof's
+   sake; their base text over the relation it spoke of is JitEmitInv.sm_embed_v1, ms_embed_v1. *)
+Lemma ms'_sm : forall mu c m, MS' mu c m -> exists s k, SM mu s k m.
+Proof.
+ intros mu c m H. destruct H as [cv caps g top e dst r2 rho k s w m _ X|cv caps g top e l r2 rho k s w m _ X
+   |cv caps g top e o top2 r2 rho k s w m _ X|cv caps v v' o k s w m X]; exists s, k;
+   [exact (proj1 X)|exact (proj1 X)|exact (proj1 X)|exact X].
+Qed.
+
+Theorem sm_embed_text_false : ~ (forall mu s k m, Com s m -> notrap k -> StoreRel mu s m -> SM mu s k m).
+Proof.
+ intro H. destruct fresh_needed as (Cm & _ & _ & _ & G & _ & N).
+ exact (N [] _ [] (H [] JitEmitInv.cx_s [] fx_m Cm (Forall_nil _) (storerel_nil _ _ G))).
+Qed.
+
+Theorem ms_embed_text_false : ~ (forall mu s c m, MS s c m -> StoreRel mu s m -> MS' mu c m).
+Proof.
+ intro H. destruct fresh_needed as (Cm & Cf & L & En & G & _ & N).
+ pose proof (ms_entered _ _ _ _ _ _ Cm Cf L En) as M.
+ destruct (ms'_sm _ _ _ (H [] _ _ _ M (storerel_nil _ _ G))) as (s & k & Sm).
+ exact (N _ _ _ Sm).
+Qed.
+
 (* ---------- the front end composed ---------- *)
 (* The one fact about closure bodies the composition needs beyond JitEmitInv's statements: a body
    CloOK accepts reads no variable outside its parameters and its capture names. Then a closure
@@ -760,8 +785,20 @@ Qed.
    JitEmitInv.call_preservation_src_old_of_new''. Its conclusion is the old statement's, verbatim;
    its premises are the old ones plus those two (fresh_needed, JitEmitInv.gvals_needed: neither
    follows from the old premises, and the corrected statements say nothing without them). *)
-Theorem call_preservation_src_old_of_cp' : call_preservation'_statement E pt sealed -> clo_scoped_statement ->
+Theorem call_preservation_src_old_fresh_of_cp' : call_preservation'_statement E pt sealed -> clo_scoped_statement ->
  old_reflect'_statement E pt sealed -> call_preservation_src_old_fresh_statement E pt sealed D.
+Proof.
+ intros Cp Hs Rf. exact (call_preservation_src_old_fresh_of_new'' E pt sealed D (call_preservation_src'_of_cp' Cp Hs) Rf).
+Qed.
+
+(* call_preservation_src_old_of_cp' at its base text (fca6c3f), proof text unchanged. It goes
+   through JitEmitInv.call_preservation_src_old_of_new'', which is now proved from its target
+   (call_preservation_src_old_holds) and does not use the corrected statements: this theorem is
+   kept so that no base theorem loses its statement, and is NOT evidence that the corrected
+   statements recover the old one (that route is call_preservation_src_old_fresh_of_cp', which
+   needs Fresh m: fresh_needed). *)
+Theorem call_preservation_src_old_of_cp' : call_preservation'_statement E pt sealed -> clo_scoped_statement ->
+ old_reflect'_statement E pt sealed -> call_preservation_src_old_statement E pt sealed D.
 Proof.
  intros Cp Hs Rf. exact (call_preservation_src_old_of_new'' E pt sealed D (call_preservation_src'_of_cp' Cp Hs) Rf).
 Qed.

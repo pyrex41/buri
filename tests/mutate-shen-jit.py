@@ -115,13 +115,14 @@ ShenJitEmitEvOfTime: ev_of translates no clock answer, as before the get-time co
 ShenJitEmitStoreRelNonEmpty: StoreRel asks for a non-empty bijection, which the old fragment at
   mu = [] has not. storerel_nil must fail.
 ShenJitEmitReflectTrace: old_reflect_statement no longer says the old-fragment run takes no source
-  IO (True in place of tS = []), so its conclusion is no silent run. preservation_old_of_new must
-  fail (at subst tS).
-ShenJitEmitReflectSrcTrace: the same for old_reflect_src_statement. call_preservation_src_old_of_new
+  IO (True in place of tS = []), so its conclusion is no silent run. preservation_old_fresh_of_new
   must fail (at subst tS).
-ShenJitEmitOldGvalsDropped: preservation_old_statement's GvalsRel [] s m premise becomes True. The
-  proof builds StoreRel [] s m from it for ms_embed, so preservation_old_of_new must fail (at
-  storerel_nil).
+ShenJitEmitReflectSrcTrace: the same for old_reflect_src_statement.
+  call_preservation_src_old_fresh_of_new must fail (at subst tS).
+ShenJitEmitOldGvalsDropped: preservation_old_statement's GvalsRel [] s m premise becomes True.
+  preservation_old_fresh_of_old passes that premise's proof on, so it must fail (r21-sms-fresh-fix:
+  preservation_old_of_new is now proved from preservation_old_holds and no longer builds StoreRel
+  from the premise).
 ShenJitEmitTRunIOSilent: TRun's IO step records no event, so an IO-free trace no longer means a
   silent run. trun_nil_tn must fail.
 ShenJitEmitNestShapeAccepted: the uniform-code nesting of JitEmitNestTest.NestShape is asserted

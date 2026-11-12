@@ -508,6 +508,45 @@ Proof.
    + rewrite Hh. apply EKD; auto.
 Qed.
 
+(* sm_embed and ms_embed at their base text (before r21-sms-fresh-fix), over the relation they
+   then spoke of (SM_v1, MS'_v1: no sm_fresh). Over the repaired SM and MS' the base text is FALSE
+   (JitEmitSim.sm_embed_text_false, ms_embed_text_false, at r22-emit-sim's fx_m, whose m_next is in
+   use); sm_embed and ms_embed above add Fresh m for that reason.
+   Does NOT say: anything about SM or MS' (with sm_fresh). *)
+Lemma sm_embed_v1 : forall mu s k m, Com s m -> notrap k -> StoreRel mu s m -> SM_v1 mu s k m.
+Proof.
+ intros mu s k m [Hh Fr] Nt (Pb & Hr & G). split.
+ - constructor; auto. apply funrel_embed; auto.
+ - unfold HK. rewrite Hh, (notrap_frames k Nt). constructor.
+Qed.
+
+Theorem ms_embed_v1 : forall mu s c m, MS s c m -> StoreRel mu s m -> MS'_v1 mu c m.
+Proof.
+ intros mu s c m H G. destruct H as [g top e dst r2 rho k w m Cm Cc Me Eb Ab Kc|g top e l r2 rho k w m Cm Ct Me Eb Ab Tk
+   |g top e o top2 r2 rho k w m Cm Co Me Eb Ab Kd|v v' o k w m Cm Ro Vr Kd];
+   pose proof Cm as [Hh _];
+   destruct (kont_embed mu (B.m_heap m) (HeapClo (B.m_heap m)) (DoOK s)) as (EKD & ETK & EKC & ERK).
+ - eapply MS'_eval_v1 with (cv := []) (caps := []) (w := w); [apply ce_C; exact Cc|].
+   unfold EvalCtx_v1. split; [apply sm_embed_v1; auto; eapply notrap_kc; exact Kc|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKC; auto.
+ - eapply MS'_test_v1 with (cv := []) (caps := []) (w := w); [apply ce_T; exact Ct|].
+   unfold TestCtx_v1. split; [apply sm_embed_v1; auto; eapply notrap_tk; exact Tk|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply ETK; auto.
+ - eapply MS'_op_v1 with (cv := []) (caps := []) (w := w); [apply (proj1 (proj2 (proj2 (comp_embed _)))); exact Co|].
+   unfold OpCtx_v1. split; [apply sm_embed_v1; auto; eapply notrap_kd; exact Kd|].
+   split; [apply menv_embed; auto|]. split; [auto|]. split; [auto|].
+   split; [left; reflexivity|]. split; [left; reflexivity|]. rewrite Hh. apply EKD; auto.
+ - eapply MS'_ret_v1 with (cv := []) (caps := []) (o := o) (v' := v') (w := w).
+   + apply sm_embed_v1; auto. eapply notrap_kd; exact Kd.
+   + exact Ro.
+   + apply VR_VRh; auto.
+   + left; reflexivity.
+   + left; reflexivity.
+   + rewrite Hh. apply EKD; auto.
+Qed.
+
 Section Inv.
 Variables (E : B.env) (pt : B.tree (B.prim * nat)) (sealed : list name).
 Notation R := (jit_rules sealed).
@@ -1159,7 +1198,7 @@ Proof. intros P s m c ps b args n Cm Cf L En G _. exact (P s m c ps b args n Cm 
 Lemma call_preservation_src_old_fresh_of_old : call_preservation_src_old_statement -> call_preservation_src_old_fresh_statement.
 Proof. intros P s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G _. exact (P s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G). Qed.
 
-Theorem preservation_old_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_fresh_statement.
+Theorem preservation_old_fresh_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_fresh_statement.
 Proof.
  intros Pr Rf n s c m H Fs G. destruct env_ok_inhabited as [rs Eo].
  destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G) Fs))
@@ -1170,7 +1209,7 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_old_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_fresh_statement.
+Theorem call_preservation_old_fresh_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_fresh_statement.
 Proof.
  intros Cp Rf s m c ps b args n Cm Cf L En G Fs c0. destruct env_ok_inhabited as [rs Eo].
  pose proof (ms_entered s m c ps b args Cm Cf L En) as H0.
@@ -1183,7 +1222,7 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> old_reflect_statement ->
+Theorem call_preservation_src_old_fresh_of_new : call_preservation_src'_statement -> old_reflect_statement ->
  old_reflect_src_statement -> call_preservation_src_old_fresh_statement.
 Proof.
  intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G Fs c0 ce. destruct env_ok_inhabited as [rs Eo].
@@ -1222,7 +1261,7 @@ Definition old_reflect'_statement : Prop := forall s c m (rs : nat -> B.jreq -> 
    implications between statements: each old conclusion is recovered only once its hypotheses
    (preservation'/call_preservation'/call_preservation_src' and the reflections) are proved, and
    none of them is yet. *)
-Theorem preservation_old_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_fresh_statement.
+Theorem preservation_old_fresh_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_fresh_statement.
 Proof.
  intros Pr Rf n s c m H Fs G. destruct env_ok_inhabited as [rs Eo].
  destruct (Pr n [] c m rs Eo (ms_embed [] s c m H (storerel_nil s m G) Fs))
@@ -1235,7 +1274,7 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_old_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_fresh_statement.
+Theorem call_preservation_old_fresh_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_fresh_statement.
 Proof.
  intros Cp Rf s m c ps b args n Cm Cf L En G Fs c0. destruct env_ok_inhabited as [rs Eo].
  pose proof (ms_entered s m c ps b args Cm Cf L En) as H0.
@@ -1250,7 +1289,7 @@ Proof.
    right. exists m1. split; [exact En0|]. eapply tn_tstar. eapply trun_nil_tn; exact Tr.
 Qed.
 
-Theorem call_preservation_src_old_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
+Theorem call_preservation_src_old_fresh_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
  old_reflect_src_statement -> call_preservation_src_old_fresh_statement.
 Proof.
  intros Cp Rf Rs s m c ps b0 b1 e args n Dw K1 K2 Sh So Cm Cf L En G Fs c0 ce. destruct env_ok_inhabited as [rs Eo].
@@ -1453,9 +1492,46 @@ Proof. exact (old_reflect_src_of_fundamental (JitKRefFund.JitKRefFund.fundamenta
 Theorem call_preservation_src_old_holds : call_preservation_src_old_statement.
 Proof. exact (call_preservation_src_old_of_fundamental (JitKRefFund.JitKRefFund.fundamental sealed D)). Qed.
 
-Theorem call_preservation_src_old_of_new'' : call_preservation_src'_statement -> old_reflect'_statement ->
+Theorem call_preservation_src_old_fresh_of_new'' : call_preservation_src'_statement -> old_reflect'_statement ->
  call_preservation_src_old_fresh_statement.
-Proof. intros Cp Rf. exact (call_preservation_src_old_of_new' Cp Rf old_reflect_src). Qed.
+Proof. intros Cp Rf. exact (call_preservation_src_old_fresh_of_new' Cp Rf old_reflect_src). Qed.
+
+(* ---------- the *_old_of_new corollaries at their base text (r21-sms-fresh-fix, closed) ----------
+   preservation_old_of_new, call_preservation_old_of_new, call_preservation_src_old_of_new, their
+   primed versions and call_preservation_src_old_of_new'' with their statements as at fca6c3f
+   (each concludes its *_old_statement, without Fresh m). They are NOT derived from the new
+   statements: each is proved from its target directly (preservation_old_holds,
+   call_preservation_old_holds, call_preservation_src_old_holds), and its hypotheses are unused.
+   They are kept so that no theorem of the base loses its statement; they are not evidence that
+   the corrected statements recover the old ones. The route through the corrected statements is
+   the *_old_fresh_of_new family above, which needs Fresh m (JitEmitSim.fresh_needed: the old
+   premises hold at a machine no SM relates). The unprimed ones were vacuous already
+   (old_reflect_statement is false, old_reflect_false).
+   Does NOT say: anything about preservation'_statement, call_preservation'_statement or
+   call_preservation_src'_statement. *)
+Theorem preservation_old_of_new : preservation'_statement -> old_reflect_statement -> preservation_old_statement.
+Proof. intros _ _. exact preservation_old_holds. Qed.
+
+Theorem call_preservation_old_of_new : call_preservation'_statement -> old_reflect_statement -> call_preservation_old_statement.
+Proof. intros _ _. exact call_preservation_old_holds. Qed.
+
+Theorem call_preservation_src_old_of_new : call_preservation_src'_statement -> old_reflect_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_statement.
+Proof. intros _ _ _. exact call_preservation_src_old_holds. Qed.
+
+Theorem preservation_old_of_new' : preservation'_statement -> old_reflect'_statement -> preservation_old_statement.
+Proof. intros _ _. exact preservation_old_holds. Qed.
+
+Theorem call_preservation_old_of_new' : call_preservation'_statement -> old_reflect'_statement -> call_preservation_old_statement.
+Proof. intros _ _. exact call_preservation_old_holds. Qed.
+
+Theorem call_preservation_src_old_of_new' : call_preservation_src'_statement -> old_reflect'_statement ->
+ old_reflect_src_statement -> call_preservation_src_old_statement.
+Proof. intros _ _ _. exact call_preservation_src_old_holds. Qed.
+
+Theorem call_preservation_src_old_of_new'' : call_preservation_src'_statement -> old_reflect'_statement ->
+ call_preservation_src_old_statement.
+Proof. intros _ _. exact call_preservation_src_old_holds. Qed.
 End Src.
 End Inv.
 

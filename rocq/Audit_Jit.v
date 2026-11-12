@@ -748,3 +748,16 @@ Print Assumptions JitEmitSim.JitEmitSim.call_preservation'_of_preservation'_v1.
 Print Assumptions JitEmitSim.JitEmitSim.fx_not_sm.
 Print Assumptions JitEmitSim.JitEmitSim.fx_comp_old.
 Print Assumptions JitEmitSim.JitEmitSim.fresh_needed.
+Print Assumptions JitEmitInv.JitEmitInv.preservation_old_fresh_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_fresh_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_fresh_of_new.
+Print Assumptions JitEmitInv.JitEmitInv.preservation_old_fresh_of_new'.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_old_fresh_of_new'.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_fresh_of_new'.
+Print Assumptions JitEmitInv.JitEmitInv.call_preservation_src_old_fresh_of_new''.
+Print Assumptions JitEmitInv.JitEmitInv.sm_embed_v1.
+Print Assumptions JitEmitInv.JitEmitInv.ms_embed_v1.
+Print Assumptions JitEmitSim.JitEmitSim.call_preservation_src_old_fresh_of_cp'.
+Print Assumptions JitEmitSim.JitEmitSim.ms'_sm.
+Print Assumptions JitEmitSim.JitEmitSim.sm_embed_text_false.
+Print Assumptions JitEmitSim.JitEmitSim.ms_embed_text_false.
